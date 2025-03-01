@@ -1,131 +1,66 @@
-Below is a comprehensive `README.md` file for your project. This file provides an overview of the project, instructions for setup, usage, and other relevant details.
+# MITRE ATT&CK KnowledgeBase Processing
 
----
+## Overview
+This project automates the processing, enrichment, and summarization of MITRE ATT&CK techniques. It downloads the latest attack rule mappings, processes MITRE ATT&CK data, and generates structured summaries in Markdown following the Alerting & Detection Strategy (ADS) framework.
 
-# MITRE ATT&CK KnowledgeBase Project
+## Features
+- **Fetch Data**: Downloads the latest MITRE ATT&CK CSV and attack rule map.
+- **Enrich Data**: Integrates external data sources like CyCAT, Sigma rules, and Atomic Red Team tests.
+- **Generate Summaries**: Uses an Ollama-powered language model to create ADS-style Markdown reports.
+- **Automation**: Fully automates fetching, processing, and summarization.
 
-This project fetches MITRE ATT&CK techniques, enriches them with additional data from the CyCAT API, and organizes the results into a structured directory based on tactics. The data is saved in JSON format for easy access and analysis.
+## Project Structure
+```
+.
+├── data/                     # Stores raw MITRE ATT&CK CSV and attack rule map
+├── MITRE_ATT&CK_Analysis/    # Enriched JSON files
+├── MITRE_ATT&CK_Summaries/   # Markdown summaries
+├── fetch_data.py             # Fetches MITRE ATT&CK data
+├── create_mitre_objects.py   # Processes and enriches MITRE ATT&CK techniques
+├── ollama_summarizer.py      # Generates ADS-style summaries
+├── Makefile                  # Automates setup and execution
+├── requirements.txt          # Python dependencies
+└── README.md                 # Project documentation
+```
 
----
+## Installation
+### Prerequisites
+- Python 3.8+
+- Virtual environment support
+- [Ollama](https://ollama.com) installed for LLM-powered summarization
 
-## **Table of Contents**
+### Setup
+```sh
+make setup
+```
+This command will:
+1. Create a virtual environment.
+2. Install required dependencies.
+3. Fetch the latest MITRE ATT&CK data.
+4. Download Atomic Red Team atomics.
+5. Process and enrich techniques.
+6. Generate Markdown summaries.
 
-1. [Features](#features)
-2. [Prerequisites](#prerequisites)
-3. [Setup](#setup)
-4. [Usage](#usage)
-5. [Directory Structure](#directory-structure)
-6. [Contributing](#contributing)
-7. [License](#license)
-
----
-
-## **Features**
-
-- Fetches MITRE ATT&CK techniques using the MITRE ATT&CK API.
-- Enriches techniques with additional data from the CyCAT API.
-- Organizes results into a directory structure based on tactics.
-- Saves each technique's data as a JSON file for easy access.
-
----
-
-## **Prerequisites**
-
-Before running the project, ensure you have the following installed:
-
-- **Python 3.8+**
-- **pip** (Python package manager)
-
----
-
-## **Setup**
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/your-username/mitre-attack-knowledgebase.git
-   cd mitre-attack-knowledgebase
-   ```
-
-2. **Set up the virtual environment and install dependencies**:
-   ```bash
-   make install
-   ```
-
-   This command will:
-   - Create a virtual environment (`.venv`).
-   - Install the required dependencies listed in `requirements.txt`.
-
----
-
-## **Usage**
-
-### **Run the Script**
-To fetch MITRE ATT&CK techniques, enrich them with CyCAT data, and save the results, run:
-```bash
+## Usage
+### Run the Pipeline
+```sh
 make run
 ```
+This will fetch data, process it, and generate summaries.
 
-### **Clean Up**
-To remove the generated data and virtual environment, run:
-```bash
+### Clean Up
+```sh
 make clean
 ```
+Removes generated files and resets the environment.
 
-### **Other Commands**
-- **Set up and run the script**:
-  ```bash
-  make setup
-  ```
+## Outputs
+- **Processed Techniques**: Stored in `MITRE_ATT&CK_Analysis/`
+- **Summarized Reports**: Saved in `MITRE_ATT&CK_Summaries/`
 
-- **Display help**:
-  ```bash
-  make help
-  ```
+## Contribution
+Feel free to submit issues or pull requests to improve the project!
 
----
+## License
+This project is licensed under the MIT License.
 
-## **Directory Structure**
-
-After running the script, the project directory will look like this:
-
-```
-mitre-attack-knowledgebase/
-├── .venv/                          # Virtual environment
-├── MITRE_ATT&CK_KnowledgeBase/     # Generated data (organized by tactics)
-│   ├── Tactic_Name_1/
-│   │   ├── T1234.json
-│   │   ├── T5678.json
-│   ├── Tactic_Name_2/
-│   │   ├── T4321.json
-│   │   ├── T8765.json
-├── main.py                  # Main Python script
-├── Makefile                        # Makefile for automation
-├── requirements.txt                # List of dependencies
-└── README.md                       # Project documentation
-```
-
----
-
-## **Contributing**
-
-Contributions are welcome! If you'd like to contribute, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bugfix.
-3. Commit your changes and push to the branch.
-4. Submit a pull request.
-
----
-
-## **License**
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-## **Acknowledgments**
-
-- [MITRE ATT&CK](https://attack.mitre.org/) for providing the techniques and tactics data.
-- [CyCAT](https://cycat.org/) for enriching the techniques with additional information.
-
----
