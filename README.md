@@ -1,7 +1,12 @@
 # MITRE ATT&CK KnowledgeBase Processing
 
 ## Overview
-This project automates the processing, enrichment, and summarization of MITRE ATT&CK techniques. It downloads the latest attack rule mappings, processes MITRE ATT&CK data, and generates structured summaries in Markdown following the Alerting & Detection Strategy (ADS) framework.
+
+This project automates the processing, enrichment, and summarization of MITRE ATT&CK techniques. It downloads the latest attack rule mappings, processes MITRE ATT&CK data, and generates structured summaries in Markdown following the Alerting & Detection Strategy (ADS) framework. 
+
+<p align="center">
+    <img src="shield.webp" alt="MITRE ATT&CK" width="10%" style="border-radius: 50%;">
+</p>
 
 ## Features
 - **Fetch Data**: Downloads the latest MITRE ATT&CK CSV and attack rule map.
@@ -69,6 +74,10 @@ Removes generated files and resets the environment.
 
 ## Contribution
 Feel free to submit issues or pull requests to improve the project!
+
+## Acknowledgements
+cycat https://cycat.org/
+krdmnbrk https://github.com/krdmnbrk
 
 ## License
 This project is licensed under the MIT License.
