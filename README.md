@@ -7,6 +7,7 @@ This project automates the processing, enrichment, and summarization of MITRE AT
 - **Fetch Data**: Downloads the latest MITRE ATT&CK CSV and attack rule map.
 - **Enrich Data**: Integrates external data sources like CyCAT, Sigma rules, and Atomic Red Team tests.
 - **Generate Summaries**: Uses an Ollama-powered language model to create ADS-style Markdown reports.
+- **Interactive Group Analysis**: A Jupyter Notebook allows users to analyze ATT&CK groups and their associated TTPs.
 - **Automation**: Fully automates fetching, processing, and summarization.
 
 ## Project Structure
@@ -18,6 +19,7 @@ This project automates the processing, enrichment, and summarization of MITRE AT
 ├── fetch_data.py             # Fetches MITRE ATT&CK data
 ├── create_mitre_objects.py   # Processes and enriches MITRE ATT&CK techniques
 ├── ollama_summarizer.py      # Generates ADS-style summaries
+├── target_pack_generator.ipynb  # Jupyter Notebook for group analysis
 ├── Makefile                  # Automates setup and execution
 ├── requirements.txt          # Python dependencies
 └── README.md                 # Project documentation
@@ -48,6 +50,13 @@ make run
 ```
 This will fetch data, process it, and generate summaries.
 
+### Interactive Group Analysis
+Open the Jupyter Notebook to explore ATT&CK groups interactively:
+```sh
+jupyter notebook target_pack_generator.ipynb
+```
+This notebook allows users to select an ATT&CK group and analyze its associated TTPs, related analysis files, and summaries.
+
 ### Clean Up
 ```sh
 make clean
@@ -63,4 +72,3 @@ Feel free to submit issues or pull requests to improve the project!
 
 ## License
 This project is licensed under the MIT License.
-
