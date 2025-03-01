@@ -1,0 +1,481 @@
+{
+    "id": "T1113",
+    "name": "Screen Capture",
+    "description": "Adversaries may attempt to take screen captures of the desktop to gather information over the course of an operation. Screen capturing functionality may be included as a feature of a remote access tool used in post-compromise operations. Taking a screenshot is also typically possible through native utilities or API calls, such as `CopyFromScreen`, `xwd`, or `screencapture`.(Citation: CopyFromScreen .NET)(Citation: Antiquated Mac Malware)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Collection",
+    "data_sources": "Process: OS API Execution, Command: Command Execution",
+    "detection": "Monitoring for screen capture behavior will depend on the method used to obtain data from the operating system and write output files. Detection methods could include collecting information from unusual processes using API calls used to obtain image data, and monitoring for image files written to disk. The sensor data may need to be correlated with other events to identify malicious activity, depending on the legitimacy of this behavior within a given network environment.",
+    "url": "https://attack.mitre.org/techniques/T1113",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1113",
+                "atomic_attack_guid": "9cd1cccb-91e4-4550-9139-e20a586fcea1",
+                "atomic_attack_name": "Capture Linux Desktop using Import Tool",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1113",
+                "atomic_attack_guid": "5a496325-0115-4274-8eb9-755b649ad0fb",
+                "atomic_attack_name": "Windows Recall Feature Enabled - DisableAIDataAnalysis Value Deleted",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Windows Recall Feature Enabled Via Reg.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_enable_windows_recall.yml",
+                        "remote_content": "title: Windows Recall Feature Enabled Via Reg.EXE\nid: 817f252c-5143-4dae-b418-48c3e9f63728\nrelated:\n    - id: 5dfc1465-8f65-4fde-8eb5-6194380c6a62\n      type: similar\n    - id: 75180c5f-4ea1-461a-a4f6-6e4700c065d4\n      type: similar\nstatus: experimental\ndescription: |\n    Detects the enabling of the Windows Recall feature via registry manipulation.\n    Windows Recall can be enabled by deleting the existing \"DisableAIDataAnalysis\" value, or setting it to 0.\n    Adversaries may enable Windows Recall as part of post-exploitation discovery and collection activities.\n    This rule assumes that Recall is already explicitly disabled on the host, and subsequently enabled by the adversary.\nreferences:\n    - https://learn.microsoft.com/en-us/windows/client-management/manage-recall\n    - https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-windowsai#disableaidataanalysis\nauthor: Sajid Nawaz Khan\ndate: 2024-06-02\ntags:\n    - attack.collection\n    - attack.t1113\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\reg.exe'\n        - OriginalFileName: 'reg.exe'\n    selection_value:\n        # HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\\DisableAIDataAnalysis\n        # HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI\\DisableAIDataAnalysis\n        CommandLine|contains|all:\n            - 'Microsoft\\Windows\\WindowsAI'\n            - 'DisableAIDataAnalysis'\n    selection_action_add:\n        CommandLine|contains:\n            - 'add'\n            - '0'\n    selection_action_delete:\n        CommandLine|contains: 'delete'\n    condition: selection_img and selection_value and 1 of selection_action_*\nfalsepositives:\n    - Legitimate use/activation of Windows Recall\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "666ecfc7-229d-42b8-821e-1a8f8cb7057c",
+                    "5d47cdea-435c-45aa-8db0-4693950d210f",
+                    "e2f17c5d-b02a-442b-9052-6eb89c9fec9c",
+                    "0259baeb-9f63-4c69-bf10-eb038c390688",
+                    "dbe4b9c5-c254-4258-9688-d6af0b7967fd",
+                    "2158f96f-43c2-43cb-952a-ab4580f32382",
+                    "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                    "5cbf6a0e-bfa4-458c-9b40-416a02de0b81",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                    "0877ed01-da46-4c49-8476-d49cdd80dfa7",
+                    "5dbae98e-7974-4480-86db-44be950d210f",
+                    "d4a11f63-2390-411c-9adf-d791fd152830",
+                    "5b43ce0c-47e8-476c-97d6-f56402de0b81",
+                    "51b37302-b844-4c08-ac98-ae6955ed1f55",
+                    "5d498330-f574-4889-bcc9-c53c950d210f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                        "lookup_data": {
+                            "description": "Prynt Stealer Spotted In the Wild - A New Info Stealer Performing Clipper And Keylogger Activities",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/4b1c186d-8bf2-4297-9cbc-f8f00192770b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666601854",
+                            "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "666ecfc7-229d-42b8-821e-1a8f8cb7057c",
+                        "lookup_data": {
+                            "description": "A General detection for processes loading System.Drawing.ni.dll. This could be an indicator of potential Screen Capture.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection for processes loading System.Drawing.ni.dll. This\n  could be an indicator of potential Screen Capture.\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n    Image|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\Microsoft.NET\\\n    - C:\\Windows\\ImmersiveControlPanel\\\n  filter2:\n    Image: C:\\Windows\\System32\\NhNotifSys.exe\n  filter3:\n    Image|endswith:\n    - \\AppData\\Local\\NhNotifSys\\nahimic\\nahimicNotifSys.exe\n    - \\GitHubDesktop\\Update.exe\n    Image|startswith: C:\\Users\\\n  selection:\n    ImageLoaded|endswith: \\System.Drawing.ni.dll\nfalsepositives:\n- Unknown\nid: 666ecfc7-229d-42b8-821e-1a8f8cb7057c\nlevel: low\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/08/13\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/16\n- https://threathunterplaybook.com/evals/apt29/detections/7.A.1_3B4E5808-3C71-406A-B181-17B0CE3178C9.html\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1113\ntitle: Suspicious System.Drawing Load\n",
+                            "sigma:id": "666ecfc7-229d-42b8-821e-1a8f8cb7057c",
+                            "title": "Suspicious System.Drawing Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d47cdea-435c-45aa-8db0-4693950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - From Carnaval to Cinco de Mayo â€“ The journey of Amavaldo",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d47cdea-435c-45aa-8db0-4693950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1565505795",
+                            "uuid": "5d47cdea-435c-45aa-8db0-4693950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e2f17c5d-b02a-442b-9052-6eb89c9fec9c",
+                        "lookup_data": {
+                            "description": "Detects adversary creating screen capture of a full with xwd. Highly recommended using rule on servers, due high usage of screenshot utilities on user workstations",
+                            "raw": "author: Pawel Mazur\ndate: 2021/09/13\ndescription: Detects adversary creating screen capture of a full with xwd. Highly\n  recommended using rule on servers, due high usage of screenshot utilities on user\n  workstations\ndetection:\n  condition: selection and 1 of xwd_*\n  selection:\n    a0: xwd\n    type: EXECVE\n  xwd_no_root_window:\n    a1: -out\n    a2|endswith: .xwd\n  xwd_root_window:\n    a1: -root\n    a2: -out\n    a3|endswith: .xwd\nfalsepositives:\n- Legitimate use of screenshot utility\nid: e2f17c5d-b02a-442b-9052-6eb89c9fec9c\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/12/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1113/T1113.md#atomic-test-3---x-windows-capture\n- https://linux.die.net/man/1/xwd\nstatus: test\ntags:\n- attack.collection\n- attack.t1113\ntitle: Screen Capture with Xwd\n",
+                            "sigma:id": "e2f17c5d-b02a-442b-9052-6eb89c9fec9c",
+                            "title": "Screen Capture with Xwd",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0259baeb-9f63-4c69-bf10-eb038c390688",
+                        "lookup_data": {
+                            "capec": "CAPEC-648",
+                            "mitre-attack-id": "T1113",
+                            "mitre-cti:description": "Adversaries may attempt to take screen captures of the desktop to gather information over the course of an operation. Screen capturing functionality may be included as a feature of a remote access tool used in post-compromise operations. Taking a screenshot is also typically possible through native utilities or API calls, such as <code>CopyFromScreen</code>, <code>xwd</code>, or <code>screencapture</code>.(Citation: CopyFromScreen .NET)(Citation: Antiquated Mac Malware)\n",
+                            "mitre-cti:name": "Screen Capture",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--0259baeb-9f63-4c69-bf10-eb038c390688', 'type': 'attack-pattern', 'created': '2017-05-31T21:31:25.060Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1113', 'url': 'https://attack.mitre.org/techniques/T1113'}, {'external_id': 'CAPEC-648', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/648.html'}, {'source_name': 'CopyFromScreen .NET', 'url': 'https://docs.microsoft.com/en-us/dotnet/api/system.drawing.graphics.copyfromscreen?view=netframework-4.8', 'description': 'Microsoft. (n.d.). Graphics.CopyFromScreen Method. Retrieved March 24, 2020.'}, {'url': 'https://blog.malwarebytes.com/threat-analysis/2017/01/new-mac-backdoor-using-antiquated-code/', 'description': 'Thomas Reed. (2017, January 18). New Mac backdoor using antiquated code. Retrieved July 5, 2017.', 'source_name': 'Antiquated Mac Malware'}], 'modified': '2020-03-24T19:56:37.627Z', 'name': 'Screen Capture', 'description': 'Adversaries may attempt to take screen captures of the desktop to gather information over the course of an operation. Screen capturing functionality may be included as a feature of a remote access tool used in post-compromise operations. Taking a screenshot is also typically possible through native utilities or API calls, such as <code>CopyFromScreen</code>, <code>xwd</code>, or <code>screencapture</code>.(Citation: CopyFromScreen .NET)(Citation: Antiquated Mac Malware)\\n', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}], 'x_mitre_detection': 'Monitoring for screen capture behavior will depend on the method used to obtain data from the operating system and write output files. Detection methods could include collecting information from unusual processes using API calls used to obtain image data, and monitoring for image files written to disk. The sensor data may need to be correlated with other events to identify malicious activity, depending on the legitimacy of this behavior within a given network environment.', 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: OS API Execution'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dbe4b9c5-c254-4258-9688-d6af0b7967fd",
+                        "lookup_data": {
+                            "description": "Detects adversary creating screen capture of a desktop with Import Tool.\nHighly recommended using rule on servers, due to high usage of screenshot utilities on user workstations.\nImageMagick must be installed.\n",
+                            "raw": "author: Pawel Mazur\ndate: 2021/09/21\ndescription: 'Detects adversary creating screen capture of a desktop with Import Tool.\n\n  Highly recommended using rule on servers, due to high usage of screenshot utilities\n  on user workstations.\n\n  ImageMagick must be installed.\n\n  '\ndetection:\n  condition: import and (import_window_root or import_no_window_root)\n  import:\n    a0: import\n    type: EXECVE\n  import_no_window_root:\n    a1|endswith:\n    - .png\n    - .jpg\n    - .jpeg\n  import_window_root:\n    a1: -window\n    a2: root\n    a3|endswith:\n    - .png\n    - .jpg\n    - .jpeg\nfalsepositives:\n- Legitimate use of screenshot utility\nid: dbe4b9c5-c254-4258-9688-d6af0b7967fd\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/10/09\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1113/T1113.md\n- https://linux.die.net/man/1/import\n- https://imagemagick.org/\nstatus: test\ntags:\n- attack.collection\n- attack.t1113\ntitle: Screen Capture with Import Tool\n",
+                            "sigma:id": "dbe4b9c5-c254-4258-9688-d6af0b7967fd",
+                            "title": "Screen Capture with Import Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2158f96f-43c2-43cb-952a-ab4580f32382",
+                        "lookup_data": {
+                            "description": "The psr.exe captures desktop screenshots and saves them on the local machine",
+                            "raw": "author: Beyu Denis, oscd.community\ndate: 2019/10/12\ndescription: The psr.exe captures desktop screenshots and saves them on the local\n  machine\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: /start\n    Image|endswith: \\Psr.exe\nfalsepositives:\n- Unknown\nid: 2158f96f-43c2-43cb-952a-ab4580f32382\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Psr/\n- https://www.sans.org/summit-archives/file/summit-archive-1493861893.pdf\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1560.001/T1560.001.md\nstatus: test\ntags:\n- attack.collection\n- attack.t1113\ntitle: Psr.exe Capture Screenshots\n",
+                            "sigma:id": "2158f96f-43c2-43cb-952a-ab4580f32382",
+                            "title": "Psr.exe Capture Screenshots",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - A journey to Zebrocy land",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ce6aa86-9cd8-4302-9dc9-4a59950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1563528054",
+                            "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cbf6a0e-bfa4-458c-9b40-416a02de0b81",
+                        "lookup_data": {
+                            "description": "OSINT - FINTEAM: Trojanized TeamViewer Against Government Targets",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5cbf6a0e-bfa4-458c-9b40-416a02de0b81.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1556049198",
+                            "uuid": "5cbf6a0e-bfa4-458c-9b40-416a02de0b81",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0877ed01-da46-4c49-8476-d49cdd80dfa7",
+                        "lookup_data": {
+                            "description": "Detects attempts to use screencapture to collect macOS screenshots",
+                            "raw": "author: remotephone, oscd.community\ndate: 2020/10/13\ndescription: Detects attempts to use screencapture to collect macOS screenshots\ndetection:\n  condition: selection\n  selection:\n    Image: /usr/sbin/screencapture\nfalsepositives:\n- Legitimate user activity taking screenshots\nid: 0877ed01-da46-4c49-8476-d49cdd80dfa7\nlevel: low\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1113/T1113.md\n- https://github.com/EmpireProject/Empire/blob/08cbd274bef78243d7a8ed6443b8364acd1fc48b/lib/modules/python/collection/osx/screenshot.py\nstatus: test\ntags:\n- attack.collection\n- attack.t1113\ntitle: Screen Capture - macOS\n",
+                            "sigma:id": "0877ed01-da46-4c49-8476-d49cdd80dfa7",
+                            "title": "Screen Capture - macOS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5dbae98e-7974-4480-86db-44be950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Dans lâ€™Å“il de notre CyberSOC : la campagne malspam Aggah diversifie ses outils",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5dbae98e-7974-4480-86db-44be950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1575969880",
+                            "uuid": "5dbae98e-7974-4480-86db-44be950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d4a11f63-2390-411c-9adf-d791fd152830",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to take screen captures of the desktop to gather information over the course of an operation.\nScreen capturing functionality may be included as a feature of a remote access tool used in post-compromise operations\n",
+                            "raw": "author: frack113\ndate: 2021/12/28\ndescription: 'Adversaries may attempt to take screen captures of the desktop to gather\n  information over the course of an operation.\n\n  Screen capturing functionality may be included as a feature of a remote access tool\n  used in post-compromise operations\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains: .CopyFromScreen\nfalsepositives:\n- Unknown\nid: d4a11f63-2390-411c-9adf-d791fd152830\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/07/07\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1113/T1113.md#atomic-test-6---windows-screen-capture-copyfromscreen\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1113\ntitle: Windows Screen Capture with CopyFromScreen\n",
+                            "sigma:id": "d4a11f63-2390-411c-9adf-d791fd152830",
+                            "title": "Windows Screen Capture with CopyFromScreen",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5b43ce0c-47e8-476c-97d6-f56402de0b81",
+                        "lookup_data": {
+                            "description": "OSINT - APT Attack In the Middle East: The Big Bang",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5b43ce0c-47e8-476c-97d6-f56402de0b81.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1531205768",
+                            "uuid": "5b43ce0c-47e8-476c-97d6-f56402de0b81",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "51b37302-b844-4c08-ac98-ae6955ed1f55",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1113",
+                            "mitre-cti:description": "Blocking software based on screen capture functionality may be difficult, and there may be legitimate software that performs those actions. Instead, identify potentially malicious software that may have functionality to acquire screen captures, and audit and/or block it by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Screen Capture Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--51b37302-b844-4c08-ac98-ae6955ed1f55', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1113', 'url': 'https://attack.mitre.org/mitigations/T1113', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:24.643Z', 'name': 'Screen Capture Mitigation', 'description': 'Blocking software based on screen capture functionality may be difficult, and there may be legitimate software that performs those actions. Instead, identify potentially malicious software that may have functionality to acquire screen captures, and audit and/or block it by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Sharpening the Machete",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d498330-f574-4889-bcc9-c53c950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566552908",
+                            "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1113",
+                "display_name": "Screen Capture",
+                "atomic_tests": [
+                    {
+                        "name": "Screencapture",
+                        "auto_generated_guid": "0f47ceb1-720f-4275-96b8-21f0562217ac",
+                        "description": "Use screencapture command to collect a full desktop screenshot\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "path",
+                                "default": "/tmp/T1113_desktop.png"
+                            }
+                        },
+                        "executor": {
+                            "command": "screencapture #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Screencapture (silent)",
+                        "auto_generated_guid": "deb7d358-5fbd-4dc4-aecc-ee0054d2d9a4",
+                        "description": "Use screencapture command to collect a full desktop screenshot\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "path",
+                                "default": "/tmp/T1113_desktop.png"
+                            }
+                        },
+                        "executor": {
+                            "command": "screencapture -x #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "X Windows Capture",
+                        "auto_generated_guid": "8206dd0c-faf6-4d74-ba13-7fbe13dce6ac",
+                        "description": "Use xwd command to collect a full desktop screenshot and review file with xwud\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "path",
+                                "default": "/tmp/T1113_desktop.xwd"
+                            },
+                            "package_checker": {
+                                "description": "Package checking command for linux. Debian system command- dpkg -s x11-apps",
+                                "type": "string",
+                                "default": "rpm -q xorg-x11-apps"
+                            },
+                            "package_installer": {
+                                "description": "Package installer command for linux. Debian system command- apt-get install x11-apps",
+                                "type": "string",
+                                "default": "yum install -y xorg-x11-apps"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Package with XWD and XWUD must exist on device\n",
+                                "prereq_command": "if #{package_checker} > /dev/null; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "sudo #{package_installer} \n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "xwd -root -out #{output_file}\nxwud -in #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "X Windows Capture (freebsd)",
+                        "auto_generated_guid": "562f3bc2-74e8-46c5-95c7-0e01f9ccc65c",
+                        "description": "Use xwd command to collect a full desktop screenshot and review file with xwud\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "path",
+                                "default": "/tmp/T1113_desktop.xwd"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Package with XWD and XWUD must exist on device\n",
+                                "prereq_command": "if [ -x \"$(command -v xwd)\" ]; then exit 0; else exit 1; fi\nif [ -x \"$(command -v xwud)\" ]; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "pkg install -y xwd xwud \n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "xwd -root -out #{output_file}\nxwud -in #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Capture Linux Desktop using Import Tool",
+                        "auto_generated_guid": "9cd1cccb-91e4-4550-9139-e20a586fcea1",
+                        "description": "Use import command from ImageMagick to collect a full desktop screenshot\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "path",
+                                "default": "/tmp/T1113_desktop.png"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "ImageMagick must be installed\n",
+                                "prereq_command": "if import -help > /dev/null 2>&1; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "sudo apt install graphicsmagick-imagemagick-compat\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "import -window root #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Capture Linux Desktop using Import Tool (freebsd)",
+                        "auto_generated_guid": "18397d87-38aa-4443-a098-8a48a8ca5d8d",
+                        "description": "Use import command from ImageMagick to collect a full desktop screenshot\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "path",
+                                "default": "/tmp/T1113_desktop.png"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "ImageMagick must be installed\n",
+                                "prereq_command": "if import -help > /dev/null 2>&1; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "pkg install -y ImageMagick7\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "import -window root #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Windows Screencapture",
+                        "auto_generated_guid": "3c898f62-626c-47d5-aad2-6de873d69153",
+                        "description": "Use Psr.exe binary to collect screenshots of user display. Test will do left mouse click to simulate user behaviour\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "path",
+                                "default": "c:\\temp\\T1113_desktop.zip"
+                            },
+                            "recording_time": {
+                                "description": "Time to take screenshots",
+                                "type": "integer",
+                                "default": 5
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "cmd /c start /b psr.exe /start /output #{output_file} /sc 1 /gui 0 /stopevent 12\nAdd-Type -MemberDefinition '[DllImport(\"user32.dll\")] public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int info);' -Name U32 -Namespace W;\n[W.U32]::mouse_event(0x02 -bor 0x04 -bor 0x01, 0, 0, 0, 0);\ncmd /c \"timeout #{recording_time} > NULL && psr.exe /stop\"\n",
+                            "cleanup_command": "rm #{output_file} -ErrorAction Ignore\n"
+                        }
+                    },
+                    {
+                        "name": "Windows Screen Capture (CopyFromScreen)",
+                        "auto_generated_guid": "e9313014-985a-48ef-80d9-cde604ffc187",
+                        "description": "Take a screen capture of the desktop through a call to the [Graphics.CopyFromScreen] .NET API.\n\n[Graphics.CopyFromScreen]: https://docs.microsoft.com/en-us/dotnet/api/system.drawing.graphics.copyfromscreen\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Path where captured results will be placed",
+                                "type": "path",
+                                "default": "$env:TEMP\\T1113.png"
+                            }
+                        },
+                        "executor": {
+                            "command": "Add-Type -AssemblyName System.Windows.Forms\n$screen = [Windows.Forms.SystemInformation]::VirtualScreen\n$bitmap = New-Object Drawing.Bitmap $screen.Width, $screen.Height\n$graphic = [Drawing.Graphics]::FromImage($bitmap)\n$graphic.CopyFromScreen($screen.Left, $screen.Top, 0, 0, $bitmap.Size)\n$bitmap.Save(\"#{output_file}\")\n",
+                            "cleanup_command": "Remove-Item #{output_file} -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Windows Recall Feature Enabled - DisableAIDataAnalysis Value Deleted",
+                        "auto_generated_guid": "5a496325-0115-4274-8eb9-755b649ad0fb",
+                        "description": "Detects the enabling of the Windows Recall feature via registry manipulation. Windows Recall can be enabled by deleting the existing \"DisableAIDataAnalysis\" registry value. Adversaries may enable Windows Recall as part of post-exploitation discovery and collection activities. This rule assumes that Recall is already explicitly disabled on the host, and subsequently enabled by the adversary. \n- https://learn.microsoft.com/en-us/windows/client-management/manage-recall\n- https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-windowsai#disableaidataanalysis",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f\nreg delete \"HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /f\n",
+                            "cleanup_command": "reg add \"HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:07:13"
+}

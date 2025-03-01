@@ -1,0 +1,181 @@
+{
+    "id": "T1021.004",
+    "name": "SSH",
+    "description": "Adversaries may use [Valid Accounts](T1078) to log into remote machines using Secure Shell (SSH). The adversary may then perform actions as the logged-on user.\nSSH is a protocol that allows authorized users to open remote shells on other computers. Many Linux and macOS versions come with SSH installed by default, although typically disabled until the user enables it. The SSH server can be configured to use standard password authentication or public-private keypairs in lieu of or in addition to a password. In this authentication scenario, the user’s public key must be in a special file on the computer running the server that lists which keypairs are allowed to login as that user.",
+    "platforms": "Linux, macOS",
+    "kill_chain_phases": "Lateral Movement",
+    "data_sources": "Process: Process Creation, Network Traffic: Network Connection Creation, Logon Session: Logon Session Creation",
+    "detection": "Use of SSH may be legitimate depending on the environment and how it’s used. Other factors, such as access patterns and activity that occurs after a remote login, may indicate suspicious or malicious behavior with SSH. Monitor for user accounts logged into systems they would not normally access or access patterns to multiple systems over a relatively short period of time.\nOn macOS systems `log show --predicate 'process = \"sshd\"'` can be used to review incoming SSH connection attempts for suspicious activity. The command `log show --info --predicate 'process = \"ssh\" or eventMessage contains \"ssh\"'` can be used to review outgoing SSH connection activity.(Citation: Apple Unified Log Analysis Remote Login and Screen Sharing)\nOn Linux systems SSH activity can be found in the logs located in `/var/log/auth.log` or `/var/log/secure` depending on the distro you are using.",
+    "url": "https://attack.mitre.org/techniques/T1021/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1021.004",
+                "atomic_attack_guid": "280812c8-4dae-43e9-a74e-1d08ab997c0e",
+                "atomic_attack_name": "ESXi - Enable SSH via VIM-CMD",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Tunneling Tool Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_susp_exfil_and_tunneling_tool_execution.yml",
+                        "remote_content": "title: Tunneling Tool Execution\nid: c75309a3-59f8-4a8d-9c2c-4c927ad50555\nstatus: test\ndescription: Detects the execution of well known tools that can be abused for data exfiltration and tunneling.\nauthor: Daniil Yugoslavskiy, oscd.community\nreferences:\n    - https://www.microsoft.com/en-us/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\ndate: 2019-10-24\nmodified: 2024-01-18\ntags:\n    - attack.exfiltration\n    - attack.command-and-control\n    - attack.t1041\n    - attack.t1572\n    - attack.t1071.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\httptunnel.exe'\n            - '\\plink.exe'\n            - '\\socat.exe'\n            - '\\stunnel.exe'\n    condition: selection\nfalsepositives:\n    - Legitimate administrators using one of these tools\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Protocol Tunneling with Plink",
+                        "rule_link": "https://research.splunk.com/endpoint/8aac5e1e-0fab-4437-af0b-c6e60af23eed/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "3ce8e9a4-bc61-4c9b-8e69-d7e2492a8781",
+                    "2db31dcd-54da-405d-acef-b9129b816ed6",
+                    "f2049d65-5315-4c37-9bbb-900c9b851204",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "3ce8e9a4-bc61-4c9b-8e69-d7e2492a8781",
+                        "lookup_data": {
+                            "description": "Detects scenarios where an attacker enables the OpenSSH server and server starts to listening on SSH socket.",
+                            "raw": "author: mdecrevoisier\ndate: 2022/10/25\ndescription: Detects scenarios where an attacker enables the OpenSSH server and server\n  starts to listening on SSH socket.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4\n    payload|startswith: 'Server listening on '\n    process: sshd\nfalsepositives:\n- Legitimate administrator activity\nid: 3ce8e9a4-bc61-4c9b-8e69-d7e2492a8781\nlevel: medium\nlogsource:\n  product: windows\n  service: openssh\nreferences:\n- https://github.com/mdecrevoisier/EVTX-to-MITRE-Attack/tree/master/TA0008-Lateral%20Movement/T1021.004-Remote%20Service%20SSH\n- https://winaero.com/enable-openssh-server-windows-10/\n- https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse\n- https://virtualizationreview.com/articles/2020/05/21/ssh-server-on-windows-10.aspx\n- https://medium.com/threatpunter/detecting-adversary-tradecraft-with-image-load-event-logging-and-eql-8de93338c16\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.004\ntitle: OpenSSH Server Listening On Socket\n",
+                            "sigma:id": "3ce8e9a4-bc61-4c9b-8e69-d7e2492a8781",
+                            "title": "OpenSSH Server Listening On Socket",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2db31dcd-54da-405d-acef-b9129b816ed6",
+                        "lookup_data": {
+                            "capec": "CAPEC-555",
+                            "mitre-attack-id": "T1021.004",
+                            "mitre-cti:description": "Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to log into remote machines using Secure Shell (SSH). The adversary may then perform actions as the logged-on user.\n\nSSH is a protocol that allows authorized users to open remote shells on other computers. Many Linux and macOS versions come with SSH installed by default, although typically disabled until the user enables it. The SSH server can be configured to use standard password authentication or public-private keypairs in lieu of or in addition to a password. In this authentication scenario, the user’s public key must be in a special file on the computer running the server that lists which keypairs are allowed to login as that user.",
+                            "mitre-cti:name": "SSH",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--2db31dcd-54da-405d-acef-b9129b816ed6', 'type': 'attack-pattern', 'created': '2020-02-11T18:27:15.774Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1021.004', 'url': 'https://attack.mitre.org/techniques/T1021/004'}, {'external_id': 'CAPEC-555', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/555.html'}, {'source_name': 'Apple Unified Log Analysis Remote Login and Screen Sharing', 'url': 'https://sarah-edwards-xzkc.squarespace.com/blog/2020/4/30/analysis-of-apple-unified-logs-quarantine-edition-entry-6-working-from-home-remote-logins', 'description': 'Sarah Edwards. (2020, April 30). Analysis of Apple Unified Logs: Quarantine Edition [Entry 6] – Working From Home? Remote Logins. Retrieved August 19, 2021.'}], 'modified': '2021-10-15T14:15:06.853Z', 'name': 'SSH', 'description': 'Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to log into remote machines using Secure Shell (SSH). The adversary may then perform actions as the logged-on user.\\n\\nSSH is a protocol that allows authorized users to open remote shells on other computers. Many Linux and macOS versions come with SSH installed by default, although typically disabled until the user enables it. The SSH server can be configured to use standard password authentication or public-private keypairs in lieu of or in addition to a password. In this authentication scenario, the user’s public key must be in a special file on the computer running the server that lists which keypairs are allowed to login as that user.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'lateral-movement'}], 'x_mitre_detection': 'Use of SSH may be legitimate depending on the environment and how it’s used. Other factors, such as access patterns and activity that occurs after a remote login, may indicate suspicious or malicious behavior with SSH. Monitor for user accounts logged into systems they would not normally access or access patterns to multiple systems over a relatively short period of time.\\n\\nOn macOS systems <code>log show --predicate \\'process = \"sshd\"\\'</code> can be used to review incoming SSH connection attempts for suspicious activity. The command <code>log show --info --predicate \\'process = \"ssh\" or eventMessage contains \"ssh\"\\'</code> can be used to review outgoing SSH connection activity.(Citation: Apple Unified Log Analysis Remote Login and Screen Sharing)\\n\\nOn Linux systems SSH activity can be found in the logs located in <code>/var/log/auth.log</code> or <code>/var/log/secure</code> depending on the distro you are using.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Connection Creation', 'Logon Session: Logon Session Creation', 'Process: Process Creation'], 'x_mitre_system_requirements': ['An SSH server is configured and running.']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f2049d65-5315-4c37-9bbb-900c9b851204",
+                        "lookup_data": {
+                            "description": "OSINT - CircleCI incident report for January 4, 2023 security incident",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/f2049d65-5315-4c37-9bbb-900c9b851204.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1674116421",
+                            "uuid": "f2049d65-5315-4c37-9bbb-900c9b851204",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1021.004",
+                "display_name": "Remote Services: SSH",
+                "atomic_tests": [
+                    {
+                        "name": "ESXi - Enable SSH via PowerCLI",
+                        "auto_generated_guid": "8f6c14d1-f13d-4616-b7fc-98cc69fe56ec",
+                        "description": "An adversary enables the SSH service on a ESXi host to maintain persistent access to the host and to carryout subsequent operations.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vm_host": {
+                                "description": "Specify the host name of the ESXi Server",
+                                "type": "string",
+                                "default": "atomic.local"
+                            },
+                            "vm_user": {
+                                "description": "Specify the privilege user account on ESXi Server",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "vm_pass": {
+                                "description": "Specify the privilege user password on ESXi Server",
+                                "type": "string",
+                                "default": "pass"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if VMWARE PowerCLI PowerShell Module is installed.\n",
+                                "prereq_command": "$RequiredModule = Get-Module -Name VMware.PowerCLI -ListAvailable\nif (-not $RequiredModule) {exit 1}\n",
+                                "get_prereq_command": "Install-Module -Name VMware.PowerCLI\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -ParticipateInCEIP:$false -Confirm:$false \nConnect-VIServer -Server #{vm_host} -User #{vm_user} -Password #{vm_pass}\nGet-VMHostService -VMHost #{vm_host} | Where-Object {$_.Key -eq \"TSM-SSH\" } | Start-VMHostService -Confirm:$false\n",
+                            "cleanup_command": "Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -ParticipateInCEIP:$false -Confirm:$false \nConnect-VIServer -Server #{vm_host} -User #{vm_user} -Password #{vm_pass}\nGet-VMHostService -VMHost #{vm_host} | Where-Object {$_.Key -eq \"TSM-SSH\" } | Stop-VMHostService -Confirm:$false\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "ESXi - Enable SSH via VIM-CMD",
+                        "auto_generated_guid": "280812c8-4dae-43e9-a74e-1d08ab997c0e",
+                        "description": "An adversary enables SSH on an ESXi host to maintain persistence and creeate another command execution interface.\n[Reference](https://lolesxi-project.github.io/LOLESXi/lolesxi/Binaries/vim-cmd/#enable%20service)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vm_host": {
+                                "description": "Specify the host name or IP of the ESXi server.",
+                                "type": "string",
+                                "default": "atomic.local"
+                            },
+                            "vm_user": {
+                                "description": "Specify the privilege user account on the ESXi server.",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "vm_pass": {
+                                "description": "Specify the privileged user's password.",
+                                "type": "string",
+                                "default": "password"
+                            },
+                            "plink_file": {
+                                "description": "Path to Plink",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if we have plink\n",
+                                "prereq_command": "if (Test-Path \"#{plink_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe\" -OutFile \"#{plink_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "echo \"\" | \"#{plink_file}\" -batch \"#{vm_host}\" -ssh -l #{vm_user} -pw \"#{vm_pass}\" \"vim-cmd hostsvc/enable_ssh\"\n",
+                            "cleanup_command": "echo \"\" | \"#{plink_file}\" -batch \"#{vm_host}\" -ssh -l #{vm_user} -pw \"#{vm_pass}\" \"vim-cmd hostsvc/disable_ssh\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:01:18"
+}

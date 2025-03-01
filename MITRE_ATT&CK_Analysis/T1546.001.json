@@ -1,0 +1,121 @@
+{
+    "id": "T1546.001",
+    "name": "Change Default File Association",
+    "description": "Adversaries may establish persistence by executing malicious content triggered by a file type association. When a file is opened, the default program used to open the file (also called the file association or handler) is checked. File association selections are stored in the Windows Registry and can be edited by users, administrators, or programs that have Registry access (Citation: Microsoft Change Default Programs) (Citation: Microsoft File Handlers) or by administrators using the built-in assoc utility. (Citation: Microsoft Assoc Oct 2017) Applications can modify the file association for a given file extension to call an arbitrary program when a file with the given extension is opened.\nSystem file associations are listed under `HKEY_CLASSES_ROOT.[extension]`, for example `HKEY_CLASSES_ROOT.txt`. The entries point to a handler for that extension located at `HKEY_CLASSES_ROOT[handler]`. The various commands are then listed as subkeys underneath the shell key at `HKEY_CLASSES_ROOT[handler]shell[action]command`. For example:\n* `HKEY_CLASSES_ROOTtxtfileshellopencommand`\n* `HKEY_CLASSES_ROOTtxtfileshellprintcommand`\n* `HKEY_CLASSES_ROOTtxtfileshellprinttocommand`\nThe values of the keys listed are commands that are executed when the handler opens the file extension. Adversaries can modify these values to continually execute arbitrary commands. (Citation: TrendMicro TROJ-FAKEAV OCT 2012)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution",
+    "detection": "Collect and analyze changes to Registry keys that associate file extensions to default applications for execution and correlate with unknown process launch activity or unusual file types for that process.\nUser file association preferences are stored under ` [HKEY_CURRENT_USER]SoftwareMicrosoftWindowsCurrentVersionExplorerFileExts` and override associations configured under `[HKEY_CLASSES_ROOT]`. Changes to a user's preference will occur under this entry's subkeys.\nAlso look for abnormal process call trees for execution of other commands that could relate to Discovery actions or other techniques.",
+    "url": "https://attack.mitre.org/techniques/T1546/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1546.001",
+                "atomic_attack_guid": "10a08978-2045-4d62-8c42-1957bbbea102",
+                "atomic_attack_name": "Change Default File Association",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Change Default File Association Via Assoc",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_assoc_execution.yml",
+                        "remote_content": "title: Change Default File Association Via Assoc\nid: 3d3aa6cd-6272-44d6-8afc-7e88dfef7061\nrelated:\n    - id: ae6f14e6-14de-45b0-9f44-c0986f50dc89\n      type: similar\nstatus: test\ndescription: |\n    Detects file association changes using the builtin \"assoc\" command.\n    When a file is opened, the default program used to open the file (also called the file association or handler) is checked. File association selections are stored in the Windows Registry and can be edited by users, administrators, or programs that have Registry access or by administrators using the built-in assoc utility. Applications can modify the file association for a given file extension to call an arbitrary program when a file with the given extension is opened.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.001/T1546.001.md\nauthor: Timur Zinniatullin, oscd.community\ndate: 2019-10-21\nmodified: 2023-03-06\ntags:\n    - attack.persistence\n    - attack.t1546.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli:\n        CommandLine|contains: 'assoc'\n    condition: all of selection_*\nfields:\n    - Image\n    - CommandLine\n    - User\n    - LogonGuid\n    - Hashes\n    - ParentProcessGuid\n    - ParentCommandLine\nfalsepositives:\n    - Admin activity\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "152f3630-77c1-4284-bcc0-4cc68ab2f6e7",
+                    "98034fef-d9fb-4667-8dc4-2eab6231724c",
+                    "3d3aa6cd-6272-44d6-8afc-7e88dfef7061",
+                    "ae6f14e6-14de-45b0-9f44-c0986f50dc89"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "152f3630-77c1-4284-bcc0-4cc68ab2f6e7",
+                        "lookup_data": {
+                            "description": "Detects the shell open key manipulation (exefile and ms-settings) used for persistence and the pattern of UAC Bypass using fodhelper.exe, computerdefaults.exe, slui.exe via registry keys (e.g. UACMe 33 or 62)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the shell open key manipulation (exefile and ms-settings) used\n  for persistence and the pattern of UAC Bypass using fodhelper.exe, computerdefaults.exe,\n  slui.exe via registry keys (e.g. UACMe 33 or 62)\ndetection:\n  condition: selection1 or selection2 or (selection3 and not filter_sel3)\n  filter_sel3:\n    Details: (Empty)\n  selection1:\n    Details|contains: \\Software\\Classes\\{\n    EventType: SetValue\n    TargetObject|endswith: Classes\\ms-settings\\shell\\open\\command\\SymbolicLinkValue\n  selection2:\n    TargetObject|endswith: Classes\\ms-settings\\shell\\open\\command\\DelegateExecute\n  selection3:\n    EventType: SetValue\n    TargetObject|endswith:\n    - Classes\\ms-settings\\shell\\open\\command\\(Default)\n    - Classes\\exefile\\shell\\open\\command\\(Default)\nfalsepositives:\n- Unknown\nid: 152f3630-77c1-4284-bcc0-4cc68ab2f6e7\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/01/13\nreferences:\n- https://github.com/hfiref0x/UACME\n- https://winscripting.blog/2017/05/12/first-entry-welcome-and-uac-bypass/\n- https://github.com/RhinoSecurityLabs/Aggressor-Scripts/tree/master/UACBypass\n- https://tria.ge/211119-gs7rtshcfr/behavioral2 [Lokibot sample from Nov 2021]\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- attack.t1546.001\ntitle: Shell Open Registry Keys Manipulation\n",
+                            "sigma:id": "152f3630-77c1-4284-bcc0-4cc68ab2f6e7",
+                            "title": "Shell Open Registry Keys Manipulation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "98034fef-d9fb-4667-8dc4-2eab6231724c",
+                        "lookup_data": {
+                            "capec": "CAPEC-556",
+                            "mitre-attack-id": "T1546.001",
+                            "mitre-cti:description": "Adversaries may establish persistence by executing malicious content triggered by a file type association. When a file is opened, the default program used to open the file (also called the file association or handler) is checked. File association selections are stored in the Windows Registry and can be edited by users, administrators, or programs that have Registry access or by administrators using the built-in assoc utility.(Citation: Microsoft Change Default Programs)(Citation: Microsoft File Handlers)(Citation: Microsoft Assoc Oct 2017) Applications can modify the file association for a given file extension to call an arbitrary program when a file with the given extension is opened.\n\nSystem file associations are listed under <code>HKEY_CLASSES_ROOT\\.[extension]</code>, for example <code>HKEY_CLASSES_ROOT\\.txt</code>. The entries point to a handler for that extension located at <code>HKEY_CLASSES_ROOT\\\\[handler]</code>. The various commands are then listed as subkeys underneath the shell key at <code>HKEY_CLASSES_ROOT\\\\[handler]\\shell\\\\[action]\\command</code>. For example: \n\n* <code>HKEY_CLASSES_ROOT\\txtfile\\shell\\open\\command</code>\n* <code>HKEY_CLASSES_ROOT\\txtfile\\shell\\print\\command</code>\n* <code>HKEY_CLASSES_ROOT\\txtfile\\shell\\printto\\command</code>\n\nThe values of the keys listed are commands that are executed when the handler opens the file extension. Adversaries can modify these values to continually execute arbitrary commands.(Citation: TrendMicro TROJ-FAKEAV OCT 2012)",
+                            "mitre-cti:name": "Change Default File Association",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Travis Smith, Tripwire', 'Stefan Kanthak'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--98034fef-d9fb-4667-8dc4-2eab6231724c', 'created': '2020-01-24T13:40:47.282Z', 'x_mitre_version': '1.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.001', 'url': 'https://attack.mitre.org/techniques/T1546/001'}, {'source_name': 'Microsoft Change Default Programs', 'url': 'https://support.microsoft.com/en-us/help/18539/windows-7-change-default-programs', 'description': 'Microsoft. (n.d.). Change which programs Windows 7 uses by default. Retrieved July 26, 2016.'}, {'source_name': 'Microsoft File Handlers', 'url': 'http://msdn.microsoft.com/en-us/library/bb166549.aspx', 'description': 'Microsoft. (n.d.). Specifying File Handlers for File Name Extensions. Retrieved November 13, 2014.'}, {'source_name': 'Microsoft Assoc Oct 2017', 'url': 'https://docs.microsoft.com/windows-server/administration/windows-commands/assoc', 'description': 'Plett, C. et al.. (2017, October 15). assoc. Retrieved August 7, 2018.'}, {'source_name': 'TrendMicro TROJ-FAKEAV OCT 2012', 'url': 'https://www.trendmicro.com/vinfo/us/threat-encyclopedia/malware/troj_fakeav.gzd', 'description': 'Sioting, S. (2012, October 8). TROJ_FAKEAV.GZD. Retrieved August 8, 2018.'}, {'url': 'https://capec.mitre.org/data/definitions/556.html', 'source_name': 'capec', 'external_id': 'CAPEC-556'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may establish persistence by executing malicious content triggered by a file type association. When a file is opened, the default program used to open the file (also called the file association or handler) is checked. File association selections are stored in the Windows Registry and can be edited by users, administrators, or programs that have Registry access or by administrators using the built-in assoc utility.(Citation: Microsoft Change Default Programs)(Citation: Microsoft File Handlers)(Citation: Microsoft Assoc Oct 2017) Applications can modify the file association for a given file extension to call an arbitrary program when a file with the given extension is opened.\\n\\nSystem file associations are listed under <code>HKEY_CLASSES_ROOT\\\\.[extension]</code>, for example <code>HKEY_CLASSES_ROOT\\\\.txt</code>. The entries point to a handler for that extension located at <code>HKEY_CLASSES_ROOT\\\\\\\\[handler]</code>. The various commands are then listed as subkeys underneath the shell key at <code>HKEY_CLASSES_ROOT\\\\\\\\[handler]\\\\shell\\\\\\\\[action]\\\\command</code>. For example: \\n\\n* <code>HKEY_CLASSES_ROOT\\\\txtfile\\\\shell\\\\open\\\\command</code>\\n* <code>HKEY_CLASSES_ROOT\\\\txtfile\\\\shell\\\\print\\\\command</code>\\n* <code>HKEY_CLASSES_ROOT\\\\txtfile\\\\shell\\\\printto\\\\command</code>\\n\\nThe values of the keys listed are commands that are executed when the handler opens the file extension. Adversaries can modify these values to continually execute arbitrary commands.(Citation: TrendMicro TROJ-FAKEAV OCT 2012)', 'modified': '2022-04-20T16:55:49.219Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Change Default File Association', 'x_mitre_detection': \"Collect and analyze changes to Registry keys that associate file extensions to default applications for execution and correlate with unknown process launch activity or unusual file types for that process.\\n\\nUser file association preferences are stored under <code> [HKEY_CURRENT_USER]\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\FileExts</code> and override associations configured under <code>[HKEY_CLASSES_ROOT]</code>. Changes to a user's preference will occur under this entry's subkeys.\\n\\nAlso look for abnormal process call trees for execution of other commands that could relate to Discovery actions or other techniques.\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Windows Registry: Windows Registry Key Modification'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM', 'User'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3d3aa6cd-6272-44d6-8afc-7e88dfef7061",
+                        "lookup_data": {
+                            "description": "When a file is opened, the default program used to open the file (also called the file association or handler) is checked. File association selections are stored in the Windows Registry and can be edited by users, administrators, or programs that have Registry access or by administrators using the built-in assoc utility. Applications can modify the file association for a given file extension to call an arbitrary program when a file with the given extension is opened.",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2019/10/21\ndescription: When a file is opened, the default program used to open the file (also\n  called the file association or handler) is checked. File association selections\n  are stored in the Windows Registry and can be edited by users, administrators, or\n  programs that have Registry access or by administrators using the built-in assoc\n  utility. Applications can modify the file association for a given file extension\n  to call an arbitrary program when a file with the given extension is opened.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ' /c '\n    - ' /k '\n    - ' /r '\n    CommandLine|contains|all:\n    - cmd\n    - assoc\nfalsepositives:\n- Admin activity\nfields:\n- Image\n- CommandLine\n- User\n- LogonGuid\n- Hashes\n- ParentProcessGuid\n- ParentCommandLine\nid: 3d3aa6cd-6272-44d6-8afc-7e88dfef7061\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.001/T1546.001.md\nstatus: test\ntags:\n- attack.persistence\n- attack.t1546.001\ntitle: Change Default File Association\n",
+                            "sigma:id": "3d3aa6cd-6272-44d6-8afc-7e88dfef7061",
+                            "title": "Change Default File Association",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ae6f14e6-14de-45b0-9f44-c0986f50dc89",
+                        "lookup_data": {
+                            "description": "Detects when a program changes the default file association of any extension to an executable",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/28\ndescription: Detects when a program changes the default file association of any extension\n  to an executable\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: .exe=exefile\n  selection:\n    CommandLine|contains:\n    - ' /c '\n    - ' /r '\n    - ' /k '\n    CommandLine|contains|all:\n    - cmd\n    - 'assoc '\n    - exefile\nfalsepositives:\n- Unknown\nid: ae6f14e6-14de-45b0-9f44-c0986f50dc89\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/18\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/assoc\nrelated:\n- id: 3d3aa6cd-6272-44d6-8afc-7e88dfef7061\n  type: derived\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.001\ntitle: Change Default File Association To Executable\n",
+                            "sigma:id": "ae6f14e6-14de-45b0-9f44-c0986f50dc89",
+                            "title": "Change Default File Association To Executable",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.001",
+                "display_name": "Event Triggered Execution: Change Default File Association",
+                "atomic_tests": [
+                    {
+                        "name": "Change Default File Association",
+                        "auto_generated_guid": "10a08978-2045-4d62-8c42-1957bbbea102",
+                        "description": "Change Default File Association From cmd.exe of hta to notepad.\n\nUpon successful execution, cmd.exe will change the file association of .hta to notepad.exe. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_extension_handler": {
+                                "description": "txtfile maps to notepad.exe",
+                                "type": "path",
+                                "default": "txtfile"
+                            },
+                            "extension_to_change": {
+                                "description": "File Extension To Hijack",
+                                "type": "string",
+                                "default": ".hta"
+                            },
+                            "original_extension_handler": {
+                                "description": "File Extension To Revert",
+                                "type": "string",
+                                "default": "htafile"
+                            }
+                        },
+                        "executor": {
+                            "command": "assoc #{extension_to_change}=#{target_extension_handler}\n",
+                            "cleanup_command": "assoc  #{extension_to_change}=#{original_extension_handler}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:21:41"
+}

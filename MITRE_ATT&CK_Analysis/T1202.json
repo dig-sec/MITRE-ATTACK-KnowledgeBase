@@ -1,0 +1,554 @@
+{
+    "id": "T1202",
+    "name": "Indirect Command Execution",
+    "description": "Adversaries may abuse utilities that allow for command execution to bypass security restrictions that limit the use of command-line interpreters. Various Windows utilities may be used to execute commands, possibly without invoking [cmd](S0106). For example, [Forfiles](S0193), the Program Compatibility Assistant (pcalua.exe), components of the Windows Subsystem for Linux (WSL), as well as other utilities may invoke the execution of programs and commands from a [Command and Scripting Interpreter](T1059), Run window, or via scripts. (Citation: VectorSec ForFiles Aug 2017) (Citation: Evi1cg Forfiles Nov 2017)\nAdversaries may abuse these features for [Defense Evasion](TA0005), specifically to perform arbitrary execution while subverting detections and/or mitigation controls (such as Group Policy) that limit/prevent the usage of [cmd](S0106) or file extensions more commonly associated with malicious payloads.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Command: Command Execution",
+    "detection": "Monitor and analyze logs from host-based detection mechanisms, such as Sysmon, for events such as process creations that include or are resulting from parameters associated with invoking programs/commands/files and/or spawning child processes/network connections. (Citation: RSA Forfiles Aug 2017)",
+    "url": "https://attack.mitre.org/techniques/T1202",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1202",
+                "atomic_attack_guid": "0fd14730-6226-4f5e-8d67-43c65f1be940",
+                "atomic_attack_name": "Indirect Command Execution - Scriptrunner.exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious PowerShell Child Processes",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_powershell_susp_child_processes.yml",
+                        "remote_content": "title: Potentially Suspicious PowerShell Child Processes\nid: e4b6d2a7-d8a4-4f19-acbd-943c16d90647\nstatus: test\ndescription: |\n    Detects potentially suspicious child processes spawned by PowerShell.\n    Use this rule to hunt for potential anomalies initiating from PowerShell scripts and commands.\nreferences:\n    - https://twitter.com/ankit_anubhav/status/1518835408502620162\nauthor: Florian Roth (Nextron Systems), Tim Shelton\ndate: 2022-04-26\nmodified: 2024-07-16\ntags:\n    - attack.execution\n    - attack.t1059.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        ParentImage|endswith:\n            - '\\powershell_ise.exe'\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        Image|endswith:\n            - '\\bash.exe'\n            - '\\bitsadmin.exe'\n            - '\\certutil.exe'\n            - '\\cscript.exe'\n            - '\\forfiles.exe'\n            - '\\hh.exe'\n            - '\\mshta.exe'\n            - '\\regsvr32.exe'\n            - '\\rundll32.exe'\n            - '\\schtasks.exe'\n            - '\\scrcons.exe'\n            - '\\scriptrunner.exe'\n            - '\\sh.exe'\n            - '\\wmic.exe'\n            - '\\wscript.exe'\n    filter_optional_amazon:\n        ParentCommandLine|contains: '\\Program Files\\Amazon\\WorkspacesConfig\\Scripts\\'  # AWS Workspaces\n        CommandLine|contains: '\\Program Files\\Amazon\\WorkspacesConfig\\Scripts\\'  # AWS Workspaces\n    filter_main_certutil_verify_store:\n        Image|endswith: '\\certutil.exe'\n        CommandLine|contains: '-verifystore '\n    filter_main_wmic:\n        Image|endswith: '\\wmic.exe'\n        CommandLine|contains:\n            - 'qfe list'\n            - 'diskdrive '\n            - 'csproduct '\n            - 'computersystem '\n            - ' os '\n            - ''\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - False positives are to be expected from PowerShell scripts that might make use of additional binaries such as \"mshta\", \"bitsadmin\", etc. Apply additional filters for those scripts.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Use of Scriptrunner.exe",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_lolbin_scriptrunner.yml",
+                        "remote_content": "title: Use of Scriptrunner.exe\nid: 64760eef-87f7-4ed3-93fd-655668ea9420\nstatus: test\ndescription: The \"ScriptRunner.exe\" binary can be abused to proxy execution through it and bypass possible whitelisting\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Scriptrunner/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-01\ntags:\n    - attack.defense-evasion\n    - attack.execution\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\ScriptRunner.exe'\n        - OriginalFileName: 'ScriptRunner.exe'\n    selection_cli:\n        CommandLine|contains: ' -appvscript '\n    condition: all of selection*\nfalsepositives:\n    - Legitimate use when App-v is deployed\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1202",
+                "atomic_attack_guid": "8b34a448-40d9-4fc3-a8c8-4bb286faf7dc",
+                "atomic_attack_name": "Indirect Command Execution - forfiles.exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Forfiles Command Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_forfiles_proxy_execution_.yml",
+                        "remote_content": "title: Forfiles Command Execution\nid: 9aa5106d-bce3-4b13-86df-3a20f1d5cf0b\nrelated:\n    - id: a85cf4e3-56ee-4e79-adeb-789f8fb209a8\n      type: obsolete\n    - id: fa47597e-90e9-41cd-ab72-c3b74cfb0d02\n      type: obsolete\nstatus: test\ndescription: |\n    Detects the execution of \"forfiles\" with the \"/c\" flag.\n    While this is an expected behavior of the tool, it can be abused in order to proxy execution through it with any binary.\n    Can be used to bypass application whitelisting.\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Forfiles/\n    - https://pentestlab.blog/2020/07/06/indirect-command-execution/\nauthor: Tim Rauch, Elastic, E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2022-06-14\nmodified: 2024-03-05\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\forfiles.exe'\n        - OriginalFileName: 'forfiles.exe'\n    selection_cli:\n        CommandLine|contains|windash: ' -c '\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate use via a batch script or by an administrator.\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1202",
+                "atomic_attack_guid": "cecfea7a-5f03-4cdd-8bc8-6f7c22862440",
+                "atomic_attack_name": "Indirect Command Execution - pcalua.exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Use of Pcalua For Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_lolbin_pcalua.yml",
+                        "remote_content": "title: Use of Pcalua For Execution\nid: 0955e4e1-c281-4fb9-9ee1-5ee7b4b754d2\nrelated:\n    - id: fa47597e-90e9-41cd-ab72-c3b74cfb0d02\n      type: obsolete\nstatus: test\ndescription: Detects execition of commands and binaries from the context of The program compatibility assistant (Pcalua.exe). This can be used as a LOLBIN in order to bypass application whitelisting.\nreferences:\n    - https://lolbas-project.github.io/lolbas/Binaries/Pcalua/\n    - https://pentestlab.blog/2020/07/06/indirect-command-execution/\nauthor: Nasreddine Bencherchali (Nextron Systems), E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2022-06-14\nmodified: 2023-01-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\pcalua.exe'\n        CommandLine|contains: ' -a' # No space after the flag because it accepts anything as long as there a \"-a\"\n    condition: selection\nfalsepositives:\n    - Legitimate use by a via a batch script or by an administrator.\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "1f1a8509-2cbb-44f5-8751-8e1571518ce2",
+                    "6545ce61-a1bd-4119-b9be-fcbee42c0cf3",
+                    "f37aba28-a9e6-4045-882c-d5004043b337",
+                    "4ae3e30b-b03f-43aa-87e3-b622f4048eed",
+                    "aaf46cdc-934e-4284-b329-34aa701e3771",
+                    "33339be3-148b-4e16-af56-ad16ec6c7e7b",
+                    "7cce6fc8-a07f-4d84-a53e-96e1879843c9",
+                    "03409c93-a7c7-49ba-9a4c-a00badf2a153",
+                    "7dc2dedd-7603-461a-bc13-15803d132355",
+                    "06b401f4-107c-4ff9-947f-9ec1e7649f1e",
+                    "883faa95-175a-4e22-8181-e5761aeb373c",
+                    "90dcf730-1b71-4ae7-9ffc-6fcf62bd0132",
+                    "7530b96f-ad8e-431d-a04d-ac85cc461fdc",
+                    "258fc8ce-8352-443a-9120-8a11e4857fa5",
+                    "5a3164f2-b373-4152-93cf-090b13c12d27",
+                    "2621b3a6-3840-4810-ac14-a02426086171",
+                    "fa47597e-90e9-41cd-ab72-c3b74cfb0d02",
+                    "7d6d30b8-5b91-4b90-a891-46cccaf29598",
+                    "ec8c4047-fad9-416a-8c81-0f479353d7f6",
+                    "3b0e52ce-517a-4614-a523-1bd5deef6c5e",
+                    "1775e15e-b61b-4d14-a1a3-80981298085a",
+                    "835e75bf-4bfd-47a4-b8a6-b766cac8bcb7",
+                    "dec44ca7-61ad-493c-bfd7-8819c5faa09b",
+                    "1e614ba5-2fc5-4464-b512-2ceafb14d76d",
+                    "c4e49831-1496-40cf-8ce1-b53f942b02f9",
+                    "dc4576d4-7467-424f-9eee-fd2b02855fe0",
+                    "e212d415-0e93-435f-9e1a-f29005bb4723",
+                    "3037d961-21e9-4732-b27a-637bcc7bf539",
+                    "2267fe65-0681-42ad-9a6d-46553d3f3480",
+                    "5e5da86d-bfec-4b9a-ae77-57540a0a020f",
+                    "eca49c87-8a75-4f13-9c73-a5a29e845f03",
+                    "340a090b-c4e9-412e-bb36-b4b16fe96f9b",
+                    "277a4393-446c-449a-b0ed-7fdc7795244c",
+                    "5edc2273-c26f-406c-83f3-f4d948e740dd"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "1f1a8509-2cbb-44f5-8751-8e1571518ce2",
+                        "lookup_data": {
+                            "description": "Detects suspicious Splwow64.exe process without any command line parameters",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects suspicious Splwow64.exe process without any command line parameters\ndetection:\n  condition: selection\n  selection:\n    CommandLine|endswith: splwow64.exe\n    Image|endswith: \\splwow64.exe\nfalsepositives:\n- Unknown\nid: 1f1a8509-2cbb-44f5-8751-8e1571518ce2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://twitter.com/sbousseaden/status/1429401053229891590?s=12\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Suspicious Splwow64 Without Params\n",
+                            "sigma:id": "1f1a8509-2cbb-44f5-8751-8e1571518ce2",
+                            "title": "Suspicious Splwow64 Without Params",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6545ce61-a1bd-4119-b9be-fcbee42c0cf3",
+                        "lookup_data": {
+                            "description": "Detects diagcab leveraging the \"ms-msdt\" handler or the \"msdt.exe\" binary to execute arbitrary commands as seen in CVE-2022-30190",
+                            "raw": "author: GossiTheDog (rule), frack113 (sigma version)\ndate: 2022/06/09\ndescription: Detects diagcab leveraging the \"ms-msdt\" handler or the \"msdt.exe\" binary\n  to execute arbitrary commands as seen in CVE-2022-30190\ndetection:\n  condition: all of selection_*\n  selection_cmd:\n    CommandLine|contains:\n    - ' /cab'\n    - ' -cab'\n  selection_img:\n  - Image|endswith: \\msdt.exe\n  - OriginalFileName: msdt.exe\nfalsepositives:\n- Legitimate usage of \".diagcab\" files\nid: 6545ce61-a1bd-4119-b9be-fcbee42c0cf3\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/24\nreferences:\n- https://github.com/GossiTheDog/ThreatHunting/blob/e85884abbf05d5b41efc809ea6532b10b45bd05c/AdvancedHuntingQueries/DogWalk-DiagCab\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-9015912909545e72ed42cbac4d1e96295e8964579c406d23fd9c47a8091576a0\n- https://irsl.medium.com/the-trouble-with-microsofts-troubleshooters-6e32fc80b8bd\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Execute MSDT.EXE Using Diagcab File\n",
+                            "sigma:id": "6545ce61-a1bd-4119-b9be-fcbee42c0cf3",
+                            "title": "Execute MSDT.EXE Using Diagcab File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f37aba28-a9e6-4045-882c-d5004043b337",
+                        "lookup_data": {
+                            "description": "lolbas Cmdl32 is use to download a payload to evade antivirus",
+                            "raw": "author: frack113\ndate: 2021/11/03\ndescription: lolbas Cmdl32 is use to download a payload to evade antivirus\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - '/vpn '\n    - '/lan '\n  selection_img:\n  - Image|endswith: \\cmdl32.exe\n  - OriginalFileName: CMDL32.EXE\nfalsepositives:\n- Unknown\nid: f37aba28-a9e6-4045-882c-d5004043b337\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/12\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Cmdl32/\n- https://twitter.com/SwiftOnSecurity/status/1455897435063074824\nstatus: experimental\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: Suspicious Cmdl32 Execution\n",
+                            "sigma:id": "f37aba28-a9e6-4045-882c-d5004043b337",
+                            "title": "Suspicious Cmdl32 Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4ae3e30b-b03f-43aa-87e3-b622f4048eed",
+                        "lookup_data": {
+                            "description": "Detects Winword process loading custmom dlls via the '/l' switch.\nWinword can be abused as a LOLBIN to download arbitrary file or load arbitrary DLLs.\n",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Victor Sergeev, oscd.community\ndate: 2022/05/17\ndescription: 'Detects Winword process loading custmom dlls via the ''/l'' switch.\n\n  Winword can be abused as a LOLBIN to download arbitrary file or load arbitrary DLLs.\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_img:\n  - Image|endswith: \\WINWORD.exe\n  - OriginalFileName: WinWord.exe\n  selection_susp:\n    CommandLine|contains:\n    - '/l '\n    - .dll\n    - http://\n    - https://\nfalsepositives:\n- Unknown\nid: 4ae3e30b-b03f-43aa-87e3-b622f4048eed\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/25\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Winword/\n- https://github.com/D4Vinci/One-Lin3r/blob/9fdfa5f0b9c698dfbd4cdfe7d2473192777ae1c6/one_lin3r/core/liners/windows/cmd/dll_loader_word.py\nrelated:\n- id: 2621b3a6-3840-4810-ac14-a02426086171\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Winword LOLBIN Usage\n",
+                            "sigma:id": "4ae3e30b-b03f-43aa-87e3-b622f4048eed",
+                            "title": "Winword LOLBIN Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aaf46cdc-934e-4284-b329-34aa701e3771",
+                        "lookup_data": {
+                            "description": "Execute VBscript code that is referenced within the *.bgi file.",
+                            "raw": "author: Beyu Denis, oscd.community\ndate: 2019/10/26\ndescription: Execute VBscript code that is referenced within the *.bgi file.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - /popup\n    - /nolicprompt\n    Image|endswith: \\bginfo.exe\nfalsepositives:\n- Unknown\nid: aaf46cdc-934e-4284-b329-34aa701e3771\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Bginfo/\n- https://oddvar.moe/2017/05/18/bypassing-application-whitelisting-with-bginfo/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: Application Whitelisting Bypass via Bginfo\n",
+                            "sigma:id": "aaf46cdc-934e-4284-b329-34aa701e3771",
+                            "title": "Application Whitelisting Bypass via Bginfo",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "33339be3-148b-4e16-af56-ad16ec6c7e7b",
+                        "lookup_data": {
+                            "description": "Detects usage of findstr to identify and execute a lnk file as seen within the HHS redirect attack",
+                            "raw": "author: Trent Liffick\ndate: 2020/05/01\ndescription: Detects usage of findstr to identify and execute a lnk file as seen within\n  the HHS redirect attack\ndetection:\n  condition: selection\n  selection:\n    CommandLine|endswith: .lnk\n    Image|endswith: \\findstr.exe\nfalsepositives:\n- Unknown\nfields:\n- Image\n- CommandLine\n- ParentCommandLine\nid: 33339be3-148b-4e16-af56-ad16ec6c7e7b\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.bleepingcomputer.com/news/security/hhsgov-open-redirect-used-by-coronavirus-phishing-to-spread-malware/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1036\n- attack.t1202\n- attack.t1027.003\ntitle: Findstr Launching .lnk File\n",
+                            "sigma:id": "33339be3-148b-4e16-af56-ad16ec6c7e7b",
+                            "title": "Findstr Launching .lnk File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7cce6fc8-a07f-4d84-a53e-96e1879843c9",
+                        "lookup_data": {
+                            "description": "Detects binaries that use the same name as legitimate sysinternals tools to evade detection",
+                            "raw": "author: frack113\ndate: 2021/12/20\ndescription: Detects binaries that use the same name as legitimate sysinternals tools\n  to evade detection\ndetection:\n  condition: selection_exe and not 1 of filter*\n  filter_empty:\n    Company: null\n  filter_valid:\n    Company:\n    - Sysinternals - www.sysinternals.com\n    - Sysinternals\n  selection_exe:\n    Image|endswith:\n    - \\accesschk.exe\n    - \\accesschk64.exe\n    - \\AccessEnum.exe\n    - \\ADExplorer.exe\n    - \\ADExplorer64.exe\n    - \\ADInsight.exe\n    - \\ADInsight64.exe\n    - \\adrestore.exe\n    - \\adrestore64.exe\n    - \\Autologon.exe\n    - \\Autologon64.exe\n    - \\Autoruns.exe\n    - \\Autoruns64.exe\n    - \\autorunsc.exe\n    - \\autorunsc64.exe\n    - \\Bginfo.exe\n    - \\Bginfo64.exe\n    - \\Cacheset.exe\n    - \\Cacheset64.exe\n    - \\Clockres.exe\n    - \\Clockres64.exe\n    - \\Contig.exe\n    - \\Contig64.exe\n    - \\Coreinfo.exe\n    - \\Coreinfo64.exe\n    - \\CPUSTRES.EXE\n    - \\CPUSTRES64.EXE\n    - \\ctrl2cap.exe\n    - \\Dbgview.exe\n    - \\dbgview64.exe\n    - \\Desktops.exe\n    - \\Desktops64.exe\n    - \\disk2vhd.exe\n    - \\disk2vhd64.exe\n    - \\diskext.exe\n    - \\diskext64.exe\n    - \\Diskmon.exe\n    - \\Diskmon64.exe\n    - \\DiskView.exe\n    - \\DiskView64.exe\n    - \\du.exe\n    - \\du64.exe\n    - \\efsdump.exe\n    - \\FindLinks.exe\n    - \\FindLinks64.exe\n    - \\handle.exe\n    - \\handle64.exe\n    - \\hex2dec.exe\n    - \\hex2dec64.exe\n    - \\junction.exe\n    - \\junction64.exe\n    - \\ldmdump.exe\n    - \\listdlls.exe\n    - \\listdlls64.exe\n    - \\livekd.exe\n    - \\livekd64.exe\n    - \\loadOrd.exe\n    - \\loadOrd64.exe\n    - \\loadOrdC.exe\n    - \\loadOrdC64.exe\n    - \\logonsessions.exe\n    - \\logonsessions64.exe\n    - \\movefile.exe\n    - \\movefile64.exe\n    - \\notmyfault.exe\n    - \\notmyfault64.exe\n    - \\notmyfaultc.exe\n    - \\notmyfaultc64.exe\n    - \\ntfsinfo.exe\n    - \\ntfsinfo64.exe\n    - \\pendmoves.exe\n    - \\pendmoves64.exe\n    - \\pipelist.exe\n    - \\pipelist64.exe\n    - \\portmon.exe\n    - \\procdump.exe\n    - \\procdump64.exe\n    - \\procexp.exe\n    - \\procexp64.exe\n    - \\Procmon.exe\n    - \\Procmon64.exe\n    - \\psExec.exe\n    - \\psExec64.exe\n    - \\psfile.exe\n    - \\psfile64.exe\n    - \\psGetsid.exe\n    - \\psGetsid64.exe\n    - \\psInfo.exe\n    - \\psInfo64.exe\n    - \\pskill.exe\n    - \\pskill64.exe\n    - \\pslist.exe\n    - \\pslist64.exe\n    - \\psLoggedon.exe\n    - \\psLoggedon64.exe\n    - \\psloglist.exe\n    - \\psloglist64.exe\n    - \\pspasswd.exe\n    - \\pspasswd64.exe\n    - \\psping.exe\n    - \\psping64.exe\n    - \\psService.exe\n    - \\psService64.exe\n    - \\psshutdown.exe\n    - \\psshutdown64.exe\n    - \\pssuspend.exe\n    - \\pssuspend64.exe\n    - \\RAMMap.exe\n    - \\RDCMan.exe\n    - \\RegDelNull.exe\n    - \\RegDelNull64.exe\n    - \\regjump.exe\n    - \\ru.exe\n    - \\ru64.exe\n    - \\sdelete.exe\n    - \\sdelete64.exe\n    - \\ShareEnum.exe\n    - \\ShareEnum64.exe\n    - \\shellRunas.exe\n    - \\sigcheck.exe\n    - \\sigcheck64.exe\n    - \\streams.exe\n    - \\streams64.exe\n    - \\strings.exe\n    - \\strings64.exe\n    - \\sync.exe\n    - \\sync64.exe\n    - \\Sysmon.exe\n    - \\Sysmon64.exe\n    - \\tcpvcon.exe\n    - \\tcpvcon64.exe\n    - \\tcpview.exe\n    - \\tcpview64.exe\n    - \\Testlimit.exe\n    - \\Testlimit64.exe\n    - \\vmmap.exe\n    - \\vmmap64.exe\n    - \\Volumeid.exe\n    - \\Volumeid64.exe\n    - \\whois.exe\n    - \\whois64.exe\n    - \\Winobj.exe\n    - \\Winobj64.exe\n    - \\ZoomIt.exe\n    - \\ZoomIt64.exe\nfalsepositives:\n- Unknown\nid: 7cce6fc8-a07f-4d84-a53e-96e1879843c9\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/08\nreferences:\n- https://docs.microsoft.com/en-us/sysinternals/downloads/sysinternals-suite\nstatus: experimental\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: Potential Binary Impersonating Sysinternals Tools\n",
+                            "sigma:id": "7cce6fc8-a07f-4d84-a53e-96e1879843c9",
+                            "title": "Potential Binary Impersonating Sysinternals Tools",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "03409c93-a7c7-49ba-9a4c-a00badf2a153",
+                        "lookup_data": {
+                            "description": "Detects execution of \"TroubleshootingPack\" cmdlets to leverage CVE-2022-30190 or action similar to \"msdt\" lolbin (as described in LOLBAS)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/21\ndescription: Detects execution of \"TroubleshootingPack\" cmdlets to leverage CVE-2022-30190\n  or action similar to \"msdt\" lolbin (as described in LOLBAS)\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - Invoke-TroubleshootingPack\n    - C:\\Windows\\Diagnostics\\System\\PCW\n    - -AnswerFile\n    - -Unattended\nfalsepositives:\n- Legitimate usage of \"TroubleshootingPack\" cmdlet for troubleshooting purposes\nid: 03409c93-a7c7-49ba-9a4c-a00badf2a153\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://twitter.com/nas_bench/status/1537919885031772161\n- https://lolbas-project.github.io/lolbas/Binaries/Msdt/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Troubleshooting Pack Cmdlet Execution\n",
+                            "sigma:id": "03409c93-a7c7-49ba-9a4c-a00badf2a153",
+                            "title": "Troubleshooting Pack Cmdlet Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7dc2dedd-7603-461a-bc13-15803d132355",
+                        "lookup_data": {
+                            "description": "Detects the conhost execution as parent process. Can be used to evaded defense mechanism.",
+                            "raw": "author: omkar72\ndate: 2020/10/25\ndescription: Detects the conhost execution as parent process. Can be used to evaded\n  defense mechanism.\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_git:\n    Image|endswith: \\git.exe\n    ParentCommandLine|contains:\n    - ' show --textconv '\n    - ' cat-file -s '\n    Provider_Name: Microsoft-Windows-Kernel-Process\n  filter_git_show:\n    CommandLine|contains:\n    - ' show --textconv '\n    - ' cat-file -s '\n    ParentCommandLine|contains: C:\\WINDOWS\\system32\\conhost.exe 0x4\n  filter_image_conhost:\n    Image: C:\\Windows\\System32\\conhost.exe\n    ParentCommandLine|contains:\n    - ' cat-file -s '\n    - show --textconv\n    Provider_Name: Microsoft-Windows-Kernel-Process\n  filter_image_conhost2:\n    Image: C:\\Windows\\System32\\conhost.exe\n    ParentCommandLine:\n    - \\\\\\?\\?\\\\C:\\\\WINDOWS\\\\system32\\\\conhost.exe 0x4\n    - \\\\\\?\\?\\\\C:\\\\WINDOWS\\\\system32\\\\conhost.exe 0xffffffff -ForceV1\n  filter_image_git:\n    Image: C:\\Program Files\\Git\\mingw64\\bin\\git.exe\n    ParentCommandLine:\n    - \\\\\\?\\?\\\\C:\\\\WINDOWS\\\\system32\\\\conhost.exe 0xffffffff -ForceV1'\n    - \\\\\\?\\?\\\\C:\\\\WINDOWS\\\\system32\\\\conhost.exe 0x4'\n  filter_provider:\n    Provider_Name: SystemTraceProvider-Process\n  selection:\n    ParentImage|endswith: \\conhost.exe\nfalsepositives:\n- Unknown\nfields:\n- Image\n- CommandLine\n- ParentCommandLine\nid: 7dc2dedd-7603-461a-bc13-15803d132355\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/07\nreferences:\n- http://www.hexacorn.com/blog/2020/05/25/how-to-con-your-host/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Conhost Parent Process Executions\n",
+                            "sigma:id": "7dc2dedd-7603-461a-bc13-15803d132355",
+                            "title": "Conhost Parent Process Executions",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "06b401f4-107c-4ff9-947f-9ec1e7649f1e",
+                        "lookup_data": {
+                            "description": "Detects execution of ftp.exe script execution with the \"-s\" flag and any child processes ran by ftp.exe",
+                            "raw": "author: Victor Sergeev, oscd.community\ndate: 2020/10/09\ndescription: Detects execution of ftp.exe script execution with the \"-s\" flag and\n  any child processes ran by ftp.exe\ndetection:\n  condition: selection_parent or all of selection_ftp_*\n  selection_ftp_cli:\n    CommandLine|contains: '-s:'\n  selection_ftp_img:\n  - Image|endswith: \\ftp.exe\n  - OriginalFileName: ftp.exe\n  selection_parent:\n    ParentImage|endswith: \\ftp.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentImage\nid: 06b401f4-107c-4ff9-947f-9ec1e7649f1e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/10\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Ftp/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059\n- attack.defense_evasion\n- attack.t1202\ntitle: LOLBIN Execution Of The FTP.EXE Binary\n",
+                            "sigma:id": "06b401f4-107c-4ff9-947f-9ec1e7649f1e",
+                            "title": "LOLBIN Execution Of The FTP.EXE Binary",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "883faa95-175a-4e22-8181-e5761aeb373c",
+                        "lookup_data": {
+                            "description": "Detects a service binary running in a suspicious directory",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/09\ndescription: Detects a service binary running in a suspicious directory\ndetection:\n  condition: selection\n  selection:\n    Image|contains:\n    - \\Users\\Public\\\n    - \\$Recycle.bin\n    - \\Users\\All Users\\\n    - \\Users\\Default\\\n    - \\Users\\Contacts\\\n    - \\Users\\Searches\\\n    - C:\\Perflogs\\\n    - \\config\\systemprofile\\\n    - \\Windows\\Fonts\\\n    - \\Windows\\IME\\\n    - \\Windows\\addins\\\n    ParentImage|endswith:\n    - \\services.exe\n    - \\svchost.exe\nfalsepositives:\n- Unknown\nid: 883faa95-175a-4e22-8181-e5761aeb373c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://blog.truesec.com/2021/03/07/exchange-zero-day-proxylogon-and-hafnium/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Suspicious Service Binary Directory\n",
+                            "sigma:id": "883faa95-175a-4e22-8181-e5761aeb373c",
+                            "title": "Suspicious Service Binary Directory",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "90dcf730-1b71-4ae7-9ffc-6fcf62bd0132",
+                        "lookup_data": {
+                            "description": "ZipExec is a Proof-of-Concept (POC) tool to wrap binary-based tools into a password-protected zip file.",
+                            "raw": "author: frack113\ndate: 2021/11/07\ndescription: ZipExec is a Proof-of-Concept (POC) tool to wrap binary-based tools into\n  a password-protected zip file.\ndetection:\n  condition: run or delete\n  delete:\n    CommandLine|contains|all:\n    - /delete\n    - Microsoft_Windows_Shell_ZipFolder:filename=\n    - .zip\n  run:\n    CommandLine|contains|all:\n    - /generic:Microsoft_Windows_Shell_ZipFolder:filename=\n    - .zip\n    - '/pass:'\n    - '/user:'\nfalsepositives:\n- Unknown\nid: 90dcf730-1b71-4ae7-9ffc-6fcf62bd0132\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://twitter.com/SBousseaden/status/1451237393017839616\n- https://github.com/Tylous/ZipExec\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: Suspicious ZipExec Execution\n",
+                            "sigma:id": "90dcf730-1b71-4ae7-9ffc-6fcf62bd0132",
+                            "title": "Suspicious ZipExec Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7530b96f-ad8e-431d-a04d-ac85cc461fdc",
+                        "lookup_data": {
+                            "description": "Detects the abuse of custom file open handler, executing powershell",
+                            "raw": "author: CD_R0M_\ndate: 2022/06/11\ndescription: Detects the abuse of custom file open handler, executing powershell\ndetection:\n  condition: selection\n  selection:\n    Details|contains|all:\n    - powershell\n    - -command\n    EventType: SetValue\n    TargetObject|contains: shell\\open\\command\\\nfalsepositives:\n- Unknown\nid: 7530b96f-ad8e-431d-a04d-ac85cc461fdc\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nreferences:\n- https://news.sophos.com/en-us/2022/02/01/solarmarker-campaign-used-novel-registry-changes-to-establish-persistence/?cmp=30728\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Custom File Open Handler Executes PowerShell\n",
+                            "sigma:id": "7530b96f-ad8e-431d-a04d-ac85cc461fdc",
+                            "title": "Custom File Open Handler Executes PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "258fc8ce-8352-443a-9120-8a11e4857fa5",
+                        "lookup_data": {
+                            "description": "Detects processes leveraging the \"ms-msdt\" handler or the \"msdt.exe\" binary to execute arbitrary commands as seen in the follina (CVE-2022-30190) vulnerability",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/05/29\ndescription: Detects processes leveraging the \"ms-msdt\" handler or the \"msdt.exe\"\n  binary to execute arbitrary commands as seen in the follina (CVE-2022-30190) vulnerability\ndetection:\n  condition: selection_img and (selection_cmd_inline or all of selection_cmd_answerfile_*)\n  selection_cmd_answerfile_flag:\n    CommandLine|contains: ' PCWDiagnostic'\n  selection_cmd_answerfile_param:\n    CommandLine|contains:\n    - ' /af '\n    - ' -af '\n  selection_cmd_inline:\n    CommandLine|contains: IT_BrowseForFile=\n  selection_img:\n  - Image|endswith: \\msdt.exe\n  - OriginalFileName: msdt.exe\nfalsepositives:\n- Unknown\nid: 258fc8ce-8352-443a-9120-8a11e4857fa5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/18\nreferences:\n- https://twitter.com/nao_sec/status/1530196847679401984\n- https://app.any.run/tasks/713f05d2-fe78-4b9d-a744-f7c133e3fafb/\n- https://twitter.com/_JohnHammond/status/1531672601067675648\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Potential Arbitrary Command Execution Using MSDT.EXE\n",
+                            "sigma:id": "258fc8ce-8352-443a-9120-8a11e4857fa5",
+                            "title": "Potential Arbitrary Command Execution Using MSDT.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5a3164f2-b373-4152-93cf-090b13c12d27",
+                        "lookup_data": {
+                            "description": "Detects uncommon or suspicious child processes spawning from a VsCode \"code.exe\" process. This could indicate an attempt of persistence via VsCode tasks or terminal profiles.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/26\ndescription: Detects uncommon or suspicious child processes spawning from a VsCode\n  \"code.exe\" process. This could indicate an attempt of persistence via VsCode tasks\n  or terminal profiles.\ndetection:\n  condition: selection_parent and 1 of selection_children_*\n  selection_children_cli:\n    CommandLine|contains:\n    - Invoke-Expressions\n    - IEX\n    - Invoke-Command\n    - ICM\n    - DownloadString\n    - rundll32\n    - regsvr32\n    - wscript\n    - cscript\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\cmd.exe\n  selection_children_images:\n    Image|endswith:\n    - \\calc.exe\n    - \\regsvr32.exe\n    - \\rundll32.exe\n    - \\cscript.exe\n    - \\wscript.exe\n  selection_children_paths:\n    Image|contains:\n    - C:\\Users\\Public\\\n    - C:\\Windows\\Temp\\\n    - C:\\Temp\\\n  selection_parent:\n    ParentImage|endswith: \\code.exe\nfalsepositives:\n- In development environment where VsCode is used heavily. False positives may occure\n  when developers use task to compile or execute different types of code. Remove or\n  add processes accordingly\nid: 5a3164f2-b373-4152-93cf-090b13c12d27\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/nas_bench/status/1618021838407495681\n- https://twitter.com/nas_bench/status/1618021415852335105\nstatus: experimental\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: VsCode Child Process Anomaly\n",
+                            "sigma:id": "5a3164f2-b373-4152-93cf-090b13c12d27",
+                            "title": "VsCode Child Process Anomaly",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2621b3a6-3840-4810-ac14-a02426086171",
+                        "lookup_data": {
+                            "description": "Detects Winword.exe loading of custmom dll via /l cmd switch",
+                            "raw": "author: Victor Sergeev, oscd.community\ndate: 2020/10/09\ndescription: Detects Winword.exe loading of custmom dll via /l cmd switch\ndetection:\n  cmd:\n    CommandLine|contains: /l\n  condition: image_path and cmd\n  image_path:\n    Image|endswith: \\winword.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\nid: 2621b3a6-3840-4810-ac14-a02426086171\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/LOLUtilz/OtherMSBinaries/Winword.yml\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Winword.exe Loads Suspicious DLL\n",
+                            "sigma:id": "2621b3a6-3840-4810-ac14-a02426086171",
+                            "title": "Winword.exe Loads Suspicious DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fa47597e-90e9-41cd-ab72-c3b74cfb0d02",
+                        "lookup_data": {
+                            "description": "Detect indirect command execution via Program Compatibility Assistant pcalua.exe or forfiles.exe",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019/10/24\ndescription: Detect indirect command execution via Program Compatibility Assistant\n  pcalua.exe or forfiles.exe\ndetection:\n  condition: selection\n  selection:\n    ParentImage|endswith:\n    - \\pcalua.exe\n    - \\forfiles.exe\nfalsepositives:\n- Need to use extra processing with 'unique_count' / 'filter' to focus on outliers\n  as opposed to commonly seen artifacts\n- Legit usage of scripts\nfields:\n- ComputerName\n- User\n- ParentCommandLine\n- CommandLine\nid: fa47597e-90e9-41cd-ab72-c3b74cfb0d02\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2019/11/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1202/T1202.yaml\n- https://eqllib.readthedocs.io/en/latest/analytics/884a7ccd-7305-4130-82d0-d4f90bc118b6.html\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Indirect Command Execution\n",
+                            "sigma:id": "fa47597e-90e9-41cd-ab72-c3b74cfb0d02",
+                            "title": "Indirect Command Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7d6d30b8-5b91-4b90-a891-46cccaf29598",
+                        "lookup_data": {
+                            "description": "Detect usage of the \"ssh.exe\" binary as a proxy to launch other programs",
+                            "raw": "author: frack113, Nasreddine Bencherchali\ndate: 2022/12/29\ndescription: Detect usage of the \"ssh.exe\" binary as a proxy to launch other programs\ndetection:\n  condition: selection_parent or all of selection_cli_*\n  selection_cli_flags:\n  - CommandLine|contains: ProxyCommand=\n  - CommandLine|contains|all:\n    - PermitLocalCommand\n    - LocalCommand\n  selection_cli_img:\n    Image|endswith: \\ssh.exe\n  selection_parent:\n    ParentImage: C:\\Windows\\System32\\OpenSSH\\sshd.exe\nfalsepositives:\n- Legitimate usage for administration purposes\nid: 7d6d30b8-5b91-4b90-a891-46cccaf29598\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/25\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Ssh/\n- https://github.com/LOLBAS-Project/LOLBAS/pull/211/files\n- https://gtfobins.github.io/gtfobins/ssh/\n- https://man.openbsd.org/ssh_config#ProxyCommand\n- https://man.openbsd.org/ssh_config#LocalCommand\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Lolbin Ssh.exe Use As Proxy\n",
+                            "sigma:id": "7d6d30b8-5b91-4b90-a891-46cccaf29598",
+                            "title": "Lolbin Ssh.exe Use As Proxy",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ec8c4047-fad9-416a-8c81-0f479353d7f6",
+                        "lookup_data": {
+                            "description": "Detects both of CVE-2022-30190 / Follina and DogWalk vulnerability exploiting msdt.exe binary to load sdiageng.dll binary",
+                            "raw": "author: Greg (rule)\ndate: 2022/06/17\ndescription: Detects both of CVE-2022-30190 / Follina and DogWalk vulnerability exploiting\n  msdt.exe binary to load sdiageng.dll binary\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith: \\sdiageng.dll\n    Image|endswith: \\msdt.exe\nfalsepositives:\n- Unknown\nid: ec8c4047-fad9-416a-8c81-0f479353d7f6\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://www.securonix.com/blog/detecting-microsoft-msdt-dogwalk/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\n- cve.2022.30190\ntitle: MSDT.exe Loading Diagnostic Library\n",
+                            "sigma:id": "ec8c4047-fad9-416a-8c81-0f479353d7f6",
+                            "title": "MSDT.exe Loading Diagnostic Library",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3b0e52ce-517a-4614-a523-1bd5deef6c5e",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1202",
+                            "mitre-cti:description": "Adversaries may abuse utilities that allow for command execution to bypass security restrictions that limit the use of command-line interpreters. Various Windows utilities may be used to execute commands, possibly without invoking [cmd](https://attack.mitre.org/software/S0106). For example, [Forfiles](https://attack.mitre.org/software/S0193), the Program Compatibility Assistant (pcalua.exe), components of the Windows Subsystem for Linux (WSL), as well as other utilities may invoke the execution of programs and commands from a [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059), Run window, or via scripts. (Citation: VectorSec ForFiles Aug 2017) (Citation: Evi1cg Forfiles Nov 2017)\n\nAdversaries may abuse these features for [Defense Evasion](https://attack.mitre.org/tactics/TA0005), specifically to perform arbitrary execution while subverting detections and/or mitigation controls (such as Group Policy) that limit/prevent the usage of [cmd](https://attack.mitre.org/software/S0106) or file extensions more commonly associated with malicious payloads.",
+                            "mitre-cti:name": "Indirect Command Execution",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Matthew Demaske, Adaptforward'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--3b0e52ce-517a-4614-a523-1bd5deef6c5e', 'created': '2018-04-18T17:59:24.739Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1202', 'url': 'https://attack.mitre.org/techniques/T1202'}, {'source_name': 'Evi1cg Forfiles Nov 2017', 'url': 'https://twitter.com/Evi1cg/status/935027922397573120', 'description': 'Evi1cg. (2017, November 26). block cmd.exe ? try this :. Retrieved January 22, 2018.'}, {'source_name': 'RSA Forfiles Aug 2017', 'url': 'https://community.rsa.com/community/products/netwitness/blog/2017/08/14/are-you-looking-out-for-forfilesexe-if-you-are-watching-for-cmdexe', 'description': 'Partington, E. (2017, August 14). Are you looking out for forfiles.exe (if you are watching for cmd.exe). Retrieved January 22, 2018.'}, {'source_name': 'VectorSec ForFiles Aug 2017', 'url': 'https://twitter.com/vector_sec/status/896049052642533376', 'description': 'vector_sec. (2017, August 11). Defenders watching launches of cmd? What about forfiles?. Retrieved January 22, 2018.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may abuse utilities that allow for command execution to bypass security restrictions that limit the use of command-line interpreters. Various Windows utilities may be used to execute commands, possibly without invoking [cmd](https://attack.mitre.org/software/S0106). For example, [Forfiles](https://attack.mitre.org/software/S0193), the Program Compatibility Assistant (pcalua.exe), components of the Windows Subsystem for Linux (WSL), as well as other utilities may invoke the execution of programs and commands from a [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059), Run window, or via scripts. (Citation: VectorSec ForFiles Aug 2017) (Citation: Evi1cg Forfiles Nov 2017)\\n\\nAdversaries may abuse these features for [Defense Evasion](https://attack.mitre.org/tactics/TA0005), specifically to perform arbitrary execution while subverting detections and/or mitigation controls (such as Group Policy) that limit/prevent the usage of [cmd](https://attack.mitre.org/software/S0106) or file extensions more commonly associated with malicious payloads.', 'modified': '2022-05-05T05:06:38.938Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Indirect Command Execution', 'x_mitre_detection': 'Monitor and analyze logs from host-based detection mechanisms, such as Sysmon, for events such as process creations that include or are resulting from parameters associated with invoking programs/commands/files and/or spawning child processes/network connections. (Citation: RSA Forfiles Aug 2017)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation'], 'x_mitre_defense_bypassed': ['Static File Analysis', 'Application Control'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1775e15e-b61b-4d14-a1a3-80981298085a",
+                        "lookup_data": {
+                            "description": "Detects suspicious start of rundll32.exe without any parameters as found in CobaltStrike beacon activity",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/05/27\ndescription: Detects suspicious start of rundll32.exe without any parameters as found\n  in CobaltStrike beacon activity\ndetection:\n  condition: selection and not 1 of filter*\n  filter1:\n    ParentImage|endswith: \\svchost.exe\n  filter2:\n    ParentImage|contains:\n    - \\AppData\\Local\\\n    - \\Microsoft\\Edge\\\n  selection:\n    CommandLine|endswith: \\rundll32.exe\nfalsepositives:\n- Possible but rare\nfields:\n- ParentImage\n- ParentCommandLine\nid: 1775e15e-b61b-4d14-a1a3-80981298085a\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/06\nreferences:\n- https://www.cobaltstrike.com/help-opsec\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Suspicious Rundll32 Without Any CommandLine Params\n",
+                            "sigma:id": "1775e15e-b61b-4d14-a1a3-80981298085a",
+                            "title": "Suspicious Rundll32 Without Any CommandLine Params",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "835e75bf-4bfd-47a4-b8a6-b766cac8bcb7",
+                        "lookup_data": {
+                            "description": "Detects the use of Setres.exe to set the screen resolution and then potentially launch a file named \"choice\" (with any executable extension such as \".cmd\" or \".exe\") from the current execution path",
+                            "raw": "author: '@gott_cyber'\ndate: 2022/12/11\ndescription: Detects the use of Setres.exe to set the screen resolution and then potentially\n  launch a file named \"choice\" (with any executable extension such as \".cmd\" or \".exe\")\n  from the current execution path\ndetection:\n  condition: all of selection*\n  selection:\n    Image|endswith: \\choice\n    ParentImage|endswith: \\setres.exe\nfalsepositives:\n- Legitimate usage of Setres\nid: 835e75bf-4bfd-47a4-b8a6-b766cac8bcb7\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Setres/\n- https://twitter.com/0gtweet/status/1583356502340870144\n- https://strontic.github.io/xcyclopedia/library/setres.exe-0E30E4C09637D7A128A37B59A3BC4D09.html\n- https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc731033(v=ws.11)\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: Use of Setres.exe\n",
+                            "sigma:id": "835e75bf-4bfd-47a4-b8a6-b766cac8bcb7",
+                            "title": "Use of Setres.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dec44ca7-61ad-493c-bfd7-8819c5faa09b",
+                        "lookup_data": {
+                            "description": "Detects Possible usage of Windows Subsystem for Linux (WSL) binary as a LOLBIN to execute arbitrary linux and windows commands",
+                            "raw": "author: oscd.community, Zach Stanford @svch0st, Nasreddine Bencherchali\ndate: 2020/10/05\ndescription: Detects Possible usage of Windows Subsystem for Linux (WSL) binary as\n  a LOLBIN to execute arbitrary linux and windows commands\ndetection:\n  condition: all of selection_* and not 1 of filter_*\n  filter_kill:\n    CommandLine|contains|all:\n    - ' -d '\n    - ' -e kill '\n    ParentImage|endswith: \\cmd.exe\n  selection_cli:\n    CommandLine|contains:\n    - ' -e '\n    - ' --exec'\n    - ' --system'\n    - ' --shell-type '\n    - ' /mnt/c'\n    - ' --user root'\n    - ' -u root'\n  selection_img:\n  - Image|endswith: \\wsl.exe\n  - OriginalFileName: wsl.exe\nfalsepositives:\n- Automation and orchestration scripts may use this method execute scripts etc\n- Legitimate use by Windows to kill processes opened via WSL (example VsCode WSL server)\nid: dec44ca7-61ad-493c-bfd7-8819c5faa09b\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/23\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Wsl/\n- https://twitter.com/nas_bench/status/1535431474429808642\nrelated:\n- id: 2267fe65-0681-42ad-9a6d-46553d3f3480\n  type: similar\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: Arbitrary Command Execution Using WSL\n",
+                            "sigma:id": "dec44ca7-61ad-493c-bfd7-8819c5faa09b",
+                            "title": "Arbitrary Command Execution Using WSL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1e614ba5-2fc5-4464-b512-2ceafb14d76d",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1202",
+                            "mitre-cti:description": "Identify or block potentially malicious software that may contain abusive functionality by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP). These mechanisms can also be used to disable and/or limit user access to Windows utilities and file types/locations used to invoke malicious execution.(Citation: SpectorOPs SettingContent-ms Jun 2018)",
+                            "mitre-cti:name": "Indirect Command Execution Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--1e614ba5-2fc5-4464-b512-2ceafb14d76d', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1202', 'url': 'https://attack.mitre.org/mitigations/T1202', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}, {'source_name': 'SpectorOPs SettingContent-ms Jun 2018', 'url': 'https://posts.specterops.io/the-tale-of-settingcontent-ms-files-f1ea253e4d39', 'description': 'Nelson, M. (2018, June 11). The Tale of SettingContent-ms Files. Retrieved April 18, 2019.'}], 'modified': '2021-08-23T20:25:19.370Z', 'name': 'Indirect Command Execution Mitigation', 'description': 'Identify or block potentially malicious software that may contain abusive functionality by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP). These mechanisms can also be used to disable and/or limit user access to Windows utilities and file types/locations used to invoke malicious execution.(Citation: SpectorOPs SettingContent-ms Jun 2018)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c4e49831-1496-40cf-8ce1-b53f942b02f9",
+                        "lookup_data": {
+                            "description": "Detects execution of renamed version of PAExec. Often used by attackers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/05/22\ndescription: Detects execution of renamed version of PAExec. Often used by attackers\ndetection:\n  condition: selection and not filter\n  filter:\n  - Image|endswith: \\paexec.exe\n  - Image|startswith: C:\\Windows\\PAExec-\n  selection:\n  - Description: PAExec Application\n  - OriginalFileName: PAExec.exe\nfalsepositives:\n- Weird admins that rename their tools\n- Software companies that bundle PAExec with their software and rename it, so that\n  it is less embarrassing\n- When executed with the \"-s\" flag. PAExec will copy itself to the \"C:\\Windows\\\" directory\n  with a different name. Usually like this \"PAExec-[XXXXX]-[ComputerName]\"\nid: c4e49831-1496-40cf-8ce1-b53f942b02f9\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/26\nreferences:\n- https://www.poweradmin.com/paexec/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Renamed PAExec\n",
+                            "sigma:id": "c4e49831-1496-40cf-8ce1-b53f942b02f9",
+                            "title": "Renamed PAExec",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dc4576d4-7467-424f-9eee-fd2b02855fe0",
+                        "lookup_data": {
+                            "description": "Detects execution of msdt.exe using the \"cab\" flag which could indicates suspicious diagcab files with embedded answer files leveraging CVE-2022-30190",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/21\ndescription: Detects execution of msdt.exe using the \"cab\" flag which could indicates\n  suspicious diagcab files with embedded answer files leveraging CVE-2022-30190\ndetection:\n  condition: all of selection_*\n  selection_cmd:\n    CommandLine|contains:\n    - ' /cab '\n    - ' -cab '\n  selection_img:\n  - Image|endswith: \\msdt.exe\n  - OriginalFileName: msdt.exe\nfalsepositives:\n- Legitimate usage of \".diagcab\" files\nid: dc4576d4-7467-424f-9eee-fd2b02855fe0\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/nas_bench/status/1537896324837781506\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: MSDT.EXE Execution With Suspicious Cab Option\n",
+                            "sigma:id": "dc4576d4-7467-424f-9eee-fd2b02855fe0",
+                            "title": "MSDT.EXE Execution With Suspicious Cab Option",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e212d415-0e93-435f-9e1a-f29005bb4723",
+                        "lookup_data": {
+                            "description": "Detects EnableUnsafeClientMailRules used for Script Execution from Outlook",
+                            "raw": "author: Markus Neis\ndate: 2018/12/27\ndescription: Detects EnableUnsafeClientMailRules used for Script Execution from Outlook\ndetection:\n  clientMailRules:\n    CommandLine|contains: EnableUnsafeClientMailRules\n  condition: clientMailRules or outlookExec\n  outlookExec:\n    CommandLine|contains|all:\n    - \\\\\\\\\n    - \\\\\n    - .exe\n    ParentImage|endswith: \\outlook.exe\nfalsepositives:\n- Unknown\nid: e212d415-0e93-435f-9e1a-f29005bb4723\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://github.com/sensepost/ruler\n- https://www.fireeye.com/blog/threat-research/2018/12/overruled-containing-a-potentially-destructive-adversary.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1059\n- attack.t1202\ntitle: Suspicious Execution from Outlook\n",
+                            "sigma:id": "e212d415-0e93-435f-9e1a-f29005bb4723",
+                            "title": "Suspicious Execution from Outlook",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3037d961-21e9-4732-b27a-637bcc7bf539",
+                        "lookup_data": {
+                            "description": "ForceV1 asks for information directly from the kernel space. Conhost connects to the console application. High IntegrityLevel means the process is running with elevated privileges, such as an Administrator context.",
+                            "raw": "author: frack113\ndate: 2022/12/09\ndescription: ForceV1 asks for information directly from the kernel space. Conhost\n  connects to the console application. High IntegrityLevel means the process is running\n  with elevated privileges, such as an Administrator context.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - conhost.exe\n    - '0xffffffff'\n    - -ForceV1\n    IntegrityLevel: High\nfalsepositives:\n- Very Likely, including launching cmd.exe via Run As Administrator\nid: 3037d961-21e9-4732-b27a-637bcc7bf539\nlevel: informational\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://cybercryptosec.medium.com/covid-19-cyber-infection-c615ead7c29\n- https://thedfirreport.com/2022/04/04/stolen-images-campaign-ends-in-conti-ransomware/\n- https://learn.microsoft.com/en-us/windows/win32/secauthz/mandatory-integrity-control\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Suspicious High IntegrityLevel Conhost Legacy Option\n",
+                            "sigma:id": "3037d961-21e9-4732-b27a-637bcc7bf539",
+                            "title": "Suspicious High IntegrityLevel Conhost Legacy Option",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2267fe65-0681-42ad-9a6d-46553d3f3480",
+                        "lookup_data": {
+                            "description": "Detects uncommon or suspicious child processes spawning from a WSL process. This could indicate an attempt to evade parent/child relationship detections or persistence attempts via cron using WSL",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/23\ndescription: Detects uncommon or suspicious child processes spawning from a WSL process.\n  This could indicate an attempt to evade parent/child relationship detections or\n  persistence attempts via cron using WSL\ndetection:\n  condition: selection_parent and 1 of selection_children_*\n  selection_children_images:\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\cmd.exe\n    - \\calc.exe\n  selection_children_paths:\n    Image|contains:\n    - \\AppData\\Local\\Temp\\\n    - C:\\Users\\Public\\\n    - C:\\Windows\\Temp\\\n    - C:\\Temp\\\n    - \\Downloads\\\n    - \\Desktop\\\n  selection_parent:\n    ParentImage|endswith:\n    - \\wsl.exe\n    - \\wslhost.exe\nfalsepositives:\n- Unknown\nid: 2267fe65-0681-42ad-9a6d-46553d3f3480\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Wsl/\n- https://twitter.com/nas_bench/status/1535431474429808642\nrelated:\n- id: dec44ca7-61ad-493c-bfd7-8819c5faa09b\n  type: derived\nstatus: experimental\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218\n- attack.t1202\ntitle: WSL Child Process Anomaly\n",
+                            "sigma:id": "2267fe65-0681-42ad-9a6d-46553d3f3480",
+                            "title": "WSL Child Process Anomaly",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e5da86d-bfec-4b9a-ae77-57540a0a020f",
+                        "lookup_data": {
+                            "description": "Remcos RAT 02-28-20",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e5da86d-bfec-4b9a-ae77-57540a0a020f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1621850671",
+                            "uuid": "5e5da86d-bfec-4b9a-ae77-57540a0a020f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eca49c87-8a75-4f13-9c73-a5a29e845f03",
+                        "lookup_data": {
+                            "description": "Detects execution of powershell scripts via Runscripthelper.exe",
+                            "raw": "author: Victor Sergeev, oscd.community\ndate: 2020/10/09\ndescription: Detects execution of powershell scripts via Runscripthelper.exe\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: surfacecheck\n    Image|endswith: \\Runscripthelper.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\nid: eca49c87-8a75-4f13-9c73-a5a29e845f03\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Runscripthelper/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059\n- attack.defense_evasion\n- attack.t1202\ntitle: Suspicious Runscripthelper.exe\n",
+                            "sigma:id": "eca49c87-8a75-4f13-9c73-a5a29e845f03",
+                            "title": "Suspicious Runscripthelper.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "340a090b-c4e9-412e-bb36-b4b16fe96f9b",
+                        "lookup_data": {
+                            "description": "Detects a renamed dctask64.exe used for process injection, command execution, process creation with a signed binary by ZOHO Corporation",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/01/28\ndescription: Detects a renamed dctask64.exe used for process injection, command execution,\n  process creation with a signed binary by ZOHO Corporation\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|endswith: \\dctask64.exe\n  selection:\n    Hashes|contains: 6834B1B94E49701D77CCB3C0895E1AFD\nfalsepositives:\n- Unknown yet\nfields:\n- CommandLine\n- ParentCommandLine\n- ParentImage\nid: 340a090b-c4e9-412e-bb36-b4b16fe96f9b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/12/08\nreferences:\n- https://twitter.com/gN3mes1s/status/1222088214581825540\n- https://twitter.com/gN3mes1s/status/1222095963789111296\n- https://twitter.com/gN3mes1s/status/1222095371175911424\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1036\n- attack.t1055.001\n- attack.t1202\n- attack.t1218\ntitle: Renamed ZOHO Dctask64\n",
+                            "sigma:id": "340a090b-c4e9-412e-bb36-b4b16fe96f9b",
+                            "title": "Renamed ZOHO Dctask64",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "277a4393-446c-449a-b0ed-7fdc7795244c",
+                        "lookup_data": {
+                            "description": "Detects execution of renamed ftp.exe binary based on OriginalFileName field",
+                            "raw": "author: Victor Sergeev, oscd.community\ndate: 2020/10/09\ndescription: Detects execution of renamed ftp.exe binary based on OriginalFileName\n  field\ndetection:\n  condition: selection_original and not filter_img\n  filter_img:\n    Image|endswith: \\ftp.exe\n  selection_original:\n    OriginalFileName: ftp.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentImage\nid: 277a4393-446c-449a-b0ed-7fdc7795244c\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/10\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Ftp/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059\n- attack.defense_evasion\n- attack.t1202\ntitle: Renamed FTP.EXE Binary Execution\n",
+                            "sigma:id": "277a4393-446c-449a-b0ed-7fdc7795244c",
+                            "title": "Renamed FTP.EXE Binary Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5edc2273-c26f-406c-83f3-f4d948e740dd",
+                        "lookup_data": {
+                            "description": "Performs execution of specified file, can be used for defensive evasion.",
+                            "raw": "author: frack113\ndate: 2021/11/24\ndescription: Performs execution of specified file, can be used for defensive evasion.\ndetection:\n  condition: selection and not 1 of filter*\n  filter_git:\n  - ParentCommandLine|contains:\n    - C:\\Program Files\\Git\\post-install.bat\n    - C:\\Program Files (x86)\\Git\\post-install.bat\n    - echo /etc/post-install/*.post\n  - CommandLine|contains: echo /etc/post-install/*.post\n  selection:\n    CommandLine|contains|all:\n    - bash.exe\n    - '-c '\nfalsepositives:\n- Unknown\nid: 5edc2273-c26f-406c-83f3-f4d948e740dd\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/26\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Bash/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1202\ntitle: Suspicious Subsystem for Linux Bash Execution\n",
+                            "sigma:id": "5edc2273-c26f-406c-83f3-f4d948e740dd",
+                            "title": "Suspicious Subsystem for Linux Bash Execution",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1202",
+                "display_name": "Indirect Command Execution",
+                "atomic_tests": [
+                    {
+                        "name": "Indirect Command Execution - pcalua.exe",
+                        "auto_generated_guid": "cecfea7a-5f03-4cdd-8bc8-6f7c22862440",
+                        "description": "The Program Compatibility Assistant (pcalua.exe) may invoke the execution of programs and commands from a Command-Line Interface.\n[Reference](https://twitter.com/KyleHanslovan/status/912659279806640128)\nUpon execution, calc.exe should open\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "payload_path": {
+                                "description": "Path to payload",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\calc.exe"
+                            },
+                            "process": {
+                                "description": "Process to execute",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "pcalua.exe -a #{process}\npcalua.exe -a #{payload_path}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Indirect Command Execution - forfiles.exe",
+                        "auto_generated_guid": "8b34a448-40d9-4fc3-a8c8-4bb286faf7dc",
+                        "description": "forfiles.exe may invoke the execution of programs and commands from a Command-Line Interface.\n[Reference](https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSBinaries/Forfiles.yml)\n\"This is basically saying for each occurrence of notepad.exe in c:\\windows\\system32 run calc.exe\"\nUpon execution calc.exe will be opened.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "process": {
+                                "description": "Process to execute",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "forfiles /p c:\\windows\\system32 /m notepad.exe /c #{process}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Indirect Command Execution - conhost.exe",
+                        "auto_generated_guid": "cf3391e0-b482-4b02-87fc-ca8362269b29",
+                        "description": "conhost.exe refers to a host process for the console window. It provide an interface between command prompt and Windows explorer.\nExecuting it through command line can create process ancestry anomalies\n[Reference] (http://www.hexacorn.com/blog/2020/05/25/how-to-con-your-host/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "process": {
+                                "description": "Process to execute",
+                                "type": "string",
+                                "default": "notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "conhost.exe \"#{process}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Indirect Command Execution - Scriptrunner.exe",
+                        "auto_generated_guid": "0fd14730-6226-4f5e-8d67-43c65f1be940",
+                        "description": "The \"ScriptRunner.exe\" binary can be abused to proxy execution through it and bypass possible whitelisting. Upon test execution, calc.exe should open\nReference: https://x.com/NickTyrer/status/914234924655312896",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "payload_path": {
+                                "description": "Path to the executable",
+                                "type": "String",
+                                "default": "C:\\Windows\\System32\\calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "Scriptrunner.exe -appvscript \"#{payload_path}\"",
+                            "cleanup_command": null,
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Indirect Command Execution - RunMRU Dialog",
+                        "auto_generated_guid": "de323a93-2f18-4bd5-ba60-d6fca6aeff76",
+                        "description": "Simulates execution of commands via the Windows Run dialog (Win+R) by programmatically opening the Run dialog, \ncopying a command to clipboard, and automating the paste and execution. This generates artifacts in the RunMRU registry key,\nwhich is commonly abused by threat actors to execute malicious commands disguised as CAPTCHA verification steps.\nUpon execution, a test PowerShell command will be executed through the Run dialog.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command": {
+                                "description": "Command to execute via Run dialog",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "command": "# Copy command to clipboard\nSet-Clipboard -Value '#{command}'\n\n# Open Run dialog\nStart-Process -FilePath \"powershell\" -ArgumentList \"-c (New-Object -ComObject 'Shell.Application').FileRun()\" -WindowStyle Hidden\n\n# Wait for Run dialog to open\nStart-Sleep -Seconds 1\n\n# Paste command and execute\nAdd-Type -AssemblyName System.Windows.Forms\n[System.Windows.Forms.SendKeys]::SendWait('^v')\nStart-Sleep -Milliseconds 500\n[System.Windows.Forms.SendKeys]::SendWait('{ENTER}')\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:53:07"
+}

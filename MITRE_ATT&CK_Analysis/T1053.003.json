@@ -1,0 +1,275 @@
+{
+    "id": "T1053.003",
+    "name": "Cron",
+    "description": "Adversaries may abuse the `cron` utility to perform task scheduling for initial or recurring execution of malicious code.(Citation: 20 macOS Common Tools and Techniques) The `cron` utility is a time-based job scheduler for Unix-like operating systems.  The ` crontab` file contains the schedule of cron entries to be run and the specified times for execution. Any `crontab` files are stored in operating system-specific file paths.\nAn adversary may use `cron` in Linux or Unix environments to execute programs at system startup or on a scheduled basis for persistence.",
+    "platforms": "Linux, macOS",
+    "kill_chain_phases": "Execution, Persistence, Privilege Escalation",
+    "data_sources": "Scheduled Job: Scheduled Job Creation, Command: Command Execution, File: File Modification, Process: Process Creation",
+    "detection": "Monitor scheduled task creation from common utilities using command-line invocation. Legitimate scheduled tasks may be created during installation of new software or through system administration functions. Look for changes to tasks that do not correlate with known software, patch cycles, etc.\nSuspicious program execution through scheduled tasks may show up as outlier processes that have not been seen before when compared against historical data. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.",
+    "url": "https://attack.mitre.org/techniques/T1053/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1053.003",
+                "atomic_attack_guid": "2d943c18-e74a-44bf-936f-25ade6cccab4",
+                "atomic_attack_name": "Cron - Add script to /var/spool/cron/crontabs/ folder",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Possible Append Cronjob Entry on Existing Cronjob File",
+                        "rule_link": "https://research.splunk.com/endpoint/b5b91200-5f27-11ec-bb4e-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1053.003",
+                "atomic_attack_guid": "078e69eb-d9fb-450e-b9d0-2e118217c846",
+                "atomic_attack_name": "Cron - Add script to /etc/cron.d folder",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Possible Append Cronjob Entry on Existing Cronjob File",
+                        "rule_link": "https://research.splunk.com/endpoint/b5b91200-5f27-11ec-bb4e-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1053.003",
+                "atomic_attack_guid": "b7d42afa-9086-4c8a-b7b0-8ea3faa6ebb0",
+                "atomic_attack_name": "Cron - Add script to all cron subfolders",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Possible Append Cronjob Entry on Existing Cronjob File",
+                        "rule_link": "https://research.splunk.com/endpoint/b5b91200-5f27-11ec-bb4e-acde48001122/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "6c4e2f43-d94d-4ead-b64d-97e53fa2bd05",
+                    "6b14bac8-3e3a-4324-8109-42f0546a347f",
+                    "af202fd3-7bff-4212-a25a-fb34606cfcbe",
+                    "1c71e254-6655-42c1-b2d6-5e4718d7fc0a",
+                    "2acf44aa-542f-4366-b4eb-55ef5747759c",
+                    "ddb26b76-4447-4807-871f-1b035b2bfa5d",
+                    "7c3b43d8-d794-47d2-800a-d277715aa460",
+                    "1a2ea919-d11d-4d1e-8535-06cda13be20f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "6c4e2f43-d94d-4ead-b64d-97e53fa2bd05",
+                        "lookup_data": {
+                            "description": "Detects creation of cron file or files in Cron directories which could indicates potential persistence.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research), MSTIC\ndate: 2021/10/15\ndescription: Detects creation of cron file or files in Cron directories which could\n  indicates potential persistence.\ndetection:\n  condition: 1 of selection*\n  selection1:\n    TargetFilename|startswith:\n    - /etc/cron.d/\n    - /etc/cron.daily/\n    - /etc/cron.hourly/\n    - /etc/cron.monthly/\n    - /etc/cron.weekly/\n    - /var/spool/cron/crontabs/\n  selection2:\n    TargetFilename|contains:\n    - /etc/cron.allow\n    - /etc/cron.deny\n    - /etc/crontab\nfalsepositives:\n- Any legitimate cron file.\nid: 6c4e2f43-d94d-4ead-b64d-97e53fa2bd05\nlevel: medium\nlogsource:\n  category: file_event\n  product: linux\nmodified: 2022/12/31\nreferences:\n- https://github.com/microsoft/MSTIC-Sysmon/blob/f1477c0512b0747c1455283069c21faec758e29d/linux/configs/attack-based/persistence/T1053.003_Cron_Activity.xml\nstatus: test\ntags:\n- attack.persistence\n- attack.t1053.003\ntitle: Persistence Via Cron Files\n",
+                            "sigma:id": "6c4e2f43-d94d-4ead-b64d-97e53fa2bd05",
+                            "title": "Persistence Via Cron Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6b14bac8-3e3a-4324-8109-42f0546a347f",
+                        "lookup_data": {
+                            "description": "Detects abuse of the cron utility to perform task scheduling for initial or recurring execution of malicious code. Detection will focus on crontab jobs uploaded from the tmp folder.",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/06\ndescription: Detects abuse of the cron utility to perform task scheduling for initial\n  or recurring execution of malicious code. Detection will focus on crontab jobs uploaded\n  from the tmp folder.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: /tmp/\n    Image|endswith: crontab\nfalsepositives:\n- Legitimate administration activities\nid: 6b14bac8-3e3a-4324-8109-42f0546a347f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.003/T1053.003.md\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1053.003\ntitle: Scheduled Cron Task/Job - Linux\n",
+                            "sigma:id": "6b14bac8-3e3a-4324-8109-42f0546a347f",
+                            "title": "Scheduled Cron Task/Job - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "af202fd3-7bff-4212-a25a-fb34606cfcbe",
+                        "lookup_data": {
+                            "description": "Detects suspicious modification of crontab file.",
+                            "raw": "author: Pawel Mazur\ndate: 2022/04/16\ndescription: Detects suspicious modification of crontab file.\ndetection:\n  condition: keywords\n  keywords:\n  - REPLACE\nfalsepositives:\n- Legitimate modification of crontab\nid: af202fd3-7bff-4212-a25a-fb34606cfcbe\nlevel: medium\nlogsource:\n  product: linux\n  service: cron\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.003/T1053.003.md\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053.003\ntitle: Modifying Crontab\n",
+                            "sigma:id": "af202fd3-7bff-4212-a25a-fb34606cfcbe",
+                            "title": "Modifying Crontab",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1c71e254-6655-42c1-b2d6-5e4718d7fc0a",
+                        "lookup_data": {
+                            "description": "Identifies when a Azure Kubernetes CronJob runs in Azure Cloud. Kubernetes Job is a controller that creates one or more pods and ensures that a specified number of them successfully terminate.\nKubernetes Job can be used to run containers that perform finite tasks for batch jobs. Kubernetes CronJob is used to schedule Jobs.\nAn Adversary may use Kubernetes CronJob for scheduling execution of malicious code that would run as a container in the cluster.\n",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/11/22\ndescription: 'Identifies when a Azure Kubernetes CronJob runs in Azure Cloud. Kubernetes\n  Job is a controller that creates one or more pods and ensures that a specified number\n  of them successfully terminate.\n\n  Kubernetes Job can be used to run containers that perform finite tasks for batch\n  jobs. Kubernetes CronJob is used to schedule Jobs.\n\n  An Adversary may use Kubernetes CronJob for scheduling execution of malicious code\n  that would run as a container in the cluster.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    operationName|endswith:\n    - /CRONJOBS/WRITE\n    - /JOBS/WRITE\n    operationName|startswith:\n    - MICROSOFT.KUBERNETES/CONNECTEDCLUSTERS/BATCH\n    - MICROSOFT.CONTAINERSERVICE/MANAGEDCLUSTERS/BATCH\nfalsepositives:\n- Azure Kubernetes CronJob/Job may be done by a system administrator.\n- If known behavior is causing false positives, it can be exempted from the rule.\nid: 1c71e254-6655-42c1-b2d6-5e4718d7fc0a\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nmodified: 2022/12/18\nreferences:\n- https://docs.microsoft.com/en-us/azure/role-based-access-control/resource-provider-operations#microsoftkubernetes\n- https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/\n- https://kubernetes.io/docs/concepts/workloads/controllers/job/\n- https://www.microsoft.com/security/blog/2020/04/02/attack-matrix-kubernetes/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053.003\n- attack.privilege_escalation\n- attack.execution\ntitle: Azure Kubernetes CronJob\n",
+                            "sigma:id": "1c71e254-6655-42c1-b2d6-5e4718d7fc0a",
+                            "title": "Azure Kubernetes CronJob",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2acf44aa-542f-4366-b4eb-55ef5747759c",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1053.003",
+                            "mitre-cti:description": "Adversaries may abuse the <code>cron</code> utility to perform task scheduling for initial or recurring execution of malicious code.(Citation: 20 macOS Common Tools and Techniques) The <code>cron</code> utility is a time-based job scheduler for Unix-like operating systems.  The <code> crontab</code> file contains the schedule of cron entries to be run and the specified times for execution. Any <code>crontab</code> files are stored in operating system-specific file paths.\n\nAn adversary may use <code>cron</code> in Linux or Unix environments to execute programs at system startup or on a scheduled basis for [Persistence](https://attack.mitre.org/tactics/TA0003). ",
+                            "mitre-cti:name": "Cron",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--2acf44aa-542f-4366-b4eb-55ef5747759c', 'type': 'attack-pattern', 'created': '2019-12-03T14:25:00.538Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1053.003', 'url': 'https://attack.mitre.org/techniques/T1053/003'}, {'source_name': '20 macOS Common Tools and Techniques', 'url': 'https://labs.sentinelone.com/20-common-tools-techniques-used-by-macos-threat-actors-malware/', 'description': 'Phil Stokes. (2021, February 16). 20 Common Tools & Techniques Used by macOS Threat Actors & Malware. Retrieved August 23, 2021.'}], 'modified': '2022-03-24T17:33:03.443Z', 'name': 'Cron', 'description': 'Adversaries may abuse the <code>cron</code> utility to perform task scheduling for initial or recurring execution of malicious code.(Citation: 20 macOS Common Tools and Techniques) The <code>cron</code> utility is a time-based job scheduler for Unix-like operating systems.  The <code> crontab</code> file contains the schedule of cron entries to be run and the specified times for execution. Any <code>crontab</code> files are stored in operating system-specific file paths.\\n\\nAn adversary may use <code>cron</code> in Linux or Unix environments to execute programs at system startup or on a scheduled basis for [Persistence](https://attack.mitre.org/tactics/TA0003). ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': 'Monitor scheduled task creation from common utilities using command-line invocation. Legitimate scheduled tasks may be created during installation of new software or through system administration functions. Look for changes to tasks that do not correlate with known software, patch cycles, etc.  \\n\\nSuspicious program execution through scheduled tasks may show up as outlier processes that have not been seen before when compared against historical data. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement. ', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'File: File Modification', 'Scheduled Job: Scheduled Job Creation'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ddb26b76-4447-4807-871f-1b035b2bfa5d",
+                        "lookup_data": {
+                            "description": "Detects creation of sudoers file or files in \"sudoers.d\" directory which can be used a potential method to persiste privileges for a specific user.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/05\ndescription: Detects creation of sudoers file or files in \"sudoers.d\" directory which\n  can be used a potential method to persiste privileges for a specific user.\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|startswith: /etc/sudoers.d/\nfalsepositives:\n- Creation of legitimate files in sudoers.d folder part of administrator work\nid: ddb26b76-4447-4807-871f-1b035b2bfa5d\nlevel: medium\nlogsource:\n  category: file_event\n  product: linux\nmodified: 2022/12/31\nreferences:\n- https://github.com/h3xduck/TripleCross/blob/1f1c3e0958af8ad9f6ebe10ab442e75de33e91de/apps/deployer.sh\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053.003\ntitle: Persistence Via Sudoers Files\n",
+                            "sigma:id": "ddb26b76-4447-4807-871f-1b035b2bfa5d",
+                            "title": "Persistence Via Sudoers Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7c3b43d8-d794-47d2-800a-d277715aa460",
+                        "lookup_data": {
+                            "description": "Detects abuse of the cron utility to perform task scheduling for initial or recurring execution of malicious code. Detection will focus on crontab jobs uploaded from the tmp folder.",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/06\ndescription: Detects abuse of the cron utility to perform task scheduling for initial\n  or recurring execution of malicious code. Detection will focus on crontab jobs uploaded\n  from the tmp folder.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: /tmp/\n    Image|endswith: /crontab\nfalsepositives:\n- Legitimate administration activities\nid: 7c3b43d8-d794-47d2-800a-d277715aa460\nlevel: medium\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.003/T1053.003.md\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1053.003\ntitle: Scheduled Cron Task/Job - MacOs\n",
+                            "sigma:id": "7c3b43d8-d794-47d2-800a-d277715aa460",
+                            "title": "Scheduled Cron Task/Job - MacOs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1a2ea919-d11d-4d1e-8535-06cda13be20f",
+                        "lookup_data": {
+                            "description": "Detects the creation of \"ebpfbackdoor\" files in both \"cron.d\" and \"sudoers.d\" directories. Which both are related to the TripleCross persistence method",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/05\ndescription: Detects the creation of \"ebpfbackdoor\" files in both \"cron.d\" and \"sudoers.d\"\n  directories. Which both are related to the TripleCross persistence method\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: ebpfbackdoor\nfalsepositives:\n- Unlikely\nid: 1a2ea919-d11d-4d1e-8535-06cda13be20f\nlevel: high\nlogsource:\n  category: file_event\n  product: linux\nmodified: 2022/12/31\nreferences:\n- https://github.com/h3xduck/TripleCross/blob/12629558b8b0a27a5488a0b98f1ea7042e76f8ab/apps/deployer.sh\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.t1053.003\ntitle: Triple Cross eBPF Rootkit Default Persistence\n",
+                            "sigma:id": "1a2ea919-d11d-4d1e-8535-06cda13be20f",
+                            "title": "Triple Cross eBPF Rootkit Default Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1053.003",
+                "display_name": "Scheduled Task/Job: Cron",
+                "atomic_tests": [
+                    {
+                        "name": "Cron - Replace crontab with referenced file",
+                        "auto_generated_guid": "435057fb-74b1-410e-9403-d81baf194f75",
+                        "description": "This test replaces the current user's crontab file with the contents of the referenced file. This technique was used by numerous IoT automated exploitation attacks.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "command": {
+                                "description": "Command to execute",
+                                "type": "string",
+                                "default": "/tmp/evil.sh"
+                            },
+                            "tmp_cron": {
+                                "description": "Temporary reference file to hold evil cron schedule",
+                                "type": "path",
+                                "default": "/tmp/persistevil"
+                            }
+                        },
+                        "executor": {
+                            "name": "sh",
+                            "command": "crontab -l > /tmp/notevil\necho \"* * * * * #{command}\" > #{tmp_cron} && crontab #{tmp_cron}\n",
+                            "cleanup_command": "crontab /tmp/notevil\n"
+                        }
+                    },
+                    {
+                        "name": "Cron - Add script to all cron subfolders",
+                        "auto_generated_guid": "b7d42afa-9086-4c8a-b7b0-8ea3faa6ebb0",
+                        "description": "This test adds a script to /etc/cron.hourly, /etc/cron.daily, /etc/cron.monthly and /etc/cron.weekly folders configured to execute on a schedule. This technique was used by the threat actor Rocke during the exploitation of Linux web servers.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "command": {
+                                "description": "Command to execute",
+                                "type": "string",
+                                "default": "echo 'Hello from Atomic Red Team' > /tmp/atomic.log"
+                            },
+                            "cron_script_name": {
+                                "description": "Name of file to store in cron folder",
+                                "type": "string",
+                                "default": "persistevil"
+                            }
+                        },
+                        "executor": {
+                            "elevation_required": true,
+                            "name": "bash",
+                            "command": "echo \"#{command}\" > /etc/cron.daily/#{cron_script_name}\necho \"#{command}\" > /etc/cron.hourly/#{cron_script_name}\necho \"#{command}\" > /etc/cron.monthly/#{cron_script_name}\necho \"#{command}\" > /etc/cron.weekly/#{cron_script_name}\n",
+                            "cleanup_command": "rm /etc/cron.daily/#{cron_script_name} -f\nrm /etc/cron.hourly/#{cron_script_name} -f\nrm /etc/cron.monthly/#{cron_script_name} -f\nrm /etc/cron.weekly/#{cron_script_name} -f\n"
+                        }
+                    },
+                    {
+                        "name": "Cron - Add script to /etc/cron.d folder",
+                        "auto_generated_guid": "078e69eb-d9fb-450e-b9d0-2e118217c846",
+                        "description": "This test adds a script to /etc/cron.d folder configured to execute on a schedule.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "command": {
+                                "description": "Command to execute",
+                                "type": "string",
+                                "default": "echo '*/5     *       *       *       *       root    echo \"Hello from Atomic Red Team\"' > /tmp/atomic.log"
+                            },
+                            "cron_script_name": {
+                                "description": "Name of file to store in cron folder",
+                                "type": "string",
+                                "default": "persistevil"
+                            }
+                        },
+                        "executor": {
+                            "elevation_required": true,
+                            "name": "sh",
+                            "command": "echo \"#{command}\" > /etc/cron.d/#{cron_script_name}\n",
+                            "cleanup_command": "rm /etc/cron.d/#{cron_script_name} -f\n"
+                        }
+                    },
+                    {
+                        "name": "Cron - Add script to /var/spool/cron/crontabs/ folder",
+                        "auto_generated_guid": "2d943c18-e74a-44bf-936f-25ade6cccab4",
+                        "description": "This test adds a script to a /var/spool/cron/crontabs folder configured to execute on a schedule. This technique was used by the threat actor Rocke during the exploitation of Linux web servers.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "command": {
+                                "description": "Command to execute",
+                                "type": "string",
+                                "default": "echo 'Hello from Atomic Red Team' > /tmp/atomic.log"
+                            },
+                            "cron_script_name": {
+                                "description": "Name of file to store in /var/spool/cron/crontabs folder",
+                                "type": "string",
+                                "default": "persistevil"
+                            }
+                        },
+                        "executor": {
+                            "elevation_required": true,
+                            "name": "bash",
+                            "command": "echo \"#{command}\" >> /var/spool/cron/crontabs/#{cron_script_name}\n",
+                            "cleanup_command": "rm /var/spool/cron/crontabs/#{cron_script_name} -f\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:41:21"
+}

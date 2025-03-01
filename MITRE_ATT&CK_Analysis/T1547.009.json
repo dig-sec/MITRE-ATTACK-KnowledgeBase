@@ -1,0 +1,140 @@
+{
+    "id": "T1547.009",
+    "name": "Shortcut Modification",
+    "description": "Adversaries may create or edit shortcuts to run a program during system boot or user login. Shortcuts or symbolic links are ways of referencing other files or programs that will be opened or executed when the shortcut is clicked or executed by a system startup process.\nAdversaries could use shortcuts to execute their tools for persistence. They may create a new shortcut as a means of indirection that may use [Masquerading](T1036) to look like a legitimate program. Adversaries could also edit the target path or entirely replace an existing shortcut so their tools will be executed instead of the intended legitimate program.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation",
+    "data_sources": "File: File Creation, File: File Modification, Process: Process Creation",
+    "detection": "Since a shortcut's target path likely will not change, modifications to shortcut files that do not correlate with known software changes, patches, removal, etc., may be suspicious. Analysis should attempt to relate shortcut file change or creation events to other potentially suspicious events based on known adversary behavior such as process launches of unknown executables that make network connections.\nMonitor for LNK files created with a Zone Identifier value greater than 1, which may indicate that the LNK file originated from outside of the network.(Citation: BSidesSLC 2020 - LNK Elastic)",
+    "url": "https://attack.mitre.org/techniques/T1547/009",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1547.009",
+                "atomic_attack_guid": "ce4fc678-364f-4282-af16-2fb4c78005ce",
+                "atomic_attack_name": "Shortcut Modification",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Calculator Usage",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_calc_uncommon_exec.yml",
+                        "remote_content": "title: Suspicious Calculator Usage\nid: 737e618a-a410-49b5-bec3-9e55ff7fbc15\nstatus: test\ndescription: |\n    Detects suspicious use of 'calc.exe' with command line parameters or in a suspicious directory, which is likely caused by some PoC or detection evasion.\nreferences:\n    - https://twitter.com/ItsReallyNick/status/1094080242686312448\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-02-09\nmodified: 2023-11-09\ntags:\n    - attack.defense-evasion\n    - attack.t1036\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        CommandLine|contains: '\\calc.exe '\n    selection_2:\n        Image|endswith: '\\calc.exe'\n    filter_main_known_locations:\n        Image|contains:\n            - ':\\Windows\\System32\\'\n            - ':\\Windows\\SysWOW64\\'\n            - ':\\Windows\\WinSxS\\'\n    condition: selection_1 or ( selection_2 and not filter_main_known_locations )\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "ee63c85c-6d51-4d12-ad09-04e25877a947",
+                    "81315b50-6b60-4d8f-9928-3466e1022515",
+                    "35bc7e28-ee6b-492f-ab04-da58fcf6402e",
+                    "8c3c76ca-8f8b-4b1d-aaf3-81aebcd367c9",
+                    "4ab929c6-ee2d-4fb5-aab4-b14be2ed7179"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "ee63c85c-6d51-4d12-ad09-04e25877a947",
+                        "lookup_data": {
+                            "description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by application shims.\nThe Microsoft Windows Application Compatibility Infrastructure/Framework (Application Shim) was created to allow for backward compatibility of software as the operating system codebase changes over time.\n",
+                            "raw": "author: frack113\ndate: 2021/12/29\ndescription: 'Adversaries may establish persistence and/or elevate privileges by executing\n  malicious content triggered by application shims.\n\n  The Microsoft Windows Application Compatibility Infrastructure/Framework (Application\n  Shim) was created to allow for backward compatibility of software as the operating\n  system codebase changes over time.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|contains: \\Windows\\apppatch\\Custom\\\n    TargetFilename|endswith: .sdb\nfalsepositives:\n- Unknown\nid: ee63c85c-6d51-4d12-ad09-04e25877a947\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.011/T1546.011.md#atomic-test-2---new-shim-database-files-created-in-the-default-shim-database-directory\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.009\ntitle: New Shim Database Created in the Default Directory\n",
+                            "sigma:id": "ee63c85c-6d51-4d12-ad09-04e25877a947",
+                            "title": "New Shim Database Created in the Default Directory",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "81315b50-6b60-4d8f-9928-3466e1022515",
+                        "lookup_data": {
+                            "description": "Detects unusual processes accessing desktop.ini, which can be leveraged to alter how Explorer displays a folder's content (i.e. renaming files) without changing them on disk.",
+                            "raw": "author: Maxime Thiebaut (@0xThiebaut), Tim Shelton (HAWK.IO)\ndate: 2020/03/19\ndescription: Detects unusual processes accessing desktop.ini, which can be leveraged\n  to alter how Explorer displays a folder's content (i.e. renaming files) without\n  changing them on disk.\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_generic:\n    Image|startswith:\n    - C:\\Windows\\\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n  filter_jetbrains:\n    Image|endswith: \\AppData\\Local\\JetBrains\\Toolbox\\bin\\7z.exe\n    TargetFilename|contains: \\JetBrains\\apps\\\n  filter_upgrade:\n    TargetFilename|startswith: C:\\$WINDOWS.~BT\\NewOS\\\n  selection:\n    TargetFilename|endswith: \\desktop.ini\nfalsepositives:\n- Operations performed through Windows SCCM or equivalent\n- Read only access list authority\nid: 81315b50-6b60-4d8f-9928-3466e1022515\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/07\nreferences:\n- https://isc.sans.edu/forums/diary/Desktopini+as+a+postexploitation+tool/25912/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.009\ntitle: Suspicious desktop.ini Action\n",
+                            "sigma:id": "81315b50-6b60-4d8f-9928-3466e1022515",
+                            "title": "Suspicious desktop.ini Action",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "35bc7e28-ee6b-492f-ab04-da58fcf6402e",
+                        "lookup_data": {
+                            "description": "Detects unusual processes accessing desktop.ini remotely over network share, which can be leveraged to alter how Explorer displays a folder's content (i.e. renaming files) without changing them on disk.",
+                            "raw": "author: Tim Shelton (HAWK.IO)\ndate: 2021/12/06\ndescription: Detects unusual processes accessing desktop.ini remotely over network\n  share, which can be leveraged to alter how Explorer displays a folder's content\n  (i.e. renaming files) without changing them on disk.\ndetection:\n  condition: selection\n  selection:\n    AccessList|contains:\n    - WriteData\n    - DELETE\n    - WriteDAC\n    - AppendData\n    - AddSubdirectory\n    EventID: 5145\n    ObjectType: File\n    RelativeTargetName|endswith: \\desktop.ini\nfalsepositives:\n- Read only access list authority\nid: 35bc7e28-ee6b-492f-ab04-da58fcf6402e\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/01/16\nreferences:\n- https://isc.sans.edu/forums/diary/Desktopini+as+a+postexploitation+tool/25912/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.009\ntitle: Windows Network Access Suspicious desktop.ini Action\n",
+                            "sigma:id": "35bc7e28-ee6b-492f-ab04-da58fcf6402e",
+                            "title": "Windows Network Access Suspicious desktop.ini Action",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8c3c76ca-8f8b-4b1d-aaf3-81aebcd367c9",
+                        "lookup_data": {
+                            "description": "Adversaries may execute their own malicious payloads by hijacking vulnerable file path references.\nAdversaries can take advantage of paths that lack surrounding quotations by placing an executable in a higher level directory within the path, so that Windows will choose the adversary's executable to launch.\n",
+                            "raw": "author: frack113\ndate: 2021/12/30\ndescription: 'Adversaries may execute their own malicious payloads by hijacking vulnerable\n  file path references.\n\n  Adversaries can take advantage of paths that lack surrounding quotations by placing\n  an executable in a higher level directory within the path, so that Windows will\n  choose the adversary''s executable to launch.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename: C:\\program.exe\nfalsepositives:\n- Unknown\nid: 8c3c76ca-8f8b-4b1d-aaf3-81aebcd367c9\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1574.009/T1574.009.md\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.009\ntitle: Creation Exe for Service with Unquoted Path\n",
+                            "sigma:id": "8c3c76ca-8f8b-4b1d-aaf3-81aebcd367c9",
+                            "title": "Creation Exe for Service with Unquoted Path",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4ab929c6-ee2d-4fb5-aab4-b14be2ed7179",
+                        "lookup_data": {
+                            "capec": "CAPEC-132",
+                            "mitre-attack-id": "T1547.009",
+                            "mitre-cti:description": "Adversaries may create or modify shortcuts that can execute a program during system boot or user login. Shortcuts or symbolic links are used to reference other files or programs that will be opened or executed when the shortcut is clicked or executed by a system startup process.\n\nAdversaries may abuse shortcuts in the startup folder to execute their tools and achieve persistence.(Citation: Shortcut for Persistence ) Although often used as payloads in an infection chain (e.g. [Spearphishing Attachment](https://attack.mitre.org/techniques/T1566/001)), adversaries may also create a new shortcut as a means of indirection, while also abusing [Masquerading](https://attack.mitre.org/techniques/T1036) to make the malicious shortcut appear as a legitimate program. Adversaries can also edit the target path or entirely replace an existing shortcut so their malware will be executed instead of the intended legitimate program.\n\nShortcuts can also be abused to establish persistence by implementing other methods. For example, LNK browser extensions may be modified (e.g. [Browser Extensions](https://attack.mitre.org/techniques/T1176)) to persistently launch malware.",
+                            "mitre-cti:name": "Shortcut Modification",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-19T22:29:46.175Z', 'name': 'Shortcut Modification', 'description': 'Adversaries may create or modify shortcuts that can execute a program during system boot or user login. Shortcuts or symbolic links are used to reference other files or programs that will be opened or executed when the shortcut is clicked or executed by a system startup process.\\n\\nAdversaries may abuse shortcuts in the startup folder to execute their tools and achieve persistence.(Citation: Shortcut for Persistence ) Although often used as payloads in an infection chain (e.g. [Spearphishing Attachment](https://attack.mitre.org/techniques/T1566/001)), adversaries may also create a new shortcut as a means of indirection, while also abusing [Masquerading](https://attack.mitre.org/techniques/T1036) to make the malicious shortcut appear as a legitimate program. Adversaries can also edit the target path or entirely replace an existing shortcut so their malware will be executed instead of the intended legitimate program.\\n\\nShortcuts can also be abused to establish persistence by implementing other methods. For example, LNK browser extensions may be modified (e.g. [Browser Extensions](https://attack.mitre.org/techniques/T1176)) to persistently launch malware.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': \"Since a shortcut's target path likely will not change, modifications to shortcut files that do not correlate with known software changes, patches, removal, etc., may be suspicious. Analysis should attempt to relate shortcut file change or creation events to other potentially suspicious events based on known adversary behavior such as process launches of unknown executables that make network connections.\\n\\nMonitor for LNK files created with a Zone Identifier value greater than 1, which may indicate that the LNK file originated from outside of the network.(Citation: BSidesSLC 2020 - LNK Elastic)\", 'x_mitre_platforms': ['Windows'], 'x_mitre_is_subtechnique': True, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.2', 'x_mitre_contributors': ['David French, Elastic', 'Bobby, Filar, Elastic', 'Travis Smith, Tripwire'], 'x_mitre_data_sources': ['Process: Process Creation', 'File: File Creation', 'File: File Modification'], 'x_mitre_permissions_required': ['Administrator', 'User'], 'type': 'attack-pattern', 'id': 'attack-pattern--4ab929c6-ee2d-4fb5-aab4-b14be2ed7179', 'created': '2020-01-24T19:00:32.917Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1547/009', 'external_id': 'T1547.009'}, {'source_name': 'Shortcut for Persistence ', 'description': 'Elastic. (n.d.). Shortcut File Written or Modified for Persistence. Retrieved June 1, 2022.', 'url': 'https://www.elastic.co/guide/en/security/7.17/shortcut-file-written-or-modified-for-persistence.html#shortcut-file-written-or-modified-for-persistence'}, {'source_name': 'BSidesSLC 2020 - LNK Elastic', 'description': 'French, D., Filar, B.. (2020, March 21). A Chain Is No Stronger Than Its Weakest LNK. Retrieved November 30, 2020.', 'url': 'https://www.youtube.com/watch?v=nJ0UsyiUEqQ'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/132.html', 'external_id': 'CAPEC-132'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1547.009",
+                "display_name": "Boot or Logon Autostart Execution: Shortcut Modification",
+                "atomic_tests": [
+                    {
+                        "name": "Shortcut Modification",
+                        "auto_generated_guid": "ce4fc678-364f-4282-af16-2fb4c78005ce",
+                        "description": "This test to simulate shortcut modification and then execute. example shortcut (*.lnk , .url) strings check with powershell;\ngci -path \"C:\\Users\" -recurse -include *.url -ea SilentlyContinue | Select-String -Pattern \"exe\" | FL.\nUpon execution, calc.exe will be launched.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "shortcut_file_path": {
+                                "description": "shortcut modified and execute",
+                                "type": "path",
+                                "default": "%temp%\\T1547.009_modified_shortcut.url"
+                            }
+                        },
+                        "executor": {
+                            "command": "echo [InternetShortcut] > #{shortcut_file_path}\necho URL=C:\\windows\\system32\\calc.exe >> #{shortcut_file_path}\n#{shortcut_file_path}\n",
+                            "cleanup_command": "del -f #{shortcut_file_path} >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Create shortcut to cmd in startup folders",
+                        "auto_generated_guid": "cfdc954d-4bb0-4027-875b-a1893ce406f2",
+                        "description": "LNK file to launch CMD placed in startup folder. Upon execution, open File Explorer and browse to \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\"\nto view the new shortcut.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$Shell = New-Object -ComObject (\"WScript.Shell\")\n$ShortCut = $Shell.CreateShortcut(\"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\T1547.009.lnk\")\n$ShortCut.TargetPath=\"cmd.exe\"\n$ShortCut.WorkingDirectory = \"C:\\Windows\\System32\";\n$ShortCut.WindowStyle = 1;\n$ShortCut.Description = \"T1547.009.\";\n$ShortCut.Save()\n\n$Shell = New-Object -ComObject (\"WScript.Shell\")\n$ShortCut = $Shell.CreateShortcut(\"$env:ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\T1547.009.lnk\")\n$ShortCut.TargetPath=\"cmd.exe\"\n$ShortCut.WorkingDirectory = \"C:\\Windows\\System32\";\n$ShortCut.WindowStyle = 1;\n$ShortCut.Description = \"T1547.009.\";\n$ShortCut.Save()\n",
+                            "cleanup_command": "Remove-Item \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\T1547.009.lnk\" -ErrorAction Ignore\nRemove-Item \"$env:ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\T1547.009.lnk\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:43:27"
+}

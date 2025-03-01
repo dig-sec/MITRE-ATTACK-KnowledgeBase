@@ -1,0 +1,479 @@
+{
+    "id": "T1053",
+    "name": "Scheduled Task/Job",
+    "description": "Adversaries may abuse task scheduling functionality to facilitate initial or recurring execution of malicious code. Utilities exist within all major operating systems to schedule programs or scripts to be executed at a specified date and time. A task can also be scheduled on a remote system, provided the proper authentication is met (ex: RPC and file and printer sharing in Windows environments). Scheduling a task on a remote system typically requires being a member of an admin or otherwise privileged group on the remote system.(Citation: TechNet Task Scheduler Security)\nAdversaries may use task scheduling to execute programs at system startup or on a scheduled basis for persistence. These mechanisms can also be abused to run a process under the context of a specified account (such as one with elevated permissions/privileges).",
+    "platforms": "Windows, Linux, macOS, Containers",
+    "kill_chain_phases": "Execution, Persistence, Privilege Escalation",
+    "data_sources": "File: File Creation, Container: Container Creation, Scheduled Job: Scheduled Job Creation, Command: Command Execution, File: File Modification, Process: Process Creation",
+    "detection": "Monitor scheduled task creation from common utilities using command-line invocation. Legitimate scheduled tasks may be created during installation of new software or through system administration functions. Look for changes to tasks that do not correlate with known software, patch cycles, etc.\nSuspicious program execution through scheduled tasks may show up as outlier processes that have not been seen before when compared against historical data. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.",
+    "url": "https://attack.mitre.org/techniques/T1053",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "b0d77106-7bb0-41fe-bd94-d1752164d066",
+                    "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "0fcd1c79-4eeb-4746-aba9-1b458f7a79cb",
+                    "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                    "35dd844a-b219-4e2b-a6bb-efa9a75995a9",
+                    "5d64d069-0fa0-45a4-bd65-b6f0950d210f",
+                    "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                    "058f4380-962d-40a5-afce-50207d36d7e2",
+                    "a8f29a7b-b137-4446-80a0-b804272f3da2",
+                    "f6de6525-4509-495a-8a82-1f8b0ed73a00",
+                    "dde85b37-40cd-4a94-b00c-0b8794f956b5",
+                    "5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf",
+                    "aff229ab-f8cd-447b-b215-084d11e79eb0",
+                    "5fd62412-4cec-450a-a2bc-e52ec0a8ab16",
+                    "5d498330-f574-4889-bcc9-c53c950d210f",
+                    "eb4ee171-8930-4c15-8917-9af8775417fb",
+                    "80e1f67a-4596-4351-98f5-a9c3efabac95",
+                    "83fd46e9-1f2c-47f3-ba6e-61b6f62ff75d",
+                    "60fc936d-2eb0-4543-8a13-911c750a1dfc",
+                    "4720b7df-40c3-48fd-bbdf-fd4b3c464f0d",
+                    "e1118a8f-82f5-44b3-bb6b-8a284e5df602",
+                    "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                    "26488ad0-f9fd-4536-876f-52fea846a2e4",
+                    "931b6802-d6a6-4267-9ffa-526f57f22aaf",
+                    "5dbae98e-7974-4480-86db-44be950d210f",
+                    "b20f6158-9438-41be-83da-a5a16ac90c2b",
+                    "f2cb6ce2-188d-4162-8feb-594f949b13dd",
+                    "671ffc77-50a7-464f-9e3d-9ea2b493b26b",
+                    "92626ddd-662c-49e3-ac59-f6535f12d189",
+                    "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                    "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                    "4f86b304-3e02-40e3-aa5d-e88a167c9617",
+                    "c5a178bf-9cfb-4340-b584-e4df39b6a3e7",
+                    "56c217c3-2de2-479b-990f-5c109ba8458f",
+                    "bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7",
+                    "ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "b0d77106-7bb0-41fe-bd94-d1752164d066",
+                        "lookup_data": {
+                            "description": "Detects rare scheduled tasks creations that only appear a few times per time frame and could reveal password dumpers, backdoor installs or other types of malicious code",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/23\ndescription: Detects rare scheduled tasks creations that only appear a few times per\n  time frame and could reveal password dumpers, backdoor installs or other types of\n  malicious code\ndetection:\n  condition: selection | count() by TaskName < 5\n  selection:\n    EventID: 4698\n  timeframe: 7d\nfalsepositives:\n- Software installation\n- Software updates\nid: b0d77106-7bb0-41fe-bd94-d1752164d066\nlevel: low\nlogsource:\n  definition: The Advanced Audit Policy setting Object Access > Audit Other Object\n    Access Events has to be configured to allow this detection (not in the baseline\n    recommendations by Microsoft). We also recommend extracting the Command field\n    from the embedded XML in the event data.\n  product: windows\n  service: security\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.persistence\n- car.2013-08-001\n- attack.t1053.005\ntitle: Rare Schtasks Creations\n",
+                            "sigma:id": "b0d77106-7bb0-41fe-bd94-d1752164d066",
+                            "title": "Rare Schtasks Creations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                        "lookup_data": {
+                            "description": "Operation Ghost - White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5d9b516c-e5f0-4e7c-a958-5d8c0a019371.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1571855044",
+                            "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0fcd1c79-4eeb-4746-aba9-1b458f7a79cb",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls to create or execute a scheduled task via ATSvc",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls to create or execute a scheduled task via ATSvc\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: 1ff70682-0a51-30e8-076d-740be8cee98b\n    OpNum:\n    - 0\n    - 1\nfalsepositives:\n- Unknown\nid: 0fcd1c79-4eeb-4746-aba9-1b458f7a79cb\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:1ff70682-0a51-30e8-076d-740be8cee98b\"'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tsch/d1058a28-7e02-4948-8b8d-4a347fa64931\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-TSCH.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1053\n- attack.t1053.002\ntitle: Remote Schedule Task Lateral Movement via ATSvc\n",
+                            "sigma:id": "0fcd1c79-4eeb-4746-aba9-1b458f7a79cb",
+                            "title": "Remote Schedule Task Lateral Movement via ATSvc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                        "lookup_data": {
+                            "description": "Windows DCE-RPC functions which indicate an execution techniques on the remote system. All credit for the Zeek mapping of the suspicious endpoint/operation field goes to MITRE",
+                            "raw": "author: '@neu5ron, SOC Prime'\ndate: 2020/03/19\ndescription: Windows DCE-RPC functions which indicate an execution techniques on the\n  remote system. All credit for the Zeek mapping of the suspicious endpoint/operation\n  field goes to MITRE\ndetection:\n  condition: 1 of op*\n  op1:\n    endpoint: JobAdd\n    operation: atsvc\n  op10:\n    endpoint: svcctl\n    operation: StartServiceW\n  op2:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcEnableTask\n  op3:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcRegisterTask\n  op4:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcRun\n  op5:\n    endpoint: IWbemServices\n    operation: ExecMethod\n  op6:\n    endpoint: IWbemServices\n    operation: ExecMethodAsync\n  op7:\n    endpoint: svcctl\n    operation: CreateServiceA\n  op8:\n    endpoint: svcctl\n    operation: CreateServiceW\n  op9:\n    endpoint: svcctl\n    operation: StartServiceA\nfalsepositives:\n- Windows administrator tasks or troubleshooting\n- Windows management scripts or software\nid: b640c0b8-87f8-4daa-aef8-95a24261dd1d\nlevel: medium\nlogsource:\n  product: zeek\n  service: dce_rpc\nmodified: 2021/11/27\nreferences:\n- https://github.com/mitre-attack/bzar#indicators-for-attck-execution\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1053.002\n- attack.t1569.002\ntitle: MITRE BZAR Indicators for Execution\n",
+                            "sigma:id": "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                            "title": "MITRE BZAR Indicators for Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                        "lookup_data": {
+                            "description": "Emotet in Depth TTP 10-07-19",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d9b5933-964c-433c-b84f-4c680a2fe004.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1621850615",
+                            "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "35dd844a-b219-4e2b-a6bb-efa9a75995a9",
+                        "lookup_data": {
+                            "capec": "CAPEC-557",
+                            "mitre-attack-id": "T1053",
+                            "mitre-cti:description": "Adversaries may abuse task scheduling functionality to facilitate initial or recurring execution of malicious code. Utilities exist within all major operating systems to schedule programs or scripts to be executed at a specified date and time. A task can also be scheduled on a remote system, provided the proper authentication is met (ex: RPC and file and printer sharing in Windows environments). Scheduling a task on a remote system typically may require being a member of an admin or otherwise privileged group on the remote system.(Citation: TechNet Task Scheduler Security)\n\nAdversaries may use task scheduling to execute programs at system startup or on a scheduled basis for persistence. These mechanisms can also be abused to run a process under the context of a specified account (such as one with elevated permissions/privileges). Similar to [System Binary Proxy Execution](https://attack.mitre.org/techniques/T1218), adversaries have also abused task scheduling to potentially mask one-time execution under a trusted system process.(Citation: ProofPoint Serpent)",
+                            "mitre-cti:name": "Scheduled Task/Job",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Linux', 'macOS', 'Containers'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Prashant Verma, Paladion', 'Leo Loobeek, @leoloobeek', 'Travis Smith, Tripwire', 'Alain Homewood, Insomnia Security', 'Andrew Northern, @ex_raritas', 'Bryan Campbell, @bry_campbell', 'Zachary Abzug, @ZackDoesML', 'Selena Larson, @selenalarson'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--35dd844a-b219-4e2b-a6bb-efa9a75995a9', 'created': '2017-05-31T21:30:46.977Z', 'x_mitre_version': '2.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1053', 'url': 'https://attack.mitre.org/techniques/T1053'}, {'source_name': 'ProofPoint Serpent', 'url': 'https://www.proofpoint.com/us/blog/threat-insight/serpent-no-swiping-new-backdoor-targets-french-entities-unique-attack-chain', 'description': 'Campbell, B. et al. (2022, March 21). Serpent, No Swiping! New Backdoor Targets French Entities with Unique Attack Chain. Retrieved April 11, 2022.'}, {'source_name': 'TechNet Task Scheduler Security', 'url': 'https://technet.microsoft.com/en-us/library/cc785125.aspx', 'description': 'Microsoft. (2005, January 21). Task Scheduler and security. Retrieved June 8, 2016.'}, {'url': 'https://capec.mitre.org/data/definitions/557.html', 'source_name': 'capec', 'external_id': 'CAPEC-557'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may abuse task scheduling functionality to facilitate initial or recurring execution of malicious code. Utilities exist within all major operating systems to schedule programs or scripts to be executed at a specified date and time. A task can also be scheduled on a remote system, provided the proper authentication is met (ex: RPC and file and printer sharing in Windows environments). Scheduling a task on a remote system typically may require being a member of an admin or otherwise privileged group on the remote system.(Citation: TechNet Task Scheduler Security)\\n\\nAdversaries may use task scheduling to execute programs at system startup or on a scheduled basis for persistence. These mechanisms can also be abused to run a process under the context of a specified account (such as one with elevated permissions/privileges). Similar to [System Binary Proxy Execution](https://attack.mitre.org/techniques/T1218), adversaries have also abused task scheduling to potentially mask one-time execution under a trusted system process.(Citation: ProofPoint Serpent)', 'modified': '2022-04-14T20:59:52.686Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Scheduled Task/Job', 'x_mitre_detection': 'Monitor scheduled task creation from common utilities using command-line invocation. Legitimate scheduled tasks may be created during installation of new software or through system administration functions. Look for changes to tasks that do not correlate with known software, patch cycles, etc. \\n\\nSuspicious program execution through scheduled tasks may show up as outlier processes that have not been seen before when compared against historical data. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Scheduled Job: Scheduled Job Creation', 'Container: Container Creation', 'Process: Process Creation', 'File: File Modification', 'File: File Creation', 'Command: Command Execution'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM', 'User'], 'x_mitre_effective_permissions': ['SYSTEM', 'Administrator', 'User'], 'x_mitre_remote_support': True, 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d64d069-0fa0-45a4-bd65-b6f0950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Gamaredon group",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d64d069-0fa0-45a4-bd65-b6f0950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566995352",
+                            "uuid": "5d64d069-0fa0-45a4-bd65-b6f0950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                        "lookup_data": {
+                            "description": "Detects commands used by Turla group as reported by ESET in May 2020",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/05/26\ndescription: Detects commands used by Turla group as reported by ESET in May 2020\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains:\n    - tracert -h 10 yahoo.com\n    - .WSqmCons))|iex;\n    - Fr`omBa`se6`4Str`ing\n  selection2:\n    CommandLine|contains|all:\n    - net use https://docs.live.net\n    - '@aol.co.uk'\nfalsepositives:\n- Unknown\nid: 9e2e51c5-c699-4794-ba5a-29f5da40ac0c\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.welivesecurity.com/wp-content/uploads/2020/05/ESET_Turla_ComRAT.pdf\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059.001\n- attack.t1053.005\n- attack.t1027\ntitle: Turla Group Commands May 2020\n",
+                            "sigma:id": "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                            "title": "Turla Group Commands May 2020",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "058f4380-962d-40a5-afce-50207d36d7e2",
+                        "lookup_data": {
+                            "description": "Detect various execution methods of the CrackMapExec pentesting framework",
+                            "raw": "author: Thomas Patzke\ndate: 2020/05/22\ndescription: Detect various execution methods of the CrackMapExec pentesting framework\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - powershell.exe -exec bypass -noni -nop -w 1 -C \"\n    - 'powershell.exe -noni -nop -w 1 -enc '\n    CommandLine|endswith:\n    - cmd.exe /Q /c * 1> \\\\\\\\*\\\\*\\\\* 2>&1\n    - cmd.exe /C * > \\\\\\\\*\\\\*\\\\* 2>&1\n    - cmd.exe /C * > *\\\\Temp\\\\* 2>&1\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 058f4380-962d-40a5-afce-50207d36d7e2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/byt3bl33d3r/CrackMapExec\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1053\n- attack.t1059.003\n- attack.t1059.001\n- attack.s0106\ntitle: CrackMapExec Command Execution\n",
+                            "sigma:id": "058f4380-962d-40a5-afce-50207d36d7e2",
+                            "title": "CrackMapExec Command Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a8f29a7b-b137-4446-80a0-b804272f3da2",
+                        "lookup_data": {
+                            "description": "Detect lateral movement using GPO scheduled task, usually used to deploy ransomware at scale",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: Detect lateral movement using GPO scheduled task, usually used to deploy\n  ransomware at scale\ndetection:\n  condition: selection\n  selection:\n    Accesses|contains:\n    - WriteData\n    - '%%4417'\n    EventID: 5145\n    RelativeTargetName|endswith: ScheduledTasks.xml\n    ShareName: \\\\\\\\\\*\\\\SYSVOL\nfalsepositives:\n- If the source IP is not localhost then it's super suspicious, better to monitor\n  both local and remote changes to GPO scheduledtasks\nid: a8f29a7b-b137-4446-80a0-b804272f3da2\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/menasec1/status/1106899890377052160\n- https://www.secureworks.com/blog/ransomware-as-a-distraction\nstatus: test\ntags:\n- attack.persistence\n- attack.lateral_movement\n- attack.t1053.005\ntitle: Persistence and Execution at Scale via GPO Scheduled Task\n",
+                            "sigma:id": "a8f29a7b-b137-4446-80a0-b804272f3da2",
+                            "title": "Persistence and Execution at Scale via GPO Scheduled Task",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f6de6525-4509-495a-8a82-1f8b0ed73a00",
+                        "lookup_data": {
+                            "description": "Detects remote task creation via at.exe or API interacting with ATSVC namedpipe",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: Detects remote task creation via at.exe or API interacting with ATSVC\n  namedpipe\ndetection:\n  condition: selection\n  selection:\n    Accesses|contains: WriteData\n    EventID: 5145\n    RelativeTargetName: atsvc\n    ShareName: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Unknown\nid: f6de6525-4509-495a-8a82-1f8b0ed73a00\nlevel: medium\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://blog.menasec.net/2019/03/threat-hunting-25-scheduled-tasks-for.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.persistence\n- car.2013-05-004\n- car.2015-04-001\n- attack.t1053.002\ntitle: Remote Task Creation via ATSVC Named Pipe\n",
+                            "sigma:id": "f6de6525-4509-495a-8a82-1f8b0ed73a00",
+                            "title": "Remote Task Creation via ATSVC Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dde85b37-40cd-4a94-b00c-0b8794f956b5",
+                        "lookup_data": {
+                            "description": "Detects remote task creation via at.exe or API interacting with ATSVC namedpipe",
+                            "raw": "author: Samir Bousseaden, @neu5rn\ndate: 2020/04/03\ndescription: Detects remote task creation via at.exe or API interacting with ATSVC\n  namedpipe\ndetection:\n  condition: selection\n  selection:\n    name: atsvc\n    path: \\\\\\*\\IPC$\nfalsepositives:\n- Unknown\nid: dde85b37-40cd-4a94-b00c-0b8794f956b5\nlevel: medium\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2022/12/27\nreferences:\n- https://blog.menasec.net/2019/03/threat-hunting-25-scheduled-tasks-for.html\nrelated:\n- id: f6de6525-4509-495a-8a82-1f8b0ed73a00\n  type: derived\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.persistence\n- car.2013-05-004\n- car.2015-04-001\n- attack.t1053.002\ntitle: Remote Task Creation via ATSVC Named Pipe - Zeek\n",
+                            "sigma:id": "dde85b37-40cd-4a94-b00c-0b8794f956b5",
+                            "title": "Remote Task Creation via ATSVC Named Pipe - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf",
+                        "lookup_data": {
+                            "description": "2019-01-10: North Korea Lazarus Targeting REDBANC",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1547585075",
+                            "uuid": "5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aff229ab-f8cd-447b-b215-084d11e79eb0",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls to create or execute a scheduled task via SASec",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls to create or execute a scheduled task via SASec\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: 378e52b0-c0a9-11cf-822d-00aa0051e40f\n    OpNum:\n    - 0\n    - 1\nfalsepositives:\n- Unknown\nid: aff229ab-f8cd-447b-b215-084d11e79eb0\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:378e52b0-c0a9-11cf-822d-00aa0051e40f\"'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tsch/d1058a28-7e02-4948-8b8d-4a347fa64931\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-TSCH.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1053\n- attack.t1053.002\ntitle: Remote Schedule Task Lateral Movement via SASec\n",
+                            "sigma:id": "aff229ab-f8cd-447b-b215-084d11e79eb0",
+                            "title": "Remote Schedule Task Lateral Movement via SASec",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5fd62412-4cec-450a-a2bc-e52ec0a8ab16",
+                        "lookup_data": {
+                            "description": "xHunt Campaign: Newly Discovered Backdoors Using Deleted Email Drafts and DNS Tunneling for Command and Control",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5fd62412-4cec-450a-a2bc-e52ec0a8ab16.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1607869658",
+                            "uuid": "5fd62412-4cec-450a-a2bc-e52ec0a8ab16",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Sharpening the Machete",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d498330-f574-4889-bcc9-c53c950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566552908",
+                            "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eb4ee171-8930-4c15-8917-9af8775417fb",
+                        "lookup_data": {
+                            "description": "CERT-FR report extended - sandworm intrusion set campaign targeting Centreon systems",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/eb4ee171-8930-4c15-8917-9af8775417fb.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1613463604",
+                            "uuid": "eb4ee171-8930-4c15-8917-9af8775417fb",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "80e1f67a-4596-4351-98f5-a9c3efabac95",
+                        "lookup_data": {
+                            "description": "Detects the creation of tasks from processes executed from suspicious locations",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/11/16\ndescription: Detects the creation of tasks from processes executed from suspicious\n  locations\ndetection:\n  condition: selection\n  selection:\n    Image|contains:\n    - \\AppData\\\n    - C:\\PerfLogs\n    - \\Windows\\System32\\config\\systemprofile\n    TargetFilename|contains: \\Windows\\System32\\Tasks\nfalsepositives:\n- Unknown\nid: 80e1f67a-4596-4351-98f5-a9c3efabac95\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/01/12\nreferences:\n- Internal Research\nstatus: test\ntags:\n- attack.persistence\n- attack.execution\n- attack.t1053\ntitle: Suspicious Scheduled Task Write to System32 Tasks\n",
+                            "sigma:id": "80e1f67a-4596-4351-98f5-a9c3efabac95",
+                            "title": "Suspicious Scheduled Task Write to System32 Tasks",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83fd46e9-1f2c-47f3-ba6e-61b6f62ff75d",
+                        "lookup_data": {
+                            "description": "Industroyer2: Industroyer reloaded",
+                            "link": "http://www.botvrij.eu/data/feed-osint/83fd46e9-1f2c-47f3-ba6e-61b6f62ff75d.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1649878899",
+                            "uuid": "83fd46e9-1f2c-47f3-ba6e-61b6f62ff75d",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "60fc936d-2eb0-4543-8a13-911c750a1dfc",
+                        "lookup_data": {
+                            "description": "Detect an interactive AT job, which may be used as a form of privilege escalation.",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019/10/24\ndescription: Detect an interactive AT job, which may be used as a form of privilege\n  escalation.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: interactive\n    Image|endswith: \\at.exe\nfalsepositives:\n- Unlikely (at.exe deprecated as of Windows 8)\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 60fc936d-2eb0-4543-8a13-911c750a1dfc\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.002/T1053.002.md\n- https://eqllib.readthedocs.io/en/latest/analytics/d8db43cf-ed52-4f5c-9fb3-c9a4b95a0b56.html\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1053.002\ntitle: Interactive AT Job\n",
+                            "sigma:id": "60fc936d-2eb0-4543-8a13-911c750a1dfc",
+                            "title": "Interactive AT Job",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4720b7df-40c3-48fd-bbdf-fd4b3c464f0d",
+                        "lookup_data": {
+                            "description": "Monitor the creation of a new key under 'TaskCache' when a new scheduled task is registered by a process that is not svchost.exe, which is suspicious",
+                            "raw": "author: Syed Hasan (@syedhasan009)\ndate: 2021/06/18\ndescription: Monitor the creation of a new key under 'TaskCache' when a new scheduled\n  task is registered by a process that is not svchost.exe, which is suspicious\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n    TargetObject|contains:\n    - Microsoft\\Windows\\UpdateOrchestrator\n    - Microsoft\\Windows\\SoftwareProtectionPlatform\\SvcRestartTask\\Index\n    - Microsoft\\Windows\\Flighting\\OneSettings\\RefreshCache\\Index\n  filter_dropbox_updater:\n    Image:\n    - C:\\Program Files (x86)\\Dropbox\\Update\\DropboxUpdate.exe\n    - C:\\Program Files\\Dropbox\\Update\\DropboxUpdate.exe\n  filter_explorer:\n    Image: C:\\Windows\\explorer.exe\n    TargetObject|contains: \\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\Microsoft\\Windows\\PLA\\Server\n      Manager Performance Monitor\\\n  filter_msiexec:\n    Image: C:\\Windows\\System32\\msiexec.exe\n  filter_ngen:\n    Image|endswith: \\ngen.exe\n    Image|startswith: C:\\Windows\\Microsoft.NET\\Framework\n    TargetObject|contains:\n    - \\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tasks\\{B66B135D-DA06-4FC4-95F8-7458E1D10129}\n    - \\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\Microsoft\\Windows\\.NET\n      Framework\\.NET Framework NGEN\n  filter_office_click_to_run:\n    Image:\n    - C:\\Program Files\\Microsoft Office\\root\\Integration\\Integrator.exe\n    - C:\\Program Files (x86)\\Microsoft Office\\root\\Integration\\Integrator.exe\n  filter_svchost:\n    Image: C:\\WINDOWS\\system32\\svchost.exe\n  filter_system:\n    Image: System\n  filter_tiworker:\n    Image|endswith: \\TiWorker.exe\n    Image|startswith: C:\\Windows\\\n  selection:\n    EventType: SetValue\n    TargetObject|contains: SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\\nfalsepositives:\n- Unknown\nid: 4720b7df-40c3-48fd-bbdf-fd4b3c464f0d\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/10/21\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://labs.f-secure.com/blog/scheduled-task-tampering/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053\n- attack.t1053.005\ntitle: Scheduled TaskCache Change by Uncommon Program\n",
+                            "sigma:id": "4720b7df-40c3-48fd-bbdf-fd4b3c464f0d",
+                            "title": "Scheduled TaskCache Change by Uncommon Program",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e1118a8f-82f5-44b3-bb6b-8a284e5df602",
+                        "lookup_data": {
+                            "description": "Detects specific process parameters as used by ACTINIUM scheduled task persistence creation.",
+                            "raw": "author: Andreas Hunkeler (@Karneades)\ndate: 2022/02/07\ndescription: Detects specific process parameters as used by ACTINIUM scheduled task\n  persistence creation.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - schtasks\n    - create\n    - wscript\n    - e:vbscript\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: e1118a8f-82f5-44b3-bb6b-8a284e5df602\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2022/02/04/actinium-targets-ukrainian-organizations\nstatus: test\ntags:\n- attack.persistence\n- attack.t1053\n- attack.t1053.005\ntitle: Scheduled Task WScript VBScript\n",
+                            "sigma:id": "e1118a8f-82f5-44b3-bb6b-8a284e5df602",
+                            "title": "Scheduled Task WScript VBScript",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - A journey to Zebrocy land",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ce6aa86-9cd8-4302-9dc9-4a59950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1563528054",
+                            "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "26488ad0-f9fd-4536-876f-52fea846a2e4",
+                        "lookup_data": {
+                            "description": "Detects the execution of the hacktool SharPersist - used to deploy various different kinds of persistence mechanisms",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/15\ndescription: Detects the execution of the hacktool SharPersist - used to deploy various\n  different kinds of persistence mechanisms\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image|endswith: \\SharPersist.exe\n  selection2:\n    Product: SharPersist\n  selection3:\n    CommandLine|contains:\n    - ' -t schtask -c '\n    - ' -t startupfolder -c '\n  selection4:\n    CommandLine|contains|all:\n    - ' -t reg -c '\n    - ' -m add'\n  selection5:\n    CommandLine|contains|all:\n    - ' -t service -c '\n    - ' -m add'\n  selection6:\n    CommandLine|contains|all:\n    - ' -t schtask -c '\n    - ' -m add'\nfalsepositives:\n- Unknown\nid: 26488ad0-f9fd-4536-876f-52fea846a2e4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.mandiant.com/resources/blog/sharpersist-windows-persistence-toolkit\n- https://github.com/mandiant/SharPersist\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053\ntitle: SharPersist Usage\n",
+                            "sigma:id": "26488ad0-f9fd-4536-876f-52fea846a2e4",
+                            "title": "SharPersist Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "931b6802-d6a6-4267-9ffa-526f57f22aaf",
+                        "lookup_data": {
+                            "description": "Detects potential exploitation of the BearLPE exploit using Task Scheduler \".job\" import arbitrary DACL write\\par",
+                            "raw": "author: Olaf Hartong\ndate: 2019/05/22\ndescription: Detects potential exploitation of the BearLPE exploit using Task Scheduler\n  \".job\" import arbitrary DACL write\\par\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - /change\n    - /TN\n    - /RU\n    - /RP\n  selection_img:\n  - Image|endswith: \\schtasks.exe\n  - OriginalFileName: schtasks.exe\nfalsepositives:\n- Unknown\nid: 931b6802-d6a6-4267-9ffa-526f57f22aaf\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/26\nreferences:\n- https://github.com/djhohnstein/polarbearrepo/blob/f26d3e008093cc5c835e92a7165170baf6713d43/bearlpe/polarbear/polarbear/exploit.cpp\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1053.005\n- car.2013-08-001\ntitle: Potential BearLPE Exploitation\n",
+                            "sigma:id": "931b6802-d6a6-4267-9ffa-526f57f22aaf",
+                            "title": "Potential BearLPE Exploitation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5dbae98e-7974-4480-86db-44be950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Dans lâ€™Å“il de notre CyberSOC : la campagne malspam Aggah diversifie ses outils",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5dbae98e-7974-4480-86db-44be950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1575969880",
+                            "uuid": "5dbae98e-7974-4480-86db-44be950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b20f6158-9438-41be-83da-a5a16ac90c2b",
+                        "lookup_data": {
+                            "description": "This rule detects rare scheduled task creations. Typically software gets installed on multiple systems and not only on a few. The aggregation and count function selects tasks with rare names.",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/17\ndescription: This rule detects rare scheduled task creations. Typically software gets\n  installed on multiple systems and not only on a few. The aggregation and count function\n  selects tasks with rare names.\ndetection:\n  condition: selection and not 1 of filter* | count() by TaskName < 5\n  filter1:\n    TaskName: \\Microsoft\\Windows\\Windows Defender\\Windows Defender Scheduled Scan\n  selection:\n    EventID: 106\n  timeframe: 7d\nfalsepositives:\n- Software installation\nid: b20f6158-9438-41be-83da-a5a16ac90c2b\nlevel: low\nlogsource:\n  definition: the \"Microsoft-Windows-TaskScheduler/Operational\" is disabled by default\n    and should be enabled in order for this detection to work\n  product: windows\n  service: taskscheduler\nmodified: 2021/12/28\nstatus: test\ntags:\n- attack.persistence\n- attack.s0111\n- attack.t1053.005\ntitle: Rare Scheduled Task Creations\n",
+                            "sigma:id": "b20f6158-9438-41be-83da-a5a16ac90c2b",
+                            "title": "Rare Scheduled Task Creations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f2cb6ce2-188d-4162-8feb-594f949b13dd",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1053",
+                            "mitre-cti:description": "Limit privileges of user accounts and remediate Privilege Escalation vectors so only authorized administrators can create scheduled tasks on remote systems. Toolkits like the PowerSploit framework contain PowerUp modules that can be used to explore systems for permission weaknesses in scheduled tasks that could be used to escalate privileges. (Citation: Powersploit)\n\nConfigure settings for scheduled tasks to force tasks to run under the context of the authenticated account instead of allowing them to run as SYSTEM. The associated Registry key is located at <code>HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\SubmitControl</code>. The setting can be configured through GPO: Computer Configuration > [Policies] > Windows Settings > Security Settings > Local Policies > Security Options: Domain Controller: Allow server operators to schedule tasks, set to disabled. (Citation: TechNet Server Operator Scheduled Task)\n\nConfigure the Increase Scheduling Priority option to only allow the Administrators group the rights to schedule a priority process. This can be can be configured through GPO: Computer Configuration > [Policies] > Windows Settings > Security Settings > Local Policies > User Rights Assignment: Increase scheduling priority. (Citation: TechNet Scheduling Priority)\n\nIdentify and block unnecessary system utilities or potentially malicious software that may be used to schedule tasks using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Scheduled Task Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--f2cb6ce2-188d-4162-8feb-594f949b13dd', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1053', 'url': 'https://attack.mitre.org/mitigations/T1053', 'source_name': 'mitre-attack'}, {'url': 'https://github.com/mattifestation/PowerSploit', 'description': 'PowerSploit. (n.d.). Retrieved December 4, 2014.', 'source_name': 'Powersploit'}, {'source_name': 'TechNet Server Operator Scheduled Task', 'description': 'Microsoft. (2012, November 15). Domain controller: Allow server operators to schedule tasks. Retrieved December 18, 2017.', 'url': 'https://technet.microsoft.com/library/jj852168.aspx'}, {'source_name': 'TechNet Scheduling Priority', 'description': 'Microsoft. (2013, May 8). Increase scheduling priority. Retrieved December 18, 2017.', 'url': 'https://technet.microsoft.com/library/dn221960.aspx'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2021-08-23T20:25:19.375Z', 'name': 'Scheduled Task Mitigation', 'description': 'Limit privileges of user accounts and remediate Privilege Escalation vectors so only authorized administrators can create scheduled tasks on remote systems. Toolkits like the PowerSploit framework contain PowerUp modules that can be used to explore systems for permission weaknesses in scheduled tasks that could be used to escalate privileges. (Citation: Powersploit)\\n\\nConfigure settings for scheduled tasks to force tasks to run under the context of the authenticated account instead of allowing them to run as SYSTEM. The associated Registry key is located at <code>HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\SubmitControl</code>. The setting can be configured through GPO: Computer Configuration > [Policies] > Windows Settings > Security Settings > Local Policies > Security Options: Domain Controller: Allow server operators to schedule tasks, set to disabled. (Citation: TechNet Server Operator Scheduled Task)\\n\\nConfigure the Increase Scheduling Priority option to only allow the Administrators group the rights to schedule a priority process. This can be can be configured through GPO: Computer Configuration > [Policies] > Windows Settings > Security Settings > Local Policies > User Rights Assignment: Increase scheduling priority. (Citation: TechNet Scheduling Priority)\\n\\nIdentify and block unnecessary system utilities or potentially malicious software that may be used to schedule tasks using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "671ffc77-50a7-464f-9e3d-9ea2b493b26b",
+                        "lookup_data": {
+                            "description": "Modifications to a config that will serve an adversary's impacts or persistence",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Modifications to a config that will serve an adversary's impacts or persistence\ndetection:\n  condition: keywords\n  keywords:\n  - ip http server\n  - ip https server\n  - kron policy-list\n  - kron occurrence\n  - policy-list\n  - access-list\n  - ip access-group\n  - archive maximum\nfalsepositives:\n- Legitimate administrators may run these commands\nfields:\n- CmdSet\nid: 671ffc77-50a7-464f-9e3d-9ea2b493b26b\nlevel: medium\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.persistence\n- attack.impact\n- attack.t1490\n- attack.t1505\n- attack.t1565.002\n- attack.t1053\ntitle: Cisco Modify Configuration\n",
+                            "sigma:id": "671ffc77-50a7-464f-9e3d-9ea2b493b26b",
+                            "title": "Cisco Modify Configuration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "92626ddd-662c-49e3-ac59-f6535f12d189",
+                        "lookup_data": {
+                            "description": "Detects the creation of scheduled tasks in user session",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/01/16\ndescription: Detects the creation of scheduled tasks in user session\ndetection:\n  condition: selection and not filter\n  filter:\n    User|contains:\n    - AUTHORI\n    - AUTORI\n  selection:\n    CommandLine|contains: ' /create '\n    Image|endswith: \\schtasks.exe\nfalsepositives:\n- Administrative activity\n- Software installation\nfields:\n- CommandLine\n- ParentCommandLine\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1053.005\n- attack.s0111\n- car.2013-08-001\ntitle: Scheduled Task Creation\n",
+                            "sigma:id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+                            "title": "Scheduled Task Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                        "lookup_data": {
+                            "description": "Detects activity mentioned in Operation Wocao report",
+                            "raw": "author: Florian Roth (Nextron Systems), frack113\ndate: 2019/12/20\ndescription: Detects activity mentioned in Operation Wocao report\ndetection:\n  condition: selection\n  selection:\n    CallerProcessName|endswith: \\checkadmin.exe\n    EventID: 4799\n    TargetUserName|startswith: Administr\nfalsepositives:\n- Administrators that use checkadmin.exe tool to enumerate local administrators\nid: 74ad4314-482e-4c3e-b237-3f7ed3b9ca8d\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://www.fox-it.com/en/news/whitepapers/operation-wocao-shining-a-light-on-one-of-chinas-hidden-hacking-groups/\n- https://twitter.com/SBousseaden/status/1207671369963646976\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1036.004\n- attack.t1027\n- attack.execution\n- attack.t1053.005\n- attack.t1059.001\ntitle: Operation Wocao Activity - Security\n",
+                            "sigma:id": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                            "title": "Operation Wocao Activity - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: selection_service\n  selection_service:\n    EventID: 7045\n    Provider_Name: Service Control Manager\n    ServiceName:\n    - SC Scheduled Scan\n    - UpdatMachine\nfalsepositives:\n- Unknown\nid: 53ba33fd-3a50-4468-a5ef-c583635cfa92\nlevel: critical\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/27\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity - System\n",
+                            "sigma:id": "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                            "title": "Chafer Activity - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4f86b304-3e02-40e3-aa5d-e88a167c9617",
+                        "lookup_data": {
+                            "description": "Detects scheduled task deletion events. Scheduled tasks are likely to be deleted if not used for persistence. Malicious Software often creates tasks directly under the root node e.g. \\TASKNAME",
+                            "raw": "author: David Strassegger, Tim Shelton\ndate: 2021/01/22\ndescription: Detects scheduled task deletion events. Scheduled tasks are likely to\n  be deleted if not used for persistence. Malicious Software often creates tasks directly\n  under the root node e.g. \\TASKNAME\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_contains:\n    TaskName|contains: '\\Mozilla\\Firefox Default Browser Agent '\n  filter_exact:\n    TaskName: \\Microsoft\\Windows\\RemovalTools\\MRT_ERROR_HB\n  selection:\n    EventID: 4699\nfalsepositives:\n- Software installation\nid: 4f86b304-3e02-40e3-aa5d-e88a167c9617\nlevel: low\nlogsource:\n  definition: 'Requirements: The Advanced Audit Policy setting Object Access > Audit\n    Other Object Access Events has to be configured to allow this detection. We also\n    recommend extracting the Command field from the embedded XML in the event data.'\n  product: windows\n  service: security\nmodified: 2023/01/20\nreferences:\n- https://twitter.com/matthewdunwoody/status/1352356685982146562\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4699\nstatus: experimental\ntags:\n- attack.execution\n- attack.privilege_escalation\n- car.2013-08-001\n- attack.t1053.005\ntitle: Scheduled Task Deletion\n",
+                            "sigma:id": "4f86b304-3e02-40e3-aa5d-e88a167c9617",
+                            "title": "Scheduled Task Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c5a178bf-9cfb-4340-b584-e4df39b6a3e7",
+                        "lookup_data": {
+                            "description": "Detects the deactivation and disabling of the Scheduled defragmentation task as seen by Slingshot APT group",
+                            "raw": "author: Florian Roth (Nextron Systems), Bartlomiej Czyz (@bczyz1)\ndate: 2019/03/04\ndescription: Detects the deactivation and disabling of the Scheduled defragmentation\n  task as seen by Slingshot APT group\ndetection:\n  condition: selection\n  selection:\n    EventID: 4701\n    TaskName: \\Microsoft\\Windows\\Defrag\\ScheduledDefrag\nfalsepositives:\n- Unknown\nid: c5a178bf-9cfb-4340-b584-e4df39b6a3e7\nlevel: medium\nlogsource:\n  definition: 'Requirements: Audit Policy : Audit Other Object Access Events > Success'\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://securelist.com/apt-slingshot/84312/\nrelated:\n- id: 958d81aa-8566-4cea-a565-59ccd4df27b0\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.t1053\n- attack.s0111\ntitle: Defrag Deactivation - Security\n",
+                            "sigma:id": "c5a178bf-9cfb-4340-b584-e4df39b6a3e7",
+                            "title": "Defrag Deactivation - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "56c217c3-2de2-479b-990f-5c109ba8458f",
+                        "lookup_data": {
+                            "description": "Detects the creation of a schtask via PowerSploit or Empire Default Configuration.",
+                            "raw": "author: Markus Neis, @Karneades\ndate: 2018/03/06\ndescription: Detects the creation of a schtask via PowerSploit or Empire Default Configuration.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ONLOGON\n    - DAILY\n    - ONIDLE\n    - Updater\n    CommandLine|contains|all:\n    - /Create\n    - /SC\n    - /TN\n    - Updater\n    - /TR\n    - powershell\n    Image|endswith: \\schtasks.exe\n    ParentImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\nfalsepositives:\n- False positives are possible, depends on organisation and processes\nid: 56c217c3-2de2-479b-990f-5c109ba8458f\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://github.com/0xdeadbeefJERKY/PowerSploit/blob/8690399ef70d2cad10213575ac67e8fa90ddf7c3/Persistence/Persistence.psm1\n- https://github.com/EmpireProject/Empire/blob/08cbd274bef78243d7a8ed6443b8364acd1fc48b/lib/modules/powershell/persistence/userland/schtasks.py\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.privilege_escalation\n- attack.s0111\n- attack.g0022\n- attack.g0060\n- car.2013-08-001\n- attack.t1053.005\n- attack.t1059.001\ntitle: Default PowerSploit and Empire Schtasks Persistence\n",
+                            "sigma:id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+                            "title": "Default PowerSploit and Empire Schtasks Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7",
+                        "lookup_data": {
+                            "description": "Detects activity observed by different researchers to be HAFNIUM group activity (or related) on Exchange servers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/09\ndescription: Detects activity observed by different researchers to be HAFNIUM group\n  activity (or related) on Exchange servers\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains|all:\n    - attrib\n    - ' +h '\n    - ' +s '\n    - ' +r '\n    - .aspx\n  selection10:\n    CommandLine|contains:\n    - \\Temp\\xx.bat\n    - Windows\\WwanSvcdcs\n    - Windows\\Temp\\cw.exe\n  selection11:\n    CommandLine|contains|all:\n    - \\comsvcs.dll\n    - Minidump\n    - \\inetpub\\wwwroot\n  selection12:\n    CommandLine|contains|all:\n    - dsquery\n    - ' -uco '\n    - \\inetpub\\wwwroot\n  selection2:\n    CommandLine|contains|all:\n    - schtasks\n    - VSPerfMon\n  selection3:\n    CommandLine|contains|all:\n    - vssadmin list shadows\n    - Temp\\__output\n  selection4:\n    CommandLine|contains: '%TEMP%\\execute.bat'\n  selection5:\n    Image|endswith: Users\\Public\\opera\\Opera_browser.exe\n  selection6:\n    Image|endswith: Opera_browser.exe\n    ParentImage|endswith:\n    - \\services.exe\n    - \\svchost.exe\n  selection7:\n    Image|contains: \\ProgramData\\VSPerfMon\\\n  selection8:\n    CommandLine|contains|all:\n    - ' -t7z '\n    - C:\\Programdata\\pst\n    - \\it.zip\n  selection9:\n    CommandLine|contains:\n    - Microsoft\\Exchange Server\\\n    - inetpub\\wwwroot\n    Image|endswith: \\makecab.exe\nfalsepositives:\n- Unknown\nid: bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://blog.truesec.com/2021/03/07/exchange-zero-day-proxylogon-and-hafnium/\n- https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers/\n- https://discuss.elastic.co/t/detection-and-response-for-hafnium-activity/266289/3\n- https://twitter.com/GadixCRK/status/1369313704869834753?s=20\n- https://twitter.com/BleepinComputer/status/1372218235949617161\nstatus: test\ntags:\n- attack.persistence\n- attack.t1546\n- attack.t1053\ntitle: Exchange Exploitation Activity\n",
+                            "sigma:id": "bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7",
+                            "title": "Exchange Exploitation Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls to create or execute a scheduled task",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls to create or execute a scheduled task\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: 86d35949-83c9-4044-b424-db363231fd0c\n    OpNum:\n    - 1\n    - 3\n    - 4\n    - 10\n    - 11\n    - 12\n    - 13\n    - 14\n    - 15\nfalsepositives:\n- Unknown\nid: ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:86d35949-83c9-4044-b424-db363231fd0c\"'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tsch/d1058a28-7e02-4948-8b8d-4a347fa64931\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-TSCH.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1053\n- attack.t1053.002\ntitle: Remote Schedule Task Lateral Movement via ITaskSchedulerService\n",
+                            "sigma:id": "ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d",
+                            "title": "Remote Schedule Task Lateral Movement via ITaskSchedulerService",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": []
+    },
+    "timestamp": "2025-02-28 11:38:47"
+}

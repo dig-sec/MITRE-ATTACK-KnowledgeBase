@@ -1,0 +1,319 @@
+{
+    "id": "T1059.007",
+    "name": "JavaScript",
+    "description": "Adversaries may abuse various implementations of JavaScript for execution. JavaScript (JS) is a platform-independent scripting language (compiled just-in-time at runtime) commonly associated with scripts in webpages, though JS can be executed in runtime environments outside the browser.(Citation: NodeJS)\nJScript is the Microsoft implementation of the same scripting standard. JScript is interpreted via the Windows Script engine and thus integrated with many components of Windows such as the [Component Object Model](T1559.001) and Internet Explorer HTML Application (HTA) pages.(Citation: JScrip May 2018)(Citation: Microsoft JScript 2007)(Citation: Microsoft Windows Scripts)\nJavaScript for Automation (JXA) is a macOS scripting language based on JavaScript, included as part of Apple’s Open Scripting Architecture (OSA), that was introduced in OSX 10.10. Apple’s OSA provides scripting capabilities to control applications, interface with the operating system, and bridge access into the rest of Apple’s internal APIs. As of OSX 10.10, OSA only supports two languages, JXA and [AppleScript](T1059.002). Scripts can be executed via the command line utility `osascript`, they can be compiled into applications or script files via `osacompile`, and they can be compiled and executed in memory of other programs by leveraging the OSAKit Framework.(Citation: Apple About Mac Scripting 2016)(Citation: SpecterOps JXA 2020)(Citation: SentinelOne macOS Red Team)(Citation: Red Canary Silver Sparrow Feb2021)(Citation: MDSec macOS JXA and VSCode)\nAdversaries may abuse various implementations of JavaScript to execute various behaviors. Common uses include hosting malicious scripts on websites as part of a [Drive-by Compromise](T1189) or downloading and executing these script files as secondary payloads. Since these payloads are text-based, it is also very common for adversaries to obfuscate their content as part of [Obfuscated Files or Information](T1027).",
+    "platforms": "Windows, macOS, Linux",
+    "kill_chain_phases": "Execution",
+    "data_sources": "Command: Command Execution, Process: Process Creation, Module: Module Load, Script: Script Execution",
+    "detection": "Monitor for events associated with scripting execution, such as process activity, usage of the Windows Script Host (typically cscript.exe or wscript.exe), file activity involving scripts, or loading of modules associated with scripting languages (ex: JScript.dll). Scripting execution is likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for execution and subsequent behavior. Actions may be related to network and system information [Discovery](TA0007), [Collection](TA0009), or other programmable post-compromise behaviors and could be used as indicators of detection leading back to the source.\nMonitor for execution of JXA through `osascript` and usage of `OSAScript` API that may be related to other suspicious behavior occurring on the system.\nUnderstanding standard usage patterns is important to avoid a high number of false positives. If scripting is restricted for normal users, then any attempts to enable related components running on a system would be considered suspicious. If scripting is not commonly used on a system, but enabled, execution running out of cycle from patching or other administrator functions is suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.",
+    "url": "https://attack.mitre.org/techniques/T1059/007",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1059.007",
+                "atomic_attack_guid": "0709945e-4fec-4c49-9faf-c3c292a74484",
+                "atomic_attack_name": "JScript execution to gather local computer information via wscript",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_wscript_cscript_script_exec.yml",
+                        "remote_content": "title: WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript\nid: 1e33157c-53b1-41ad-bbcc-780b80b58288\nrelated:\n    - id: 23250293-eed5-4c39-b57a-841c8933a57d\n      type: obsolete\n    - id: cea72823-df4d-4567-950c-0b579eaf0846\n      type: derived\nstatus: test\ndescription: Detects script file execution (.js, .jse, .vba, .vbe, .vbs, .wsf) by Wscript/Cscript\nreferences:\n    - https://thedfirreport.com/2023/10/30/netsupport-intrusion-results-in-domain-compromise/\n    - https://redcanary.com/blog/gootloader/\nauthor: Michael Haag\ndate: 2019-01-16\nmodified: 2023-05-15\ntags:\n    - attack.execution\n    - attack.t1059.005\n    - attack.t1059.007\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName:\n              - 'wscript.exe'\n              - 'cscript.exe'\n        - Image|endswith:\n              - '\\wscript.exe'\n              - '\\cscript.exe'\n    selection_cli:\n        CommandLine|contains:\n            - '.js'\n            - '.jse'\n            - '.vba'\n            - '.vbe'\n            - '.vbs'\n            - '.wsf'\n    condition: all of selection_*\nfalsepositives:\n    - Some additional tuning is required. It is recommended to add the user profile path in CommandLine if it is getting too noisy.\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.007",
+                "atomic_attack_guid": "01d75adf-ca1b-4dd1-ac96-7c9550ad1035",
+                "atomic_attack_name": "JScript execution to gather local computer information via cscript",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_wscript_cscript_script_exec.yml",
+                        "remote_content": "title: WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript\nid: 1e33157c-53b1-41ad-bbcc-780b80b58288\nrelated:\n    - id: 23250293-eed5-4c39-b57a-841c8933a57d\n      type: obsolete\n    - id: cea72823-df4d-4567-950c-0b579eaf0846\n      type: derived\nstatus: test\ndescription: Detects script file execution (.js, .jse, .vba, .vbe, .vbs, .wsf) by Wscript/Cscript\nreferences:\n    - https://thedfirreport.com/2023/10/30/netsupport-intrusion-results-in-domain-compromise/\n    - https://redcanary.com/blog/gootloader/\nauthor: Michael Haag\ndate: 2019-01-16\nmodified: 2023-05-15\ntags:\n    - attack.execution\n    - attack.t1059.005\n    - attack.t1059.007\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName:\n              - 'wscript.exe'\n              - 'cscript.exe'\n        - Image|endswith:\n              - '\\wscript.exe'\n              - '\\cscript.exe'\n    selection_cli:\n        CommandLine|contains:\n            - '.js'\n            - '.jse'\n            - '.vba'\n            - '.vbe'\n            - '.vbs'\n            - '.wsf'\n    condition: all of selection_*\nfalsepositives:\n    - Some additional tuning is required. It is recommended to add the user profile path in CommandLine if it is getting too noisy.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "401e5d00-b944-11ea-8f9a-00163ecd60ae",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "5cddf373-ef00-4112-ad72-960ac29bac34",
+                    "5a717019-2b96-48ea-aad0-8532d4f1dad2",
+                    "b730a276-6b63-41b8-bcf8-55930c8fc6ee",
+                    "2e4e488a-6164-4811-9ea1-f960c7359c40",
+                    "cc7abbd0-762b-41e3-8a26-57ad50d2eea3",
+                    "f1408a58-0e94-4165-b80a-da9f96cf6fc3",
+                    "42f0e038-767e-4b85-9d96-2c6335bad0b5",
+                    "0bcfabcb-7929-47f4-93d6-b33fb67d34d1",
+                    "df1f26d3-bea7-4700-9ea2-ad3e990cf90e",
+                    "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                    "cea72823-df4d-4567-950c-0b579eaf0846",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                    "0f4a0c76-ab2d-4cb0-85d3-3f0efb8cba0d",
+                    "8d63dadf-b91b-4187-87b6-34a1114577ea",
+                    "1e33157c-53b1-41ad-bbcc-780b80b58288",
+                    "1fac1481-2dbc-48b2-9096-753c49b4ec71"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "401e5d00-b944-11ea-8f9a-00163ecd60ae",
+                        "lookup_data": {
+                            "description": "Detect run not allowed files. Applocker is a very useful tool, especially on servers where unprivileged users have access. For example terminal servers. You need configure applocker and log collect to receive these events.",
+                            "raw": "author: Pushkarev Dmitry\ndate: 2020/06/28\ndescription: Detect run not allowed files. Applocker is a very useful tool, especially\n  on servers where unprivileged users have access. For example terminal servers. You\n  need configure applocker and log collect to receive these events.\ndetection:\n  condition: selection\n  selection:\n    EventID:\n    - 8004\n    - 8007\n    - 8022\n    - 8025\nfalsepositives:\n- Need tuning applocker or add exceptions in SIEM\nfields:\n- PolicyName\n- RuleId\n- RuleName\n- TargetUser\n- TargetProcessId\n- FilePath\n- FileHash\n- Fqbn\nid: 401e5d00-b944-11ea-8f9a-00163ecd60ae\nlevel: medium\nlogsource:\n  product: windows\n  service: applocker\nmodified: 2021/11/27\nreferences:\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/applocker/what-is-applocker\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/applocker/using-event-viewer-with-applocker\n- https://nxlog.co/documentation/nxlog-user-guide/applocker.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1204.002\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.006\n- attack.t1059.007\ntitle: File Was Not Allowed To Run\n",
+                            "sigma:id": "401e5d00-b944-11ea-8f9a-00163ecd60ae",
+                            "title": "File Was Not Allowed To Run",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cddf373-ef00-4112-ad72-960ac29bac34",
+                        "lookup_data": {
+                            "description": "Detects command line parameters used by Koadic hack tool",
+                            "raw": "author: wagga, Jonhnathan Ribeiro, oscd.community\ndate: 2020/01/12\ndescription: Detects command line parameters used by Koadic hack tool\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - /q\n    - /c\n    - chcp\n    Image|endswith: \\cmd.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 5cddf373-ef00-4112-ad72-960ac29bac34\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://unit42.paloaltonetworks.com/unit42-sofacy-groups-parallel-attacks/\n- https://github.com/offsecginger/koadic/blob/457f9a3ff394c989cdb4c599ab90eb34fb2c762c/data/stager/js/stdlib.js\n- https://blog.f-secure.com/hunting-for-koadic-a-com-based-rootkit/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.007\ntitle: Koadic Execution\n",
+                            "sigma:id": "5cddf373-ef00-4112-ad72-960ac29bac34",
+                            "title": "Koadic Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5a717019-2b96-48ea-aad0-8532d4f1dad2",
+                        "lookup_data": {
+                            "description": "Return of the Evilnum APT with updated TTPs and new targets",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5a717019-2b96-48ea-aad0-8532d4f1dad2.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1656703958",
+                            "uuid": "5a717019-2b96-48ea-aad0-8532d4f1dad2",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b730a276-6b63-41b8-bcf8-55930c8fc6ee",
+                        "lookup_data": {
+                            "description": "Detects a suspicious parent of csc.exe, which could by a sign of payload delivery",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/02/11\ndescription: Detects a suspicious parent of csc.exe, which could by a sign of payload\n  delivery\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\csc.exe\n    ParentImage|endswith:\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\mshta.exe\nfalsepositives:\n- Unknown\nid: b730a276-6b63-41b8-bcf8-55930c8fc6ee\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://twitter.com/SBousseaden/status/1094924091256176641\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\n- attack.defense_evasion\n- attack.t1218.005\n- attack.t1027.004\ntitle: Suspicious Parent of Csc.exe\n",
+                            "sigma:id": "b730a276-6b63-41b8-bcf8-55930c8fc6ee",
+                            "title": "Suspicious Parent of Csc.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2e4e488a-6164-4811-9ea1-f960c7359c40",
+                        "lookup_data": {
+                            "description": "Detects remote thread creation from CACTUSTORCH as described in references.",
+                            "raw": "author: '@SBousseaden (detection), Thomas Patzke (rule)'\ndate: 2019/02/01\ndescription: Detects remote thread creation from CACTUSTORCH as described in references.\ndetection:\n  condition: selection\n  selection:\n    SourceImage|endswith:\n    - \\System32\\cscript.exe\n    - \\System32\\wscript.exe\n    - \\System32\\mshta.exe\n    - \\winword.exe\n    - \\excel.exe\n    StartModule: null\n    TargetImage|contains: \\SysWOW64\\\nfalsepositives:\n- Unknown\nid: 2e4e488a-6164-4811-9ea1-f960c7359c40\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://twitter.com/SBousseaden/status/1090588499517079552\n- https://github.com/mdsecactivebreach/CACTUSTORCH\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055.012\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\n- attack.t1218.005\ntitle: CACTUSTORCH Remote Thread Creation\n",
+                            "sigma:id": "2e4e488a-6164-4811-9ea1-f960c7359c40",
+                            "title": "CACTUSTORCH Remote Thread Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cc7abbd0-762b-41e3-8a26-57ad50d2eea3",
+                        "lookup_data": {
+                            "description": "Detection for mshta.exe suspicious execution patterns sometimes involving file polyglotism",
+                            "raw": "author: Diego Perez (@darkquassar), Markus Neis, Swisscom (Improve Rule)\ndate: 2019/02/22\ndescription: Detection for mshta.exe suspicious execution patterns sometimes involving\n  file polyglotism\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - vbscript\n    - .jpg\n    - .png\n    - .lnk\n    - .xls\n    - .doc\n    - .zip\n    - .dll\n    Image|endswith: \\mshta.exe\nfalsepositives:\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\nid: cc7abbd0-762b-41e3-8a26-57ad50d2eea3\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/07\nreferences:\n- http://blog.sevagas.com/?Hacking-around-HTA-files\n- https://0x00sec.org/t/clientside-exploitation-in-2018-how-pentesting-has-changed/7356\n- https://docs.microsoft.com/en-us/dotnet/standard/data/xml/xslt-stylesheet-scripting-using-msxsl-script\n- https://medium.com/tsscyber/pentesting-and-hta-bypassing-powershell-constrained-language-mode-53a42856c997\n- https://twitter.com/mattifestation/status/1326228491302563846\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1140\n- attack.t1218.005\n- attack.execution\n- attack.t1059.007\n- cve.2020.1599\ntitle: MSHTA Suspicious Execution 01\n",
+                            "sigma:id": "cc7abbd0-762b-41e3-8a26-57ad50d2eea3",
+                            "title": "MSHTA Suspicious Execution 01",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f1408a58-0e94-4165-b80a-da9f96cf6fc3",
+                        "lookup_data": {
+                            "description": "Detects possible malicious execution of JXA in-memory via OSAScript",
+                            "raw": "author: Sohan G (D4rkCiph3r)\ndate: 2023/01/31\ndescription: Detects possible malicious execution of JXA in-memory via OSAScript\ndetection:\n  condition: all of selection_*\n  selection_js:\n  - CommandLine|contains|all:\n    - ' -l '\n    - JavaScript\n  - CommandLine|contains: .js\n  selection_main:\n    CommandLine|contains|all:\n    - osascript\n    - ' -e '\n    - eval\n    - NSData.dataWithContentsOfURL\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\nid: f1408a58-0e94-4165-b80a-da9f96cf6fc3\nlevel: high\nlogsource:\n  category: process_creation\n  product: macos\nreferences:\n- https://redcanary.com/blog/applescript/\nrelated:\n- id: 1bc2e6c5-0885-472b-bed6-be5ea8eace55\n  type: derived\nstatus: experimental\ntags:\n- attack.t1059.002\n- attack.t1059.007\n- attack.execution\ntitle: JXA In-memory Execution Via OSAScript\n",
+                            "sigma:id": "f1408a58-0e94-4165-b80a-da9f96cf6fc3",
+                            "title": "JXA In-memory Execution Via OSAScript",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "42f0e038-767e-4b85-9d96-2c6335bad0b5",
+                        "lookup_data": {
+                            "description": "Detects javaw.exe in AppData folder as used by Adwind / JRAT",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom Ueltschi, Jonhnathan Ribeiro, oscd.community\ndate: 2017/11/10\ndescription: Detects javaw.exe in AppData folder as used by Adwind / JRAT\ndetection:\n  condition: selection\n  selection:\n    Details|startswith: '%AppData%\\Roaming\\Oracle\\bin\\'\n    EventType: SetValue\n    TargetObject|startswith: HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\nid: 42f0e038-767e-4b85-9d96-2c6335bad0b5\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/11/26\nreferences:\n- https://www.hybrid-analysis.com/sample/ba86fa0d4b6af2db0656a88b1dd29f36fe362473ae8ad04255c4e52f214a541c?environmentId=100\n- https://www.first.org/resources/papers/conf2017/Advanced-Incident-Detection-and-Threat-Hunting-using-Sysmon-and-Splunk.pdf\nrelated:\n- id: 1fac1481-2dbc-48b2-9096-753c49b4ec71\n  type: derived\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\ntitle: Adwind RAT / JRAT - Registry\n",
+                            "sigma:id": "42f0e038-767e-4b85-9d96-2c6335bad0b5",
+                            "title": "Adwind RAT / JRAT - Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0bcfabcb-7929-47f4-93d6-b33fb67d34d1",
+                        "lookup_data": {
+                            "description": "Detects javaw.exe in AppData folder as used by Adwind / JRAT",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom Ueltschi, Jonhnathan Ribeiro, oscd.community\ndate: 2017/11/10\ndescription: Detects javaw.exe in AppData folder as used by Adwind / JRAT\ndetection:\n  condition: selection\n  selection:\n  - TargetFilename|contains|all:\n    - \\AppData\\Roaming\\Oracle\\bin\\java\n    - .exe\n  - TargetFilename|contains|all:\n    - \\Retrive\n    - .vbs\nid: 0bcfabcb-7929-47f4-93d6-b33fb67d34d1\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://www.hybrid-analysis.com/sample/ba86fa0d4b6af2db0656a88b1dd29f36fe362473ae8ad04255c4e52f214a541c?environmentId=100\n- https://www.first.org/resources/papers/conf2017/Advanced-Incident-Detection-and-Threat-Hunting-using-Sysmon-and-Splunk.pdf\nrelated:\n- id: 1fac1481-2dbc-48b2-9096-753c49b4ec71\n  type: derived\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\ntitle: Adwind RAT / JRAT File Artifact\n",
+                            "sigma:id": "0bcfabcb-7929-47f4-93d6-b33fb67d34d1",
+                            "title": "Adwind RAT / JRAT File Artifact",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df1f26d3-bea7-4700-9ea2-ad3e990cf90e",
+                        "lookup_data": {
+                            "description": "Detects the execution of other scripts using the Node executable packaged with Adobe Creative Cloud",
+                            "raw": "author: Max Altgelt (Nextron Systems)\ndate: 2022/04/06\ndescription: Detects the execution of other scripts using the Node executable packaged\n  with Adobe Creative Cloud\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: Adobe Creative Cloud Experience\\js\n  selection:\n    Image|endswith: \\Adobe Creative Cloud Experience\\libs\\node.exe\nfalsepositives:\n- Unknown\nfields:\n- Image\n- CommandLine\n- ParentCommandLine\nid: df1f26d3-bea7-4700-9ea2-ad3e990cf90e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/mttaggart/status/1511804863293784064\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\n- attack.t1059.007\ntitle: Node Process Executions\n",
+                            "sigma:id": "df1f26d3-bea7-4700-9ea2-ad3e990cf90e",
+                            "title": "Node Process Executions",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                        "lookup_data": {
+                            "description": "Detects a suspicious child process of a Microsoft HTML Help system when executing compiled HTML files (.chm)",
+                            "raw": "author: Maxim Pavlunin\ndate: 2020/04/01\ndescription: Detects a suspicious child process of a Microsoft HTML Help system when\n  executing compiled HTML files (.chm)\ndetection:\n  condition: 1 of selection_*\n  selection_1:\n    Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\regsvr32.exe\n    - \\wmic.exe\n    - \\rundll32.exe\n    - \\MSHTA.EXE\n    - \\CertUtil.exe\n    - \\CertReq.exe\n    - \\MSbuild.exe\n    - \\installutil.exe\n    - \\schtasks.exe\n    - \\msiexec.exe\n    ParentImage:\n    - C:\\Windows\\hh.exe\n    - C:\\Windows\\SysWOW64\\hh.exe\n  selection_2:\n    CommandLine|contains:\n    - .application\n    - \\Downloads\\\n    - \\Content.Outlook\\\n    - \\AppData\\Local\\Temp\\\n    Image|endswith:\n    - \\Windows\\hh.exe\n    - \\Windows\\SysWOW64\\hh.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 52cad028-0ff0-4854-8f67-d25dfcbc78b4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/24\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/chm-badness-delivers-a-banking-trojan/\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-27939090904026cc396b0b629c8e4314acd6f5dac40a676edbc87f4567b47eb7\n- https://www.ptsecurity.com/ww-en/analytics/pt-esc-threat-intelligence/higaisa-or-winnti-apt-41-backdoors-old-and-new/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.001\n- attack.t1218.010\n- attack.t1218.011\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.007\n- attack.t1047\n- attack.t1566\n- attack.t1566.001\n- attack.initial_access\n- attack.t1218\ntitle: HTML Help Shell Spawn\n",
+                            "sigma:id": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                            "title": "HTML Help Shell Spawn",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cea72823-df4d-4567-950c-0b579eaf0846",
+                        "lookup_data": {
+                            "description": "Detects wscript/cscript executions of scripts located in user directories",
+                            "raw": "author: Margaritis Dimitrios (idea), Florian Roth (Nextron Systems), oscd.community\ndate: 2019/01/16\ndescription: Detects wscript/cscript executions of scripts located in user directories\ndetection:\n  condition: selection1 and selection2 and not falsepositive\n  falsepositive:\n    ParentImage|contains: \\winzip\n  selection1:\n    CommandLine|contains:\n    - C:\\Users\\\n    - C:\\ProgramData\\\n    Image|endswith:\n    - \\wscript.exe\n    - \\cscript.exe\n  selection2:\n    CommandLine|contains:\n    - .jse\n    - .vbe\n    - .js\n    - .vba\n    - .vbs\nfalsepositives:\n- Winzip\n- Other self-extractors\nfields:\n- CommandLine\n- ParentCommandLine\nid: cea72823-df4d-4567-950c-0b579eaf0846\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\ntitle: WScript or CScript Dropper\n",
+                            "sigma:id": "cea72823-df4d-4567-950c-0b579eaf0846",
+                            "title": "WScript or CScript Dropper",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0f4a0c76-ab2d-4cb0-85d3-3f0efb8cba0d",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1059.007",
+                            "mitre-cti:description": "Adversaries may abuse various implementations of JavaScript for execution. JavaScript (JS) is a platform-independent scripting language (compiled just-in-time at runtime) commonly associated with scripts in webpages, though JS can be executed in runtime environments outside the browser.(Citation: NodeJS)\n\nJScript is the Microsoft implementation of the same scripting standard. JScript is interpreted via the Windows Script engine and thus integrated with many components of Windows such as the [Component Object Model](https://attack.mitre.org/techniques/T1559/001) and Internet Explorer HTML Application (HTA) pages.(Citation: JScrip May 2018)(Citation: Microsoft JScript 2007)(Citation: Microsoft Windows Scripts)\n\nJavaScript for Automation (JXA) is a macOS scripting language based on JavaScript, included as part of Apple’s Open Scripting Architecture (OSA), that was introduced in OSX 10.10. Apple’s OSA provides scripting capabilities to control applications, interface with the operating system, and bridge access into the rest of Apple’s internal APIs. As of OSX 10.10, OSA only supports two languages, JXA and [AppleScript](https://attack.mitre.org/techniques/T1059/002). Scripts can be executed via the command line utility <code>osascript</code>, they can be compiled into applications or script files via <code>osacompile</code>, and they can be compiled and executed in memory of other programs by leveraging the OSAKit Framework.(Citation: Apple About Mac Scripting 2016)(Citation: SpecterOps JXA 2020)(Citation: SentinelOne macOS Red Team)(Citation: Red Canary Silver Sparrow Feb2021)(Citation: MDSec macOS JXA and VSCode)\n\nAdversaries may abuse various implementations of JavaScript to execute various behaviors. Common uses include hosting malicious scripts on websites as part of a [Drive-by Compromise](https://attack.mitre.org/techniques/T1189) or downloading and executing these script files as secondary payloads. Since these payloads are text-based, it is also very common for adversaries to obfuscate their content as part of [Obfuscated Files or Information](https://attack.mitre.org/techniques/T1027).",
+                            "mitre-cti:name": "JavaScript",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Cody Thomas, SpecterOps'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--0f4a0c76-ab2d-4cb0-85d3-3f0efb8cba0d', 'type': 'attack-pattern', 'created': '2020-06-23T19:12:24.924Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1059.007', 'url': 'https://attack.mitre.org/techniques/T1059/007'}, {'source_name': 'NodeJS', 'url': 'https://nodejs.org/', 'description': 'OpenJS Foundation. (n.d.). Node.js. Retrieved June 23, 2020.'}, {'source_name': 'JScrip May 2018', 'url': 'https://docs.microsoft.com/windows/win32/com/translating-to-jscript', 'description': 'Microsoft. (2018, May 31). Translating to JScript. Retrieved June 23, 2020.'}, {'source_name': 'Microsoft JScript 2007', 'url': 'https://docs.microsoft.com/archive/blogs/gauravseth/the-world-of-jscript-javascript-ecmascript', 'description': 'Microsoft. (2007, August 15). The World of JScript, JavaScript, ECMAScript …. Retrieved June 23, 2020.'}, {'source_name': 'Microsoft Windows Scripts', 'url': 'https://docs.microsoft.com/scripting/winscript/windows-script-interfaces', 'description': 'Microsoft. (2017, January 18). Windows Script Interfaces. Retrieved June 23, 2020.'}, {'source_name': 'Apple About Mac Scripting 2016', 'url': 'https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/index.html', 'description': 'Apple. (2016, June 13). About Mac Scripting. Retrieved April 14, 2021.'}, {'source_name': 'SpecterOps JXA 2020', 'url': 'https://posts.specterops.io/persistent-jxa-66e1c3cd1cf5', 'description': 'Pitt, L. (2020, August 6). Persistent JXA. Retrieved April 14, 2021.'}, {'source_name': 'SentinelOne macOS Red Team', 'url': 'https://www.sentinelone.com/blog/macos-red-team-calling-apple-apis-without-building-binaries/', 'description': 'Phil Stokes. (2019, December 5). macOS Red Team: Calling Apple APIs Without Building Binaries. Retrieved July 17, 2020.'}, {'source_name': 'Red Canary Silver Sparrow Feb2021', 'url': 'https://redcanary.com/blog/clipping-silver-sparrows-wings/', 'description': 'Tony Lambert. (2021, February 18). Clipping Silver Sparrow’s wings: Outing macOS malware before it takes flight. Retrieved April 20, 2021.'}, {'source_name': 'MDSec macOS JXA and VSCode', 'url': 'https://www.mdsec.co.uk/2021/01/macos-post-exploitation-shenanigans-with-vscode-extensions/', 'description': 'Dominic Chell. (2021, January 1). macOS Post-Exploitation Shenanigans with VSCode Extensions. Retrieved April 20, 2021.'}], 'modified': '2021-08-16T21:02:05.142Z', 'name': 'JavaScript', 'description': 'Adversaries may abuse various implementations of JavaScript for execution. JavaScript (JS) is a platform-independent scripting language (compiled just-in-time at runtime) commonly associated with scripts in webpages, though JS can be executed in runtime environments outside the browser.(Citation: NodeJS)\\n\\nJScript is the Microsoft implementation of the same scripting standard. JScript is interpreted via the Windows Script engine and thus integrated with many components of Windows such as the [Component Object Model](https://attack.mitre.org/techniques/T1559/001) and Internet Explorer HTML Application (HTA) pages.(Citation: JScrip May 2018)(Citation: Microsoft JScript 2007)(Citation: Microsoft Windows Scripts)\\n\\nJavaScript for Automation (JXA) is a macOS scripting language based on JavaScript, included as part of Apple’s Open Scripting Architecture (OSA), that was introduced in OSX 10.10. Apple’s OSA provides scripting capabilities to control applications, interface with the operating system, and bridge access into the rest of Apple’s internal APIs. As of OSX 10.10, OSA only supports two languages, JXA and [AppleScript](https://attack.mitre.org/techniques/T1059/002). Scripts can be executed via the command line utility <code>osascript</code>, they can be compiled into applications or script files via <code>osacompile</code>, and they can be compiled and executed in memory of other programs by leveraging the OSAKit Framework.(Citation: Apple About Mac Scripting 2016)(Citation: SpecterOps JXA 2020)(Citation: SentinelOne macOS Red Team)(Citation: Red Canary Silver Sparrow Feb2021)(Citation: MDSec macOS JXA and VSCode)\\n\\nAdversaries may abuse various implementations of JavaScript to execute various behaviors. Common uses include hosting malicious scripts on websites as part of a [Drive-by Compromise](https://attack.mitre.org/techniques/T1189) or downloading and executing these script files as secondary payloads. Since these payloads are text-based, it is also very common for adversaries to obfuscate their content as part of [Obfuscated Files or Information](https://attack.mitre.org/techniques/T1027).', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}], 'x_mitre_detection': 'Monitor for events associated with scripting execution, such as process activity, usage of the Windows Script Host (typically cscript.exe or wscript.exe), file activity involving scripts, or loading of modules associated with scripting languages (ex: JScript.dll). Scripting execution is likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for execution and subsequent behavior. Actions may be related to network and system information [Discovery](https://attack.mitre.org/tactics/TA0007), [Collection](https://attack.mitre.org/tactics/TA0009), or other programmable post-compromise behaviors and could be used as indicators of detection leading back to the source.\\n\\nMonitor for execution of JXA through <code>osascript</code> and usage of <code>OSAScript</code> API that may be related to other suspicious behavior occurring on the system.\\n\\nUnderstanding standard usage patterns is important to avoid a high number of false positives. If scripting is restricted for normal users, then any attempts to enable related components running on a system would be considered suspicious. If scripting is not commonly used on a system, but enabled, execution running out of cycle from patching or other administrator functions is suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '2.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Script: Script Execution', 'Command: Command Execution', 'Module: Module Load'], 'x_mitre_permissions_required': ['User', 'Administrator', 'SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8d63dadf-b91b-4187-87b6-34a1114577ea",
+                        "lookup_data": {
+                            "description": "Detects WMI SquiblyTwo Attack with possible renamed WMI by looking for imphash",
+                            "raw": "author: Markus Neis, Florian Roth\ndate: 2019/01/16\ndescription: Detects WMI SquiblyTwo Attack with possible renamed WMI by looking for\n  imphash\ndetection:\n  condition: all of selection_org_* or all of selection_renamed_*\n  selection_org_cli:\n    CommandLine|contains|all:\n    - wmic\n    - format\n    - http\n  selection_org_img:\n  - Image|endswith: \\wmic.exe\n  - OriginalFileName: wmic.exe\n  selection_renamed_flags:\n    CommandLine|contains|all:\n    - 'format:'\n    - http\n  selection_renamed_wmic_imphash:\n  - Imphash:\n    - 1B1A3F43BF37B5BFE60751F2EE2F326E\n    - 37777A96245A3C74EB217308F3546F4C\n    - 9D87C9D67CE724033C0B40CC4CA1B206\n  - Hashes|contains:\n    - IMPHASH=1B1A3F43BF37B5BFE60751F2EE2F326E\n    - IMPHASH=37777A96245A3C74EB217308F3546F4C\n    - IMPHASH=9D87C9D67CE724033C0B40CC4CA1B206\nfalsepositives:\n- Unknown\nid: 8d63dadf-b91b-4187-87b6-34a1114577ea\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://subt0x11.blogspot.ch/2018/04/wmicexe-whitelisting-bypass-hacking.html\n- https://twitter.com/mattifestation/status/986280382042595328\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1047\n- attack.t1220\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\ntitle: SquiblyTwo Execution\n",
+                            "sigma:id": "8d63dadf-b91b-4187-87b6-34a1114577ea",
+                            "title": "SquiblyTwo Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1e33157c-53b1-41ad-bbcc-780b80b58288",
+                        "lookup_data": {
+                            "description": "Detects suspicious file execution by wscript and cscript",
+                            "raw": "author: Michael Haag\ndate: 2019/01/16\ndescription: Detects suspicious file execution by wscript and cscript\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - .jse\n    - .vbe\n    - .js\n    - .vba\n    Image|endswith:\n    - \\wscript.exe\n    - \\cscript.exe\nfalsepositives:\n- Will need to be tuned. I recommend adding the user profile path in CommandLine if\n  it is getting too noisy.\nfields:\n- CommandLine\n- ParentCommandLine\nid: 1e33157c-53b1-41ad-bbcc-780b80b58288\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\ntitle: WSF/JSE/JS/VBA/VBE File Execution\n",
+                            "sigma:id": "1e33157c-53b1-41ad-bbcc-780b80b58288",
+                            "title": "WSF/JSE/JS/VBA/VBE File Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1fac1481-2dbc-48b2-9096-753c49b4ec71",
+                        "lookup_data": {
+                            "description": "Detects javaw.exe in AppData folder as used by Adwind / JRAT",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom Ueltschi, Jonhnathan Ribeiro, oscd.community\ndate: 2017/11/10\ndescription: Detects javaw.exe in AppData folder as used by Adwind / JRAT\ndetection:\n  condition: selection\n  selection:\n  - CommandLine|contains|all:\n    - \\AppData\\Roaming\\Oracle\n    - \\java\n    - '.exe '\n  - CommandLine|contains|all:\n    - cscript.exe\n    - Retrive\n    - '.vbs '\nid: 1fac1481-2dbc-48b2-9096-753c49b4ec71\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.hybrid-analysis.com/sample/ba86fa0d4b6af2db0656a88b1dd29f36fe362473ae8ad04255c4e52f214a541c?environmentId=100\n- https://www.first.org/resources/papers/conf2017/Advanced-Incident-Detection-and-Threat-Hunting-using-Sysmon-and-Splunk.pdf\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\ntitle: Adwind RAT / JRAT\n",
+                            "sigma:id": "1fac1481-2dbc-48b2-9096-753c49b4ec71",
+                            "title": "Adwind RAT / JRAT",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1059.007",
+                "display_name": "Command and Scripting Interpreter: JavaScript",
+                "atomic_tests": [
+                    {
+                        "name": "JScript execution to gather local computer information via cscript",
+                        "auto_generated_guid": "01d75adf-ca1b-4dd1-ac96-7c9550ad1035",
+                        "description": "JScript execution test, execute JScript via cscript command. When successful, system information will be written to $env:TEMP\\T1059.007.out.txt",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "jscript": {
+                                "description": "Path to sample script",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1059.007\\src\\sys_info.js"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Sample script must exist on disk at specified location (#{jscript})",
+                                "prereq_command": "if (Test-Path \"#{jscript}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -ItemType Directory (Split-Path \"#{jscript}\") -Force | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.007/src/sys_info.js\" -OutFile \"#{jscript}\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "cscript \"#{jscript}\" > %tmp%\\T1059.007.out.txt\n",
+                            "cleanup_command": "del %tmp%\\T1059.007.out.txt >nul 2>&1",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "JScript execution to gather local computer information via wscript",
+                        "auto_generated_guid": "0709945e-4fec-4c49-9faf-c3c292a74484",
+                        "description": "JScript execution test, execute JScript via wscript command. When successful, system information will be shown with four message boxes.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "jscript": {
+                                "description": "Path to sample script",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1059.007\\src\\sys_info.js"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Sample script must exist on disk at specified location (#{jscript})",
+                                "prereq_command": "if (Test-Path \"#{jscript}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -ItemType Directory (Split-Path \"#{jscript}\") -Force | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.007/src/sys_info.js\" -OutFile \"#{jscript}\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "wscript \"#{jscript}\"\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:08:57"
+}

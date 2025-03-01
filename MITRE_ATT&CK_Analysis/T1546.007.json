@@ -1,0 +1,107 @@
+{
+    "id": "T1546.007",
+    "name": "Netsh Helper DLL",
+    "description": "Adversaries may establish persistence by executing malicious content triggered by Netsh Helper DLLs. Netsh.exe (also referred to as Netshell) is a command-line scripting utility used to interact with the network configuration of a system. It contains functionality to add helper DLLs for extending functionality of the utility. (Citation: TechNet Netsh) The paths to registered netsh.exe helper DLLs are entered into the Windows Registry at `HKLMSOFTWAREMicrosoftNetsh`.\nAdversaries can use netsh.exe helper DLLs to trigger execution of arbitrary code in a persistent manner. This execution would take place anytime netsh.exe is executed, which could happen automatically, with another persistence technique, or if other software (ex: VPN) is present on the system that executes netsh.exe as part of its normal functionality. (Citation: Github Netsh Helper CS Beacon)(Citation: Demaske Netsh Persistence)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution, Module: Module Load",
+    "detection": "It is likely unusual for netsh.exe to have any child processes in most environments. Monitor process executions and investigate any child processes spawned by netsh.exe for malicious behavior. Monitor the `HKLMSOFTWAREMicrosoftNetsh` registry key for any new or suspicious entries that do not correlate with known system files or benign software. (Citation: Demaske Netsh Persistence)",
+    "url": "https://attack.mitre.org/techniques/T1546/007",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1546.007",
+                "atomic_attack_guid": "3244697d-5a3a-4dfc-941c-550f69f91a4d",
+                "atomic_attack_name": "Netsh Helper DLL Registration",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Persistence Via Netsh Helper DLL",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_netsh_helper_dll_persistence.yml",
+                        "remote_content": "title: Potential Persistence Via Netsh Helper DLL\nid: 56321594-9087-49d9-bf10-524fe8479452\nrelated:\n    - id: c90362e0-2df3-4e61-94fe-b37615814cb1\n      type: similar\n    - id: e7b18879-676e-4a0e-ae18-27039185a8e7\n      type: similar\nstatus: test\ndescription: |\n    Detects the execution of netsh with \"add helper\" flag in order to add a custom helper DLL. This technique can be abused to add a malicious helper DLL that can be used as a persistence proxy that gets called when netsh.exe is executed.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.007/T1546.007.md\n    - https://github.com/outflanknl/NetshHelperBeacon\n    - https://web.archive.org/web/20160928212230/https://www.adaptforward.com/2016/09/using-netshell-to-execute-evil-dlls-and-persist-on-a-host/\nauthor: Victor Sergeev, oscd.community\ndate: 2019-10-25\nmodified: 2023-11-28\ntags:\n    - attack.privilege-escalation\n    - attack.persistence\n    - attack.t1546.007\n    - attack.s0108\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName: 'netsh.exe'\n        - Image|endswith: '\\netsh.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'add'\n            - 'helper'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                    "f63fe421-b1d1-45c0-b8a7-02cd16ff2bed",
+                    "56321594-9087-49d9-bf10-524fe8479452"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                        "lookup_data": {
+                            "description": "Detects potential suspicious behaviour using secedit.exe. Such as exporting or modifying the security policy",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/11/18\ndescription: Detects potential suspicious behaviour using secedit.exe. Such as exporting\n  or modifying the security policy\ndetection:\n  condition: selection_img and (1 of selection_flags_*)\n  selection_flags_configure:\n    CommandLine|contains|all:\n    - /configure\n    - /db\n  selection_flags_discovery:\n    CommandLine|contains|all:\n    - /export\n    - /cfg\n  selection_img:\n  - Image|endswith: \\secedit.exe\n  - OriginalFileName: SeCEdit\nfalsepositives:\n- Legitimate administrative use\nid: c2c76b77-32be-4d1f-82c9-7e544bdfe0eb\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://blueteamops.medium.com/secedit-and-i-know-it-595056dee53d\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/secedit\nstatus: experimental\ntags:\n- attack.discovery\n- attack.persistence\n- attack.defense_evasion\n- attack.credential_access\n- attack.privilege_escalation\n- attack.t1562.002\n- attack.t1547.001\n- attack.t1505.005\n- attack.t1556.002\n- attack.t1562\n- attack.t1574.007\n- attack.t1564.002\n- attack.t1546.008\n- attack.t1546.007\n- attack.t1547.014\n- attack.t1547.010\n- attack.t1547.002\n- attack.t1557\n- attack.t1082\ntitle: Potential Suspicious Activity Using SeCEdit\n",
+                            "sigma:id": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                            "title": "Potential Suspicious Activity Using SeCEdit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f63fe421-b1d1-45c0-b8a7-02cd16ff2bed",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546.007",
+                            "mitre-cti:description": "Adversaries may establish persistence by executing malicious content triggered by Netsh Helper DLLs. Netsh.exe (also referred to as Netshell) is a command-line scripting utility used to interact with the network configuration of a system. It contains functionality to add helper DLLs for extending functionality of the utility.(Citation: TechNet Netsh) The paths to registered netsh.exe helper DLLs are entered into the Windows Registry at <code>HKLM\\SOFTWARE\\Microsoft\\Netsh</code>.\n\nAdversaries can use netsh.exe helper DLLs to trigger execution of arbitrary code in a persistent manner. This execution would take place anytime netsh.exe is executed, which could happen automatically, with another persistence technique, or if other software (ex: VPN) is present on the system that executes netsh.exe as part of its normal functionality.(Citation: Github Netsh Helper CS Beacon)(Citation: Demaske Netsh Persistence)",
+                            "mitre-cti:name": "Netsh Helper DLL",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Matthew Demaske, Adaptforward'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--f63fe421-b1d1-45c0-b8a7-02cd16ff2bed', 'created': '2020-01-24T14:26:51.207Z', 'x_mitre_version': '1.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.007', 'url': 'https://attack.mitre.org/techniques/T1546/007'}, {'source_name': 'Demaske Netsh Persistence', 'url': 'https://htmlpreview.github.io/?https://github.com/MatthewDemaske/blogbackup/blob/master/netshell.html', 'description': 'Demaske, M. (2016, September 23). USING NETSHELL TO EXECUTE EVIL DLLS AND PERSIST ON A HOST. Retrieved April 8, 2017.'}, {'source_name': 'TechNet Netsh', 'url': 'https://technet.microsoft.com/library/bb490939.aspx', 'description': 'Microsoft. (n.d.). Using Netsh. Retrieved February 13, 2017.'}, {'source_name': 'Github Netsh Helper CS Beacon', 'url': 'https://github.com/outflankbv/NetshHelperBeacon', 'description': 'Smeets, M. (2016, September 26). NetshHelperBeacon. Retrieved February 13, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may establish persistence by executing malicious content triggered by Netsh Helper DLLs. Netsh.exe (also referred to as Netshell) is a command-line scripting utility used to interact with the network configuration of a system. It contains functionality to add helper DLLs for extending functionality of the utility.(Citation: TechNet Netsh) The paths to registered netsh.exe helper DLLs are entered into the Windows Registry at <code>HKLM\\\\SOFTWARE\\\\Microsoft\\\\Netsh</code>.\\n\\nAdversaries can use netsh.exe helper DLLs to trigger execution of arbitrary code in a persistent manner. This execution would take place anytime netsh.exe is executed, which could happen automatically, with another persistence technique, or if other software (ex: VPN) is present on the system that executes netsh.exe as part of its normal functionality.(Citation: Github Netsh Helper CS Beacon)(Citation: Demaske Netsh Persistence)', 'modified': '2022-04-20T17:09:17.363Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Netsh Helper DLL', 'x_mitre_detection': 'It is likely unusual for netsh.exe to have any child processes in most environments. Monitor process executions and investigate any child processes spawned by netsh.exe for malicious behavior. Monitor the <code>HKLM\\\\SOFTWARE\\\\Microsoft\\\\Netsh</code> registry key for any new or suspicious entries that do not correlate with known system files or benign software.(Citation: Demaske Netsh Persistence)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Modification', 'Command: Command Execution', 'Process: Process Creation', 'Module: Module Load'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "56321594-9087-49d9-bf10-524fe8479452",
+                        "lookup_data": {
+                            "description": "Detects persitence via netsh helper",
+                            "raw": "author: Victor Sergeev, oscd.community\ndate: 2019/10/25\ndescription: Detects persitence via netsh helper\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - add\n    - helper\n    Image|endswith: \\netsh.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 56321594-9087-49d9-bf10-524fe8479452\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.007/T1546.007.md\n- https://attack.mitre.org/software/S0108/\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1546.007\n- attack.s0108\ntitle: Suspicious Netsh DLL Persistence\n",
+                            "sigma:id": "56321594-9087-49d9-bf10-524fe8479452",
+                            "title": "Suspicious Netsh DLL Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.007",
+                "display_name": "Event Triggered Execution: Netsh Helper DLL",
+                "atomic_tests": [
+                    {
+                        "name": "Netsh Helper DLL Registration",
+                        "auto_generated_guid": "3244697d-5a3a-4dfc-941c-550f69f91a4d",
+                        "description": "You can register a \"helper dll\" with Netsh as a persistance mechanism. The code in the dll is executed every time netsh.exe is called.\nThe NetshHelper.dll provided with the atomic will simply launch notepad when netsh.exe is run.\n\n[Blog](https://htmlpreview.github.io/?https://github.com/MatthewDemaske/blogbackup/blob/master/netshell.html)\n[Sample DLL code](https://github.com/outflanknl/NetshHelperBeacon)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "helper_file": {
+                                "description": "Path to DLL",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1546.007\\bin\\NetshHelper.dll"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Helper DLL must exist on disk at specified location (#{helper_file})\n",
+                                "prereq_command": "if (Test-Path \"#{helper_file}\") { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{helper_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.007/bin/NetshHelper.dll\" -OutFile \"#{helper_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "netsh.exe add helper \"#{helper_file}\"\ntaskkill /im notepad.exe /t /f > NUL 2>&1\n",
+                            "cleanup_command": "netsh.exe delete helper \"#{helper_file}\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:27:15"
+}

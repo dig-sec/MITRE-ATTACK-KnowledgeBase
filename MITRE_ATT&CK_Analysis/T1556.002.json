@@ -1,0 +1,143 @@
+{
+    "id": "T1556.002",
+    "name": "Password Filter DLL",
+    "description": "Adversaries may register malicious password filter dynamic link libraries (DLLs) into the authentication process to acquire user credentials as they are validated.\nWindows password filters are password policy enforcement mechanisms for both domain and local accounts. Filters are implemented as DLLs containing a method to validate potential passwords against password policies. Filter DLLs can be positioned on local computers for local accounts and/or domain controllers for domain accounts. Before registering new passwords in the Security Accounts Manager (SAM), the Local Security Authority (LSA) requests validation from each registered filter. Any potential changes cannot take effect until every registered filter acknowledges validation.\nAdversaries can register malicious password filters to harvest credentials from local computers and/or entire domains. To perform proper validation, filters must receive plain-text credentials from the LSA. A malicious password filter would receive these plain-text credentials every time a password request is made.(Citation: Carnal Ownage Password Filters Sept 2013)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access, Defense Evasion, Persistence",
+    "data_sources": "File: File Creation, Module: Module Load, Windows Registry: Windows Registry Key Modification",
+    "detection": "Monitor for new, unfamiliar DLL files written to a domain controller and/or local computer. Monitor for changes to Registry entries for password filters (ex: `HKEY_LOCAL_MACHINESYSTEMCurrentControlSetControlLsaNotification Packages`) and correlate then investigate the DLL files these files reference.\nPassword filters will also show up as an autorun and loaded DLL in lsass.exe.(Citation: Clymb3r Function Hook Passwords Sept 2013)",
+    "url": "https://attack.mitre.org/techniques/T1556/002",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                    "63bf8794-9917-45bc-88dd-e1b5abc0ecfd",
+                    "b7966f4a-b333-455b-8370-8ca53c229762",
+                    "3731fbcd-0e43-47ae-ae6c-d15e510f0d42"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                        "lookup_data": {
+                            "description": "Detects potential suspicious behaviour using secedit.exe. Such as exporting or modifying the security policy",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/11/18\ndescription: Detects potential suspicious behaviour using secedit.exe. Such as exporting\n  or modifying the security policy\ndetection:\n  condition: selection_img and (1 of selection_flags_*)\n  selection_flags_configure:\n    CommandLine|contains|all:\n    - /configure\n    - /db\n  selection_flags_discovery:\n    CommandLine|contains|all:\n    - /export\n    - /cfg\n  selection_img:\n  - Image|endswith: \\secedit.exe\n  - OriginalFileName: SeCEdit\nfalsepositives:\n- Legitimate administrative use\nid: c2c76b77-32be-4d1f-82c9-7e544bdfe0eb\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://blueteamops.medium.com/secedit-and-i-know-it-595056dee53d\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/secedit\nstatus: experimental\ntags:\n- attack.discovery\n- attack.persistence\n- attack.defense_evasion\n- attack.credential_access\n- attack.privilege_escalation\n- attack.t1562.002\n- attack.t1547.001\n- attack.t1505.005\n- attack.t1556.002\n- attack.t1562\n- attack.t1574.007\n- attack.t1564.002\n- attack.t1546.008\n- attack.t1546.007\n- attack.t1547.014\n- attack.t1547.010\n- attack.t1547.002\n- attack.t1557\n- attack.t1082\ntitle: Potential Suspicious Activity Using SeCEdit\n",
+                            "sigma:id": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                            "title": "Potential Suspicious Activity Using SeCEdit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "63bf8794-9917-45bc-88dd-e1b5abc0ecfd",
+                        "lookup_data": {
+                            "description": "Uses PowerShell to install/copy a a file into a system directory such as \"System32\" or \"SysWOW64\"",
+                            "raw": "author: frack113, Nasreddine Bencherchali\ndate: 2021/12/27\ndescription: Uses PowerShell to install/copy a a file into a system directory such\n  as \"System32\" or \"SysWOW64\"\ndetection:\n  condition: all of selection*\n  selection_copy:\n    ScriptBlockText|contains|all:\n    - 'Copy-Item '\n    - '-Destination '\n  selection_paths:\n    ScriptBlockText|contains:\n    - \\Windows\\System32\n    - \\Windows\\SysWOW64\nfalsepositives:\n- Unknown\nid: 63bf8794-9917-45bc-88dd-e1b5abc0ecfd\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/10/20\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1556.002/T1556.002.md#atomic-test-1---install-and-register-password-filter-dll\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1556.002\ntitle: Powershell Install a DLL in System Directory\n",
+                            "sigma:id": "63bf8794-9917-45bc-88dd-e1b5abc0ecfd",
+                            "title": "Powershell Install a DLL in System Directory",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b7966f4a-b333-455b-8370-8ca53c229762",
+                        "lookup_data": {
+                            "description": "Detects dropping of dll files in system32 that may be used to retrieve user credentials from LSASS",
+                            "raw": "author: Sreeman\ndate: 2020/10/29\ndescription: Detects dropping of dll files in system32 that may be used to retrieve\n  user credentials from LSASS\ndetection:\n  condition: selection_cmdline\n  selection_cmdline:\n    CommandLine|contains|all:\n    - HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\n    - scecli\\0*\n    - reg add\nfalsepositives:\n- Unknown\nid: b7966f4a-b333-455b-8370-8ca53c229762\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://pentestlab.blog/2020/02/10/credential-access-password-filter-dll/\n- https://github.com/3gstudent/PasswordFilter/tree/master/PasswordFilter\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1556.002\ntitle: Dropping Of Password Filter DLL\n",
+                            "sigma:id": "b7966f4a-b333-455b-8370-8ca53c229762",
+                            "title": "Dropping Of Password Filter DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3731fbcd-0e43-47ae-ae6c-d15e510f0d42",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1556.002",
+                            "mitre-cti:description": "Adversaries may register malicious password filter dynamic link libraries (DLLs) into the authentication process to acquire user credentials as they are validated. \n\nWindows password filters are password policy enforcement mechanisms for both domain and local accounts. Filters are implemented as DLLs containing a method to validate potential passwords against password policies. Filter DLLs can be positioned on local computers for local accounts and/or domain controllers for domain accounts. Before registering new passwords in the Security Accounts Manager (SAM), the Local Security Authority (LSA) requests validation from each registered filter. Any potential changes cannot take effect until every registered filter acknowledges validation. \n\nAdversaries can register malicious password filters to harvest credentials from local computers and/or entire domains. To perform proper validation, filters must receive plain-text credentials from the LSA. A malicious password filter would receive these plain-text credentials every time a password request is made.(Citation: Carnal Ownage Password Filters Sept 2013)",
+                            "mitre-cti:name": "Password Filter DLL",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Vincent Le Toux'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--3731fbcd-0e43-47ae-ae6c-d15e510f0d42', 'type': 'attack-pattern', 'created': '2020-02-11T19:05:45.829Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1556.002', 'url': 'https://attack.mitre.org/techniques/T1556/002'}, {'url': 'http://carnal0wnage.attackresearch.com/2013/09/stealing-passwords-every-time-they.html', 'description': 'Fuller, R. (2013, September 11). Stealing passwords every time they change. Retrieved November 21, 2017.', 'source_name': 'Carnal Ownage Password Filters Sept 2013'}, {'url': 'https://clymb3r.wordpress.com/2013/09/15/intercepting-password-changes-with-function-hooking/', 'description': 'Bialek, J. (2013, September 15). Intercepting Password Changes With Function Hooking. Retrieved November 21, 2017.', 'source_name': 'Clymb3r Function Hook Passwords Sept 2013'}], 'modified': '2021-04-20T20:11:55.147Z', 'name': 'Password Filter DLL', 'description': 'Adversaries may register malicious password filter dynamic link libraries (DLLs) into the authentication process to acquire user credentials as they are validated. \\n\\nWindows password filters are password policy enforcement mechanisms for both domain and local accounts. Filters are implemented as DLLs containing a method to validate potential passwords against password policies. Filter DLLs can be positioned on local computers for local accounts and/or domain controllers for domain accounts. Before registering new passwords in the Security Accounts Manager (SAM), the Local Security Authority (LSA) requests validation from each registered filter. Any potential changes cannot take effect until every registered filter acknowledges validation. \\n\\nAdversaries can register malicious password filters to harvest credentials from local computers and/or entire domains. To perform proper validation, filters must receive plain-text credentials from the LSA. A malicious password filter would receive these plain-text credentials every time a password request is made.(Citation: Carnal Ownage Password Filters Sept 2013)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Monitor for new, unfamiliar DLL files written to a domain controller and/or local computer. Monitor for changes to Registry entries for password filters (ex: <code>HKEY_LOCAL_MACHINE\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\Notification Packages</code>) and correlate then investigate the DLL files these files reference.\\n\\nPassword filters will also show up as an autorun and loaded DLL in lsass.exe.(Citation: Clymb3r Function Hook Passwords Sept 2013)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '2.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Creation', 'Module: Module Load', 'Windows Registry: Windows Registry Key Modification'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1556.002",
+                "display_name": "Modify Authentication Process: Password Filter DLL",
+                "atomic_tests": [
+                    {
+                        "name": "Install and Register Password Filter DLL",
+                        "auto_generated_guid": "a7961770-beb5-4134-9674-83d7e1fa865c",
+                        "description": "Uses PowerShell to install and register a password filter DLL. Requires a reboot and administrative privileges.\nThe binary in bin is https://www.virustotal.com/gui/file/95140c1ad39fd632d1c1300b246293297aa272ce6035eecc3da56e337200221d/detection\nSource is in src folder. \nThis does require a reboot to see the filter loaded into lsass.exe. \nIt does require Administrative privileges to import the clean registry values back into LSA, it is possible you may have to manually do this after for cleanup.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_path": {
+                                "description": "Path to DLL to be installed and registered",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1556.002\\bin"
+                            },
+                            "dll_name": {
+                                "description": "Name of the Password Filter",
+                                "type": "string",
+                                "default": "AtomicRedTeamPWFilter.dll"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AtomicRedTeamPWFilter.dll must exist on disk at specified location (#{dll_path}\\#{dll_name})\n",
+                                "prereq_command": "if (Test-Path \"#{dll_path}\\#{dll_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nInvoke-WebRequest \"https://github.com/redcanaryco/atomicredteam/atomics/T1556.002/bin/AtomicRedTeamPWFilter.dll\" -OutFile \"#{dll_path}\\#{dll_name}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "reg.exe export HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\ \"PathToAtomicsFolder\\T1556.002\\lsa_backup.reg\"\n$passwordFilterName = (Copy-Item \"#{dll_path}\\#{dll_name}\" -Destination \"C:\\Windows\\System32\" -PassThru).basename\n$lsaKey = Get-Item \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\\"\n$notificationPackagesValues = $lsaKey.GetValue(\"Notification Packages\")\n$notificationPackagesValues += $passwordFilterName\nSet-ItemProperty \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\\" \"Notification Packages\" $notificationPackagesValues\n",
+                            "cleanup_command": "reg.exe import \"PathToAtomicsFolder\\T1556.002\\lsa_backup.reg\"\nremove-item C:\\Windows\\System32\\#{dll_name}\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Install Additional Authentication Packages",
+                        "auto_generated_guid": "91580da6-bc6e-431b-8b88-ac77180005f2",
+                        "description": "lsass.exe loads all DLLs specified by the Authentication Packages REG_MULTI_SZ value.\nUses PowerShell to install and register a password filter DLL. Requires a reboot and administrative privileges.\nThe binary in bin is https://www.virustotal.com/gui/file/95140c1ad39fd632d1c1300b246293297aa272ce6035eecc3da56e337200221d/detection\nSource is in src folder. \nThis does require a reboot to see the filter loaded into lsass.exe. \nIt does require Administrative privileges to import the clean registry values back into LSA, it is possible you may have to manually do this after for cleanup.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_path": {
+                                "description": "Path to DLL to be installed and registered as additional authentication package",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1556.002\\bin"
+                            },
+                            "dll_name": {
+                                "description": "Name of the Password Filter",
+                                "type": "string",
+                                "default": "AtomicRedTeamPWFilter.dll"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AtomicRedTeamPWFilter.dll must exist on disk at specified location (#{dll_path}\\#{dll_name})\n",
+                                "prereq_command": "if (Test-Path \"#{dll_path}\\#{dll_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nInvoke-WebRequest \"https://github.com/redcanaryco/atomicredteam/atomics/T1556.002/bin/AtomicRedTeamPWFilter.dll\" -OutFile \"#{dll_path}\\#{dll_name}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "reg.exe export HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\ \"PathToAtomicsFolder\\T1556.002\\lsa_backup.reg\"\n$passwordFilterName = (Copy-Item \"#{dll_path}\\#{dll_name}\" -Destination \"C:\\Windows\\System32\" -PassThru).basename\n$lsaKey = Get-Item \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\\"\n$AuthenticationPackagesValues = $lsaKey.GetValue(\"Authentication Packages\")\n$AuthenticationPackagesValues += $passwordFilterName\nSet-ItemProperty \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\\" \"Authentication Packages\" $AuthenticationPackagesValues\n",
+                            "cleanup_command": "reg.exe import \"PathToAtomicsFolder\\T1556.002\\lsa_backup.reg\"\nremove-item C:\\Windows\\System32\\#{dll_name}\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:20:57"
+}

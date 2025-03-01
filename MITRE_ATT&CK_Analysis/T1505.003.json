@@ -1,0 +1,435 @@
+{
+    "id": "T1505.003",
+    "name": "Web Shell",
+    "description": "Adversaries may backdoor web servers with web shells to establish persistent access to systems. A Web shell is a Web script that is placed on an openly accessible Web server to allow an adversary to use the Web server as a gateway into a network. A Web shell may provide a set of functions to execute or a command-line interface on the system that hosts the Web server.\nIn addition to a server-side script, a Web shell may have a client interface program that is used to talk to the Web server (ex: [China Chopper](S0020) Web shell client).(Citation: Lee 2013)",
+    "platforms": "Linux, Windows, macOS",
+    "kill_chain_phases": "Persistence",
+    "data_sources": "File: File Creation, File: File Modification, Process: Process Creation, Network Traffic: Network Traffic Content, Network Traffic: Network Traffic Flow, Application Log: Application Log Content",
+    "detection": "Web shells can be difficult to detect. Unlike other forms of persistent remote access, they do not initiate connections. The portion of the Web shell that is on the server may be small and innocuous looking. The PHP version of the China Chopper Web shell, for example, is the following short payload: (Citation: Lee 2013)\n`&lt;?php @eval($_POST['password']);&gt;`\nNevertheless, detection mechanisms exist. Process monitoring may be used to detect Web servers that perform suspicious actions such as spawning cmd.exe or accessing files that are not in the Web directory.(Citation: NSA Cyber Mitigating Web Shells)\nFile monitoring may be used to detect changes to files in the Web directory of a Web server that do not match with updates to the Web server's content and may indicate implantation of a Web shell script.(Citation: NSA Cyber Mitigating Web Shells)\nLog authentication attempts to the server and any unusual traffic patterns to or from the server and internal network. (Citation: US-CERT Alert TA15-314A Web Shells)",
+    "url": "https://attack.mitre.org/techniques/T1505/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1505.003",
+                "atomic_attack_guid": "0a2ce662-1efa-496f-a472-2fe7b080db16",
+                "atomic_attack_name": "Web Shell Written to Disk",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "fdf135a2-9241-4f96-a114-bb404948f736",
+                    "b7bc7038-638b-4ffd-880c-292c692209ef",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "9f6a34b4-2688-4eb7-a7f5-e39fef573d0e",
+                    "fdf96c90-42d5-4406-8a9c-14a2c9a016b5",
+                    "9465ddf4-f9e4-4ebd-8d98-702df3a93239",
+                    "4c885688-92fe-4498-be89-69aa6bdcc5eb",
+                    "35efb964-e6a5-47ad-bbcd-19661854018d",
+                    "5d0d3609-d06d-49e1-b9c9-b544e0c618cb",
+                    "bd1212e5-78da-431e-95fa-c58e3237a8e6",
+                    "bed2a484-9348-4143-8a8a-b801c979301c",
+                    "39f1f9f2-9636-45de-98f6-a4046aa8e4b9",
+                    "9db37458-4df2-46a5-95ab-307e7f29e675",
+                    "f64e5c19-879c-4bae-b471-6d84c8339677",
+                    "7280c9f3-a5af-45d0-916a-bc01cb4151c9",
+                    "fcbb4a77-f368-4945-b046-4499a1da69d1",
+                    "37e8369b-43bb-4bf8-83b6-6dd43bda2000",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5",
+                    "a133193c-2daa-4a29-8022-018695fcf0ae",
+                    "c67e0c98-4d39-46ee-8f6b-437ebf6b950e",
+                    "2ea44a60-cfda-11ea-87d0-0242ac130003",
+                    "516376b4-05cd-4122-bae0-ad7641c38d48",
+                    "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                    "c0d3734d-330f-4a03-aae2-65dacc6a8222",
+                    "8202070f-edeb-4d31-a010-a26c72ac5600",
+                    "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                    "6b269392-9eba-40b5-acb6-55c882b20ba6",
+                    "a2cee20b-eacc-459f-861d-c02e5d12f1db",
+                    "7ff9db12-1b94-4a79-ba68-a2402c5d6729",
+                    "818f7b24-0fba-4c49-a073-8b755573b9c7",
+                    "869b9ca7-9ea2-4a5a-8325-e80e62f75445"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "fdf135a2-9241-4f96-a114-bb404948f736",
+                        "lookup_data": {
+                            "description": "Detects a highly relevant Antivirus alert that reports a web shell. It's highly recommended to tune this rule to the specific strings used by your anti virus solution by downloading a big webshell repo from e.g. github and checking the matches.",
+                            "raw": "author: Florian Roth (Nextron Systems), Arnim Rupp\ndate: 2018/09/09\ndescription: Detects a highly relevant Antivirus alert that reports a web shell. It's\n  highly recommended to tune this rule to the specific strings used by your anti virus\n  solution by downloading a big webshell repo from e.g. github and checking the matches.\ndetection:\n  condition: selection\n  selection:\n  - Signature|startswith:\n    - PHP.\n    - JSP.\n    - ASP.\n    - Perl.\n    - VBS/Uxor\n    - IIS/BackDoor\n    - JAVA/Backdoor\n    - Troj/ASP\n    - Troj/PHP\n    - Troj/JSP\n  - Signature|contains:\n    - Webshell\n    - Chopper\n    - SinoChoper\n    - ASPXSpy\n    - Aspdoor\n    - filebrowser\n    - PHP_\n    - JSP_\n    - ASP_\n    - 'PHP:'\n    - 'JSP:'\n    - 'ASP:'\n    - 'Perl:'\n    - PHP/\n    - JSP/\n    - ASP/\n    - Perl/\n    - PHPShell\n    - Trojan.PHP\n    - Trojan.ASP\n    - Trojan.JSP\n    - Trojan.VBS\n    - PHP/Agent\n    - ASP/Agent\n    - JSP/Agent\n    - VBS/Agent\n    - Backdoor/PHP\n    - Backdoor/JSP\n    - Backdoor/ASP\n    - Backdoor/VBS\n    - Backdoor/Java\n    - PHP.Agent\n    - ASP.Agent\n    - JSP.Agent\n    - VBS.Agent\n    - Backdoor.PHP\n    - Backdoor.JSP\n    - Backdoor.ASP\n    - Backdoor.VBS\n    - Backdoor.Java\n    - PShlSpy\n    - C99shell\nfalsepositives:\n- Unlikely\nfields:\n- FileName\n- User\nid: fdf135a2-9241-4f96-a114-bb404948f736\nlevel: high\nlogsource:\n  category: antivirus\nmodified: 2023/02/03\nreferences:\n- https://www.nextron-systems.com/?s=antivirus\n- https://github.com/tennc/webshell\n- https://www.virustotal.com/gui/file/bd1d52289203866645e556e2766a21d2275877fbafa056a76fe0cf884b7f8819/detection\n- https://www.virustotal.com/gui/file/308487ed28a3d9abc1fec7ebc812d4b5c07ab025037535421f64c60d3887a3e8/detection\n- https://www.virustotal.com/gui/file/7d3cb8a8ff28f82b07f382789247329ad2d7782a72dde9867941f13266310c80/detection\n- https://www.virustotal.com/gui/file/e841675a4b82250c75273ebf0861245f80c6a1c3d5803c2d995d9d3b18d5c4b5/detection\n- https://www.virustotal.com/gui/file/a80042c61a0372eaa0c2c1e831adf0d13ef09feaf71d1d20b216156269045801/detection\n- https://www.virustotal.com/gui/file/b219f7d3c26f8bad7e175934cd5eda4ddb5e3983503e94ff07d39c0666821b7e/detection\n- https://www.virustotal.com/gui/file/b8702acf32fd651af9f809ed42d15135f842788cd98d81a8e1b154ee2a2b76a2/detection\n- https://www.virustotal.com/gui/file/13ae8bfbc02254b389ab052aba5e1ba169b16a399d9bc4cb7414c4a73cd7dc78/detection\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Antivirus Web Shell Detection\n",
+                            "sigma:id": "fdf135a2-9241-4f96-a114-bb404948f736",
+                            "title": "Antivirus Web Shell Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b7bc7038-638b-4ffd-880c-292c692209ef",
+                        "lookup_data": {
+                            "description": "Detects a write of an Exchange CSR to an untypical directory or with aspx name suffix which can be used to place a webshell",
+                            "raw": "author: Max Altgelt (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects a write of an Exchange CSR to an untypical directory or with\n  aspx name suffix which can be used to place a webshell\ndetection:\n  condition: keywords_export_command and keywords_export_params\n  keywords_export_command:\n    '|all':\n    - New-ExchangeCertificate\n    - ' -GenerateRequest'\n    - ' -BinaryEncoded'\n    - ' -RequestFile'\n  keywords_export_params:\n  - \\\\\\\\localhost\\\\C$\n  - \\\\\\\\127.0.0.1\\\\C$\n  - C:\\\\inetpub\n  - .aspx\nfalsepositives:\n- Unlikely\nid: b7bc7038-638b-4ffd-880c-292c692209ef\nlevel: critical\nlogsource:\n  product: windows\n  service: msexchange-management\nmodified: 2023/01/23\nreferences:\n- https://twitter.com/GossiTheDog/status/1429175908905127938\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Certificate Request Export to Exchange Webserver\n",
+                            "sigma:id": "b7bc7038-638b-4ffd-880c-292c692209ef",
+                            "title": "Certificate Request Export to Exchange Webserver",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9f6a34b4-2688-4eb7-a7f5-e39fef573d0e",
+                        "lookup_data": {
+                            "description": "Detects suspicious windows strins in URI which could indicate possible exfiltration or webshell communication",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/06\ndescription: Detects suspicious windows strins in URI which could indicate possible\n  exfiltration or webshell communication\ndetection:\n  condition: selection\n  selection:\n    cs-uri-query|contains:\n    - =C:/Users\n    - =C:/Program%20Files\n    - =C:/Windows\n    - =C%3A%5CUsers\n    - =C%3A%5CProgram%20Files\n    - =C%3A%5CWindows\nfalsepositives:\n- Legitimate application and websites that use windows paths in their URL\nid: 9f6a34b4-2688-4eb7-a7f5-e39fef573d0e\nlevel: high\nlogsource:\n  category: webserver\nmodified: 2023/01/02\nreferences:\n- https://thedfirreport.com/2022/06/06/will-the-real-msiexec-please-stand-up-exploit-leads-to-data-exfiltration/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.exfiltration\n- attack.t1505.003\ntitle: Suspicious Windows Strings In URI\n",
+                            "sigma:id": "9f6a34b4-2688-4eb7-a7f5-e39fef573d0e",
+                            "title": "Suspicious Windows Strings In URI",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fdf96c90-42d5-4406-8a9c-14a2c9a016b5",
+                        "lookup_data": {
+                            "description": "Detects access to DEWMODE webshell as described in FIREEYE report",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/02/22\ndescription: Detects access to DEWMODE webshell as described in FIREEYE report\ndetection:\n  condition: 1 of selection*\n  selection1:\n    cs-uri-query|contains|all:\n    - ?dwn=\n    - '&fn='\n    - .html?\n  selection2:\n    cs-uri-query|contains|all:\n    - '&dwn='\n    - ?fn=\n    - .html?\nfalsepositives:\n- Unknown\nfields:\n- client_ip\n- response\nid: fdf96c90-42d5-4406-8a9c-14a2c9a016b5\nlevel: high\nlogsource:\n  category: webserver\nmodified: 2023/01/02\nreferences:\n- https://www.fireeye.com/blog/threat-research/2021/02/accellion-fta-exploited-for-data-theft-and-extortion.html\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: DEWMODE Webshell Access\n",
+                            "sigma:id": "fdf96c90-42d5-4406-8a9c-14a2c9a016b5",
+                            "title": "DEWMODE Webshell Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9465ddf4-f9e4-4ebd-8d98-702df3a93239",
+                        "lookup_data": {
+                            "description": "Detects suspicious IIS native-code module installations via command line",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/12/11\ndescription: Detects suspicious IIS native-code module installations via command line\ndetection:\n  condition: all of selection_* and not 1 of filter_*\n  filter_iis_setup:\n    ParentImage: C:\\Windows\\System32\\inetsrv\\iissetup.exe\n  selection_cli:\n    CommandLine|contains:\n    - '/name:'\n    - '-name:'\n    CommandLine|contains|all:\n    - install\n    - module\n  selection_img:\n  - Image|endswith: \\appcmd.exe\n  - OriginalFileName: appcmd.exe\nfalsepositives:\n- Unknown as it may vary from organisation to organisation how admins use to install\n  IIS modules\nid: 9465ddf4-f9e4-4ebd-8d98-702df3a93239\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/22\nreferences:\n- https://researchcenter.paloaltonetworks.com/2018/01/unit42-oilrig-uses-rgdoor-iis-backdoor-targets-middle-east/\n- https://www.microsoft.com/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: IIS Native-Code Module Command Line Installation\n",
+                            "sigma:id": "9465ddf4-f9e4-4ebd-8d98-702df3a93239",
+                            "title": "IIS Native-Code Module Command Line Installation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4c885688-92fe-4498-be89-69aa6bdcc5eb",
+                        "lookup_data": {
+                            "description": "Scraper: Breaking Down the China Chopper Web Shell - Part I",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4c885688-92fe-4498-be89-69aa6bdcc5eb.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1663016118",
+                            "uuid": "4c885688-92fe-4498-be89-69aa6bdcc5eb",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "35efb964-e6a5-47ad-bbcd-19661854018d",
+                        "lookup_data": {
+                            "description": "Detects a suspicious program execution in a web service root folder (filter out false positives)",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/01/16\ndescription: Detects a suspicious program execution in a web service root folder (filter\n  out false positives)\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|contains:\n    - bin\\\n    - \\Tools\\\n    - \\SMSComponent\\\n    ParentImage|endswith: \\services.exe\n  selection:\n    Image|contains:\n    - \\wwwroot\\\n    - \\wmpub\\\n    - \\htdocs\\\nfalsepositives:\n- Various applications\n- Tools that include ping or nslookup command invocations\nfields:\n- CommandLine\n- ParentCommandLine\nid: 35efb964-e6a5-47ad-bbcd-19661854018d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Execution in Webserver Root Folder\n",
+                            "sigma:id": "35efb964-e6a5-47ad-bbcd-19661854018d",
+                            "title": "Execution in Webserver Root Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d0d3609-d06d-49e1-b9c9-b544e0c618cb",
+                        "lookup_data": {
+                            "capec": "CAPEC-650",
+                            "mitre-attack-id": "T1505.003",
+                            "mitre-cti:description": "Adversaries may backdoor web servers with web shells to establish persistent access to systems. A Web shell is a Web script that is placed on an openly accessible Web server to allow an adversary to use the Web server as a gateway into a network. A Web shell may provide a set of functions to execute or a command-line interface on the system that hosts the Web server.(Citation: volexity_0day_sophos_FW)\n\nIn addition to a server-side script, a Web shell may have a client interface program that is used to talk to the Web server (e.g. [China Chopper](https://attack.mitre.org/software/S0020) Web shell client).(Citation: Lee 2013)",
+                            "mitre-cti:name": "Web Shell",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-19T20:11:07.800Z', 'name': 'Web Shell', 'description': 'Adversaries may backdoor web servers with web shells to establish persistent access to systems. A Web shell is a Web script that is placed on an openly accessible Web server to allow an adversary to use the Web server as a gateway into a network. A Web shell may provide a set of functions to execute or a command-line interface on the system that hosts the Web server.(Citation: volexity_0day_sophos_FW)\\n\\nIn addition to a server-side script, a Web shell may have a client interface program that is used to talk to the Web server (e.g. [China Chopper](https://attack.mitre.org/software/S0020) Web shell client).(Citation: Lee 2013)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': \"Web shells can be difficult to detect. Unlike other forms of persistent remote access, they do not initiate connections. The portion of the Web shell that is on the server may be small and innocuous looking. The PHP version of the China Chopper Web shell, for example, is the following short payload: (Citation: Lee 2013) \\n\\n<code>&lt;?php @eval($_POST['password']);&gt;</code>\\n\\nNevertheless, detection mechanisms exist. Process monitoring may be used to detect Web servers that perform suspicious actions such as spawning cmd.exe or accessing files that are not in the Web directory.(Citation: NSA Cyber Mitigating Web Shells)\\n\\nFile monitoring may be used to detect changes to files in the Web directory of a Web server that do not match with updates to the Web server's content and may indicate implantation of a Web shell script.(Citation: NSA Cyber Mitigating Web Shells)\\n\\nLog authentication attempts to the server and any unusual traffic patterns to or from the server and internal network. (Citation: US-CERT Alert TA15-314A Web Shells)\", 'x_mitre_platforms': ['Linux', 'Windows', 'macOS', 'Network'], 'x_mitre_is_subtechnique': True, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.3', 'x_mitre_contributors': ['Arnim Rupp, Deutsche Lufthansa AG'], 'x_mitre_data_sources': ['Network Traffic: Network Traffic Content', 'File: File Modification', 'Network Traffic: Network Traffic Flow', 'Application Log: Application Log Content', 'File: File Creation', 'Process: Process Creation'], 'x_mitre_system_requirements': ['Adversary access to Web server with vulnerability or account to upload and serve the Web shell file.'], 'type': 'attack-pattern', 'id': 'attack-pattern--5d0d3609-d06d-49e1-b9c9-b544e0c618cb', 'created': '2019-12-13T16:46:18.927Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1505/003', 'external_id': 'T1505.003'}, {'source_name': 'NSA Cyber Mitigating Web Shells', 'description': ' NSA Cybersecurity Directorate. (n.d.). Mitigating Web Shells. Retrieved July 22, 2021.', 'url': 'https://github.com/nsacyber/Mitigating-Web-Shells'}, {'source_name': 'volexity_0day_sophos_FW', 'description': 'Adair, S., Lancaster, T., Volexity Threat Research. (2022, June 15). DriftingCloud: Zero-Day Sophos Firewall Exploitation and an Insidious Breach. Retrieved July 1, 2022.', 'url': 'https://www.volexity.com/blog/2022/06/15/driftingcloud-zero-day-sophos-firewall-exploitation-and-an-insidious-breach/'}, {'source_name': 'Lee 2013', 'description': 'Lee, T., Hanzlik, D., Ahl, I. (2013, August 7). Breaking Down the China Chopper Web Shell - Part I. Retrieved March 27, 2015.', 'url': 'https://www.fireeye.com/blog/threat-research/2013/08/breaking-down-the-china-chopper-web-shell-part-i.html'}, {'source_name': 'US-CERT Alert TA15-314A Web Shells', 'description': 'US-CERT. (2015, November 13). Compromised Web Servers and Web Shells - Threat Awareness and Guidance. Retrieved June 8, 2016.', 'url': 'https://www.us-cert.gov/ncas/alerts/TA15-314A'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/650.html', 'external_id': 'CAPEC-650'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bd1212e5-78da-431e-95fa-c58e3237a8e6",
+                        "lookup_data": {
+                            "description": "Detects suspicious file type dropped by an Exchange component in IIS into a suspicious folder",
+                            "raw": "author: Florian Roth (Nextron Systems), MSTI (query, idea)\ndate: 2022/10/01\ndescription: Detects suspicious file type dropped by an Exchange component in IIS\n  into a suspicious folder\ndetection:\n  condition: all of selection*\n  selection:\n    CommandLine|contains: MSExchange\n    Image|endswith: \\w3wp.exe\n    TargetFilename|contains:\n    - FrontEnd\\HttpProxy\\\n    - \\inetpub\\wwwroot\\aspnet_client\\\n  selection_types:\n    TargetFilename|endswith:\n    - .aspx\n    - .asp\n    - .ashx\nfalsepositives:\n- Unknown\nid: bd1212e5-78da-431e-95fa-c58e3237a8e6\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2022/09/30/analyzing-attacks-using-the-exchange-vulnerabilities-cve-2022-41040-and-cve-2022-41082/\n- https://www.gteltsc.vn/blog/canh-bao-chien-dich-tan-cong-su-dung-lo-hong-zero-day-tren-microsoft-exchange-server-12714.html\n- https://en.gteltsc.vn/blog/cap-nhat-nhe-ve-lo-hong-bao-mat-0day-microsoft-exchange-dang-duoc-su-dung-de-tan-cong-cac-to-chuc-tai-viet-nam-9685.html\nrelated:\n- id: 6b269392-9eba-40b5-acb6-55c882b20ba6\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Suspicious ASPX File Drop by Exchange\n",
+                            "sigma:id": "bd1212e5-78da-431e-95fa-c58e3237a8e6",
+                            "title": "Suspicious ASPX File Drop by Exchange",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bed2a484-9348-4143-8a8a-b801c979301c",
+                        "lookup_data": {
+                            "description": "Detects certain command line parameters often used during reconnaissance activity via web shells",
+                            "raw": "author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, Anton Kutepov, oscd.community\ndate: 2017/01/01\ndescription: Detects certain command line parameters often used during reconnaissance\n  activity via web shells\ndetection:\n  condition: 1 of selection* and 1 of susp*\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    CommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_tomcatservice.exe\n  susp_change_dir:\n    CommandLine|contains:\n    - '&cd&echo'\n    - 'cd /d '\n  susp_misc_discovery_binaries:\n  - Image|endswith:\n    - \\whoami.exe\n    - \\systeminfo.exe\n    - \\quser.exe\n    - \\ipconfig.exe\n    - \\pathping.exe\n    - \\tracert.exe\n    - \\netstat.exe\n    - \\schtasks.exe\n    - \\vssadmin.exe\n    - \\wevtutil.exe\n    - \\tasklist.exe\n  - OriginalFileName:\n    - whoami.exe\n    - sysinfo.exe\n    - quser.exe\n    - ipconfig.exe\n    - pathping.exe\n    - tracert.exe\n    - netstat.exe\n    - schtasks.exe\n    - VSSADMIN.EXE\n    - wevtutil.exe\n    - tasklist.exe\n  susp_misc_discovery_commands:\n    CommandLine|contains:\n    - ' Test-NetConnection '\n    - dir \\\n  susp_net_utility:\n    CommandLine|contains:\n    - ' user '\n    - ' use '\n    - ' group '\n    OriginalFileName:\n    - net.exe\n    - net1.exe\n  susp_ping_utility:\n    CommandLine|contains: ' -n '\n    OriginalFileName: ping.exe\n  susp_wmic_utility:\n    CommandLine|contains: ' /node:'\n    OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: bed2a484-9348-4143-8a8a-b801c979301c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://www.fireeye.com/blog/threat-research/2013/08/breaking-down-the-china-chopper-web-shell-part-ii.html\n- https://unit42.paloaltonetworks.com/bumblebee-webshell-xhunt-campaign/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Webshell Detection With Command Line Keywords\n",
+                            "sigma:id": "bed2a484-9348-4143-8a8a-b801c979301c",
+                            "title": "Webshell Detection With Command Line Keywords",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "39f1f9f2-9636-45de-98f6-a4046aa8e4b9",
+                        "lookup_data": {
+                            "description": "Possible webshell file creation on a static web site",
+                            "raw": "author: Beyu Denis, oscd.community, Tim Shelton\ndate: 2019/10/22\ndescription: Possible webshell file creation on a static web site\ndetection:\n  condition: ((selection_wwwroot and selection_ext1) or (selection_static and selection_ext2))\n    and not 1 of false_positive*\n  false_positive1:\n    TargetFilename|contains:\n    - \\AppData\\Local\\Temp\\\n    - \\Windows\\Temp\\\n  false_positive_legitimate:\n    TargetFilename|contains: \\xampp\n  false_positive_system:\n    Image: System\n  selection_ext1:\n    TargetFilename|contains:\n    - .asp\n    - .ashx\n    - .ph\n  selection_ext2:\n    TargetFilename|contains: .ph\n  selection_static:\n    TargetFilename|contains:\n    - \\www\\\n    - \\htdocs\\\n    - \\html\\\n  selection_wwwroot:\n    TargetFilename|contains: \\inetpub\\wwwroot\\\nfalsepositives:\n- Legitimate administrator or developer creating legitimate executable files in a\n  web application folder\nid: 39f1f9f2-9636-45de-98f6-a4046aa8e4b9\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/09/18\nreferences:\n- PT ESC rule and personal experience\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Windows Webshell Creation\n",
+                            "sigma:id": "39f1f9f2-9636-45de-98f6-a4046aa8e4b9",
+                            "title": "Windows Webshell Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9db37458-4df2-46a5-95ab-307e7f29e675",
+                        "lookup_data": {
+                            "description": "Rule to detect an adversary setting OabVirtualDirectory External URL property to a script in Exchange Management log",
+                            "raw": "author: Jose Rodriguez @Cyb3rPandaH\ndate: 2021/03/15\ndescription: Rule to detect an adversary setting OabVirtualDirectory External URL\n  property to a script in Exchange Management log\ndetection:\n  condition: keywords\n  keywords:\n    '|all':\n    - Set-OabVirtualDirectory\n    - ExternalUrl\n    - Page_Load\n    - script\nfalsepositives:\n- Unknown\nid: 9db37458-4df2-46a5-95ab-307e7f29e675\nlevel: high\nlogsource:\n  product: windows\n  service: msexchange-management\nmodified: 2023/01/23\nreferences:\n- https://twitter.com/OTR_Community/status/1371053369071132675\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Exchange Set OabVirtualDirectory ExternalUrl Property\n",
+                            "sigma:id": "9db37458-4df2-46a5-95ab-307e7f29e675",
+                            "title": "Exchange Set OabVirtualDirectory ExternalUrl Property",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f64e5c19-879c-4bae-b471-6d84c8339677",
+                        "lookup_data": {
+                            "description": "Detects processes spawned from web servers (php, tomcat, iis...etc) that perform reconnaissance looking for the existence of popular scripting tools (perl, python, wget) on the system via the help commands",
+                            "raw": "author: Cian Heasley, Florian Roth\ndate: 2020/07/22\ndescription: Detects processes spawned from web servers (php, tomcat, iis...etc) that\n  perform reconnaissance looking for the existence of popular scripting tools (perl,\n  python, wget) on the system via the help commands\ndetection:\n  condition: 1 of selection* and recon\n  recon:\n    CommandLine|contains:\n    - perl --help\n    - python --help\n    - python -h\n    - python3 --help\n    - python3 -h\n    - wget --help\n    - perl -h\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    CommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_tomcatservice.exe\nfalsepositives:\n- Unknown\nfields:\n- Image\n- CommandLine\n- ParentCommandLine\nid: f64e5c19-879c-4bae-b471-6d84c8339677\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/27\nreferences:\n- https://ragged-lab.blogspot.com/2020/07/webshells-automating-reconnaissance.html\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Webshell Recon Detection Via CommandLine & Processes\n",
+                            "sigma:id": "f64e5c19-879c-4bae-b471-6d84c8339677",
+                            "title": "Webshell Recon Detection Via CommandLine & Processes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7280c9f3-a5af-45d0-916a-bc01cb4151c9",
+                        "lookup_data": {
+                            "description": "Detects suspicious activity in which the MSExchangeMailboxReplication process writes .asp and .apsx files to disk, which could be a sign of ProxyShell exploitation",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/25\ndescription: Detects suspicious activity in which the MSExchangeMailboxReplication\n  process writes .asp and .apsx files to disk, which could be a sign of ProxyShell\n  exploitation\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\MSExchangeMailboxReplication.exe\n    TargetFilename|endswith:\n    - .aspx\n    - .asp\nfalsepositives:\n- Unknown\nid: 7280c9f3-a5af-45d0-916a-bc01cb4151c9\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://redcanary.com/blog/blackbyte-ransomware/\nstatus: test\ntags:\n- attack.initial_access\n- attack.t1190\n- attack.persistence\n- attack.t1505.003\ntitle: Suspicious MSExchangeMailboxReplication ASPX Write\n",
+                            "sigma:id": "7280c9f3-a5af-45d0-916a-bc01cb4151c9",
+                            "title": "Suspicious MSExchangeMailboxReplication ASPX Write",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fcbb4a77-f368-4945-b046-4499a1da69d1",
+                        "lookup_data": {
+                            "description": "Detects an authentication bypass vulnerability affecting the REST API URLs in ADSelfService Plus (CVE-2021-40539).",
+                            "raw": "author: Sittikorn S, Nuttakorn Tungpoonsup\ndate: 2021/09/10\ndescription: Detects an authentication bypass vulnerability affecting the REST API\n  URLs in ADSelfService Plus (CVE-2021-40539).\ndetection:\n  condition: selection\n  selection:\n    cs-uri-query|contains:\n    - /help/admin-guide/Reports/ReportGenerate.jsp\n    - /RestAPI/LogonCustomization\n    - /RestAPI/Connection\nfalsepositives:\n- Unknown\nfields:\n- c-ip\n- cs-uri-query\nid: fcbb4a77-f368-4945-b046-4499a1da69d1\nlevel: critical\nlogsource:\n  category: webserver\n  definition: Must be collect log from \\ManageEngine\\ADSelfService Plus\\logs\nmodified: 2023/01/02\nreferences:\n- https://therecord.media/cisa-warns-of-zoho-server-zero-day-exploited-in-the-wild/\n- https://www.manageengine.com/products/self-service-password/kb/how-to-fix-authentication-bypass-vulnerability-in-REST-API.html\n- https://us-cert.cisa.gov/ncas/alerts/aa21-259a\nstatus: test\ntags:\n- attack.initial_access\n- attack.t1190\n- attack.persistence\n- attack.t1505.003\ntitle: CVE-2021-40539 Zoho ManageEngine ADSelfService Plus Exploit\n",
+                            "sigma:id": "fcbb4a77-f368-4945-b046-4499a1da69d1",
+                            "title": "CVE-2021-40539 Zoho ManageEngine ADSelfService Plus Exploit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "37e8369b-43bb-4bf8-83b6-6dd43bda2000",
+                        "lookup_data": {
+                            "description": "Detects access to a webshell dropped into a keystore folder on the WebLogic server",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/07/22\ndescription: Detects access to a webshell dropped into a keystore folder on the WebLogic\n  server\ndetection:\n  condition: selection\n  selection:\n    cs-uri-query: '*/config/keystore/*.js*'\nfalsepositives:\n- Unknown\nfields:\n- c-ip\n- c-dns\nid: 37e8369b-43bb-4bf8-83b6-6dd43bda2000\nlevel: critical\nlogsource:\n  category: webserver\nmodified: 2023/01/02\nreferences:\n- https://twitter.com/pyn3rd/status/1020620932967223296\n- https://github.com/LandGrey/CVE-2018-2894\nstatus: test\ntags:\n- attack.t1190\n- attack.initial_access\n- attack.persistence\n- attack.t1505.003\n- cve.2018.2894\ntitle: Oracle WebLogic Exploit\n",
+                            "sigma:id": "37e8369b-43bb-4bf8-83b6-6dd43bda2000",
+                            "title": "Oracle WebLogic Exploit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5",
+                        "lookup_data": {
+                            "description": "\"Lebanese Cedar\" APT Global Lebanese Espionage Campaign Leveraging Web Servers",
+                            "link": "http://www.botvrij.eu/data/feed-osint/3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1612198942",
+                            "uuid": "3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a133193c-2daa-4a29-8022-018695fcf0ae",
+                        "lookup_data": {
+                            "description": "Detects attempts to exploit a Rejetto HTTP File Server (HFS) via CVE-2014-6287",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/19\ndescription: Detects attempts to exploit a Rejetto HTTP File Server (HFS) via CVE-2014-6287\ndetection:\n  condition: all of selection_*\n  selection_payload:\n    cs-uri-query|contains:\n    - save|\n    - powershell\n    - cmd.exe\n    - cmd /c\n    - cmd /r\n    - cmd /k\n    - cscript\n    - wscript\n    - python\n    - C:\\Users\\Public\\\n    - '%comspec%'\n  selection_search:\n    cs-uri-query|contains: ?search=%00{.\nfalsepositives:\n- Unknown\nid: a133193c-2daa-4a29-8022-018695fcf0ae\nlevel: high\nlogsource:\n  category: webserver\nmodified: 2023/01/02\nreferences:\n- https://vk9-sec.com/hfs-code-execution-cve-2014-6287/\n- https://www.exploit-db.com/exploits/39161\n- https://github.com/Twigonometry/Cybersecurity-Notes/blob/c875b0f52df7d2c7a870e75e1f0c2679d417931d/Writeups/Hack%20the%20Box/Boxes/Optimum/10%20-%20Website.md\nstatus: experimental\ntags:\n- attack.initial_access\n- attack.t1190\n- attack.t1505.003\n- cve.2014.6287\ntitle: Rejetto HTTP File Server RCE\n",
+                            "sigma:id": "a133193c-2daa-4a29-8022-018695fcf0ae",
+                            "title": "Rejetto HTTP File Server RCE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c67e0c98-4d39-46ee-8f6b-437ebf6b950e",
+                        "lookup_data": {
+                            "description": "Detects shellshock expressions in log files",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/14\ndescription: Detects shellshock expressions in log files\ndetection:\n  condition: keywords\n  keywords:\n  - (){:;};\n  - () {:;};\n  - () { :;};\n  - () { :; };\nfalsepositives:\n- Unknown\nid: c67e0c98-4d39-46ee-8f6b-437ebf6b950e\nlevel: high\nlogsource:\n  product: linux\nmodified: 2022/10/09\nreferences:\n- https://owasp.org/www-pdf-archive/Shellshock_-_Tudor_Enache.pdf\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Shellshock Expression\n",
+                            "sigma:id": "c67e0c98-4d39-46ee-8f6b-437ebf6b950e",
+                            "title": "Shellshock Expression",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2ea44a60-cfda-11ea-87d0-0242ac130003",
+                        "lookup_data": {
+                            "description": "Certain strings in the uri_query field when combined with null referer and null user agent can indicate activity associated with the webshell ReGeorg.",
+                            "raw": "author: Cian Heasley\ndate: 2020/08/04\ndescription: Certain strings in the uri_query field when combined with null referer\n  and null user agent can indicate activity associated with the webshell ReGeorg.\ndetection:\n  condition: selection and filter\n  filter:\n    cs-method: POST\n    cs-referer: null\n    cs-user-agent: null\n  selection:\n    cs-uri-query|contains:\n    - cmd=read\n    - connect&target\n    - cmd=connect\n    - cmd=disconnect\n    - cmd=forward\nfalsepositives:\n- Web applications that use the same URL parameters as ReGeorg\nfields:\n- cs-uri-query\n- cs-referer\n- cs-method\n- cs-User-Agent\nid: 2ea44a60-cfda-11ea-87d0-0242ac130003\nlevel: high\nlogsource:\n  category: webserver\nmodified: 2023/01/02\nreferences:\n- https://community.rsa.com/community/products/netwitness/blog/2019/02/19/web-shells-and-netwitness-part-3\n- https://github.com/sensepost/reGeorg\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Webshell ReGeorg Detection Via Web Logs\n",
+                            "sigma:id": "2ea44a60-cfda-11ea-87d0-0242ac130003",
+                            "title": "Webshell ReGeorg Detection Via Web Logs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "516376b4-05cd-4122-bae0-ad7641c38d48",
+                        "lookup_data": {
+                            "description": "Detects a successful export of an Exchange mailbox to untypical directory or with aspx name suffix which can be used to place a webshell or the needed role assignment for it",
+                            "raw": "author: Florian Roth (Nextron Systems), Rich Warren, Christian Burkard (Nextron Systems)\ndate: 2021/08/09\ndescription: Detects a successful export of an Exchange mailbox to untypical directory\n  or with aspx name suffix which can be used to place a webshell or the needed role\n  assignment for it\ndetection:\n  condition: all of export_* or role_assignment\n  export_command:\n  - New-MailboxExportRequest\n  - ' -Mailbox '\n  export_params:\n  - -FilePath \"\\\\\\\\\n  - .aspx\n  role_assignment:\n  - New-ManagementRoleAssignment\n  - ' -Role \"Mailbox Import Export\"'\n  - ' -User '\nfalsepositives:\n- Unlikely\nid: 516376b4-05cd-4122-bae0-ad7641c38d48\nlevel: critical\nlogsource:\n  product: windows\n  service: msexchange-management\nmodified: 2022/10/26\nreferences:\n- https://blog.orange.tw/2021/08/proxylogon-a-new-attack-surface-on-ms-exchange-part-1.html\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Mailbox Export to Exchange Webserver\n",
+                            "sigma:id": "516376b4-05cd-4122-bae0-ad7641c38d48",
+                            "title": "Mailbox Export to Exchange Webserver",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                        "lookup_data": {
+                            "description": "Detects patterns found in process executions cause by China Chopper like tiny (ASPX) webshells",
+                            "raw": "author: Florian Roth (Nextron Systems), MSTI (query)\ndate: 2022/10/01\ndescription: Detects patterns found in process executions cause by China Chopper like\n  tiny (ASPX) webshells\ndetection:\n  condition: all of selection*\n  selection_cmdline:\n    CommandLine|contains:\n    - '&ipconfig&echo'\n    - '&quser&echo'\n    - '&whoami&echo'\n    - '&c:&echo'\n    - '&cd&echo'\n    - '&dir&echo'\n    - '&echo [E]'\n    - '&echo [S]'\n  selection_origin:\n  - Image|endswith: \\w3wp.exe\n  - ParentImage|endswith: \\w3wp.exe\nfalsepositives:\n- Unknown\nid: fa3c117a-bc0d-416e-a31b-0c0e80653efb\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2022/09/30/analyzing-attacks-using-the-exchange-vulnerabilities-cve-2022-41040-and-cve-2022-41082/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Chopper Webshell Process Pattern\n",
+                            "sigma:id": "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                            "title": "Chopper Webshell Process Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c0d3734d-330f-4a03-aae2-65dacc6a8222",
+                        "lookup_data": {
+                            "description": "Detects possible command execution by web application/web shell",
+                            "raw": "author: Ilyas Ochkov, Beyu Denis, oscd.community\ndate: 2019/10/12\ndescription: Detects possible command execution by web application/web shell\ndetection:\n  condition: selection\n  selection:\n    key: detect_execve_www\n    syscall: execve\n    type: SYSCALL\nfalsepositives:\n- Admin activity\n- Crazy web applications\nid: c0d3734d-330f-4a03-aae2-65dacc6a8222\nlevel: critical\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/12/25\nreferences:\n- Personal Experience of the Author\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Webshell Remote Command Execution\n",
+                            "sigma:id": "c0d3734d-330f-4a03-aae2-65dacc6a8222",
+                            "title": "Webshell Remote Command Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8202070f-edeb-4d31-a010-a26c72ac5600",
+                        "lookup_data": {
+                            "description": "Detects web servers that spawn shell processes which could be the result of a successfully placed web shell or another attack",
+                            "raw": "author: Thomas Patzke, Florian Roth (Nextron Systems), Zach Stanford @svch0st, Tim\n  Shelton, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019/01/16\ndescription: Detects web servers that spawn shell processes which could be the result\n  of a successfully placed web shell or another attack\ndetection:\n  anomaly_children:\n    Image|endswith:\n    - \\cmd.exe\n    - \\cscript.exe\n    - \\sh.exe\n    - \\bash.exe\n    - \\powershell.exe\n    - \\powershell_ise.exe\n    - \\pwsh.exe\n    - \\bitsadmin.exe\n    - \\arp.exe\n    - \\at.exe\n    - \\certutil.exe\n    - \\dsget.exe\n    - \\dsquery.exe\n    - \\find.exe\n    - \\findstr.exe\n    - \\fsutil.exe\n    - \\hostname.exe\n    - \\ipconfig.exe\n    - \\nbtstat.exe\n    - \\net.exe\n    - \\net1.exe\n    - \\netdom.exe\n    - \\netsh.exe\n    - \\netstat.exe\n    - \\nltest.exe\n    - \\nslookup.exe\n    - \\ntdutil.exe\n    - \\pathping.exe\n    - \\ping.exe\n    - \\qprocess.exe\n    - \\query.exe\n    - \\qwinsta.exe\n    - \\reg.exe\n    - \\rundll32.exe\n    - \\sc.exe\n    - \\schtasks.exe\n    - \\systeminfo.exe\n    - \\tasklist.exe\n    - \\tracert.exe\n    - \\ver.exe\n    - \\vssadmin.exe\n    - \\wevtutil.exe\n    - \\whoami.exe\n    - \\wmic.exe\n    - \\wscript.exe\n    - \\wusa.exe\n  condition: 1 of selection* and anomaly_children and not 1 of false_positive*\n  false_positive1:\n    CommandLine|endswith: Windows\\system32\\cmd.exe /c C:\\ManageEngine\\ADManager \"Plus\\ES\\bin\\elasticsearch.bat\n      -Enode.name=RMP-NODE1 -pelasticsearch-pid.txt\n  false_positive2:\n    CommandLine|contains|all:\n    - sc query\n    - ADManager Plus\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    ParentCommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    - catalina.home\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_TomcatService.exe\n    - \\tomcat.exe\n    - \\UMWorkerProcess.exe\nfalsepositives:\n- Particular web applications may spawn a shell process legitimately\nfields:\n- CommandLine\n- ParentCommandLine\nid: 8202070f-edeb-4d31-a010-a26c72ac5600\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/19\nreferences:\n- https://media.defense.gov/2020/Jun/09/2002313081/-1/-1/0/CSI-DETECT-AND-PREVENT-WEB-SHELL-MALWARE-20200422.PDF\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1190\ntitle: Shells Spawned by Web Servers\n",
+                            "sigma:id": "8202070f-edeb-4d31-a010-a26c72ac5600",
+                            "title": "Shells Spawned by Web Servers",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                        "lookup_data": {
+                            "description": "Detects certain parent child patterns found in cases in which a webshell is used to perform certain credential dumping or exfiltration activities on a compromised system",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/03/17\ndescription: Detects certain parent child patterns found in cases in which a webshell\n  is used to perform certain credential dumping or exfiltration activities on a compromised\n  system\ndetection:\n  condition: 1 of selection_webserver* and 1 of selection_child*\n  selection_child_1:\n    CommandLine|contains|all:\n    - rundll32\n    - comsvcs\n  selection_child_2:\n    CommandLine|contains|all:\n    - ' -hp'\n    - ' a '\n    - ' -m'\n  selection_child_3:\n    CommandLine|contains|all:\n    - net\n    - ' user '\n    - ' /add'\n  selection_child_4:\n    CommandLine|contains|all:\n    - net\n    - ' localgroup '\n    - ' administrators '\n    - /add\n  selection_child_5:\n    Image|endswith:\n    - \\ntdsutil.exe\n    - \\ldifde.exe\n    - \\adfind.exe\n    - \\procdump.exe\n    - \\Nanodump.exe\n    - \\vssadmin.exe\n    - \\fsutil.exe\n  selection_child_6:\n    CommandLine|contains:\n    - ' -NoP '\n    - ' -W Hidden '\n    - ' -decode '\n    - ' /decode '\n    - 'reg save '\n    - .downloadstring(\n    - .downloadfile(\n    - FromBase64String\n    - ' /ticket:'\n    - ' sekurlsa'\n    - .dmp full\n    - process call create\n    - whoami /priv\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    CommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_tomcatservice.exe\nfalsepositives:\n- Unlikely\nid: 4ebc877f-4612-45cb-b3a5-8e3834db36c9\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/04\nreferences:\n- https://youtu.be/7aemGhaE9ds?t=641\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Webshell Hacking Activity Patterns\n",
+                            "sigma:id": "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                            "title": "Webshell Hacking Activity Patterns",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6b269392-9eba-40b5-acb6-55c882b20ba6",
+                        "lookup_data": {
+                            "description": "Detects suspicious file type dropped by an Exchange component in IIS",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/10/04\ndescription: Detects suspicious file type dropped by an Exchange component in IIS\ndetection:\n  condition: all of selection*\n  selection:\n    CommandLine|contains: MSExchange\n    Image|endswith: \\w3wp.exe\n  selection_types:\n    TargetFilename|endswith:\n    - .aspx\n    - .asp\n    - .ashx\n    - .ps1\n    - .bat\n    - .exe\n    - .dll\n    - .vbs\nfalsepositives:\n- Unknown\nid: 6b269392-9eba-40b5-acb6-55c882b20ba6\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2022/09/30/analyzing-attacks-using-the-exchange-vulnerabilities-cve-2022-41040-and-cve-2022-41082/\n- https://www.gteltsc.vn/blog/canh-bao-chien-dich-tan-cong-su-dung-lo-hong-zero-day-tren-microsoft-exchange-server-12714.html\n- https://en.gteltsc.vn/blog/cap-nhat-nhe-ve-lo-hong-bao-mat-0day-microsoft-exchange-dang-duoc-su-dung-de-tan-cong-cac-to-chuc-tai-viet-nam-9685.html\nrelated:\n- id: bd1212e5-78da-431e-95fa-c58e3237a8e6\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1190\n- attack.initial_access\n- attack.t1505.003\ntitle: Suspicious File Drop by Exchange\n",
+                            "sigma:id": "6b269392-9eba-40b5-acb6-55c882b20ba6",
+                            "title": "Suspicious File Drop by Exchange",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a2cee20b-eacc-459f-861d-c02e5d12f1db",
+                        "lookup_data": {
+                            "description": "Detects access to SUPERNOVA webshell as described in Guidepoint report",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/12/17\ndescription: Detects access to SUPERNOVA webshell as described in Guidepoint report\ndetection:\n  condition: selection1 or selection2\n  selection1:\n    cs-uri-query|contains|all:\n    - logoimagehandler.ashx\n    - clazz\n  selection2:\n    cs-uri-query|contains: logoimagehandler.ashx\n    sc-status: 500\nfalsepositives:\n- Unknown\nfields:\n- client_ip\n- response\nid: a2cee20b-eacc-459f-861d-c02e5d12f1db\nlevel: critical\nlogsource:\n  category: webserver\nmodified: 2023/01/02\nreferences:\n- https://www.guidepointsecurity.com/supernova-solarwinds-net-webshell-analysis/\n- https://www.anquanke.com/post/id/226029\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Solarwinds SUPERNOVA Webshell Access\n",
+                            "sigma:id": "a2cee20b-eacc-459f-861d-c02e5d12f1db",
+                            "title": "Solarwinds SUPERNOVA Webshell Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7ff9db12-1b94-4a79-ba68-a2402c5d6729",
+                        "lookup_data": {
+                            "description": "Detects Windows Webshells that use GET requests via access logs",
+                            "raw": "author: Florian Roth (Nextron Systems), Nasreddine Bencherchali\ndate: 2017/02/19\ndescription: Detects Windows Webshells that use GET requests via access logs\ndetection:\n  condition: all of selection_*\n  selection_keywords:\n  - =whoami\n  - =net%20user\n  - =net+user\n  - =net%2Buser\n  - =cmd%20/c%\n  - =cmd+/c+\n  - =cmd%2B/c%\n  - =cmd%20/r%\n  - =cmd+/r+\n  - =cmd%2B/r%\n  - =cmd%20/k%\n  - =cmd+/k+\n  - =cmd%2B/k%\n  - =powershell%\n  - =powershell+\n  - =tasklist%\n  - =tasklist+\n  - =wmic%\n  - =wmic+\n  - =ssh%\n  - =ssh+\n  - =python%\n  - =python+\n  - =python3%\n  - =python3+\n  - =ipconfig\n  - =wget%\n  - =wget+\n  - =curl%\n  - =curl+\n  - =certutil\n  - =copy%20%5C%5C\n  - =dsquery%\n  - =dsquery+\n  - =nltest%\n  - =nltest+\n  selection_method:\n    cs-method: GET\nfalsepositives:\n- Web sites like wikis with articles on os commands and pages that include the os\n  commands in the URLs\n- User searches in search boxes of the respective website\nfields:\n- client_ip\n- vhost\n- url\n- response\nid: 7ff9db12-1b94-4a79-ba68-a2402c5d6729\nlevel: high\nlogsource:\n  category: webserver\nmodified: 2022/11/18\nreferences:\n- https://bad-jubies.github.io/RCE-NOW-WHAT/\n- https://m365internals.com/2022/10/07/hunting-in-on-premises-exchange-server-logs/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Windows Webshell Strings\n",
+                            "sigma:id": "7ff9db12-1b94-4a79-ba68-a2402c5d6729",
+                            "title": "Windows Webshell Strings",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "818f7b24-0fba-4c49-a073-8b755573b9c7",
+                        "lookup_data": {
+                            "description": "Detects suspicious sub processes of web server processes",
+                            "raw": "author: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2021/10/15\ndescription: Detects suspicious sub processes of web server processes\ndetection:\n  condition: 1 of selection_* and sub_processes\n  selection_general:\n    ParentImage|endswith:\n    - /httpd\n    - /lighttpd\n    - /nginx\n    - /apache2\n    - /node\n    - /caddy\n  selection_tomcat:\n    ParentCommandLine|contains|all:\n    - /bin/java\n    - tomcat\n  selection_websphere:\n    ParentCommandLine|contains|all:\n    - /bin/java\n    - websphere\n  sub_processes:\n    Image|endswith:\n    - /whoami\n    - /ifconfig\n    - /ip\n    - /bin/uname\n    - /bin/cat\n    - /bin/crontab\n    - /hostname\n    - /iptables\n    - /netstat\n    - /pwd\n    - /route\nfalsepositives:\n- Web applications that invoke Linux command line tools\nid: 818f7b24-0fba-4c49-a073-8b755573b9c7\nlevel: high\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/12/28\nreferences:\n- https://www.acunetix.com/blog/articles/web-shells-101-using-php-introduction-web-shells-part-2/\n- https://media.defense.gov/2020/Jun/09/2002313081/-1/-1/0/CSI-DETECT-AND-PREVENT-WEB-SHELL-MALWARE-20200422.PDF\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\ntitle: Linux Webshell Indicators\n",
+                            "sigma:id": "818f7b24-0fba-4c49-a073-8b755573b9c7",
+                            "title": "Linux Webshell Indicators",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "869b9ca7-9ea2-4a5a-8325-e80e62f75445",
+                        "lookup_data": {
+                            "description": "Detects suspicious shell spawn from MSSQL process, this might be sight of RCE or SQL Injection",
+                            "raw": "author: FPT.EagleEye Team, wagga\ndate: 2020/12/11\ndescription: Detects suspicious shell spawn from MSSQL process, this might be sight\n  of RCE or SQL Injection\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_datev:\n    CommandLine|startswith: '\"C:\\Windows\\system32\\cmd.exe\" '\n    Image: C:\\Windows\\System32\\cmd.exe\n    ParentImage|endswith: DATEV_DBENGINE\\MSSQL\\Binn\\sqlservr.exe\n    ParentImage|startswith: C:\\Program Files\\Microsoft SQL Server\\\n  selection:\n    Image|endswith:\n    - \\cmd.exe\n    - \\sh.exe\n    - \\bash.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\bitsadmin.exe\n    - \\systeminfo.exe\n    ParentImage|endswith: \\sqlservr.exe\nid: 869b9ca7-9ea2-4a5a-8325-e80e62f75445\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/21\nstatus: experimental\ntags:\n- attack.t1505.003\n- attack.t1190\n- attack.initial_access\n- attack.persistence\n- attack.privilege_escalation\ntitle: Suspicious Shells Spawn by SQL Server\n",
+                            "sigma:id": "869b9ca7-9ea2-4a5a-8325-e80e62f75445",
+                            "title": "Suspicious Shells Spawn by SQL Server",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1505.003",
+                "display_name": "Server Software Component: Web Shell",
+                "atomic_tests": [
+                    {
+                        "name": "Web Shell Written to Disk",
+                        "auto_generated_guid": "0a2ce662-1efa-496f-a472-2fe7b080db16",
+                        "description": "This test simulates an adversary leveraging Web Shells by simulating the file modification to disk.\nIdea from APTSimulator.\ncmd.aspx source - https://github.com/tennc/webshell/blob/master/fuzzdb-webshell/asp/cmd.aspx\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "web_shell_path": {
+                                "description": "The path to drop the web shell",
+                                "type": "string",
+                                "default": "C:\\inetpub\\wwwroot"
+                            },
+                            "web_shells": {
+                                "description": "Path of Web Shell",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1505.003\\src"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Web shell must exist on disk at specified location (#{web_shells})\n",
+                                "prereq_command": "if (Test-Path \"#{web_shells}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"#{web_shells}\" -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1505.003/src/b.jsp\" -OutFile \"#{web_shells}/b.jsp\"\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1505.003/src/tests.jsp\" -OutFile \"#{web_shells}/tests.jsp\"\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1505.003/src/cmd.aspx\" -OutFile \"#{web_shells}/cmd.aspx\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "xcopy /I /Y \"#{web_shells}\" #{web_shell_path}\n",
+                            "cleanup_command": "del #{web_shell_path}\\b.jsp /q >nul 2>&1\ndel #{web_shell_path}\\tests.jsp /q >nul 2>&1\ndel #{web_shell_path}\\cmd.aspx /q >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:57:22"
+}

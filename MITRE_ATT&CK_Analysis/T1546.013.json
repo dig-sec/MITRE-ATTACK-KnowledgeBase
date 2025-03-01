@@ -1,0 +1,108 @@
+{
+    "id": "T1546.013",
+    "name": "PowerShell Profile",
+    "description": "Adversaries may gain persistence and elevate privileges by executing malicious content triggered by PowerShell profiles. A PowerShell profile  (`profile.ps1`) is a script that runs when [PowerShell](T1059.001) starts and can be used as a logon script to customize user environments.\n[PowerShell](T1059.001) supports several profiles depending on the user or host program. For example, there can be different profiles for [PowerShell](T1059.001) host programs such as the PowerShell console, PowerShell ISE or Visual Studio Code. An administrator can also configure a profile that applies to all users and host programs on the local computer. (Citation: Microsoft About Profiles)\nAdversaries may modify these profiles to include arbitrary commands, functions, modules, and/or [PowerShell](T1059.001) drives to gain persistence. Every time a user opens a [PowerShell](T1059.001) session the modified script will be executed unless the `-NoProfile` flag is used when it is launched. (Citation: ESET Turla PowerShell May 2019)\nAn adversary may also be able to escalate privileges if a script in a PowerShell profile is loaded and executed by an account with higher privileges, such as a domain administrator. (Citation: Wits End and Shady PowerShell Profiles)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Command: Command Execution, File: File Modification, File: File Creation",
+    "detection": "Locations where `profile.ps1` can be stored should be monitored for new profiles or modifications. (Citation: Malware Archaeology PowerShell Cheat Sheet) Example profile locations include:\n* `$PsHomeProfile.ps1`\n* `$PsHomeMicrosoft.{HostProgram}_profile.ps1`\n* `$HomeMy DocumentsPowerShellProfile.ps1`\n* `$HomeMy DocumentsPowerShellMicrosoft.{HostProgram}_profile.ps1`\nMonitor abnormal PowerShell commands, unusual loading of PowerShell drives or modules, and/or execution of unknown programs.",
+    "url": "https://attack.mitre.org/techniques/T1546/013",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "3a9fa2ec-30bc-4ebd-b49e-7c9cff225502",
+                    "b5b78988-486d-4a80-b991-930eff3ff8bf",
+                    "05b3e303-faf0-4f4a-9b30-46cc13e69152",
+                    "0f2c410d-d740-4ed9-abb1-b8f4a7faf6c3"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "3a9fa2ec-30bc-4ebd-b49e-7c9cff225502",
+                        "lookup_data": {
+                            "description": "Detects the creation or modification of a vscode related powershell profile which could indicate suspicious activity as the profile can be used as a mean of persistence",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/24\ndescription: Detects the creation or modification of a vscode related powershell profile\n  which could indicate suspicious activity as the profile can be used as a mean of\n  persistence\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: \\Microsoft.VSCode_profile.ps1\nfalsepositives:\n- Legitimate use of the profile by developers or administrators\nid: 3a9fa2ec-30bc-4ebd-b49e-7c9cff225502\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2023/01/06\nreferences:\n- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_profiles?view=powershell-7.2\nrelated:\n- id: b5b78988-486d-4a80-b991-930eff3ff8bf\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.013\ntitle: VsCode Powershell Profile Modification\n",
+                            "sigma:id": "3a9fa2ec-30bc-4ebd-b49e-7c9cff225502",
+                            "title": "VsCode Powershell Profile Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b5b78988-486d-4a80-b991-930eff3ff8bf",
+                        "lookup_data": {
+                            "description": "Detects the creation or modification of a powershell profile which could indicate suspicious activity as the profile can be used as a mean of persistence",
+                            "raw": "author: HieuTT35, Nasreddine Bencherchali\ndate: 2019/10/24\ndescription: Detects the creation or modification of a powershell profile which could\n  indicate suspicious activity as the profile can be used as a mean of persistence\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith:\n    - \\Microsoft.PowerShell_profile.ps1\n    - \\WindowsPowerShell\\profile.ps1\n    - \\PowerShell\\profile.ps1\n    - \\Windows\\System32\\WindowsPowerShell\\v1.0\\profile.ps1\n    - \\Program Files\\PowerShell\\7\\profile.ps1\nfalsepositives:\n- System administrator creating Powershell profile manually\nid: b5b78988-486d-4a80-b991-930eff3ff8bf\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/08/24\nreferences:\n- https://www.welivesecurity.com/2019/05/29/turla-powershell-usage/\n- https://persistence-info.github.io/Data/powershellprofile.html\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.013\ntitle: PowerShell Profile Modification\n",
+                            "sigma:id": "b5b78988-486d-4a80-b991-930eff3ff8bf",
+                            "title": "PowerShell Profile Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "05b3e303-faf0-4f4a-9b30-46cc13e69152",
+                        "lookup_data": {
+                            "description": "Adversaries may gain persistence and elevate privileges by executing malicious content triggered by PowerShell profiles.",
+                            "raw": "author: frack113\ndate: 2021/08/18\ndescription: Adversaries may gain persistence and elevate privileges by executing\n  malicious content triggered by PowerShell profiles.\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - Start-Process\n    - '\"\"'\n    ScriptBlockText|contains|all:\n    - Add-Content\n    - $profile\n    - -Value\nfalsepositives:\n- Unknown\nid: 05b3e303-faf0-4f4a-9b30-46cc13e69152\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.013/T1546.013.md\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1546.013\ntitle: Powershell Trigger Profiles by Add_Content\n",
+                            "sigma:id": "05b3e303-faf0-4f4a-9b30-46cc13e69152",
+                            "title": "Powershell Trigger Profiles by Add_Content",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0f2c410d-d740-4ed9-abb1-b8f4a7faf6c3",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546.013",
+                            "mitre-cti:description": "Adversaries may gain persistence and elevate privileges by executing malicious content triggered by PowerShell profiles. A PowerShell profile  (<code>profile.ps1</code>) is a script that runs when [PowerShell](https://attack.mitre.org/techniques/T1059/001) starts and can be used as a logon script to customize user environments.\n\n[PowerShell](https://attack.mitre.org/techniques/T1059/001) supports several profiles depending on the user or host program. For example, there can be different profiles for [PowerShell](https://attack.mitre.org/techniques/T1059/001) host programs such as the PowerShell console, PowerShell ISE or Visual Studio Code. An administrator can also configure a profile that applies to all users and host programs on the local computer. (Citation: Microsoft About Profiles) \n\nAdversaries may modify these profiles to include arbitrary commands, functions, modules, and/or [PowerShell](https://attack.mitre.org/techniques/T1059/001) drives to gain persistence. Every time a user opens a [PowerShell](https://attack.mitre.org/techniques/T1059/001) session the modified script will be executed unless the <code>-NoProfile</code> flag is used when it is launched. (Citation: ESET Turla PowerShell May 2019) \n\nAn adversary may also be able to escalate privileges if a script in a PowerShell profile is loaded and executed by an account with higher privileges, such as a domain administrator. (Citation: Wits End and Shady PowerShell Profiles)",
+                            "mitre-cti:name": "PowerShell Profile",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Matthew Green', 'Allen DeRyke, ICE'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--0f2c410d-d740-4ed9-abb1-b8f4a7faf6c3', 'type': 'attack-pattern', 'created': '2020-01-24T15:11:02.758Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.013', 'url': 'https://attack.mitre.org/techniques/T1546/013'}, {'source_name': 'Microsoft About Profiles', 'url': 'https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_profiles?view=powershell-6', 'description': 'Microsoft. (2017, November 29). About Profiles. Retrieved June 14, 2019.'}, {'source_name': 'ESET Turla PowerShell May 2019', 'url': 'https://www.welivesecurity.com/2019/05/29/turla-powershell-usage/', 'description': 'Faou, M. and Dumont R.. (2019, May 29). A dive into Turla PowerShell usage. Retrieved June 14, 2019.'}, {'source_name': 'Wits End and Shady PowerShell Profiles', 'url': 'https://witsendandshady.blogspot.com/2019/06/lab-notes-persistence-and-privilege.html', 'description': 'DeRyke, A.. (2019, June 7). Lab Notes: Persistence and Privilege Elevation using the Powershell Profile. Retrieved July 8, 2019.'}, {'url': 'http://www.malwarearchaeology.com/s/Windows-PowerShell-Logging-Cheat-Sheet-ver-June-2016-v2.pdf', 'description': 'Malware Archaeology. (2016, June). WINDOWS POWERSHELL LOGGING CHEAT SHEET - Win 7/Win 2008 or later. Retrieved June 24, 2016.', 'source_name': 'Malware Archaeology PowerShell Cheat Sheet'}, {'source_name': 'Microsoft Profiles', 'url': 'https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_profiles', 'description': 'Microsoft. (2021, September 27). about_Profiles. Retrieved February 4, 2022.'}], 'modified': '2022-02-08T16:39:08.851Z', 'name': 'PowerShell Profile', 'description': 'Adversaries may gain persistence and elevate privileges by executing malicious content triggered by PowerShell profiles. A PowerShell profile  (<code>profile.ps1</code>) is a script that runs when [PowerShell](https://attack.mitre.org/techniques/T1059/001) starts and can be used as a logon script to customize user environments.\\n\\n[PowerShell](https://attack.mitre.org/techniques/T1059/001) supports several profiles depending on the user or host program. For example, there can be different profiles for [PowerShell](https://attack.mitre.org/techniques/T1059/001) host programs such as the PowerShell console, PowerShell ISE or Visual Studio Code. An administrator can also configure a profile that applies to all users and host programs on the local computer. (Citation: Microsoft About Profiles) \\n\\nAdversaries may modify these profiles to include arbitrary commands, functions, modules, and/or [PowerShell](https://attack.mitre.org/techniques/T1059/001) drives to gain persistence. Every time a user opens a [PowerShell](https://attack.mitre.org/techniques/T1059/001) session the modified script will be executed unless the <code>-NoProfile</code> flag is used when it is launched. (Citation: ESET Turla PowerShell May 2019) \\n\\nAn adversary may also be able to escalate privileges if a script in a PowerShell profile is loaded and executed by an account with higher privileges, such as a domain administrator. (Citation: Wits End and Shady PowerShell Profiles)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Locations where <code>profile.ps1</code> can be stored should be monitored for new profiles or modifications. (Citation: Malware Archaeology PowerShell Cheat Sheet)(Citation: Microsoft Profiles) Example profile locations (user defaults as well as program-specific) include:\\n\\n* <code>$PsHome\\\\Profile.ps1</code>\\n* <code>$PsHome\\\\Microsoft.{HostProgram}_profile.ps1</code>\\n* <code>$Home\\\\\\\\\\\\[My ]Documents\\\\PowerShell\\\\Profile.ps1</code>\\n* <code>$Home\\\\\\\\\\\\[My ]Documents\\\\PowerShell\\\\Microsoft.{HostProgram}_profile.ps1</code>\\n\\nMonitor abnormal PowerShell commands, unusual loading of PowerShell drives or modules, and/or execution of unknown programs.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Modification', 'File: File Creation', 'Command: Command Execution', 'Process: Process Creation'], 'x_mitre_permissions_required': ['User', 'Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.013",
+                "display_name": "Event Triggered Execution: PowerShell Profile",
+                "atomic_tests": [
+                    {
+                        "name": "Append malicious start-process cmdlet",
+                        "auto_generated_guid": "090e5aa5-32b6-473b-a49b-21e843a56896",
+                        "description": "Appends a start process cmdlet to the current user's powershell profile pofile that points to a malicious executable. Upon execution, calc.exe will be launched.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "exe_path": {
+                                "description": "Path the malicious executable",
+                                "type": "path",
+                                "default": "calc.exe"
+                            },
+                            "ps_profile": {
+                                "description": "Powershell profile to use",
+                                "type": "string",
+                                "default": "$profile"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Ensure a powershell profile exists for the current user\n",
+                                "prereq_command": "if (Test-Path #{ps_profile}) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Path #{ps_profile} -Type File -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Add-Content #{ps_profile} -Value \"\"\nAdd-Content #{ps_profile} -Value \"Start-Process #{exe_path}\"\npowershell -Command exit\n",
+                            "cleanup_command": "$oldprofile = cat $profile | Select-Object -skiplast 1\nSet-Content $profile -Value $oldprofile\n",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:32:31"
+}

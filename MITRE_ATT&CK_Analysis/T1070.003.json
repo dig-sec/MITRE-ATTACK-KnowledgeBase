@@ -1,0 +1,390 @@
+{
+    "id": "T1070.003",
+    "name": "Clear Command History",
+    "description": "In addition to clearing system logs, an adversary may clear the command history of a compromised account to conceal the actions undertaken during an intrusion. Various command interpreters keep track of the commands users type in their terminal so that users can retrace what they've done.\nOn Linux and macOS, these command histories can be accessed in a few different ways. While logged in, this command history is tracked in a file pointed to by the environment variable `HISTFILE`. When a user logs off a system, this information is flushed to a file in the user's home directory called `~/.bash_history`. The benefit of this is that it allows users to go back to commands they've used before in different sessions.\nAdversaries may delete their commands from these logs by manually clearing the history (`history -c`) or deleting the bash history file `rm ~/.bash_history`.\nOn Windows hosts, PowerShell has two different command history providers: the built-in history and the command history managed by the `PSReadLine` module. The built-in history only tracks the commands used in the current session. This command history is not available to other sessions and is deleted when the session ends.\nThe `PSReadLine` command history tracks the commands used in all PowerShell sessions and writes them to a file (`$env:APPDATAMicrosoftWindowsPowerShellPSReadLineConsoleHost_history.txt` by default). This history file is available to all sessions and contains all past history since the file is not deleted when the session ends.(Citation: Microsoft PowerShell Command History)\nAdversaries may run the PowerShell command `Clear-History` to flush the entire command history from a current PowerShell session. This, however, will not delete/flush the `ConsoleHost_history.txt` file. Adversaries may also delete the `ConsoleHost_history.txt` file or edit its contents to hide PowerShell commands they have run.(Citation: Sophos PowerShell command audit)(Citation: Sophos PowerShell Command History Forensics)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Command: Command Execution, File: File Modification, File: File Deletion",
+    "detection": "User authentication, especially via remote terminal services like SSH, without new entries in that user's `~/.bash_history` is suspicious. Additionally, the removal/clearing of the `~/.bash_history` file can be an indicator of suspicious activity.\nMonitor for suspicious modifications or deletion of `ConsoleHost_history.txt` and use of the `Clear-History` command.",
+    "url": "https://attack.mitre.org/techniques/T1070/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1070.003",
+                "atomic_attack_guid": "553b39f9-1e8c-47b1-abf5-8daf7b0391e9",
+                "atomic_attack_name": "Clear Docker Container Logs",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Sudo OR Su Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/4b00f134-6d6a-11ec-a90c-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.003",
+                "atomic_attack_guid": "a934276e-2be5-4a36-93fd-98adbb5bd4fc",
+                "atomic_attack_name": "Clear Bash history (rm)",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "History File Deletion",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_history_delete.yml",
+                        "remote_content": "title: History File Deletion\nid: 1182f3b3-e716-4efa-99ab-d2685d04360f\nstatus: test\ndescription: Detects events in which a history file gets deleted, e.g. the ~/bash_history to remove traces of malicious activity\nreferences:\n    - https://github.com/sleventyeleven/linuxprivchecker/\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.003/T1552.003.md\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-06-20\nmodified: 2022-09-15\ntags:\n    - attack.impact\n    - attack.t1565.001\nlogsource:\n    category: process_creation\n    product: linux\ndetection:\n    selection:\n        Image|endswith:\n            - '/rm'\n            - '/unlink'\n            - '/shred'\n    selection_history:\n        - CommandLine|contains:\n              - '/.bash_history'\n              - '/.zsh_history'\n        - CommandLine|endswith:\n              - '_history'\n              - '.history'\n              - 'zhistory'\n    condition: all of selection*\nfalsepositives:\n    - Legitimate administration activities\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "70ad982f-67c8-40e0-a955-b920c2fa05cb",
+                    "2ebc21a4-5635-4a7d-9553-ec5f58be0ee6",
+                    "dfba4ce1-e0ea-495f-986e-97140f31af2d",
+                    "f99276ad-d122-4989-a09a-d00904a5f9d2",
+                    "602f5669-6927-4688-84db-0d4b7afb2150",
+                    "bde47d4b-9987-405c-94c7-b080410e8ea7",
+                    "3aef9463-9a7a-43ba-8957-a867e07c1e6a",
+                    "fdc88d25-96fb-4b7c-9633-c0e417fdbd4e",
+                    "26b692dc-1722-49b2-b496-a8258aa6371d",
+                    "ceb407f6-8277-439b-951f-e4210e3ed956"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "70ad982f-67c8-40e0-a955-b920c2fa05cb",
+                        "lookup_data": {
+                            "description": "Open a handle on the drive volume via the \\\\.\\ DOS device path specifier and perform direct access read of the first few bytes of the volume.",
+                            "raw": "author: frack113\ndate: 2022/01/09\ndescription: Open a handle on the drive volume via the \\\\.\\ DOS device path specifier\n  and perform direct access read of the first few bytes of the volume.\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - New-Object\n    - IO.FileStream\n    - \\\\\\\\.\\\\\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 70ad982f-67c8-40e0-a955-b920c2fa05cb\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/03/05\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1006/T1006.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.003\ntitle: Suspicious IO.FileStream\n",
+                            "sigma:id": "70ad982f-67c8-40e0-a955-b920c2fa05cb",
+                            "title": "Suspicious IO.FileStream",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2ebc21a4-5635-4a7d-9553-ec5f58be0ee6",
+                        "lookup_data": {
+                            "description": "OSINT - Kobalos – A complex Linux threat to high performance computing infrastructure",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/2ebc21a4-5635-4a7d-9553-ec5f58be0ee6.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1612271360",
+                            "uuid": "2ebc21a4-5635-4a7d-9553-ec5f58be0ee6",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dfba4ce1-e0ea-495f-986e-97140f31af2d",
+                        "lookup_data": {
+                            "description": "Detects keywords that could indicate clearing PowerShell history",
+                            "raw": "author: Ilyas Ochkov, Jonhnathan Ribeiro, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/25\ndescription: Detects keywords that could indicate clearing PowerShell history\ndetection:\n  condition: selection_1 and ( selection_2 or selection_3 ) or selection_4 and ( selection_5\n    or selection_6 )\n  selection_1:\n    EventID: 4104\n  selection_2:\n    ScriptBlockText|contains:\n    - del\n    - Remove-Item\n    - rm\n    ScriptBlockText|contains|all:\n    - (Get-PSReadlineOption).HistorySavePath\n  selection_3:\n    ScriptBlockText|contains|all:\n    - Set-PSReadlineOption\n    - \"\\u2013HistorySaveStyle\"\n    - SaveNothing\n  selection_4:\n    EventID: 4103\n  selection_5:\n    Payload|contains:\n    - del\n    - Remove-Item\n    - rm\n    Payload|contains|all:\n    - (Get-PSReadlineOption).HistorySavePath\n  selection_6:\n    Payload|contains|all:\n    - Set-PSReadlineOption\n    - \"\\u2013HistorySaveStyle\"\n    - SaveNothing\nfalsepositives:\n- Legitimate PowerShell scripts\nid: dfba4ce1-e0ea-495f-986e-97140f31af2d\nlevel: medium\nlogsource:\n  product: windows\n  service: powershell\nmodified: 2020/11/28\nreferences:\n- https://gist.github.com/hook-s3c/7363a856c3cdbadeb71085147f042c1a\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.003\n- attack.t1146\ntitle: Clear PowerShell History\n",
+                            "sigma:id": "dfba4ce1-e0ea-495f-986e-97140f31af2d",
+                            "title": "Clear PowerShell History",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f99276ad-d122-4989-a09a-d00904a5f9d2",
+                        "lookup_data": {
+                            "description": "Detects keywords that could indicate clearing PowerShell history",
+                            "raw": "author: Ilyas Ochkov, Jonhnathan Ribeiro, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/25\ndescription: Detects keywords that could indicate clearing PowerShell history\ndetection:\n  condition: 1 of selection_payload_* or all of selection_1*\n  selection_1a_payload:\n    Payload|contains:\n    - del\n    - Remove-Item\n    - rm\n  selection_1b_payload:\n    Payload|contains: (Get-PSReadlineOption).HistorySavePath\n  selection_payload_2:\n    Payload|contains|all:\n    - Set-PSReadlineOption\n    - \"\\u2013HistorySaveStyle\"\n    - SaveNothing\n  selection_payload_3:\n    Payload|contains|all:\n    - Set-PSReadlineOption\n    - -HistorySaveStyle\n    - SaveNothing\nfalsepositives:\n- Legitimate PowerShell scripts\nid: f99276ad-d122-4989-a09a-d00904a5f9d2\nlevel: medium\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://gist.github.com/hook-s3c/7363a856c3cdbadeb71085147f042c1a\nrelated:\n- id: dfba4ce1-e0ea-495f-986e-97140f31af2d\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.003\ntitle: Clear PowerShell History - PowerShell Module\n",
+                            "sigma:id": "f99276ad-d122-4989-a09a-d00904a5f9d2",
+                            "title": "Clear PowerShell History - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "602f5669-6927-4688-84db-0d4b7afb2150",
+                        "lookup_data": {
+                            "description": "Detects scripts or commands that disabled the Powershell command history by removing psreadline module",
+                            "raw": "author: Ali Alwashali\ndate: 2022/08/21\ndescription: Detects scripts or commands that disabled the Powershell command history\n  by removing psreadline module\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - Remove-Module\n    - psreadline\nfalsepositives:\n- Legitimate script that disables the command history\nid: 602f5669-6927-4688-84db-0d4b7afb2150\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://twitter.com/DissectMalware/status/1062879286749773824\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.003\ntitle: Disable Powershell Command History\n",
+                            "sigma:id": "602f5669-6927-4688-84db-0d4b7afb2150",
+                            "title": "Disable Powershell Command History",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bde47d4b-9987-405c-94c7-b080410e8ea7",
+                        "lookup_data": {
+                            "description": "Identifies when a user attempts to clear console history. An adversary may clear the command history of a compromised account to conceal the actions undertaken during an intrusion.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/11/25\ndescription: Identifies when a user attempts to clear console history. An adversary\n  may clear the command history of a compromised account to conceal the actions undertaken\n  during an intrusion.\ndetection:\n  condition: selection1 or selection2a and selection2b\n  selection1:\n    ScriptBlockText|contains: Clear-History\n  selection2a:\n    ScriptBlockText|contains:\n    - Remove-Item\n    - rm\n  selection2b:\n    ScriptBlockText|contains:\n    - ConsoleHost_history.txt\n    - (Get-PSReadlineOption).HistorySavePath\nfalsepositives:\n- Unknown\nid: bde47d4b-9987-405c-94c7-b080410e8ea7\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://stefanos.cloud/blog/kb/how-to-clear-the-powershell-command-history/\n- https://www.shellhacks.com/clear-history-powershell/\n- https://community.sophos.com/sophos-labs/b/blog/posts/powershell-command-history-forensics\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1070.003\ntitle: Clearing Windows Console History\n",
+                            "sigma:id": "bde47d4b-9987-405c-94c7-b080410e8ea7",
+                            "title": "Clearing Windows Console History",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3aef9463-9a7a-43ba-8957-a867e07c1e6a",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1070.003",
+                            "mitre-cti:description": "In addition to clearing system logs, an adversary may clear the command history of a compromised account to conceal the actions undertaken during an intrusion. Various command interpreters keep track of the commands users type in their terminal so that users can retrace what they've done.\n\nOn Linux and macOS, these command histories can be accessed in a few different ways. While logged in, this command history is tracked in a file pointed to by the environment variable <code>HISTFILE</code>. When a user logs off a system, this information is flushed to a file in the user's home directory called <code>~/.bash_history</code>. The benefit of this is that it allows users to go back to commands they've used before in different sessions.\n\nAdversaries may delete their commands from these logs by manually clearing the history (<code>history -c</code>) or deleting the bash history file <code>rm ~/.bash_history</code>.  \n\nAdversaries may also leverage a [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) on network devices to clear command history data (<code>clear logging</code> and/or <code>clear history</code>).(Citation: US-CERT-TA18-106A)\n\nOn Windows hosts, PowerShell has two different command history providers: the built-in history and the command history managed by the <code>PSReadLine</code> module. The built-in history only tracks the commands used in the current session. This command history is not available to other sessions and is deleted when the session ends.\n\nThe <code>PSReadLine</code> command history tracks the commands used in all PowerShell sessions and writes them to a file (<code>$env:APPDATA\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt</code> by default). This history file is available to all sessions and contains all past history since the file is not deleted when the session ends.(Citation: Microsoft PowerShell Command History)\n\nAdversaries may run the PowerShell command <code>Clear-History</code> to flush the entire command history from a current PowerShell session. This, however, will not delete/flush the <code>ConsoleHost_history.txt</code> file. Adversaries may also delete the <code>ConsoleHost_history.txt</code> file or edit its contents to hide PowerShell commands they have run.(Citation: Sophos PowerShell command audit)(Citation: Sophos PowerShell Command History Forensics)",
+                            "mitre-cti:name": "Clear Command History",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'Network'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Vikas Singh, Sophos', 'Emile Kenning, Sophos', 'Austin Clark, @c2defense'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--3aef9463-9a7a-43ba-8957-a867e07c1e6a', 'created': '2020-01-31T12:32:08.228Z', 'x_mitre_version': '1.3', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1070.003', 'url': 'https://attack.mitre.org/techniques/T1070/003'}, {'source_name': 'Sophos PowerShell command audit', 'url': 'https://community.sophos.com/products/intercept/early-access-program/f/live-discover-response-queries/121529/live-discover---powershell-command-audit', 'description': 'jak. (2020, June 27). Live Discover - PowerShell command audit. Retrieved August 21, 2020.'}, {'source_name': 'Microsoft PowerShell Command History', 'url': 'https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_history?view=powershell-7', 'description': 'Microsoft. (2020, May 13). About History. Retrieved September 4, 2020.'}, {'source_name': 'US-CERT-TA18-106A', 'url': 'https://www.us-cert.gov/ncas/alerts/TA18-106A', 'description': 'US-CERT. (2018, April 20). Alert (TA18-106A) Russian State-Sponsored Cyber Actors Targeting Network Infrastructure Devices. Retrieved October 19, 2020.'}, {'source_name': 'Sophos PowerShell Command History Forensics', 'url': 'https://community.sophos.com/products/malware/b/blog/posts/powershell-command-history-forensics', 'description': 'Vikas, S. (2020, August 26). PowerShell Command History Forensics. Retrieved September 4, 2020.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"In addition to clearing system logs, an adversary may clear the command history of a compromised account to conceal the actions undertaken during an intrusion. Various command interpreters keep track of the commands users type in their terminal so that users can retrace what they've done.\\n\\nOn Linux and macOS, these command histories can be accessed in a few different ways. While logged in, this command history is tracked in a file pointed to by the environment variable <code>HISTFILE</code>. When a user logs off a system, this information is flushed to a file in the user's home directory called <code>~/.bash_history</code>. The benefit of this is that it allows users to go back to commands they've used before in different sessions.\\n\\nAdversaries may delete their commands from these logs by manually clearing the history (<code>history -c</code>) or deleting the bash history file <code>rm ~/.bash_history</code>.  \\n\\nAdversaries may also leverage a [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) on network devices to clear command history data (<code>clear logging</code> and/or <code>clear history</code>).(Citation: US-CERT-TA18-106A)\\n\\nOn Windows hosts, PowerShell has two different command history providers: the built-in history and the command history managed by the <code>PSReadLine</code> module. The built-in history only tracks the commands used in the current session. This command history is not available to other sessions and is deleted when the session ends.\\n\\nThe <code>PSReadLine</code> command history tracks the commands used in all PowerShell sessions and writes them to a file (<code>$env:APPDATA\\\\Microsoft\\\\Windows\\\\PowerShell\\\\PSReadLine\\\\ConsoleHost_history.txt</code> by default). This history file is available to all sessions and contains all past history since the file is not deleted when the session ends.(Citation: Microsoft PowerShell Command History)\\n\\nAdversaries may run the PowerShell command <code>Clear-History</code> to flush the entire command history from a current PowerShell session. This, however, will not delete/flush the <code>ConsoleHost_history.txt</code> file. Adversaries may also delete the <code>ConsoleHost_history.txt</code> file or edit its contents to hide PowerShell commands they have run.(Citation: Sophos PowerShell command audit)(Citation: Sophos PowerShell Command History Forensics)\", 'modified': '2022-09-01T21:58:56.496Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Clear Command History', 'x_mitre_detection': \"User authentication, especially via remote terminal services like SSH, without new entries in that user's <code>~/.bash_history</code> is suspicious. Additionally, the removal/clearing of the <code>~/.bash_history</code> file can be an indicator of suspicious activity.\\n\\nMonitor for suspicious modifications or deletion of <code>ConsoleHost_history.txt</code> and use of the <code>Clear-History</code> command.\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['File: File Modification', 'File: File Deletion', 'User Account: User Account Authentication', 'Command: Command Execution'], 'x_mitre_defense_bypassed': ['Host forensic analysis', 'Log analysis'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fdc88d25-96fb-4b7c-9633-c0e417fdbd4e",
+                        "lookup_data": {
+                            "description": "Clear command history in linux which is used for defense evasion.",
+                            "raw": "author: Patrick Bareiss\ndate: 2019/03/24\ndescription: Clear command history in linux which is used for defense evasion.\ndetection:\n  condition: keywords\n  keywords:\n  - rm *bash_history\n  - echo \"\" > *bash_history\n  - cat /dev/null > *bash_history\n  - cat /dev/zero > *bash_history\n  - ln -sf /dev/null *bash_history\n  - ln -sf /dev/zero *bash_history\n  - truncate -s0 *bash_history\n  - export HISTFILESIZE=0\n  - history -c\n  - history -w\n  - shred *bash_history\n  - empty_bash_history\n  - chattr +i *bash_history\nfalsepositives:\n- Unknown\nid: fdc88d25-96fb-4b7c-9633-c0e417fdbd4e\nlevel: high\nlogsource:\n  product: linux\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.003/T1070.003.md\n- https://www.hackers-arise.com/single-post/2016/06/20/Covering-your-BASH-Shell-Tracks-AntiForensics\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.003\ntitle: Clear Command History\n",
+                            "sigma:id": "fdc88d25-96fb-4b7c-9633-c0e417fdbd4e",
+                            "title": "Clear Command History",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "26b692dc-1722-49b2-b496-a8258aa6371d",
+                        "lookup_data": {
+                            "description": "Detects keywords that could indicate clearing PowerShell history",
+                            "raw": "author: Ilyas Ochkov, Jonhnathan Ribeiro, Daniil Yugoslavskiy, oscd.community\ndate: 2022/01/25\ndescription: Detects keywords that could indicate clearing PowerShell history\ndetection:\n  condition: 1 of selection_* or all of selection1*\n  selection1a:\n    ScriptBlockText|contains:\n    - del\n    - Remove-Item\n    - rm\n  selection1b:\n    ScriptBlockText|contains: (Get-PSReadlineOption).HistorySavePath\n  selection_2:\n    ScriptBlockText|contains|all:\n    - Set-PSReadlineOption\n    - \"\\u2013HistorySaveStyle\"\n    - SaveNothing\n  selection_3:\n    ScriptBlockText|contains|all:\n    - Set-PSReadlineOption\n    - -HistorySaveStyle\n    - SaveNothing\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 26b692dc-1722-49b2-b496-a8258aa6371d\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://gist.github.com/hook-s3c/7363a856c3cdbadeb71085147f042c1a\nrelated:\n- id: dfba4ce1-e0ea-495f-986e-97140f31af2d\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.003\ntitle: Clear PowerShell History - PowerShell\n",
+                            "sigma:id": "26b692dc-1722-49b2-b496-a8258aa6371d",
+                            "title": "Clear PowerShell History - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ceb407f6-8277-439b-951f-e4210e3ed956",
+                        "lookup_data": {
+                            "description": "Clear command history in network OS which is used for defense evasion",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Clear command history in network OS which is used for defense evasion\ndetection:\n  condition: keywords\n  keywords:\n  - clear logging\n  - clear archive\nfalsepositives:\n- Legitimate administrators may run these commands\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: ceb407f6-8277-439b-951f-e4210e3ed956\nlevel: high\nlogsource:\n  category: accounting\n  product: cisco\n  service: aaa\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.003\ntitle: Cisco Clear Logs\n",
+                            "sigma:id": "ceb407f6-8277-439b-951f-e4210e3ed956",
+                            "title": "Cisco Clear Logs",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1070.003",
+                "display_name": "Indicator Removal on Host: Clear Command History",
+                "atomic_tests": [
+                    {
+                        "name": "Clear Bash history (rm)",
+                        "auto_generated_guid": "a934276e-2be5-4a36-93fd-98adbb5bd4fc",
+                        "description": "Clears bash history via rm\n",
+                        "input_arguments": {
+                            "history_path": {
+                                "description": "Bash history path",
+                                "type": "path",
+                                "default": "~/.bash_history"
+                            }
+                        },
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "rm #{history_path}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Clear Bash history (echo)",
+                        "auto_generated_guid": "cbf506a5-dd78-43e5-be7e-a46b7c7a0a11",
+                        "description": "Clears bash history via echo\n",
+                        "input_arguments": {
+                            "history_path": {
+                                "description": "Bash history path",
+                                "type": "path",
+                                "default": "~/.bash_history"
+                            }
+                        },
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "echo \"\" > #{history_path}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Clear Bash history (cat dev/null)",
+                        "auto_generated_guid": "b1251c35-dcd3-4ea1-86da-36d27b54f31f",
+                        "description": "Clears bash history via cat /dev/null\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "history_path": {
+                                "description": "Bash history path",
+                                "type": "path",
+                                "default": "~/.bash_history"
+                            }
+                        },
+                        "executor": {
+                            "command": "cat /dev/null > #{history_path}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Clear Bash history (ln dev/null)",
+                        "auto_generated_guid": "23d348f3-cc5c-4ba9-bd0a-ae09069f0914",
+                        "description": "Clears bash history via a symlink to /dev/null\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "history_path": {
+                                "description": "Bash history path",
+                                "type": "path",
+                                "default": "~/.bash_history"
+                            }
+                        },
+                        "executor": {
+                            "command": "ln -sf /dev/null #{history_path}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Clear Bash history (truncate)",
+                        "auto_generated_guid": "47966a1d-df4f-4078-af65-db6d9aa20739",
+                        "description": "Clears bash history via truncate\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "history_path": {
+                                "description": "Bash history path",
+                                "type": "path",
+                                "default": "~/.bash_history"
+                            }
+                        },
+                        "executor": {
+                            "command": "truncate -s0 #{history_path}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Clear history of a bunch of shells",
+                        "auto_generated_guid": "7e6721df-5f08-4370-9255-f06d8a77af4c",
+                        "description": "Clears the history of a bunch of different shell types by setting the history size to zero\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "unset HISTFILE\nexport HISTFILESIZE=0\nhistory -c\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Clear and Disable Bash History Logging",
+                        "auto_generated_guid": "784e4011-bd1a-4ecd-a63a-8feb278512e6",
+                        "description": "Clears the history and disable bash history logging of the current shell and future shell sessions\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "set +o history\necho 'set +o history' >> ~/.bashrc\n. ~/.bashrc\nhistory -c\n",
+                            "cleanup_command": "sed -i 's/set +o history//g' ~/.bashrc\n. ~/.bashrc\nset -o history\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Use Space Before Command to Avoid Logging to History",
+                        "auto_generated_guid": "53b03a54-4529-4992-852d-a00b4b7215a6",
+                        "description": "Using a space before a command causes the command to not be logged in the Bash History file\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "hostname\nwhoami\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Disable Bash History Logging with SSH -T",
+                        "auto_generated_guid": "5f8abd62-f615-43c5-b6be-f780f25790a1",
+                        "description": "Keeps history clear and stays out of lastlog,wtmp,btmp ssh -T keeps the ssh client from catching a proper TTY, which is what usually gets logged on lastlog\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "Install sshpass and create user account used for excuting\n",
+                                "prereq_command": "$(getent passwd testuser1 >/dev/null) && $(which sshpass >/dev/null)\n",
+                                "get_prereq_command": "[ \"$(uname)\" = 'FreeBSD' ] && pw useradd testuser1 -g wheel -s /bin/sh || /usr/sbin/useradd testuser1\n[ \"$(uname)\" = 'FreeBSD' ] && echo 'pwd101!' | pw mod user testuser1 -h 0 || echo -e 'pwd101!\\npwd101!' | passwd testuser1\n(which yum && yum -y install epel-release sshpass)||(which apt-get && DEBIAN_FRONTEND=noninteractive apt-get install -y sshpass)||(which pkg && pkg install -y sshpass)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sshpass -p 'pwd101!' ssh testuser1@localhost -T hostname\n",
+                            "cleanup_command": "[ \"$(uname)\" = 'FreeBSD' ] && rmuser -y testuser1 || userdel -f testuser1\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Clear Docker Container Logs",
+                        "auto_generated_guid": "553b39f9-1e8c-47b1-abf5-8daf7b0391e9",
+                        "description": "Clears Docker container logs using the Docker CLI and the truncate command, removing all log entries.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "bash",
+                            "command": "docker container prune -f && sudo truncate -s 0 /var/lib/docker/containers/*/*-json.log\n",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Prevent Powershell History Logging",
+                        "auto_generated_guid": "2f898b81-3e97-4abb-bc3f-a95138988370",
+                        "description": "Prevents Powershell history\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Set-PSReadlineOption -HistorySaveStyle SaveNothing\n",
+                            "name": "powershell",
+                            "cleanup_command": "Set-PSReadLineOption -HistorySaveStyle SaveIncrementally"
+                        }
+                    },
+                    {
+                        "name": "Clear Powershell History by Deleting History File",
+                        "auto_generated_guid": "da75ae8d-26d6-4483-b0fe-700e4df4f037",
+                        "description": "Clears Powershell history\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Remove-Item (Get-PSReadlineOption).HistorySavePath\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Set Custom AddToHistoryHandler to Avoid History File Logging",
+                        "auto_generated_guid": "1d0d9aa6-6111-4f89-927b-53e8afae7f94",
+                        "description": "The \"AddToHistoryHandler\" receives the current command as the $line variable and then returns $true if \nthe line should be written to the history file. Here we simply return $false so nothing gets added to \nthe history file for the current session. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Set-PSReadLineOption -AddToHistoryHandler { return $false }\n",
+                            "cleanup_command": "Set-PSReadLineOption -AddToHistoryHandler $null\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Clear PowerShell Session History",
+                        "auto_generated_guid": "22c779cd-9445-4d3e-a136-f75adbf0315f",
+                        "description": "This technique involves using the Clear-History cmdlet in PowerShell to remove all records of previously executed commands.\nThis action is often performed by attackers to eliminate traces of their activities, making incident detection and forensic \ninvestigation more challenging. By clearing the session history, adversaries aim to obfuscate their operational footprint.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Clear-History\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:18:26"
+}

@@ -1,0 +1,372 @@
+{
+    "id": "T1574.001",
+    "name": "DLL Search Order Hijacking",
+    "description": "Adversaries may execute their own malicious payloads by hijacking the search order used to load DLLs. Windows systems use a common method to look for required DLLs to load into a program. (Citation: Microsoft Dynamic Link Library Search Order)(Citation: FireEye Hijacking July 2010) Hijacking DLL loads may be for the purpose of establishing persistence as well as elevating privileges and/or evading restrictions on file execution.\nThere are many ways an adversary can hijack DLL loads. Adversaries may plant trojan dynamic-link library files (DLLs) in a directory that will be searched before the location of a legitimate library that will be requested by a program, causing Windows to load their malicious library when it is called for by the victim program. Adversaries may also perform DLL preloading, also called binary planting attacks, (Citation: OWASP Binary Planting) by placing a malicious DLL with the same name as an ambiguously specified DLL in a location that Windows searches before the legitimate DLL. Often this location is the current working directory of the program.(Citation: FireEye fxsst June 2011) Remote DLL preloading attacks occur when a program sets its current directory to a remote location such as a Web share before loading a DLL. (Citation: Microsoft Security Advisory 2269637)\nAdversaries may also directly modify the search order via DLL redirection, which after being enabled (in the Registry and creation of a redirection file) may cause a program to load a different DLL.(Citation: Microsoft Dynamic-Link Library Redirection)(Citation: Microsoft Manifests)(Citation: FireEye DLL Search Order Hijacking)\nIf a search order-vulnerable program is configured to run at a higher privilege level, then the adversary-controlled DLL that is loaded will also be executed at the higher level. In this case, the technique could be used for privilege escalation from user to administrator or SYSTEM or from administrator to SYSTEM, depending on the program. Programs that fall victim to path hijacking may appear to behave normally because malicious DLLs may be configured to also load the legitimate DLLs they were meant to replace.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation, Defense Evasion",
+    "data_sources": "File: File Creation, File: File Modification, Module: Module Load",
+    "detection": "Monitor file systems for moving, renaming, replacing, or modifying DLLs. Changes in the set of DLLs that are loaded by a process (compared with past behavior) that do not correlate with known software, patches, etc., are suspicious. Monitor DLLs loaded into a process and detect DLLs that have the same file name but abnormal paths. Modifications to or creation of `.manifest` and `.local` redirection files that do not correlate with software updates are suspicious.",
+    "url": "https://attack.mitre.org/techniques/T1574/001",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "9ca2bf31-0570-44d8-a543-534c47c33ed7",
+                    "4fc0deee-0057-4998-ab31-d24e46e0aba4",
+                    "602a1f13-c640-4d73-b053-be9a2fa58b77",
+                    "b2400ffb-7680-47c0-b08a-098a7de7e7a9",
+                    "9e1bef8d-0fff-46f6-8465-9aa54e128c1e",
+                    "bc3cc333-48b9-467a-9d1f-d44ee594ef48",
+                    "602a1f13-c640-4d73-b053-be9a2fa58b96",
+                    "90ae0469-0cee-4509-b67f-e5efcef040f7",
+                    "6b98b92b-4f00-4f62-b4fe-4d1920215771",
+                    "829a3bdf-34da-4051-9cf4-8ed221a8ae4f",
+                    "a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12",
+                    "df6ecb8b-7822-4f4b-b412-08f524b4576c",
+                    "dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c",
+                    "28a452f3-786c-4fd8-b8f2-bddbe9d616d1",
+                    "828af599-4c53-4ed2-ba4a-a9f835c434ea",
+                    "6414b5cd-b19d-447e-bb5e-9f03940b5784",
+                    "72ca7c75-bf85-45cd-aca7-255d360e423c",
+                    "2bd63d53-84d4-4210-80ff-bf0658f1bf78",
+                    "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                    "552b6b65-df37-4d3e-a258-f2fc4771ae54",
+                    "6360757a-d460-456c-8b13-74cf0e60cceb",
+                    "35a7dc42-bc6f-46e0-9f83-81f8e56c8d4b",
+                    "f9df325d-d7bc-4a32-8a1a-2cc61dcefc63",
+                    "70e8e9b4-6a93-4cb7-8cde-da69502e7aff",
+                    "2fee9321-3e71-4cf4-af24-d4d40d355b34",
+                    "caa02837-f659-466f-bca6-48bde2826ab4",
+                    "68654bf0-4412-43d5-bfe8-5eaa393cd939"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "9ca2bf31-0570-44d8-a543-534c47c33ed7",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of \"dbgcore.dll\"",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Wietze Beukema (project and research)\ndate: 2022/10/25\ndescription: Detects DLL sideloading of \"dbgcore.dll\"\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_generic:\n    ImageLoaded|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Windows\\WinSxS\\\n    - C:\\Windows\\SoftwareDistribution\\\n    - C:\\Windows\\SystemTemp\\\n    - C:\\Program Files (x86)\\\n    - C:\\Program Files\\\n  filter_steam:\n    ImageLoaded|endswith: \\Steam\\bin\\cef\\cef.win7x64\\dbgcore.dll\n  selection:\n    ImageLoaded|endswith: \\dbgcore.dll\nfalsepositives:\n- Legitimate applications loading their own versions of the DLL mentioned in this\n  rule\nid: 9ca2bf31-0570-44d8-a543-534c47c33ed7\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/28\nreferences:\n- https://hijacklibs.net/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: DLL Sideloading Of DBGCORE.DLL\n",
+                            "sigma:id": "9ca2bf31-0570-44d8-a543-534c47c33ed7",
+                            "title": "DLL Sideloading Of DBGCORE.DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4fc0deee-0057-4998-ab31-d24e46e0aba4",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of DLLs usually located in system locations (System32, SysWOW64...)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/14\ndescription: Detects DLL sideloading of DLLs usually located in system locations (System32,\n  SysWOW64...)\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_appvpolicy:\n    Image: C:\\Program Files\\Common Files\\microsoft shared\\ClickToRun\\OfficeClickToRun.exe\n    ImageLoaded: C:\\Program Files\\Common Files\\microsoft shared\\ClickToRun\\AppVPolicy.dll\n  filter_azure:\n    ImageLoaded|startswith: C:\\Packages\\Plugins\\Microsoft.GuestConfiguration.ConfigurationforWindows\\\n  filter_cleanmgr:\n    Image: C:\\Windows\\System32\\cleanmgr.exe\n    ImageLoaded|endswith: \\ssshim.dll\n  filter_dell:\n    ImageLoaded|startswith: C:\\Program Files\\WindowsApps\\DellInc.DellSupportAssistforPCs\n    Image|startswith:\n    - C:\\Program Files\\WindowsApps\\DellInc.DellSupportAssistforPCs\n    - C:\\Windows\\System32\\backgroundTaskHost.exe\n  filter_generic:\n    ImageLoaded|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Windows\\WinSxS\\\n    - C:\\Windows\\SoftwareDistribution\\\n    - C:\\Windows\\SystemTemp\\\n  filter_upgrade:\n    Image|startswith: C:\\$WINDOWS.~BT\\\n  selection:\n    ImageLoaded|endswith:\n    - \\shfolder.dll\n    - \\activeds.dll\n    - \\adsldpc.dll\n    - \\aepic.dll\n    - \\apphelp.dll\n    - \\applicationframe.dll\n    - \\appxalluserstore.dll\n    - \\appxdeploymentclient.dll\n    - \\archiveint.dll\n    - \\atl.dll\n    - \\audioses.dll\n    - \\auditpolcore.dll\n    - \\authfwcfg.dll\n    - \\authz.dll\n    - \\avrt.dll\n    - \\bcd.dll\n    - \\bcp47langs.dll\n    - \\bcp47mrm.dll\n    - \\bcrypt.dll\n    - \\cabinet.dll\n    - \\cabview.dll\n    - \\certenroll.dll\n    - \\cldapi.dll\n    - \\clipc.dll\n    - \\clusapi.dll\n    - \\cmpbk32.dll\n    - \\coloradapterclient.dll\n    - \\colorui.dll\n    - \\comdlg32.dll\n    - \\connect.dll\n    - \\coremessaging.dll\n    - \\credui.dll\n    - \\cryptbase.dll\n    - \\cryptdll.dll\n    - \\cryptui.dll\n    - \\cryptxml.dll\n    - \\cscapi.dll\n    - \\cscobj.dll\n    - \\cscui.dll\n    - \\d2d1.dll\n    - \\d3d10.dll\n    - \\d3d10_1.dll\n    - \\d3d10_1core.dll\n    - \\d3d10core.dll\n    - \\d3d10warp.dll\n    - \\d3d11.dll\n    - \\d3d12.dll\n    - \\d3d9.dll\n    - \\dataexchange.dll\n    - \\davclnt.dll\n    - \\dcomp.dll\n    - \\defragproxy.dll\n    - \\desktopshellext.dll\n    - \\deviceassociation.dll\n    - \\devicecredential.dll\n    - \\devicepairing.dll\n    - \\devobj.dll\n    - \\devrtl.dll\n    - \\dhcpcmonitor.dll\n    - \\dhcpcsvc.dll\n    - \\dhcpcsvc6.dll\n    - \\directmanipulation.dll\n    - \\dismapi.dll\n    - \\dismcore.dll\n    - \\dmcfgutils.dll\n    - \\dmcmnutils.dll\n    - \\dmenrollengine.dll\n    - \\dmenterprisediagnostics.dll\n    - \\dmiso8601utils.dll\n    - \\dmoleaututils.dll\n    - \\dmprocessxmlfiltered.dll\n    - \\dmpushproxy.dll\n    - \\dmxmlhelputils.dll\n    - \\dnsapi.dll\n    - \\dot3api.dll\n    - \\dot3cfg.dll\n    - \\drprov.dll\n    - \\dsclient.dll\n    - \\dsparse.dll\n    - \\dsreg.dll\n    - \\dsrole.dll\n    - \\dui70.dll\n    - \\duser.dll\n    - \\dusmapi.dll\n    - \\dwmapi.dll\n    - \\dwrite.dll\n    - \\dxgi.dll\n    - \\dxva2.dll\n    - \\eappcfg.dll\n    - \\eappprxy.dll\n    - \\edputil.dll\n    - \\efsadu.dll\n    - \\efsutil.dll\n    - \\esent.dll\n    - \\execmodelproxy.dll\n    - \\explorerframe.dll\n    - \\fastprox.dll\n    - \\faultrep.dll\n    - \\fddevquery.dll\n    - \\feclient.dll\n    - \\fhcfg.dll\n    - \\firewallapi.dll\n    - \\flightsettings.dll\n    - \\fltlib.dll\n    - \\fveapi.dll\n    - \\fwbase.dll\n    - \\fwcfg.dll\n    - \\fwpolicyiomgr.dll\n    - \\fwpuclnt.dll\n    - \\getuname.dll\n    - \\hid.dll\n    - \\hnetmon.dll\n    - \\httpapi.dll\n    - \\idstore.dll\n    - \\ieadvpack.dll\n    - \\iedkcs32.dll\n    - \\iertutil.dll\n    - \\ifmon.dll\n    - \\iphlpapi.dll\n    - \\iri.dll\n    - \\iscsidsc.dll\n    - \\iscsium.dll\n    - \\isv.exe_rsaenh.dll\n    - \\joinutil.dll\n    - \\ksuser.dll\n    - \\ktmw32.dll\n    - \\licensemanagerapi.dll\n    - \\licensingdiagspp.dll\n    - \\linkinfo.dll\n    - \\loadperf.dll\n    - \\logoncli.dll\n    - \\logoncontroller.dll\n    - \\lpksetupproxyserv.dll\n    - \\magnification.dll\n    - \\mapistub.dll\n    - \\mfcore.dll\n    - \\mfplat.dll\n    - \\mi.dll\n    - \\midimap.dll\n    - \\miutils.dll\n    - \\mlang.dll\n    - \\mmdevapi.dll\n    - \\mobilenetworking.dll\n    - \\mpr.dll\n    - \\mprapi.dll\n    - \\mrmcorer.dll\n    - \\msacm32.dll\n    - \\mscms.dll\n    - \\mscoree.dll\n    - \\msctf.dll\n    - \\msctfmonitor.dll\n    - \\msdrm.dll\n    - \\msftedit.dll\n    - \\msi.dll\n    - \\msutb.dll\n    - \\mswb7.dll\n    - \\mswsock.dll\n    - \\msxml3.dll\n    - \\mtxclu.dll\n    - \\napinsp.dll\n    - \\ncrypt.dll\n    - \\ndfapi.dll\n    - \\netid.dll\n    - \\netiohlp.dll\n    - \\netplwiz.dll\n    - \\netprofm.dll\n    - \\netsetupapi.dll\n    - \\netshell.dll\n    - \\netutils.dll\n    - \\networkexplorer.dll\n    - \\newdev.dll\n    - \\ninput.dll\n    - \\nlaapi.dll\n    - \\nlansp_c.dll\n    - \\npmproxy.dll\n    - \\nshhttp.dll\n    - \\nshipsec.dll\n    - \\nshwfp.dll\n    - \\ntdsapi.dll\n    - \\ntlanman.dll\n    - \\ntlmshared.dll\n    - \\ntmarta.dll\n    - \\ntshrui.dll\n    - \\oleacc.dll\n    - \\omadmapi.dll\n    - \\onex.dll\n    - \\osbaseln.dll\n    - \\osuninst.dll\n    - \\p2p.dll\n    - \\p2pnetsh.dll\n    - \\p9np.dll\n    - \\pcaui.dll\n    - \\pdh.dll\n    - \\peerdistsh.dll\n    - \\pla.dll\n    - \\pnrpnsp.dll\n    - \\policymanager.dll\n    - \\polstore.dll\n    - \\printui.dll\n    - \\propsys.dll\n    - \\prvdmofcomp.dll\n    - \\puiapi.dll\n    - \\radcui.dll\n    - \\rasapi32.dll\n    - \\rasgcw.dll\n    - \\rasman.dll\n    - \\rasmontr.dll\n    - \\reagent.dll\n    - \\regapi.dll\n    - \\resutils.dll\n    - \\rmclient.dll\n    - \\rpcnsh.dll\n    - \\rsaenh.dll\n    - \\rtutils.dll\n    - \\rtworkq.dll\n    - \\samcli.dll\n    - \\samlib.dll\n    - \\sapi_onecore.dll\n    - \\sas.dll\n    - \\scansetting.dll\n    - \\scecli.dll\n    - \\schedcli.dll\n    - \\secur32.dll\n    - \\shell32.dll\n    - \\slc.dll\n    - \\snmpapi.dll\n    - \\spp.dll\n    - \\sppc.dll\n    - \\srclient.dll\n    - \\srpapi.dll\n    - \\srvcli.dll\n    - \\ssp.exe_rsaenh.dll\n    - \\ssp_isv.exe_rsaenh.dll\n    - \\sspicli.dll\n    - \\ssshim.dll\n    - \\staterepository.core.dll\n    - \\structuredquery.dll\n    - \\sxshared.dll\n    - \\tapi32.dll\n    - \\tbs.dll\n    - \\tdh.dll\n    - \\tquery.dll\n    - \\tsworkspace.dll\n    - \\ttdrecord.dll\n    - \\twext.dll\n    - \\twinapi.dll\n    - \\twinui.appcore.dll\n    - \\uianimation.dll\n    - \\uiautomationcore.dll\n    - \\uireng.dll\n    - \\uiribbon.dll\n    - \\updatepolicy.dll\n    - \\userenv.dll\n    - \\utildll.dll\n    - \\uxinit.dll\n    - \\uxtheme.dll\n    - \\vaultcli.dll\n    - \\virtdisk.dll\n    - \\vssapi.dll\n    - \\vsstrace.dll\n    - \\wbemprox.dll\n    - \\wbemsvc.dll\n    - \\wcmapi.dll\n    - \\wcnnetsh.dll\n    - \\wdi.dll\n    - \\wdscore.dll\n    - \\webservices.dll\n    - \\wecapi.dll\n    - \\wer.dll\n    - \\wevtapi.dll\n    - \\whhelper.dll\n    - \\wimgapi.dll\n    - \\winbrand.dll\n    - \\windows.storage.dll\n    - \\windows.storage.search.dll\n    - \\windowscodecs.dll\n    - \\windowscodecsext.dll\n    - \\windowsudk.shellcommon.dll\n    - \\winhttp.dll\n    - \\wininet.dll\n    - \\winipsec.dll\n    - \\winmde.dll\n    - \\winmm.dll\n    - \\winnsi.dll\n    - \\winrnr.dll\n    - \\winsqlite3.dll\n    - \\winsta.dll\n    - \\wkscli.dll\n    - \\wlanapi.dll\n    - \\wlancfg.dll\n    - \\wldp.dll\n    - \\wlidprov.dll\n    - \\wmiclnt.dll\n    - \\wmidcom.dll\n    - \\wmiutils.dll\n    - \\wmsgapi.dll\n    - \\wofutil.dll\n    - \\wpdshext.dll\n    - \\wshbth.dll\n    - \\wshelper.dll\n    - \\wtsapi32.dll\n    - \\wwapi.dll\n    - \\xmllite.dll\n    - \\xolehlp.dll\n    - \\xwizards.dll\n    - \\xwtpw32.dll\n    - \\aclui.dll\n    - \\bderepair.dll\n    - \\bootmenuux.dll\n    - \\dcntel.dll\n    - \\dwmcore.dll\n    - \\dynamoapi.dll\n    - \\fhsvcctl.dll\n    - \\fxsst.dll\n    - \\inproclogger.dll\n    - \\iumbase.dll\n    - \\kdstub.dll\n    - \\maintenanceui.dll\n    - \\mdmdiagnostics.dll\n    - \\mintdh.dll\n    - \\msdtctm.dll\n    - \\nettrace.dll\n    - \\osksupport.dll\n    - \\reseteng.dll\n    - \\resetengine.dll\n    - \\spectrumsyncclient.dll\n    - \\srcore.dll\n    - \\systemsettingsthresholdadminflowui.dll\n    - \\timesync.dll\n    - \\upshared.dll\n    - \\wmpdui.dll\n    - \\wwancfg.dll\n    - \\dpx.dll\n    - \\fxsapi.dll\n    - \\fxstiff.dll\n    - \\xpsservices.dll\n    - \\appvpolicy.dll\n    - \\batmeter.dll\n    - \\bootux.dll\n    - \\cmutil.dll\n    - \\configmanager2.dll\n    - \\coredplus.dll\n    - \\coreuicomponents.dll\n    - \\cryptsp.dll\n    - \\dmcommandlineutils.dll\n    - \\drvstore.dll\n    - \\dsprop.dll\n    - \\dxcore.dll\n    - \\edgeiso.dll\n    - \\framedynos.dll\n    - \\fveskybackup.dll\n    - \\fvewiz.dll\n    - \\gpapi.dll\n    - \\icmp.dll\n    - \\ifsutil.dll\n    - \\iumsdk.dll\n    - \\lockhostingframework.dll\n    - \\lrwizdll.dll\n    - \\mbaexmlparser.dll\n    - \\mfc42u.dll\n    - \\msiso.dll\n    - \\msvcp110_win.dll\n    - \\netapi32.dll\n    - \\netjoin.dll\n    - \\netprovfw.dll\n    - \\opcservices.dll\n    - \\pkeyhelper.dll\n    - \\playsndsrv.dll\n    - \\powrprof.dll\n    - \\prntvpt.dll\n    - \\profapi.dll\n    - \\proximitycommon.dll\n    - \\proximityservicepal.dll\n    - \\rasdlg.dll\n    - \\security.dll\n    - \\sppcext.dll\n    - \\srmtrace.dll\n    - \\tpmcoreprovisioning.dll\n    - \\umpdc.dll\n    - \\unattend.dll\n    - \\urlmon.dll\n    - \\vdsutil.dll\n    - \\version.dll\n    - \\winbio.dll\n    - \\windows.ui.immersive.dll\n    - \\winscard.dll\n    - \\winsync.dll\n    - \\wscapi.dll\n    - \\wsmsvc.dll\n    - \\FxsCompose.dll\n    - \\WfsR.dll\n    - \\rpchttp.dll\n    - \\storageusage.dll\n    - \\amsi.dll\n    - \\PrintIsolationProxy.dll\n    - \\msdtcVSp1res.dll\n    - \\rdpendp.dll\n    - \\dxilconv.dll\n    - \\utcutil.dll\n    - \\appraiser.dll\n    - \\dsound.dll\n    - \\DispBroker.dll\n    - \\FXSRESM.DLL\n    - \\cryptnet.dll\n    - \\COMRES.DLL\n    - \\igdumdim64.dll\n    - \\igd10iumd64.dll\n    - \\igd12umd64.dll\n    - \\igdusc64.dll\n    - \\WLBSCTRL.dll\n    - \\TSMSISrv.dll\n    - \\TSVIPSrv.dll\n    - \\wow64log.dll\n    - \\WptsExtensions.dll\n    - \\wbemcomn.dll\nfalsepositives:\n- Legitimate applications loading their own versions of the DLLs mentioned in this\n  rule\nid: 4fc0deee-0057-4998-ab31-d24e46e0aba4\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2023/01/09\nreferences:\n- https://hijacklibs.net/\n- https://blog.cyble.com/2022/07/21/qakbot-resurfaces-with-new-playbook/\n- https://blog.cyble.com/2022/07/27/targeted-attacks-being-carried-out-via-dll-sideloading/\n- https://github.com/XForceIR/SideLoadHunter/blob/cc7ef2e5d8908279b0c4cee4e8b6f85f7b8eed52/SideLoads/README.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Potential System DLL Sideloading From Non System Locations\n",
+                            "sigma:id": "4fc0deee-0057-4998-ab31-d24e46e0aba4",
+                            "title": "Potential System DLL Sideloading From Non System Locations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "602a1f13-c640-4d73-b053-be9a2fa58b77",
+                        "lookup_data": {
+                            "description": "IKEEXT and SessionEnv service, as they call LoadLibrary on files that do not exist within C:\\Windows\\System32\\ by default.\nAn attacker can place their malicious logic within the PROCESS_ATTACH block of their library and restart the aforementioned services \"svchost.exe -k netsvcs\" to gain code execution on a remote machine.\n",
+                            "raw": "author: SBousseaden\ndate: 2019/10/28\ndescription: 'IKEEXT and SessionEnv service, as they call LoadLibrary on files that\n  do not exist within C:\\Windows\\System32\\ by default.\n\n  An attacker can place their malicious logic within the PROCESS_ATTACH block of their\n  library and restart the aforementioned services \"svchost.exe -k netsvcs\" to gain\n  code execution on a remote machine.\n\n  '\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded|startswith: C:\\Windows\\WinSxS\\\n  selection:\n    ImageLoaded|endswith:\n    - \\tsmsisrv.dll\n    - \\tsvipsrv.dll\n    - \\wlbsctrl.dll\n    Image|endswith: \\svchost.exe\nfalsepositives:\n- Unknown\nid: 602a1f13-c640-4d73-b053-be9a2fa58b77\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://posts.specterops.io/lateral-movement-scm-and-dll-hijacking-primer-d2f61e8ab992\nstatus: test\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.t1574.002\n- attack.t1574.001\ntitle: Svchost DLL Search Order Hijack\n",
+                            "sigma:id": "602a1f13-c640-4d73-b053-be9a2fa58b77",
+                            "title": "Svchost DLL Search Order Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b2400ffb-7680-47c0-b08a-098a7de7e7a9",
+                        "lookup_data": {
+                            "description": "Detects the use of Pingback backdoor that creates ICMP tunnel for C2 as described in the trustwave report",
+                            "raw": "author: Bhabesh Raj\ndate: 2021/05/05\ndescription: Detects the use of Pingback backdoor that creates ICMP tunnel for C2\n  as described in the trustwave report\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - config\n    - msdtc\n    - start\n    - auto\n    ParentImage|endswith: updata.exe\nfalsepositives:\n- Very unlikely\nid: b2400ffb-7680-47c0-b08a-098a7de7e7a9\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/backdoor-at-the-end-of-the-icmp-tunnel\n- https://app.any.run/tasks/4a54c651-b70b-4b72-84d7-f34d301d6406\nstatus: test\ntags:\n- attack.persistence\n- attack.t1574.001\ntitle: Pingback Backdoor\n",
+                            "sigma:id": "b2400ffb-7680-47c0-b08a-098a7de7e7a9",
+                            "title": "Pingback Backdoor",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9e1bef8d-0fff-46f6-8465-9aa54e128c1e",
+                        "lookup_data": {
+                            "description": "Detects calls to hidden files or files located in hidden directories in NIX systems.",
+                            "raw": "author: David Burkett, @signalblur\ndate: 2022/12/30\ndescription: Detects calls to hidden files or files located in hidden directories\n  in NIX systems.\ndetection:\n  condition: selection and not filter\n  filter:\n    name|contains:\n    - /.cache/\n    - /.config/\n    - /.pyenv/\n    - /.rustup/toolchains\n  selection:\n    name|contains: /.\n    type: PATH\nfalsepositives:\n- Unknown\nid: 9e1bef8d-0fff-46f6-8465-9aa54e128c1e\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1564.001/T1564.001.md\nrelated:\n- id: d08722cd-3d09-449a-80b4-83ea2d9d4616\n  type: similar\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1574.001\ntitle: Use Of Hidden Paths Or Files\n",
+                            "sigma:id": "9e1bef8d-0fff-46f6-8465-9aa54e128c1e",
+                            "title": "Use Of Hidden Paths Or Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bc3cc333-48b9-467a-9d1f-d44ee594ef48",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of DLLs that are loaded by the SCM for some services (IKE, IKEEXT, SessionEnv) which do not exists on a typical modern system",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/01\ndescription: Detects DLL sideloading of DLLs that are loaded by the SCM for some services\n  (IKE, IKEEXT, SessionEnv) which do not exists on a typical modern system\ndetection:\n  condition: selection\n  selection:\n    Image: C:\\Windows\\System32\\svchost.exe\n    ImageLoaded:\n    - C:\\Windows\\System32\\WLBSCTRL.dll\n    - C:\\Windows\\System32\\TSMSISrv.dll\n    - C:\\Windows\\System32\\TSVIPSrv.dll\nfalsepositives:\n- Unknown\nid: bc3cc333-48b9-467a-9d1f-d44ee594ef48\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://decoded.avast.io/martinchlumecky/png-steganography/\n- https://posts.specterops.io/lateral-movement-scm-and-dll-hijacking-primer-d2f61e8ab992\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: SCM DLL Sideload\n",
+                            "sigma:id": "bc3cc333-48b9-467a-9d1f-d44ee594ef48",
+                            "title": "SCM DLL Sideload",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "602a1f13-c640-4d73-b053-be9a2fa58b96",
+                        "lookup_data": {
+                            "description": "Powerup tool's Write Hijack DLL exploits DLL hijacking for privilege escalation.\nIn it's default mode, it builds a self deleting .bat file which executes malicious command.\nThe detection rule relies on creation of the malicious bat file (debug.bat by default).\n",
+                            "raw": "author: Subhash Popuri (@pbssubhash)\ndate: 2021/08/21\ndescription: 'Powerup tool''s Write Hijack DLL exploits DLL hijacking for privilege\n  escalation.\n\n  In it''s default mode, it builds a self deleting .bat file which executes malicious\n  command.\n\n  The detection rule relies on creation of the malicious bat file (debug.bat by default).\n\n  '\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    TargetFilename|endswith: .bat\nfalsepositives:\n- Any powershell script that creates bat files\nid: 602a1f13-c640-4d73-b053-be9a2fa58b96\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://powersploit.readthedocs.io/en/latest/Privesc/Write-HijackDll/\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1574.001\ntitle: Powerup Write Hijack DLL\n",
+                            "sigma:id": "602a1f13-c640-4d73-b053-be9a2fa58b96",
+                            "title": "Powerup Write Hijack DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "90ae0469-0cee-4509-b67f-e5efcef040f7",
+                        "lookup_data": {
+                            "description": "Detects potential DLL sideloading activity via the Aruba Networks Virtual Intranet Access \"arubanetsvc.exe\" process using DLL Search Order Hijacking",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/22\ndescription: Detects potential DLL sideloading activity via the Aruba Networks Virtual\n  Intranet Access \"arubanetsvc.exe\" process using DLL Search Order Hijacking\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Windows\\WinSxS\\\n  selection:\n    ImageLoaded|endswith:\n    - \\wtsapi32.dll\n    - \\msvcr100.dll\n    - \\msvcp100.dll\n    - \\dbghelp.dll\n    - \\dbgcore.dll\n    - \\wininet.dll\n    - \\iphlpapi.dll\n    - \\version.dll\n    - \\cryptsp.dll\n    - \\cryptbase.dll\n    - \\wldp.dll\n    - \\profapi.dll\n    - \\sspicli.dll\n    - \\winsta.dll\n    - \\dpapi.dll\n    Image|endswith: \\arubanetsvc.exe\nfalsepositives:\n- Unknown\nid: 90ae0469-0cee-4509-b67f-e5efcef040f7\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://twitter.com/wdormann/status/1616581559892545537?t=XLCBO9BziGzD7Bmbt8oMEQ&s=09\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1574.001\n- attack.t1574.002\ntitle: Aruba Network Service Potential DLL Sideloading\n",
+                            "sigma:id": "90ae0469-0cee-4509-b67f-e5efcef040f7",
+                            "title": "Aruba Network Service Potential DLL Sideloading",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6b98b92b-4f00-4f62-b4fe-4d1920215771",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of system dlls that are not present on the system by default. Usualy to achieve techniques such as UAC bypass and privilege escalation",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/09\ndescription: Detects DLL sideloading of system dlls that are not present on the system\n  by default. Usualy to achieve techniques such as UAC bypass and privilege escalation\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_ms_signed:\n    Signature: Microsoft Windows\n    Signed: 'true'\n  selection:\n    ImageLoaded:\n    - C:\\Windows\\System32\\WLBSCTRL.dll\n    - C:\\Windows\\System32\\TSMSISrv.dll\n    - C:\\Windows\\System32\\TSVIPSrv.dll\n    - C:\\Windows\\System32\\wow64log.dll\n    - C:\\Windows\\System32\\WptsExtensions.dll\n    - C:\\Windows\\System32\\wbem\\wbemcomn.dll\nfalsepositives:\n- Unknown\nid: 6b98b92b-4f00-4f62-b4fe-4d1920215771\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://decoded.avast.io/martinchlumecky/png-steganography/\n- https://posts.specterops.io/lateral-movement-scm-and-dll-hijacking-primer-d2f61e8ab992\n- https://clement.notin.org/blog/2020/09/12/CVE-2020-7315-McAfee-Agent-DLL-injection/\n- https://github.com/Wh04m1001/SysmonEoP\n- https://www.hexacorn.com/blog/2013/12/08/beyond-good-ol-run-key-part-5/\n- http://remoteawesomethoughts.blogspot.com/2019/05/windows-10-task-schedulerservice.html\nrelated:\n- id: df6ecb8b-7822-4f4b-b412-08f524b4576c\n  type: similar\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Potential DLL Sideloading Of Non-Existent DLLs From System Folders\n",
+                            "sigma:id": "6b98b92b-4f00-4f62-b4fe-4d1920215771",
+                            "title": "Potential DLL Sideloading Of Non-Existent DLLs From System Folders",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "829a3bdf-34da-4051-9cf4-8ed221a8ae4f",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of DLLs that are part of Microsoft Office from non standard location",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Wietze Beukema (project and research)\ndate: 2022/08/17\ndescription: Detects DLL sideloading of DLLs that are part of Microsoft Office from\n  non standard location\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded|startswith:\n    - C:\\Program Files\\Microsoft Office\\OFFICE\n    - C:\\Program Files (x86)\\Microsoft Office\\OFFICE\n    - C:\\Program Files\\Microsoft Office\\Root\\OFFICE\n    - C:\\Program Files (x86)\\Microsoft Office\\Root\\OFFICE\n  selection:\n    ImageLoaded|endswith: \\outllib.dll\nfalsepositives:\n- Unlikely\nid: 829a3bdf-34da-4051-9cf4-8ed221a8ae4f\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://hijacklibs.net/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Microsoft Office DLL Sideload\n",
+                            "sigma:id": "829a3bdf-34da-4051-9cf4-8ed221a8ae4f",
+                            "title": "Microsoft Office DLL Sideload",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12",
+                        "lookup_data": {
+                            "description": "Detects potential COM object hijacking leveraging the COM Search Order",
+                            "raw": "author: \"Maxime Thiebaut (@0xThiebaut), oscd.community, C\\xE9dric Hien\"\ndate: 2020/04/14\ndescription: Detects potential COM object hijacking leveraging the COM Search Order\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_bonjourlib:\n    Details:\n    - C:\\Windows\\system32\\dnssdX.dll\n    - C:\\Windows\\SysWOW64\\dnssdX.dll\n  filter_defender:\n    Image|endswith: \\MsMpEng.exe\n    Image|startswith:\n    - C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\\n    - C:\\Program Files\\Windows Defender\\\n  filter_dropbox:\n    Details|contains|all:\n    - \\AppData\\Roaming\\Dropbox\\\n    - \\DropboxExt64.*.dll\n  filter_dx:\n    Image: C:\\WINDOWS\\SYSTEM32\\dxdiag.exe\n  filter_edge:\n    Image|endswith: \\MicrosoftEdgeUpdateComRegisterShell64.exe\n  filter_gameservice:\n    Details|contains: C:\\WINDOWS\\system32\\GamingServicesProxy.dll\n  filter_generic:\n    Details|contains:\n    - '%%systemroot%%\\system32\\'\n    - '%%systemroot%%\\SysWow64\\'\n  filter_health_service:\n    Image: C:\\WINDOWS\\system32\\SecurityHealthService.exe\n  filter_inprocserver:\n    Image:\n    - C:\\Windows\\System32\\poqexec.exe\n    - C:\\Windows\\System32\\regsvr32.exe\n    TargetObject|endswith: \\InProcServer32\\(Default)\n  filter_nvidia:\n    Details|contains: \\FileRepository\\nvmdi.inf\n  filter_onedrive:\n    Details|contains:\n    - \\AppData\\Local\\Microsoft\\OneDrive\\\n    - \\FileCoAuthLib64.dll\n    - \\FileSyncShell64.dll\n    - \\FileSyncApi64.dll\n  filter_poqexec:\n    Details|contains: C:\\Windows\\System32\\Autopilot.dll\n    Image: C:\\Windows\\System32\\poqexec.exe\n  filter_printextensionmanager:\n    Details: C:\\Windows\\system32\\spool\\drivers\\x64\\3\\PrintConfig.dll\n  filter_programdata:\n    Details|startswith: C:\\ProgramData\\Microsoft\\\n  filter_programfiles:\n    Details|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n  filter_python:\n    Details:\n    - C:\\Windows\\pyshellext.amd64.dll\n    - C:\\Windows\\pyshellext.dll\n  filter_sec_health_svc:\n    Details|contains: C:\\Windows\\System32\\SecurityHealth\n    Image: C:\\Windows\\system32\\SecurityHealthService.exe\n  filter_teams:\n    Details|contains|all:\n    - \\AppData\\Local\\Microsoft\\TeamsMeetingAddin\\\n    - \\Microsoft.Teams.AddinLoader.dll\n  filter_trend_micro:\n    Details|endswith: TmopIEPlg.dll\n  filter_update:\n    Image:\n    - C:\\WINDOWS\\system32\\wuauclt.exe\n    - C:\\WINDOWS\\system32\\svchost.exe\n  selection:\n    EventType: SetValue\n    TargetObject|endswith: \\InprocServer32\\(Default)\n    TargetObject|startswith:\n    - HKCR\\CLSID\\\n    - HKCU\\Software\\Classes\\CLSID\\\nfalsepositives:\n- Some installed utilities (i.e. OneDrive) may serve new COM objects at user-level\nid: a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://www.cyberbit.com/blog/endpoint-security/com-hijacking-windows-overlooked-security-vulnerability/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.015\ntitle: Potential Persistence Via COM Search Order Hijacking\n",
+                            "sigma:id": "a0ff33d8-79e4-4cef-b4f3-9dc4133ccd12",
+                            "title": "Potential Persistence Via COM Search Order Hijacking",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df6ecb8b-7822-4f4b-b412-08f524b4576c",
+                        "lookup_data": {
+                            "description": "Detects the creation of system dlls that are not present on the system. Usualy to achieve dll hijacking",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/01\ndescription: Detects the creation of system dlls that are not present on the system.\n  Usualy to achieve dll hijacking\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|startswith: C:\\Windows\\System32\\\n  selection:\n    TargetFilename:\n    - C:\\Windows\\System32\\WLBSCTRL.dll\n    - C:\\Windows\\System32\\TSMSISrv.dll\n    - C:\\Windows\\System32\\TSVIPSrv.dll\n    - C:\\Windows\\System32\\wow64log.dll\nfalsepositives:\n- Unknown\nid: df6ecb8b-7822-4f4b-b412-08f524b4576c\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/09\nreferences:\n- https://decoded.avast.io/martinchlumecky/png-steganography/\n- https://posts.specterops.io/lateral-movement-scm-and-dll-hijacking-primer-d2f61e8ab992\n- https://clement.notin.org/blog/2020/09/12/CVE-2020-7315-McAfee-Agent-DLL-injection/\n- https://github.com/Wh04m1001/SysmonEoP\n- https://www.hexacorn.com/blog/2013/12/08/beyond-good-ol-run-key-part-5/\nrelated:\n- id: 6b98b92b-4f00-4f62-b4fe-4d1920215771\n  type: similar\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Creation Of Non-Existent DLLs In System Folders\n",
+                            "sigma:id": "df6ecb8b-7822-4f4b-b412-08f524b4576c",
+                            "title": "Creation Of Non-Existent DLLs In System Folders",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c",
+                        "lookup_data": {
+                            "description": "Detects attempts to create a DLL file to a known desktop application dependencies folder such as Slack, Teams or OneDrive and by an unusual process. This may indicate an attempt to load a malicious module via DLL search order hijacking.",
+                            "raw": "author: Tim Rauch (rule), Elastic (idea)\ndate: 2022/10/21\ndescription: Detects attempts to create a DLL file to a known desktop application\n  dependencies folder such as Slack, Teams or OneDrive and by an unusual process.\n  This may indicate an attempt to load a malicious module via DLL search order hijacking.\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|endswith: \\cmd.exe\n    TargetFilename|contains|all:\n    - \\Users\\\n    - \\AppData\\\n    - \\Microsoft\\OneDrive\\\n    - \\api-ms-win-core-\n  selection:\n    Image|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n    - \\MSACCESS.EXE\n    - \\MSPUB.EXE\n    - \\fltldr.exe\n    - \\cmd.exe\n    - \\certutil.exe\n    - \\mshta.exe\n    - \\cscript.exe\n    - \\wscript.exe\n    - \\curl.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    TargetFilename|contains:\n    - \\Microsoft\\OneDrive\\\n    - \\Microsoft OneDrive\\\n    - \\Microsoft\\Teams\\\n    - \\Local\\slack\\app-\n    - \\Local\\Programs\\Microsoft VS Code\\\n    TargetFilename|contains|all:\n    - \\Users\\\n    - \\AppData\\\n    TargetFilename|endswith: .dll\nfalsepositives:\n- Unknown\nid: dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-5d46dd4ac6866b4337ec126be8cee0e115467b3e8703794ba6f6df6432c806bc\n- https://posts.specterops.io/automating-dll-hijack-discovery-81c4295904b0\nstatus: experimental\ntags:\n- attack.t1566\n- attack.t1566.001\n- attack.initial_access\n- attack.t1574\n- attack.t1574.001\n- attack.defense_evasion\ntitle: Potential Initial Access via DLL Search Order Hijacking\n",
+                            "sigma:id": "dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c",
+                            "title": "Potential Initial Access via DLL Search Order Hijacking",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "28a452f3-786c-4fd8-b8f2-bddbe9d616d1",
+                        "lookup_data": {
+                            "description": "Detects WerFault copoed to a suspicious folder, which could be a sign of WerFault DLL hijacking",
+                            "raw": "author: frack113\ndate: 2022/05/09\ndescription: Detects WerFault copoed to a suspicious folder, which could be a sign\n  of WerFault DLL hijacking\ndetection:\n  condition: selection and not filter_whitelist\n  filter_whitelist:\n    TargetFilename|contains:\n    - \\System32\\\n    - \\SysWOW64\\\n    - \\WinSxS\\\n  selection:\n    TargetFilename|endswith:\n    - \\WerFault.exe\n    - \\wer.dll\nfalsepositives:\n- Unknown\nid: 28a452f3-786c-4fd8-b8f2-bddbe9d616d1\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://www.bleepingcomputer.com/news/security/hackers-are-now-hiding-malware-in-windows-event-logs/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.t1574.001\ntitle: Creation of an WerFault.exe in Unusual Folder\n",
+                            "sigma:id": "28a452f3-786c-4fd8-b8f2-bddbe9d616d1",
+                            "title": "Creation of an WerFault.exe in Unusual Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "828af599-4c53-4ed2-ba4a-a9f835c434ea",
+                        "lookup_data": {
+                            "description": "The Fax service attempts to load ualapi.dll, which is non-existent. An attacker can then (side)load their own malicious DLL using this service.",
+                            "raw": "author: NVISO\ndate: 2020/05/04\ndescription: The Fax service attempts to load ualapi.dll, which is non-existent. An\n  attacker can then (side)load their own malicious DLL using this service.\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded|startswith: C:\\Windows\\WinSxS\\\n  selection:\n    ImageLoaded|endswith: ualapi.dll\n    Image|endswith: \\fxssvc.exe\nfalsepositives:\n- Unlikely\nid: 828af599-4c53-4ed2-ba4a-a9f835c434ea\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://windows-internals.com/faxing-your-way-to-system/\nstatus: test\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.t1574.001\n- attack.t1574.002\ntitle: Fax Service DLL Search Order Hijack\n",
+                            "sigma:id": "828af599-4c53-4ed2-ba4a-a9f835c434ea",
+                            "title": "Fax Service DLL Search Order Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6414b5cd-b19d-447e-bb5e-9f03940b5784",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of \"dbghelp.dll\"",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Wietze Beukema (project and research)\ndate: 2022/10/25\ndescription: Detects DLL sideloading of \"dbghelp.dll\"\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_generic:\n  - ImageLoaded|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Windows\\WinSxS\\\n    - C:\\Windows\\SoftwareDistribution\\\n    - C:\\Windows\\SystemTemp\\\n    - C:\\Program Files (x86)\\\n    - C:\\Program Files\\\n  - ImageLoaded|endswith:\n    - \\Epic Games\\Launcher\\Engine\\Binaries\\ThirdParty\\DbgHelp\\dbghelp.dll\n    - \\Epic Games\\MagicLegends\\x86\\dbghelp.dll\n    - \\Anaconda3\\Lib\\site-packages\\vtrace\\platforms\\windll\\amd64\\dbghelp.dll\n    - \\Anaconda3\\Lib\\site-packages\\vtrace\\platforms\\windll\\i386\\dbghelp.dll\n  selection:\n    ImageLoaded|endswith: \\dbghelp.dll\nfalsepositives:\n- Legitimate applications loading their own versions of the DLL mentioned in this\n  rule\nid: 6414b5cd-b19d-447e-bb5e-9f03940b5784\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/28\nreferences:\n- https://hijacklibs.net/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: DLL Sideloading Of DBGHELP.DLL\n",
+                            "sigma:id": "6414b5cd-b19d-447e-bb5e-9f03940b5784",
+                            "title": "DLL Sideloading Of DBGHELP.DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "72ca7c75-bf85-45cd-aca7-255d360e423c",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of DLLs that are part of web browsers",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Wietze Beukema (project and research)\ndate: 2022/08/17\ndescription: Detects DLL sideloading of DLLs that are part of web browsers\ndetection:\n  condition: selection_chrome and not filter_chrome\n  filter_chrome:\n  - ImageLoaded|contains: \\AppData\\local\\Google\\Chrome\\Application\\\n  - ImageLoaded|startswith:\n    - C:\\Program Files\\Google\\Chrome\\Application\\\n    - C:\\Program Files (x86)\\Google\\Chrome\\Application\\\n  selection_chrome:\n    ImageLoaded|endswith: \\chrome_frame_helper.dll\nfalsepositives:\n- Unknown\nid: 72ca7c75-bf85-45cd-aca7-255d360e423c\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://hijacklibs.net/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Web Browsers DLL Sideloading\n",
+                            "sigma:id": "72ca7c75-bf85-45cd-aca7-255d360e423c",
+                            "title": "Web Browsers DLL Sideloading",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2bd63d53-84d4-4210-80ff-bf0658f1bf78",
+                        "lookup_data": {
+                            "description": "Detects the use of Pingback backdoor that creates ICMP tunnel for C2 as described in the trustwave report",
+                            "raw": "author: Bhabesh Raj\ndate: 2021/05/05\ndescription: Detects the use of Pingback backdoor that creates ICMP tunnel for C2\n  as described in the trustwave report\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: updata.exe\n    TargetFilename: C:\\Windows\\oci.dll\nfalsepositives:\n- Very unlikely\nid: 2bd63d53-84d4-4210-80ff-bf0658f1bf78\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/backdoor-at-the-end-of-the-icmp-tunnel\n- https://app.any.run/tasks/4a54c651-b70b-4b72-84d7-f34d301d6406\nstatus: test\ntags:\n- attack.persistence\n- attack.t1574.001\ntitle: Pingback Backdoor - File\n",
+                            "sigma:id": "2bd63d53-84d4-4210-80ff-bf0658f1bf78",
+                            "title": "Pingback Backdoor - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                        "lookup_data": {
+                            "description": "The SideWalk may be as dangerous as the CROSSWALK",
+                            "link": "http://www.botvrij.eu/data/feed-osint/f35d4a9f-881b-46b7-9d8a-887a40bce133.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1630180802",
+                            "uuid": "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "552b6b65-df37-4d3e-a258-f2fc4771ae54",
+                        "lookup_data": {
+                            "description": "Detects potential DLL sideloading of DLLs that are part of antivirus software suchas McAfee, Symantec...etc",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Wietze Beukema (project and research)\ndate: 2022/08/17\ndescription: Detects potential DLL sideloading of DLLs that are part of antivirus\n  software suchas McAfee, Symantec...etc\ndetection:\n  condition: (selection_bitdefender and not 1 of filter_log_dll_*) or (selection_fsecure\n    and not filter_fsecure) or (selection_mcafee and not filter_mcafee) or (selection_cyberark\n    and not filter_cyberark) or (selection_avast and not filter_avast) or (selection_titanium\n    and not filter_titanium)\n  filter_avast:\n    ImageLoaded|startswith:\n    - C:\\program Files\\AVAST Software\\Avast\\\n    - C:\\program Files (x86)\\AVAST Software\\Avast\\\n  filter_cyberark:\n    ImageLoaded|startswith:\n    - C:\\Program Files\\CyberArk\\Endpoint Privilege Manager\\Agent\\x32\\\n    - C:\\Program Files (x86)\\CyberArk\\Endpoint Privilege Manager\\Agent\\x32\\\n  filter_fsecure:\n    ImageLoaded|startswith:\n    - C:\\Program Files\\F-Secure\\Anti-Virus\\\n    - C:\\Program Files (x86)\\F-Secure\\Anti-Virus\\\n  filter_log_dll_bitdefender:\n    ImageLoaded|startswith:\n    - C:\\Program Files\\Bitdefender Antivirus Free\\\n    - C:\\Program Files (x86)\\Bitdefender Antivirus Free\\\n  filter_log_dll_canon:\n    ImageLoaded|startswith: C:\\Program Files\\Canon\\MyPrinter\\\n  filter_log_dll_dell_sar:\n    Image: C:\\Program Files\\Dell\\SARemediation\\audit\\TelemetryUtility.exe\n    ImageLoaded:\n    - C:\\Program Files\\Dell\\SARemediation\\plugin\\log.dll\n    - C:\\Program Files\\Dell\\SARemediation\\audit\\log.dll\n  filter_mcafee:\n    ImageLoaded|startswith:\n    - C:\\Program Files\\McAfee\\\n    - C:\\Program Files (x86)\\McAfee\\\n  filter_titanium:\n    ImageLoaded|startswith:\n    - C:\\program Files\\Trend Micro\\Titanium\\\n    - C:\\program Files (x86)\\Trend Micro\\Titanium\\\n  selection_avast:\n    ImageLoaded|endswith: \\wsc.dll\n  selection_bitdefender:\n    ImageLoaded|endswith: \\log.dll\n  selection_cyberark:\n    ImageLoaded|endswith: \\vftrace.dll\n  selection_fsecure:\n    ImageLoaded|endswith: \\qrt.dll\n  selection_mcafee:\n    ImageLoaded|endswith:\n    - \\ashldres.dll\n    - \\lockdown.dll\n    - \\vsodscpl.dll\n  selection_titanium:\n    ImageLoaded|endswith: \\tmdbglog.dll\nfalsepositives:\n- Applications that load the same dlls mentioned in the detection section. Investigate\n  them and filter them out if a lot FPs are caused.\n- Dell SARemediation plugin folder (C:\\Program Files\\Dell\\SARemediation\\plugin\\log.dll)\n  is known to contain the 'log.dll' file.\n- The Canon MyPrinter folder 'C:\\Program Files\\Canon\\MyPrinter\\' is known to contain\n  the 'log.dll' file\nid: 552b6b65-df37-4d3e-a258-f2fc4771ae54\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2023/01/29\nreferences:\n- https://hijacklibs.net/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Potential Antivirus Software DLL Sideloading\n",
+                            "sigma:id": "552b6b65-df37-4d3e-a258-f2fc4771ae54",
+                            "title": "Potential Antivirus Software DLL Sideloading",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6360757a-d460-456c-8b13-74cf0e60cceb",
+                        "lookup_data": {
+                            "description": "Detects potential DLL sideloading using comctl32.dll to obtain system privileges",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Subhash Popuri (@pbssubhash)\ndate: 2022/12/16\ndescription: Detects potential DLL sideloading using comctl32.dll to obtain system\n  privileges\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith: \\comctl32.dll\n    ImageLoaded|startswith:\n    - C:\\Windows\\System32\\logonUI.exe.local\\\n    - C:\\Windows\\System32\\werFault.exe.local\\\n    - C:\\Windows\\System32\\consent.exe.local\\\n    - C:\\Windows\\System32\\narrator.exe.local\\\n    - C:\\windows\\system32\\wermgr.exe.local\\\nfalsepositives:\n- Unlikely\nid: 6360757a-d460-456c-8b13-74cf0e60cceb\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/19\nreferences:\n- https://github.com/binderlabs/DirCreate2System\n- https://github.com/sailay1996/awesome_windows_logical_bugs/blob/60cbb23a801f4c3195deac1cc46df27c225c3d07/dir_create2system.txt\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Potential DLL Sideloading Via comctl32.dll\n",
+                            "sigma:id": "6360757a-d460-456c-8b13-74cf0e60cceb",
+                            "title": "Potential DLL Sideloading Via comctl32.dll",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "35a7dc42-bc6f-46e0-9f83-81f8e56c8d4b",
+                        "lookup_data": {
+                            "description": "Detects the use of Pingback backdoor that creates ICMP tunnel for C2 as described in the trustwave report",
+                            "raw": "author: Bhabesh Raj\ndate: 2021/05/05\ndescription: Detects the use of Pingback backdoor that creates ICMP tunnel for C2\n  as described in the trustwave report\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded: C:\\Windows\\oci.dll\n    Image|endswith: \\msdtc.exe\nfalsepositives:\n- Very unlikely\nid: 35a7dc42-bc6f-46e0-9f83-81f8e56c8d4b\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/backdoor-at-the-end-of-the-icmp-tunnel\n- https://app.any.run/tasks/4a54c651-b70b-4b72-84d7-f34d301d6406\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1574.001\ntitle: Pingback Backdoor - Image\n",
+                            "sigma:id": "35a7dc42-bc6f-46e0-9f83-81f8e56c8d4b",
+                            "title": "Pingback Backdoor - Image",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f9df325d-d7bc-4a32-8a1a-2cc61dcefc63",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of DLLs that are part of third party software (zoom, discord....etc)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Wietze Beukema (project and research)\ndate: 2022/08/17\ndescription: Detects DLL sideloading of DLLs that are part of third party software\n  (zoom, discord....etc)\ndetection:\n  condition: (selection_lenovo and not filter_lenovo) or (selection_toshiba and not\n    filter_toshiba)\n  filter_lenovo:\n  - ImageLoaded|contains: \\AppData\\local\\Google\\Chrome\\Application\\\n  - ImageLoaded|startswith:\n    - C:\\Program Files\\Lenovo\\Communications Utility\\\n    - C:\\Program Files (x86)\\Lenovo\\Communications Utility\\\n  filter_toshiba:\n    ImageLoaded|startswith:\n    - C:\\Program Files\\Toshiba\\Bluetooth Toshiba Stack\\\n    - C:\\Program Files (x86)\\Toshiba\\Bluetooth Toshiba Stack\\\n  selection_lenovo:\n    ImageLoaded|endswith: \\commfunc.dll\n  selection_toshiba:\n    ImageLoaded|endswith: \\tosbtkbd.dll\nfalsepositives:\n- Unknown\nid: f9df325d-d7bc-4a32-8a1a-2cc61dcefc63\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://hijacklibs.net/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Third Party Software DLL Sideloading\n",
+                            "sigma:id": "f9df325d-d7bc-4a32-8a1a-2cc61dcefc63",
+                            "title": "Third Party Software DLL Sideloading",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "70e8e9b4-6a93-4cb7-8cde-da69502e7aff",
+                        "lookup_data": {
+                            "description": "Detects DLL sideloading of VMGuestLib.dll by the WmiApSrv service.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/01\ndescription: Detects DLL sideloading of VMGuestLib.dll by the WmiApSrv service.\ndetection:\n  condition: selection and not filter\n  filter:\n    Signed: 'true'\n  selection:\n    ImageLoaded|contains|all:\n    - \\VMware\\VMware Tools\\vmStatsProvider\\win32\n    - \\vmGuestLib.dll\n    Image|endswith: \\Windows\\System32\\wbem\\WmiApSrv.exe\nfalsepositives:\n- FP could occure if the legitimate version of vmGuestLib already exists on the system\nid: 70e8e9b4-6a93-4cb7-8cde-da69502e7aff\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://decoded.avast.io/martinchlumecky/png-steganography/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: VMGuestLib DLL Sideload\n",
+                            "sigma:id": "70e8e9b4-6a93-4cb7-8cde-da69502e7aff",
+                            "title": "VMGuestLib DLL Sideload",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2fee9321-3e71-4cf4-af24-d4d40d355b34",
+                        "lookup_data": {
+                            "capec": "CAPEC-471",
+                            "mitre-attack-id": "T1574.001",
+                            "mitre-cti:description": "Adversaries may execute their own malicious payloads by hijacking the search order used to load DLLs. Windows systems use a common method to look for required DLLs to load into a program. (Citation: Microsoft Dynamic Link Library Search Order)(Citation: FireEye Hijacking July 2010) Hijacking DLL loads may be for the purpose of establishing persistence as well as elevating privileges and/or evading restrictions on file execution.\n\nThere are many ways an adversary can hijack DLL loads. Adversaries may plant trojan dynamic-link library files (DLLs) in a directory that will be searched before the location of a legitimate library that will be requested by a program, causing Windows to load their malicious library when it is called for by the victim program. Adversaries may also perform DLL preloading, also called binary planting attacks, (Citation: OWASP Binary Planting) by placing a malicious DLL with the same name as an ambiguously specified DLL in a location that Windows searches before the legitimate DLL. Often this location is the current working directory of the program.(Citation: FireEye fxsst June 2011) Remote DLL preloading attacks occur when a program sets its current directory to a remote location such as a Web share before loading a DLL. (Citation: Microsoft Security Advisory 2269637)\n\nAdversaries may also directly modify the search order via DLL redirection, which after being enabled (in the Registry and creation of a redirection file) may cause a program to load a different DLL.(Citation: Microsoft Dynamic-Link Library Redirection)(Citation: Microsoft Manifests)(Citation: FireEye DLL Search Order Hijacking)\n\nIf a search order-vulnerable program is configured to run at a higher privilege level, then the adversary-controlled DLL that is loaded will also be executed at the higher level. In this case, the technique could be used for privilege escalation from user to administrator or SYSTEM or from administrator to SYSTEM, depending on the program. Programs that fall victim to path hijacking may appear to behave normally because malicious DLLs may be configured to also load the legitimate DLLs they were meant to replace.",
+                            "mitre-cti:name": "DLL Search Order Hijacking",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Travis Smith, Tripwire', 'Stefan Kanthak'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--2fee9321-3e71-4cf4-af24-d4d40d355b34', 'type': 'attack-pattern', 'created': '2020-03-13T18:11:08.357Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1574.001', 'url': 'https://attack.mitre.org/techniques/T1574/001'}, {'external_id': 'CAPEC-471', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/471.html'}, {'source_name': 'Microsoft Dynamic Link Library Search Order', 'url': 'https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order?redirectedfrom=MSDN', 'description': 'Microsoft. (2018, May 31). Dynamic-Link Library Search Order. Retrieved November 30, 2014.'}, {'source_name': 'FireEye Hijacking July 2010', 'url': 'https://www.fireeye.com/blog/threat-research/2010/07/malware-persistence-windows-registry.html', 'description': 'Harbour, N. (2010, July 15). Malware Persistence without the Windows Registry. Retrieved November 17, 2020.'}, {'source_name': 'OWASP Binary Planting', 'description': 'OWASP. (2013, January 30). Binary planting. Retrieved June 7, 2016.', 'url': 'https://www.owasp.org/index.php/Binary_planting'}, {'source_name': 'FireEye fxsst June 2011', 'url': 'https://www.fireeye.com/blog/threat-research/2011/06/fxsst.html', 'description': 'Harbour, N. (2011, June 3). What the fxsst?. Retrieved November 17, 2020.'}, {'source_name': 'Microsoft Security Advisory 2269637', 'url': 'https://docs.microsoft.com/en-us/security-updates/securityadvisories/2010/2269637', 'description': 'Microsoft. (, May 23). Microsoft Security Advisory 2269637. Retrieved March 13, 2020.'}, {'source_name': 'Microsoft Dynamic-Link Library Redirection', 'url': 'https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-redirection?redirectedfrom=MSDN', 'description': 'Microsoft. (2018, May 31). Dynamic-Link Library Redirection. Retrieved March 13, 2020.'}, {'source_name': 'Microsoft Manifests', 'description': 'Microsoft. (n.d.). Manifests. Retrieved December 5, 2014.', 'url': 'https://msdn.microsoft.com/en-US/library/aa375365'}, {'source_name': 'FireEye DLL Search Order Hijacking', 'url': 'https://www.fireeye.com/blog/threat-research/2010/08/dll-search-order-hijacking-revisited.html', 'description': 'Nick Harbour. (2010, September 1). DLL Search Order Hijacking Revisited. Retrieved March 13, 2020.'}], 'modified': '2021-04-26T18:37:03.748Z', 'name': 'DLL Search Order Hijacking', 'description': 'Adversaries may execute their own malicious payloads by hijacking the search order used to load DLLs. Windows systems use a common method to look for required DLLs to load into a program. (Citation: Microsoft Dynamic Link Library Search Order)(Citation: FireEye Hijacking July 2010) Hijacking DLL loads may be for the purpose of establishing persistence as well as elevating privileges and/or evading restrictions on file execution.\\n\\nThere are many ways an adversary can hijack DLL loads. Adversaries may plant trojan dynamic-link library files (DLLs) in a directory that will be searched before the location of a legitimate library that will be requested by a program, causing Windows to load their malicious library when it is called for by the victim program. Adversaries may also perform DLL preloading, also called binary planting attacks, (Citation: OWASP Binary Planting) by placing a malicious DLL with the same name as an ambiguously specified DLL in a location that Windows searches before the legitimate DLL. Often this location is the current working directory of the program.(Citation: FireEye fxsst June 2011) Remote DLL preloading attacks occur when a program sets its current directory to a remote location such as a Web share before loading a DLL. (Citation: Microsoft Security Advisory 2269637)\\n\\nAdversaries may also directly modify the search order via DLL redirection, which after being enabled (in the Registry and creation of a redirection file) may cause a program to load a different DLL.(Citation: Microsoft Dynamic-Link Library Redirection)(Citation: Microsoft Manifests)(Citation: FireEye DLL Search Order Hijacking)\\n\\nIf a search order-vulnerable program is configured to run at a higher privilege level, then the adversary-controlled DLL that is loaded will also be executed at the higher level. In this case, the technique could be used for privilege escalation from user to administrator or SYSTEM or from administrator to SYSTEM, depending on the program. Programs that fall victim to path hijacking may appear to behave normally because malicious DLLs may be configured to also load the legitimate DLLs they were meant to replace.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Monitor file systems for moving, renaming, replacing, or modifying DLLs. Changes in the set of DLLs that are loaded by a process (compared with past behavior) that do not correlate with known software, patches, etc., are suspicious. Monitor DLLs loaded into a process and detect DLLs that have the same file name but abnormal paths. Modifications to or creation of `.manifest` and `.local` redirection files that do not correlate with software updates are suspicious.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Module: Module Load', 'File: File Modification', 'File: File Creation']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "caa02837-f659-466f-bca6-48bde2826ab4",
+                        "lookup_data": {
+                            "description": "Detects potential DLL sideloading using ClassicExplorer32.dll from the Classic Shell software",
+                            "raw": "author: frack113\ndate: 2022/12/13\ndescription: Detects potential DLL sideloading using ClassicExplorer32.dll from the\n  Classic Shell software\ndetection:\n  condition: selection_classicexplorer and not filter_classicexplorer\n  filter_classicexplorer:\n    ImageLoaded|startswith: C:\\Program Files\\Classic Shell\\\n  selection_classicexplorer:\n    ImageLoaded|endswith: \\ClassicExplorer32.dll\nfalsepositives:\n- Unknown\nid: caa02837-f659-466f-bca6-48bde2826ab4\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://blogs.blackberry.com/en/2022/12/mustang-panda-uses-the-russian-ukrainian-war-to-attack-europe-and-asia-pacific-targets\n- https://app.any.run/tasks/6d8cabb0-dcda-44b6-8050-28d6ce281687/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Potential DLL Sideloading Via ClassicExplorer32.dll\n",
+                            "sigma:id": "caa02837-f659-466f-bca6-48bde2826ab4",
+                            "title": "Potential DLL Sideloading Via ClassicExplorer32.dll",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "68654bf0-4412-43d5-bfe8-5eaa393cd939",
+                        "lookup_data": {
+                            "description": "Detects potential DLL sideloading using JUSTSYSTEMS Japanese word processor",
+                            "raw": "author: frack113\ndate: 2022/12/14\ndescription: Detects potential DLL sideloading using JUSTSYSTEMS Japanese word processor\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded|startswith: C:\\Program Files\\Common Files\\Justsystem\\JsSchHlp\\\n  selection:\n    ImageLoaded|endswith: \\JSESPR.dll\nfalsepositives:\n- Unknown\nid: 68654bf0-4412-43d5-bfe8-5eaa393cd939\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://www.welivesecurity.com/2022/12/14/unmasking-mirrorface-operation-liberalface-targeting-japanese-political-entities/\n- http://www.windowexe.com/bbs/board.php?q=jsschhlp-exe-c-program-files-common-files-justsystem-jsschhlp-jsschhlp\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.001\n- attack.t1574.002\ntitle: Potential DLL Sideloading Via JsSchHlp\n",
+                            "sigma:id": "68654bf0-4412-43d5-bfe8-5eaa393cd939",
+                            "title": "Potential DLL Sideloading Via JsSchHlp",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1574.001",
+                "display_name": "Hijack Execution Flow: DLL Search Order Hijacking",
+                "atomic_tests": [
+                    {
+                        "name": "DLL Search Order Hijacking - amsi.dll",
+                        "auto_generated_guid": "8549ad4b-b5df-4a2d-a3d7-2aee9e7052a3",
+                        "description": "Adversaries can take advantage of insecure library loading by PowerShell to load a vulnerable version of amsi.dll in order to bypass AMSI (Anti-Malware Scanning Interface)\nhttps://enigma0x3.net/2017/07/19/bypassing-amsi-via-com-server-hijacking/\n\nUpon successful execution, powershell.exe will be copied and renamed to updater.exe and load amsi.dll from a non-standard path.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "copy %windir%\\System32\\windowspowershell\\v1.0\\powershell.exe %APPDATA%\\updater.exe\ncopy %windir%\\System32\\amsi.dll %APPDATA%\\amsi.dll\n%APPDATA%\\updater.exe -Command exit\n",
+                            "cleanup_command": "del %APPDATA%\\updater.exe >nul 2>&1\ndel %APPDATA%\\amsi.dll >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Phantom Dll Hijacking - WinAppXRT.dll",
+                        "auto_generated_guid": "46ed938b-c617-429a-88dc-d49b5c9ffedb",
+                        "description": ".NET components (a couple of DLLs loaded anytime .NET apps are executed) when they are loaded they look for an environment variable called APPX_PROCESS\nSetting the environmental variable and dropping the phantom WinAppXRT.dll in e.g. c:\\windows\\system32 (or any other location accessible via PATH) will ensure the \nWinAppXRT.dll is loaded everytime user launches an application using .NET.\n\nUpon successful execution, amsi.dll will be copied and renamed to WinAppXRT.dll and then WinAppXRT.dll will be copied to system32 folder for loading during execution of any .NET application.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "copy %windir%\\System32\\amsi.dll %APPDATA%\\amsi.dll\nren %APPDATA%\\amsi.dll WinAppXRT.dll\ncopy %APPDATA%\\WinAppXRT.dll %windir%\\System32\\WinAppXRT.dll\nreg add \"HKEY_CURRENT_USER\\Environment\" /v APPX_PROCESS /t REG_EXPAND_SZ /d \"1\" /f\n",
+                            "cleanup_command": "reg delete \"HKEY_CURRENT_USER\\Environment\" /v APPX_PROCESS /f\ndel %windir%\\System32\\WinAppXRT.dll\ndel %APPDATA%\\WinAppXRT.dll\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Phantom Dll Hijacking - ualapi.dll",
+                        "auto_generated_guid": "5898902d-c5ad-479a-8545-6f5ab3cfc87f",
+                        "description": "Re-starting the Print Spooler service leads to C:\\Windows\\System32\\ualapi.dll being loaded\nA malicious ualapi.dll placed in the System32 directory will lead to its execution whenever the system starts\n\nUpon successful execution, amsi.dll will be copied and renamed to ualapi.dll and then ualapi.dll will be copied to system32 folder for loading during system restart.\nPrint Spooler service is also configured to auto start. Reboot of system is required\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "copy %windir%\\System32\\amsi.dll %APPDATA%\\amsi.dll\nren %APPDATA%\\amsi.dll ualapi.dll\ncopy %APPDATA%\\ualapi.dll %windir%\\System32\\ualapi.dll\nsc config Spooler start=auto\n",
+                            "cleanup_command": "del %windir%\\System32\\ualapi.dll\ndel %APPDATA%\\ualapi.dll\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 17:23:46"
+}

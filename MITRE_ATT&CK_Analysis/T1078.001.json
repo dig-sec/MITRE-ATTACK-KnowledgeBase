@@ -1,0 +1,173 @@
+{
+    "id": "T1078.001",
+    "name": "Default Accounts",
+    "description": "Adversaries may obtain and abuse credentials of a default account as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Default accounts are those that are built-into an OS, such as the Guest or Administrator accounts on Windows systems. Default accounts also include default factory/provider set accounts on other types of systems, software, or devices, including the root user account in AWS and the default service account in Kubernetes.(Citation: Microsoft Local Accounts Feb 2019)(Citation: AWS Root User)(Citation: Threat Matrix for Kubernetes)\nDefault accounts are not limited to client machines, rather also include accounts that are preset for equipment such as network devices and computer applications whether they are internal, open source, or commercial. Appliances that come preset with a username and password combination pose a serious threat to organizations that do not change it post installation, as they are easy targets for an adversary. Similarly, adversaries may also utilize publicly disclosed or stolen [Private Keys](T1552.004) or credential materials to legitimately connect to remote environments via [Remote Services](T1021).(Citation: Metasploit SSH Module)",
+    "platforms": "Windows, Azure AD, Office 365, SaaS, IaaS, Linux, macOS, Google Workspace, Containers",
+    "kill_chain_phases": "Defense Evasion, Persistence, Privilege Escalation, Initial Access",
+    "data_sources": "User Account: User Account Authentication, Logon Session: Logon Session Creation",
+    "detection": "Monitor whether default accounts have been activated or logged into. These audits should also include checks on any appliances and applications for default credentials or SSH keys, and if any are discovered, they should be updated immediately.",
+    "url": "https://attack.mitre.org/techniques/T1078/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1078.001",
+                "atomic_attack_guid": "aa6cb8c4-b582-4f8e-b677-37733914abda",
+                "atomic_attack_name": "Activate Guest Account",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Manipulation Of Default Accounts Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_user_default_accounts_manipulation.yml",
+                        "remote_content": "title: Suspicious Manipulation Of Default Accounts Via Net.EXE\nid: 5b768e71-86f2-4879-b448-81061cbae951\nstatus: test\ndescription: Detects suspicious manipulations of default accounts such as 'administrator' and 'guest'. For example 'enable' or 'disable' accounts or change the password...etc\nreferences:\n    - https://www.trellix.com/en-sg/about/newsroom/stories/threat-labs/lockergoga-ransomware-family-used-in-targeted-attacks.html\n    - https://redacted.com/blog/bianlian-ransomware-gang-gives-it-a-go/\n    - https://www.microsoft.com/security/blog/2022/09/07/profiling-dev-0270-phosphorus-ransomware-operations/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-01\nmodified: 2023-02-21\ntags:\n    - attack.collection\n    - attack.t1560.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_user_option:\n        CommandLine|contains: ' user '\n    selection_username:\n        CommandLine|contains:\n            # Note: We need to write the full account name for cases starting with 'admin' to avoid lookups only with the user flag\n            - ' Järjestelmänvalvoja ' # Finish\n            - ' Rendszergazda ' # Hungarian\n            - ' Администратор ' # Russian\n            - ' Administrateur ' # French\n            - ' Administrador ' # Portuguese (Brazil + Portugal) + Spanish\n            - ' Administratör ' # Swedish\n            - ' Administrator ' # English\n            - ' guest '\n            - ' DefaultAccount '\n            # The cases below are for when an attacker requests the net command via 'cmd /c....'\n            # First in double quotes\n            - ' \"Järjestelmänvalvoja\" ' # Finish\n            - ' \"Rendszergazda\" ' # Hungarian\n            - ' \"Администратор\" ' # Russian\n            - ' \"Administrateur\" ' # French\n            - ' \"Administrador\" ' # Portuguese (Brazil + Portugal) + Spanish\n            - ' \"Administratör\" ' # Swedish\n            - ' \"Administrator\" ' # English\n            - ' \"guest\" '\n            - ' \"DefaultAccount\" '\n            # Second in single quotes\n            - \" 'Järjestelmänvalvoja' \" # Finish\n            - \" 'Rendszergazda' \" # Hungarian\n            - \" 'Администратор' \" # Russian\n            - \" 'Administrateur' \" # French\n            - \" 'Administrador' \" # Portuguese (Brazil + Portugal) + Spanish\n            - \" 'Administratör' \" # Swedish\n            - \" 'Administrator' \" # English\n            - \" 'guest' \"\n            - \" 'DefaultAccount' \"\n    filter:\n        CommandLine|contains|all:\n            - 'guest'\n            - '/active no'\n    condition: all of selection_* and not filter\nfalsepositives:\n    - Some false positives could occur with the admin or guest account. It depends on the scripts being used by the admins in your env. If you experience a lot of FP you could reduce the level to medium\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Network Connection Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/640337e5-6e41-4b7f-af06-9d9eab5e1e2d/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1078.001",
+                "atomic_attack_guid": "99747561-ed8d-47f2-9c91-1e5fde1ed6e0",
+                "atomic_attack_name": "Enable Guest account with RDP capability and admin privileges",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "User Added to Local Administrators Group",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_add_user_local_admin_group.yml",
+                        "remote_content": "title: User Added to Local Administrators Group\nid: ad720b90-25ad-43ff-9b5e-5c841facc8e5\nrelated:\n    - id: ffa28e60-bdb1-46e0-9f82-05f7a61cc06e # Remote Desktop groups\n      type: similar\n    - id: 10fb649c-3600-4d37-b1e6-56ea90bb7e09 # Privileged groups\n      type: similar\nstatus: test\ndescription: Detects addition of users to the local administrator group via \"Net\" or \"Add-LocalGroupMember\".\nreferences:\n    - https://blog.talosintelligence.com/2022/08/recent-cyber-attack.html?m=1\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-12\nmodified: 2023-03-02\ntags:\n    - attack.persistence\n    - attack.t1098\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_main:\n        - CommandLine|contains|all:\n              # net.exe\n              - 'localgroup '\n              - ' /add'\n        - CommandLine|contains|all:\n              # powershell.exe\n              - 'Add-LocalGroupMember '\n              - ' -Group '\n    selection_group:\n        CommandLine|contains:\n            - ' administrators '\n            - ' administrateur' # Typo without an 'S' so we catch both\n    condition: all of selection_*\nfalsepositives:\n    - Administrative activity\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "User Added to Remote Desktop Users Group",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_add_user_remote_desktop_group.yml",
+                        "remote_content": "title: User Added to Remote Desktop Users Group\nid: ffa28e60-bdb1-46e0-9f82-05f7a61cc06e\nrelated:\n    - id: ad720b90-25ad-43ff-9b5e-5c841facc8e5 # Admin groups\n      type: similar\n    - id: 10fb649c-3600-4d37-b1e6-56ea90bb7e09 # Privileged groups\n      type: similar\nstatus: test\ndescription: Detects addition of users to the local Remote Desktop Users group via \"Net\" or \"Add-LocalGroupMember\".\nreferences:\n    - https://www.microsoft.com/security/blog/2021/11/16/evolving-trends-in-iranian-threat-actor-activity-mstic-presentation-at-cyberwarcon-2021/\nauthor: Florian Roth (Nextron Systems)\ndate: 2021-12-06\nmodified: 2022-09-09\ntags:\n    - attack.persistence\n    - attack.lateral-movement\n    - attack.t1133\n    - attack.t1136.001\n    - attack.t1021.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_main:\n        - CommandLine|contains|all:\n              - 'localgroup '\n              - ' /add'\n        - CommandLine|contains|all:\n              - 'Add-LocalGroupMember '\n              - ' -Group '\n    selection_group:\n        CommandLine|contains:\n            - 'Remote Desktop Users'\n            - 'Utilisateurs du Bureau à distance' # French for \"Remote Desktop Users\"\n            - 'Usuarios de escritorio remoto' # Spanish for \"Remote Desktop Users\"\n    condition: all of selection_*\nfalsepositives:\n    - Administrative activity\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Weak or Abused Passwords In CLI",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_weak_or_abused_passwords.yml",
+                        "remote_content": "title: Weak or Abused Passwords In CLI\nid: 91edcfb1-2529-4ac2-9ecc-7617f895c7e4\nstatus: test\ndescription: |\n    Detects weak passwords or often abused passwords (seen used by threat actors) via the CLI.\n    An example would be a threat actor creating a new user via the net command and providing the password inline\nreferences:\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/espionage-asia-governments\n    - https://thedfirreport.com/2022/09/26/bumblebee-round-two/\n    - https://www.microsoft.com/en-us/security/blog/2022/10/25/dev-0832-vice-society-opportunistic-ransomware-campaigns-impacting-us-education-sector/\n    - https://www.huntress.com/blog/slashandgrab-screen-connect-post-exploitation-in-the-wild-cve-2024-1709-cve-2024-1708\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-14\nmodified: 2024-02-23\ntags:\n    - attack.defense-evasion\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            # Add more passwords\n            - '123456789'\n            - '123123qwE'\n            - 'Asd123.aaaa'\n            - 'Decryptme'\n            - 'P@ssw0rd!'\n            - 'Pass8080'\n            - 'password123' # Also covers PASSWORD123123! as seen in https://www.microsoft.com/en-us/security/blog/2022/10/25/dev-0832-vice-society-opportunistic-ransomware-campaigns-impacting-us-education-sector/\n            - 'test@202' # Covers multiple years\n    condition: selection\nfalsepositives:\n    - Legitimate usage of the passwords by users via commandline (should be discouraged)\n    - Other currently unknown false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0f63e1ef-1eb9-4226-9d54-8927ca08520a",
+                    "6151cbea-819b-455a-9fa6-99a1cc58797d"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0f63e1ef-1eb9-4226-9d54-8927ca08520a",
+                        "lookup_data": {
+                            "description": "Detect remote login by Administrator user (depending on internal pattern).",
+                            "raw": "author: juju4\ndate: 2017/10/29\ndescription: Detect remote login by Administrator user (depending on internal pattern).\ndetection:\n  condition: selection\n  selection:\n    AuthenticationPackageName: Negotiate\n    EventID: 4624\n    LogonType: 10\n    TargetUserName|startswith: Admin\nfalsepositives:\n- Legitimate administrative activity.\nid: 0f63e1ef-1eb9-4226-9d54-8927ca08520a\nlevel: low\nlogsource:\n  definition: 'Requirements: Identifiable administrators usernames (pattern or special\n    unique character. ex: \"Admin-*\"), internal policy mandating use only as secondary\n    account'\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://car.mitre.org/wiki/CAR-2016-04-005\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1078.001\n- attack.t1078.002\n- attack.t1078.003\n- car.2016-04-005\ntitle: Admin User Remote Logon\n",
+                            "sigma:id": "0f63e1ef-1eb9-4226-9d54-8927ca08520a",
+                            "title": "Admin User Remote Logon",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6151cbea-819b-455a-9fa6-99a1cc58797d",
+                        "lookup_data": {
+                            "capec": "CAPEC-70",
+                            "mitre-attack-id": "T1078.001",
+                            "mitre-cti:description": "Adversaries may obtain and abuse credentials of a default account as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Default accounts are those that are built-into an OS, such as the Guest or Administrator accounts on Windows systems. Default accounts also include default factory/provider set accounts on other types of systems, software, or devices, including the root user account in AWS and the default service account in Kubernetes.(Citation: Microsoft Local Accounts Feb 2019)(Citation: AWS Root User)(Citation: Threat Matrix for Kubernetes)\n\nDefault accounts are not limited to client machines, rather also include accounts that are preset for equipment such as network devices and computer applications whether they are internal, open source, or commercial. Appliances that come preset with a username and password combination pose a serious threat to organizations that do not change it post installation, as they are easy targets for an adversary. Similarly, adversaries may also utilize publicly disclosed or stolen [Private Keys](https://attack.mitre.org/techniques/T1552/004) or credential materials to legitimately connect to remote environments via [Remote Services](https://attack.mitre.org/techniques/T1021).(Citation: Metasploit SSH Module)",
+                            "mitre-cti:name": "Default Accounts",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Azure AD', 'Office 365', 'SaaS', 'IaaS', 'Linux', 'macOS', 'Google Workspace', 'Containers'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--6151cbea-819b-455a-9fa6-99a1cc58797d', 'type': 'attack-pattern', 'created': '2020-03-13T20:15:31.974Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1078.001', 'url': 'https://attack.mitre.org/techniques/T1078/001'}, {'external_id': 'CAPEC-70', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/70.html'}, {'source_name': 'Microsoft Local Accounts Feb 2019', 'url': 'https://docs.microsoft.com/en-us/windows/security/identity-protection/access-control/local-accounts', 'description': 'Microsoft. (2018, December 9). Local Accounts. Retrieved February 11, 2019.'}, {'source_name': 'AWS Root User', 'url': 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html', 'description': 'Amazon. (n.d.). AWS Account Root User. Retrieved April 5, 2021.'}, {'source_name': 'Threat Matrix for Kubernetes', 'url': 'https://www.microsoft.com/security/blog/2020/04/02/attack-matrix-kubernetes/', 'description': 'Weizman, Y. (2020, April 2). Threat Matrix for Kubernetes. Retrieved March 30, 2021.'}, {'source_name': 'Metasploit SSH Module', 'url': 'https://github.com/rapid7/metasploit-framework/tree/master/modules/exploits/linux/ssh', 'description': 'undefined. (n.d.). Retrieved April 12, 2019.'}], 'modified': '2021-04-05T20:14:26.846Z', 'name': 'Default Accounts', 'description': 'Adversaries may obtain and abuse credentials of a default account as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Default accounts are those that are built-into an OS, such as the Guest or Administrator accounts on Windows systems. Default accounts also include default factory/provider set accounts on other types of systems, software, or devices, including the root user account in AWS and the default service account in Kubernetes.(Citation: Microsoft Local Accounts Feb 2019)(Citation: AWS Root User)(Citation: Threat Matrix for Kubernetes)\\n\\nDefault accounts are not limited to client machines, rather also include accounts that are preset for equipment such as network devices and computer applications whether they are internal, open source, or commercial. Appliances that come preset with a username and password combination pose a serious threat to organizations that do not change it post installation, as they are easy targets for an adversary. Similarly, adversaries may also utilize publicly disclosed or stolen [Private Keys](https://attack.mitre.org/techniques/T1552/004) or credential materials to legitimately connect to remote environments via [Remote Services](https://attack.mitre.org/techniques/T1021).(Citation: Metasploit SSH Module)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'initial-access'}], 'x_mitre_detection': 'Monitor whether default accounts have been activated or logged into. These audits should also include checks on any appliances and applications for default credentials or SSH keys, and if any are discovered, they should be updated immediately.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['User Account: User Account Authentication', 'Logon Session: Logon Session Creation'], 'x_mitre_permissions_required': ['Administrator', 'User']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1078.001",
+                "display_name": "Valid Accounts: Default Accounts",
+                "atomic_tests": [
+                    {
+                        "name": "Enable Guest account with RDP capability and admin privileges",
+                        "auto_generated_guid": "99747561-ed8d-47f2-9c91-1e5fde1ed6e0",
+                        "description": "After execution the Default Guest account will be enabled (Active) and added to Administrators and Remote Desktop Users Group,\nand desktop will allow multiple RDP connections.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "guest_user": {
+                                "description": "Specify the guest account",
+                                "type": "string",
+                                "default": "guest"
+                            },
+                            "guest_password": {
+                                "description": "Specify the guest password",
+                                "type": "string",
+                                "default": "Password123!"
+                            },
+                            "local_admin_group": {
+                                "description": "Specify the admin localgroup name",
+                                "type": "string",
+                                "default": "Administrators"
+                            },
+                            "remote_desktop_users_group_name": {
+                                "description": "Specify the remote desktop users group name",
+                                "type": "string",
+                                "default": "Remote Desktop Users"
+                            },
+                            "remove_rdp_access_during_cleanup": {
+                                "description": "Set to 1 if you want the cleanup to remove RDP access to machine",
+                                "type": "integer",
+                                "default": 0
+                            }
+                        },
+                        "executor": {
+                            "command": "net user #{guest_user} /active:yes\nnet user #{guest_user} #{guest_password}\nnet localgroup #{local_admin_group} #{guest_user} /add\nnet localgroup \"#{remote_desktop_users_group_name}\" #{guest_user} /add\nreg add \"hklm\\system\\CurrentControlSet\\Control\\Terminal Server\" /v fDenyTSConnections /t REG_DWORD /d 0 /f\nreg add \"hklm\\system\\CurrentControlSet\\Control\\Terminal Server\" /v \"AllowTSConnections\" /t REG_DWORD /d 0x1 /f",
+                            "cleanup_command": "net user #{guest_user} /active:no >nul 2>&1\nnet localgroup #{local_admin_group} #{guest_user} /delete >nul 2>&1\nnet localgroup \"#{remote_desktop_users_group_name}\" #{guest_user} /delete >nul 2>&1\nif #{remove_rdp_access_during_cleanup} NEQ 1 (echo Note: set remove_rdp_access_during_cleanup input argument to disable RDP access during cleanup)\nif #{remove_rdp_access_during_cleanup} EQU 1 (reg delete \"hklm\\system\\CurrentControlSet\\Control\\Terminal Server\" /v fDenyTSConnections /f >nul 2>&1)\nif #{remove_rdp_access_during_cleanup} EQU 1 (reg delete \"hklm\\system\\CurrentControlSet\\Control\\Terminal Server\" /v \"AllowTSConnections\" /f >nul 2>&1)",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Activate Guest Account",
+                        "auto_generated_guid": "aa6cb8c4-b582-4f8e-b677-37733914abda",
+                        "description": "The Adversaries can activate the default Guest user. The guest account is inactivated by default\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "guest_user": {
+                                "description": "Specify the guest account",
+                                "type": "string",
+                                "default": "guest"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user #{guest_user} /active:yes\n",
+                            "cleanup_command": "net user #{guest_user} /active:no\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Enable Guest Account on macOS",
+                        "auto_generated_guid": "0315bdff-4178-47e9-81e4-f31a6d23f7e4",
+                        "description": "This test enables the guest account on macOS using sysadminctl utility.",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "sudo sysadminctl -guestAccount on",
+                            "cleanup_command": "sudo sysadminctl -guestAccount off",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:31:16"
+}

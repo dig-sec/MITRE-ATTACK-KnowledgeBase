@@ -1,0 +1,518 @@
+{
+    "id": "T1059.003",
+    "name": "Windows Command Shell",
+    "description": "Adversaries may abuse the Windows command shell for execution. The Windows command shell ([cmd](S0106)) is the primary command prompt on Windows systems. The Windows command prompt can be used to control almost any aspect of a system, with various permission levels required for different subsets of commands. The command prompt can be invoked remotely via [Remote Services](T1021) such as [SSH](T1021.004).(Citation: SSH in Windows)\nBatch files (ex: .bat or .cmd) also provide the shell with a list of sequential commands to run, as well as normal scripting operations such as conditionals and loops. Common uses of batch files include long or repetitive tasks, or the need to run the same set of commands on multiple systems.\nAdversaries may leverage [cmd](S0106) to execute various commands and payloads. Common uses include [cmd](S0106) to execute a single command, or abusing [cmd](S0106) interactively with input and output forwarded over a command and control channel.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Execution",
+    "data_sources": "Command: Command Execution, Process: Process Creation",
+    "detection": "Usage of the Windows command shell may be common on administrator, developer, or power user systems depending on job function. If scripting is restricted for normal users, then any attempt to enable scripts running on a system would be considered suspicious. If scripts are not commonly used on a system, but enabled, scripts running out of cycle from patching or other administrator functions are suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.\nScripts are likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for script execution and subsequent behavior. Actions may be related to network and system information Discovery, Collection, or other scriptable post-compromise behaviors and could be used as indicators of detection leading back to the source script.",
+    "url": "https://attack.mitre.org/techniques/T1059/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1059.003",
+                "atomic_attack_guid": "00682c9f-7df4-4df8-950b-6dcaaa3ad9af",
+                "atomic_attack_name": "Command prompt writing script to file then executes it",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Whoami.EXE Execution With Output Option",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_whoami_output.yml",
+                        "remote_content": "title: Whoami.EXE Execution With Output Option\nid: c30fb093-1109-4dc8-88a8-b30d11c95a5d\nstatus: test\ndescription: Detects the execution of \"whoami.exe\" with the \"/FO\" flag to choose CSV as output format or with redirection options to export the results to a file for later use.\nreferences:\n    - https://brica.de/alerts/alert/public/1247926/agent-tesla-keylogger-delivered-inside-a-power-iso-daa-archive/\n    - https://app.any.run/tasks/7eaba74e-c1ea-400f-9c17-5e30eee89906/\n    - https://www.youtube.com/watch?v=DsJ9ByX84o4&t=6s\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-28\nmodified: 2023-12-04\ntags:\n    - attack.discovery\n    - attack.t1033\n    - car.2016-03-001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_main_img:\n        - Image|endswith: '\\whoami.exe'\n        - OriginalFileName: 'whoami.exe'\n    selection_main_cli:\n        CommandLine|contains:\n            - ' /FO CSV'\n            - ' -FO CSV'\n    selection_special:\n        CommandLine|contains: 'whoami*>'\n    condition: all of selection_main_* or selection_special\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.003",
+                "atomic_attack_guid": "df81db1b-066c-4802-9bc8-b6d030c3ba8e",
+                "atomic_attack_name": "Command Prompt read contents from CMD file and execute",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Read Contents From Stdin Via Cmd.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_stdin_redirect.yml",
+                        "remote_content": "title: Read Contents From Stdin Via Cmd.EXE\nid: 241e802a-b65e-484f-88cd-c2dc10f9206d\nrelated:\n    - id: 00a4bacd-6db4-46d5-9258-a7d5ebff4003\n      type: obsolete\nstatus: test\ndescription: Detect the use of \"<\" to read and potentially execute a file via cmd.exe\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1059.003/T1059.003.md\n    - https://web.archive.org/web/20220306121156/https://www.x86matthew.com/view_post?id=ntdll_pipe\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-03-07\ntags:\n    - attack.execution\n    - attack.t1059.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - OriginalFileName: 'Cmd.Exe'\n        - Image|endswith: '\\cmd.exe'\n    selection_cli:\n        CommandLine|contains: '<'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.003",
+                "atomic_attack_guid": "127b4afe-2346-4192-815c-69042bec570e",
+                "atomic_attack_name": "Writes text to a file and displays it.",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "401e5d00-b944-11ea-8f9a-00163ecd60ae",
+                    "4f154fb6-27d1-4813-a759-78b93e0b9c48",
+                    "00a4bacd-6db4-46d5-9258-a7d5ebff4003",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "1c373b6d-76ce-4553-997d-8c1da9a6b5f5",
+                    "087790e3-3287-436c-bccf-cbd0184a7db1",
+                    "095c4227-2a9e-45da-9268-cec186be53b1",
+                    "0a99eb3e-1617-41bd-b095-13dc767f3def",
+                    "846b866e-2a57-46ee-8e16-85fa92759be7",
+                    "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                    "647c7b9e-d784-4fda-b9a0-45c565a7b729",
+                    "023394c4-29d5-46ab-92b8-6a534c6f447b",
+                    "ee5e119b-1f75-4b34-add8-3be976961e39",
+                    "e507feb7-5f73-4ef6-a970-91bb6f6d744f",
+                    "058f4380-962d-40a5-afce-50207d36d7e2",
+                    "b5522a23-82da-44e5-9c8b-e10ed8955f88",
+                    "2b30fa36-3a18-402f-a22d-bf4ce2189f35",
+                    "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+                    "d1fcf083-a721-4223-aedf-bf8960798d62",
+                    "f0b70adb-0075-43b0-9745-e82a1c608fcc",
+                    "ba778144-5e3d-40cf-8af9-e28fb1df1e20",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "1ac8666b-046f-4201-8aba-1951aaec03a3",
+                    "1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df",
+                    "5cddf373-ef00-4112-ad72-960ac29bac34"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "401e5d00-b944-11ea-8f9a-00163ecd60ae",
+                        "lookup_data": {
+                            "description": "Detect run not allowed files. Applocker is a very useful tool, especially on servers where unprivileged users have access. For example terminal servers. You need configure applocker and log collect to receive these events.",
+                            "raw": "author: Pushkarev Dmitry\ndate: 2020/06/28\ndescription: Detect run not allowed files. Applocker is a very useful tool, especially\n  on servers where unprivileged users have access. For example terminal servers. You\n  need configure applocker and log collect to receive these events.\ndetection:\n  condition: selection\n  selection:\n    EventID:\n    - 8004\n    - 8007\n    - 8022\n    - 8025\nfalsepositives:\n- Need tuning applocker or add exceptions in SIEM\nfields:\n- PolicyName\n- RuleId\n- RuleName\n- TargetUser\n- TargetProcessId\n- FilePath\n- FileHash\n- Fqbn\nid: 401e5d00-b944-11ea-8f9a-00163ecd60ae\nlevel: medium\nlogsource:\n  product: windows\n  service: applocker\nmodified: 2021/11/27\nreferences:\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/applocker/what-is-applocker\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/applocker/using-event-viewer-with-applocker\n- https://nxlog.co/documentation/nxlog-user-guide/applocker.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1204.002\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.006\n- attack.t1059.007\ntitle: File Was Not Allowed To Run\n",
+                            "sigma:id": "401e5d00-b944-11ea-8f9a-00163ecd60ae",
+                            "title": "File Was Not Allowed To Run",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4f154fb6-27d1-4813-a759-78b93e0b9c48",
+                        "lookup_data": {
+                            "description": "Detects Cobalt Strike module/commands accidentally entered in CMD shell",
+                            "raw": "author: _pete_0, TheDFIRReport\ndate: 2022/05/06\ndescription: Detects Cobalt Strike module/commands accidentally entered in CMD shell\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - Invoke-UserHunter\n    - Invoke-ShareFinder\n    - Invoke-Kerberoast\n    - Invoke-SMBAutoBrute\n    - Invoke-Nightmare\n    - zerologon\n    - av_query\n  selection_img:\n  - OriginalFileName: Cmd.Exe\n  - Image|endswith: \\cmd.exe\nfalsepositives:\n- Unknown\nid: 4f154fb6-27d1-4813-a759-78b93e0b9c48\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/cobalt-4-5-user-guide.pdf\n- https://thedfirreport.com/2021/10/04/bazarloader-and-the-conti-leaks/\n- https://thedfirreport.com/2022/06/16/sans-ransomware-summit-2022-can-you-detect-this/\nrelated:\n- id: 647c7b9e-d784-4fda-b9a0-45c565a7b729\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.003\ntitle: Operator Bloopers Cobalt Strike Modules\n",
+                            "sigma:id": "4f154fb6-27d1-4813-a759-78b93e0b9c48",
+                            "title": "Operator Bloopers Cobalt Strike Modules",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "00a4bacd-6db4-46d5-9258-a7d5ebff4003",
+                        "lookup_data": {
+                            "description": "Detect use of \"/R <\" to read and execute a file via cmd.exe",
+                            "raw": "author: frack113\ndate: 2022/08/20\ndescription: Detect use of \"/R <\" to read and execute a file via cmd.exe\ndetection:\n  condition: all of selection_*\n  selection_cmd:\n  - OriginalFileName: Cmd.Exe\n  - Image|endswith: \\cmd.exe\n  selection_read:\n  - ParentCommandLine|contains|all:\n    - 'cmd '\n    - '/r '\n    - <\n  - CommandLine|contains|all:\n    - 'cmd '\n    - '/r '\n    - <\nfalsepositives:\n- Legitimate use\nid: 00a4bacd-6db4-46d5-9258-a7d5ebff4003\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1059.003/T1059.003.md\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.003\ntitle: Read and Execute a File Via Cmd.exe\n",
+                            "sigma:id": "00a4bacd-6db4-46d5-9258-a7d5ebff4003",
+                            "title": "Read and Execute a File Via Cmd.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1c373b6d-76ce-4553-997d-8c1da9a6b5f5",
+                        "lookup_data": {
+                            "description": "Detects exploitation attempt of privilege escalation vulnerability via SetupComplete.cmd and PartnerSetupComplete.cmd described in CVE-2019-1378",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019/11/15\ndescription: Detects exploitation attempt of privilege escalation vulnerability via\n  SetupComplete.cmd and PartnerSetupComplete.cmd described in CVE-2019-1378\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Windows\\WinSxS\\\n    - C:\\Windows\\Setup\\\n  selection:\n    ParentCommandLine|contains|all:\n    - \\cmd.exe\n    - /c\n    - C:\\Windows\\Setup\\Scripts\\\n    ParentCommandLine|endswith:\n    - SetupComplete.cmd\n    - PartnerSetupComplete.cmd\nfalsepositives:\n- Unknown\nid: 1c373b6d-76ce-4553-997d-8c1da9a6b5f5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.embercybersecurity.com/blog/cve-2019-1378-exploiting-an-access-control-privilege-escalation-vulnerability-in-windows-10-update-assistant-wua\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1068\n- attack.execution\n- attack.t1059.003\n- attack.t1574\n- cve.2019.1378\ntitle: Exploiting SetupComplete.cmd CVE-2019-1378\n",
+                            "sigma:id": "1c373b6d-76ce-4553-997d-8c1da9a6b5f5",
+                            "title": "Exploiting SetupComplete.cmd CVE-2019-1378",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "087790e3-3287-436c-bccf-cbd0184a7db1",
+                        "lookup_data": {
+                            "description": "detects the usage of path traversal in cmd.exe indicating possible command/argument confusion/hijacking",
+                            "raw": "author: xknow @xknow_infosec, Tim Shelton\ndate: 2020/06/11\ndescription: detects the usage of path traversal in cmd.exe indicating possible command/argument\n  confusion/hijacking\ndetection:\n  condition: all of selection_* and not 1 of falsepositive*\n  falsepositive_1:\n    CommandLine|contains: \\Tasktop\\keycloak\\bin\\/../../jre\\bin\\java\n  selection_1:\n  - ParentCommandLine|contains: cmd\n  - ParentImage|endswith: \\cmd.exe\n  selection_2:\n    CommandLine|contains: /../../\n    ParentCommandLine|contains:\n    - /c\n    - /k\n    - /r\nfalsepositives:\n- (not much) some benign Java tools may product false-positive commandlines for loading\n  libraries\nid: 087790e3-3287-436c-bccf-cbd0184a7db1\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/18\nreferences:\n- https://hackingiscool.pl/cmdhijack-command-argument-confusion-with-path-traversal-in-cmd-exe/\n- https://twitter.com/Oddvarmoe/status/1270633613449723905\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\ntitle: Cmd.exe CommandLine Path Traversal\n",
+                            "sigma:id": "087790e3-3287-436c-bccf-cbd0184a7db1",
+                            "title": "Cmd.exe CommandLine Path Traversal",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "095c4227-2a9e-45da-9268-cec186be53b1",
+                        "lookup_data": {
+                            "description": "Back in Black: Unlocking a LockBit 3.0 Ransomware Attack",
+                            "link": "http://www.botvrij.eu/data/feed-osint/095c4227-2a9e-45da-9268-cec186be53b1.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1661104992",
+                            "uuid": "095c4227-2a9e-45da-9268-cec186be53b1",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0a99eb3e-1617-41bd-b095-13dc767f3def",
+                        "lookup_data": {
+                            "description": "Detect the use of Jlaive to execute assemblies in a copied PowerShell",
+                            "raw": "author: Jose Luis Sanchez Martinez (@Joseliyo_Jstnk)\ndate: 2022/05/24\ndescription: Detect the use of Jlaive to execute assemblies in a copied PowerShell\ndetection:\n  condition: parent_selection and (1 of selection*)\n  parent_selection:\n    ParentCommandLine|endswith: .bat\n    ParentImage|endswith: \\cmd.exe\n  selection1:\n    CommandLine|contains|all:\n    - powershell.exe\n    - .bat.exe\n    Image|endswith: \\xcopy.exe\n  selection2:\n    CommandLine|contains|all:\n    - pwsh.exe\n    - .bat.exe\n    Image|endswith: \\xcopy.exe\n  selection3:\n    CommandLine|contains|all:\n    - +s\n    - +h\n    - .bat.exe\n    Image|endswith: \\attrib.exe\nfalsepositives:\n- Unknown\nid: 0a99eb3e-1617-41bd-b095-13dc767f3def\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://jstnk9.github.io/jstnk9/research/Jlaive-Antivirus-Evasion-Tool\n- https://github.com/ch2sh/Jlaive\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.003\ntitle: Jlaive Usage For Assembly Execution In-Memory\n",
+                            "sigma:id": "0a99eb3e-1617-41bd-b095-13dc767f3def",
+                            "title": "Jlaive Usage For Assembly Execution In-Memory",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "846b866e-2a57-46ee-8e16-85fa92759be7",
+                        "lookup_data": {
+                            "description": "Detects the exploitation of Zoho ManageEngine Desktop Central Java Deserialization vulnerability reported as CVE-2020-10189",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/03/25\ndescription: Detects the exploitation of Zoho ManageEngine Desktop Central Java Deserialization\n  vulnerability reported as CVE-2020-10189\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\bitsadmin.exe\n    - \\systeminfo.exe\n    - \\net.exe\n    - \\net1.exe\n    - \\reg.exe\n    - \\query.exe\n    ParentImage|endswith: DesktopCentral_Server\\jre\\bin\\java.exe\nfalsepositives:\n- Unknown\nid: 846b866e-2a57-46ee-8e16-85fa92759be7\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/21\nreferences:\n- https://www.fireeye.com/blog/threat-research/2020/03/apt41-initiates-global-intrusion-campaign-using-multiple-exploits.html\n- https://vulmon.com/exploitdetails?qidtp=exploitdb&qid=48224\nstatus: test\ntags:\n- attack.initial_access\n- attack.t1190\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.s0190\n- cve.2020.10189\ntitle: Exploited CVE-2020-10189 Zoho ManageEngine\n",
+                            "sigma:id": "846b866e-2a57-46ee-8e16-85fa92759be7",
+                            "title": "Exploited CVE-2020-10189 Zoho ManageEngine",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                        "lookup_data": {
+                            "description": "Detects a suspicious child process of a Microsoft HTML Help system when executing compiled HTML files (.chm)",
+                            "raw": "author: Maxim Pavlunin\ndate: 2020/04/01\ndescription: Detects a suspicious child process of a Microsoft HTML Help system when\n  executing compiled HTML files (.chm)\ndetection:\n  condition: 1 of selection_*\n  selection_1:\n    Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\regsvr32.exe\n    - \\wmic.exe\n    - \\rundll32.exe\n    - \\MSHTA.EXE\n    - \\CertUtil.exe\n    - \\CertReq.exe\n    - \\MSbuild.exe\n    - \\installutil.exe\n    - \\schtasks.exe\n    - \\msiexec.exe\n    ParentImage:\n    - C:\\Windows\\hh.exe\n    - C:\\Windows\\SysWOW64\\hh.exe\n  selection_2:\n    CommandLine|contains:\n    - .application\n    - \\Downloads\\\n    - \\Content.Outlook\\\n    - \\AppData\\Local\\Temp\\\n    Image|endswith:\n    - \\Windows\\hh.exe\n    - \\Windows\\SysWOW64\\hh.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 52cad028-0ff0-4854-8f67-d25dfcbc78b4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/24\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/chm-badness-delivers-a-banking-trojan/\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-27939090904026cc396b0b629c8e4314acd6f5dac40a676edbc87f4567b47eb7\n- https://www.ptsecurity.com/ww-en/analytics/pt-esc-threat-intelligence/higaisa-or-winnti-apt-41-backdoors-old-and-new/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.001\n- attack.t1218.010\n- attack.t1218.011\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.007\n- attack.t1047\n- attack.t1566\n- attack.t1566.001\n- attack.initial_access\n- attack.t1218\ntitle: HTML Help Shell Spawn\n",
+                            "sigma:id": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                            "title": "HTML Help Shell Spawn",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "647c7b9e-d784-4fda-b9a0-45c565a7b729",
+                        "lookup_data": {
+                            "description": "Detects use of Cobalt Strike commands accidentally entered in the CMD shell",
+                            "raw": "author: _pete_0, TheDFIRReport\ndate: 2022/05/06\ndescription: Detects use of Cobalt Strike commands accidentally entered in the CMD\n  shell\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - psinject\n    - spawnas\n    - make_token\n    - remote-exec\n    - rev2self\n    - dcsync\n    - logonpasswords\n    - execute-assembly\n    - getsystem\n    CommandLine|startswith:\n    - 'cmd '\n    - cmd.exe\n    - c:\\windows\\system32\\cmd.exe\n  selection_img:\n  - OriginalFileName: Cmd.Exe\n  - Image|endswith: \\cmd.exe\nfalsepositives:\n- Unknown\nid: 647c7b9e-d784-4fda-b9a0-45c565a7b729\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/cobalt-4-5-user-guide.pdf\n- https://thedfirreport.com/2021/10/04/bazarloader-and-the-conti-leaks/\n- https://thedfirreport.com/2022/06/16/sans-ransomware-summit-2022-can-you-detect-this/\nrelated:\n- id: 4f154fb6-27d1-4813-a759-78b93e0b9c48\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.003\ntitle: Operator Bloopers Cobalt Strike Commands\n",
+                            "sigma:id": "647c7b9e-d784-4fda-b9a0-45c565a7b729",
+                            "title": "Operator Bloopers Cobalt Strike Commands",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "023394c4-29d5-46ab-92b8-6a534c6f447b",
+                        "lookup_data": {
+                            "description": "Detects suspicious Hangul Word Processor (Hanword) sub processes that could indicate an exploitation",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/10/24\ndescription: Detects suspicious Hangul Word Processor (Hanword) sub processes that\n  could indicate an exploitation\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\gbb.exe\n    ParentImage|endswith: \\Hwp.exe\nfalsepositives:\n- Unknown\nid: 023394c4-29d5-46ab-92b8-6a534c6f447b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.securitynewspaper.com/2016/11/23/technical-teardown-exploit-malware-hwp-files/\n- https://www.hybrid-analysis.com/search?query=context:74940dcc5b38f9f9b1a0fea760d344735d7d91b610e6d5bd34533dd0153402c5&from_sample=5db135000388385a7644131f&block_redirect=1\n- https://twitter.com/cyberwar_15/status/1187287262054076416\n- https://blog.alyac.co.kr/1901\n- https://en.wikipedia.org/wiki/Hangul_(word_processor)\nstatus: test\ntags:\n- attack.initial_access\n- attack.t1566.001\n- attack.execution\n- attack.t1203\n- attack.t1059.003\n- attack.g0032\ntitle: Suspicious HWP Sub Processes\n",
+                            "sigma:id": "023394c4-29d5-46ab-92b8-6a534c6f447b",
+                            "title": "Suspicious HWP Sub Processes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ee5e119b-1f75-4b34-add8-3be976961e39",
+                        "lookup_data": {
+                            "description": "detects the usage of path traversal in conhost.exe indicating possible command/argument confusion/hijacking",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/14\ndescription: detects the usage of path traversal in conhost.exe indicating possible\n  command/argument confusion/hijacking\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: /../../\n    ParentCommandLine|contains: conhost\nfalsepositives:\n- Unlikely\nid: ee5e119b-1f75-4b34-add8-3be976961e39\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://pentestlab.blog/2020/07/06/indirect-command-execution/\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.003\ntitle: Conhost.exe CommandLine Path Traversal\n",
+                            "sigma:id": "ee5e119b-1f75-4b34-add8-3be976961e39",
+                            "title": "Conhost.exe CommandLine Path Traversal",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e507feb7-5f73-4ef6-a970-91bb6f6d744f",
+                        "lookup_data": {
+                            "description": "Detects Elise backdoor acitivty as used by APT32",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/01/31\ndescription: Detects Elise backdoor acitivty as used by APT32\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains: '\\Windows\\Caches\\NavShExt.dll '\n    Image: C:\\Windows\\SysWOW64\\cmd.exe\n  selection2:\n    CommandLine|endswith: \\AppData\\Roaming\\MICROS~1\\Windows\\Caches\\NavShExt.dll,Setting\nfalsepositives:\n- Unknown\nid: e507feb7-5f73-4ef6-a970-91bb6f6d744f\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://community.rsa.com/community/products/netwitness/blog/2018/02/13/lotus-blossom-continues-asean-targeting\nstatus: test\ntags:\n- attack.g0030\n- attack.g0050\n- attack.s0081\n- attack.execution\n- attack.t1059.003\ntitle: Elise Backdoor\n",
+                            "sigma:id": "e507feb7-5f73-4ef6-a970-91bb6f6d744f",
+                            "title": "Elise Backdoor",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "058f4380-962d-40a5-afce-50207d36d7e2",
+                        "lookup_data": {
+                            "description": "Detect various execution methods of the CrackMapExec pentesting framework",
+                            "raw": "author: Thomas Patzke\ndate: 2020/05/22\ndescription: Detect various execution methods of the CrackMapExec pentesting framework\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - powershell.exe -exec bypass -noni -nop -w 1 -C \"\n    - 'powershell.exe -noni -nop -w 1 -enc '\n    CommandLine|endswith:\n    - cmd.exe /Q /c * 1> \\\\\\\\*\\\\*\\\\* 2>&1\n    - cmd.exe /C * > \\\\\\\\*\\\\*\\\\* 2>&1\n    - cmd.exe /C * > *\\\\Temp\\\\* 2>&1\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 058f4380-962d-40a5-afce-50207d36d7e2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/byt3bl33d3r/CrackMapExec\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1053\n- attack.t1059.003\n- attack.t1059.001\n- attack.s0106\ntitle: CrackMapExec Command Execution\n",
+                            "sigma:id": "058f4380-962d-40a5-afce-50207d36d7e2",
+                            "title": "CrackMapExec Command Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b5522a23-82da-44e5-9c8b-e10ed8955f88",
+                        "lookup_data": {
+                            "description": "Adversaries may abuse the Windows command shell for execution.\nThe Windows command shell ([cmd](https://attack.mitre.org/software/S0106)) is the primary command prompt on Windows systems.\nThe Windows command prompt can be used to control almost any aspect of a system, with various permission levels required for different subsets of commands.\nBatch files (ex: .bat or .cmd) also provide the shell with a list of sequential commands to run, as well as normal scripting operations such as conditionals and loops.\nCommon uses of batch files include long or repetitive tasks, or the need to run the same set of commands on multiple system\n",
+                            "raw": "author: frack113\ndate: 2022/01/02\ndescription: 'Adversaries may abuse the Windows command shell for execution.\n\n  The Windows command shell ([cmd](https://attack.mitre.org/software/S0106)) is the\n  primary command prompt on Windows systems.\n\n  The Windows command prompt can be used to control almost any aspect of a system,\n  with various permission levels required for different subsets of commands.\n\n  Batch files (ex: .bat or .cmd) also provide the shell with a list of sequential\n  commands to run, as well as normal scripting operations such as conditionals and\n  loops.\n\n  Common uses of batch files include long or repetitive tasks, or the need to run\n  the same set of commands on multiple system\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_batch:\n    ScriptBlockText|contains:\n    - .cmd\n    - .bat\n  selection_start:\n    ScriptBlockText|contains: Start-Process\nfalsepositives:\n- Legitimate administration script\nid: b5522a23-82da-44e5-9c8b-e10ed8955f88\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1059.003/T1059.003.md#atomic-test-1---create-and-execute-batch-script\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\ntitle: Powershell Execute Batch Script\n",
+                            "sigma:id": "b5522a23-82da-44e5-9c8b-e10ed8955f88",
+                            "title": "Powershell Execute Batch Script",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2b30fa36-3a18-402f-a22d-bf4ce2189f35",
+                        "lookup_data": {
+                            "description": "Detects activity that could be related to Baby Shark malware",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/02/24\ndescription: Detects activity that could be related to Baby Shark malware\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - reg query \"HKEY_CURRENT_USER\\Software\\Microsoft\\Terminal Server Client\\Default\"\n    - powershell.exe mshta.exe http\n    - cmd.exe /c taskkill /im cmd.exe\nfalsepositives:\n- Unknown\nid: 2b30fa36-3a18-402f-a22d-bf4ce2189f35\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://unit42.paloaltonetworks.com/new-babyshark-malware-targets-u-s-national-security-think-tanks/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\n- attack.t1059.001\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1218.005\ntitle: Baby Shark Activity\n",
+                            "sigma:id": "2b30fa36-3a18-402f-a22d-bf4ce2189f35",
+                            "title": "Baby Shark Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+                        "lookup_data": {
+                            "description": "Detects actions caused by the RedMimicry Winnti playbook",
+                            "raw": "author: Alexander Rausch\ndate: 2020/06/24\ndescription: Detects actions caused by the RedMimicry Winnti playbook\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - gthread-3.6.dll\n    - \\Windows\\Temp\\tmp.bat\n    - sigcmm-2.4.dll\n    Image|endswith:\n    - \\rundll32.exe\n    - \\cmd.exe\nfalsepositives:\n- Unknown\nid: 95022b85-ff2a-49fa-939a-d7b8f56eeb9b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://redmimicry.com/posts/redmimicry-winnti/\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1106\n- attack.t1059.003\n- attack.t1218.011\ntitle: RedMimicry Winnti Playbook Execution\n",
+                            "sigma:id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+                            "title": "RedMimicry Winnti Playbook Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d1fcf083-a721-4223-aedf-bf8960798d62",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1059.003",
+                            "mitre-cti:description": "Adversaries may abuse the Windows command shell for execution. The Windows command shell ([cmd](https://attack.mitre.org/software/S0106)) is the primary command prompt on Windows systems. The Windows command prompt can be used to control almost any aspect of a system, with various permission levels required for different subsets of commands. The command prompt can be invoked remotely via [Remote Services](https://attack.mitre.org/techniques/T1021) such as [SSH](https://attack.mitre.org/techniques/T1021/004).(Citation: SSH in Windows)\n\nBatch files (ex: .bat or .cmd) also provide the shell with a list of sequential commands to run, as well as normal scripting operations such as conditionals and loops. Common uses of batch files include long or repetitive tasks, or the need to run the same set of commands on multiple systems.\n\nAdversaries may leverage [cmd](https://attack.mitre.org/software/S0106) to execute various commands and payloads. Common uses include [cmd](https://attack.mitre.org/software/S0106) to execute a single command, or abusing [cmd](https://attack.mitre.org/software/S0106) interactively with input and output forwarded over a command and control channel.",
+                            "mitre-cti:name": "Windows Command Shell",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--d1fcf083-a721-4223-aedf-bf8960798d62', 'type': 'attack-pattern', 'created': '2020-03-09T14:12:31.196Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1059.003', 'url': 'https://attack.mitre.org/techniques/T1059/003'}, {'source_name': 'SSH in Windows', 'url': 'https://docs.microsoft.com/en-us/windows/terminal/tutorials/ssh', 'description': 'Microsoft. (2020, May 19). Tutorial: SSH in Windows Terminal. Retrieved July 26, 2021.'}], 'modified': '2021-07-26T17:13:07.345Z', 'name': 'Windows Command Shell', 'description': 'Adversaries may abuse the Windows command shell for execution. The Windows command shell ([cmd](https://attack.mitre.org/software/S0106)) is the primary command prompt on Windows systems. The Windows command prompt can be used to control almost any aspect of a system, with various permission levels required for different subsets of commands. The command prompt can be invoked remotely via [Remote Services](https://attack.mitre.org/techniques/T1021) such as [SSH](https://attack.mitre.org/techniques/T1021/004).(Citation: SSH in Windows)\\n\\nBatch files (ex: .bat or .cmd) also provide the shell with a list of sequential commands to run, as well as normal scripting operations such as conditionals and loops. Common uses of batch files include long or repetitive tasks, or the need to run the same set of commands on multiple systems.\\n\\nAdversaries may leverage [cmd](https://attack.mitre.org/software/S0106) to execute various commands and payloads. Common uses include [cmd](https://attack.mitre.org/software/S0106) to execute a single command, or abusing [cmd](https://attack.mitre.org/software/S0106) interactively with input and output forwarded over a command and control channel.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}], 'x_mitre_detection': 'Usage of the Windows command shell may be common on administrator, developer, or power user systems depending on job function. If scripting is restricted for normal users, then any attempt to enable scripts running on a system would be considered suspicious. If scripts are not commonly used on a system, but enabled, scripts running out of cycle from patching or other administrator functions are suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.\\n\\nScripts are likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for script execution and subsequent behavior. Actions may be related to network and system information Discovery, Collection, or other scriptable post-compromise behaviors and could be used as indicators of detection leading back to the source script.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution'], 'x_mitre_permissions_required': ['User'], 'x_mitre_remote_support': True}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0b70adb-0075-43b0-9745-e82a1c608fcc",
+                        "lookup_data": {
+                            "description": "Detects a ZxShell start by the called and well-known function name",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2017/07/20\ndescription: Detects a ZxShell start by the called and well-known function name\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - zxFunction\n    - RemoteDiskXXXXX\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: f0b70adb-0075-43b0-9745-e82a1c608fcc\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.hybrid-analysis.com/sample/5d2a4cde9fa7c2fdbf39b2e2ffd23378d0c50701a3095d1e91e3cf922d7b0b16?environmentId=100\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\n- attack.defense_evasion\n- attack.t1218.011\n- attack.s0412\n- attack.g0001\ntitle: ZxShell Malware\n",
+                            "sigma:id": "f0b70adb-0075-43b0-9745-e82a1c608fcc",
+                            "title": "ZxShell Malware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ba778144-5e3d-40cf-8af9-e28fb1df1e20",
+                        "lookup_data": {
+                            "description": "Detects Trojan loader activity as used by APT28",
+                            "raw": "author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community\ndate: 2018/03/01\ndescription: Detects Trojan loader activity as used by APT28\ndetection:\n  condition: all of selection*\n  selection1:\n    CommandLine|contains|all:\n    - rundll32.exe\n    - '%APPDATA%\\'\n  selection2:\n  - CommandLine|contains: .dat\",\n  - CommandLine|endswith:\n    - .dll\",#1\n    - '.dll #1'\n    - '.dll\" #1'\nfalsepositives:\n- Unknown\nid: ba778144-5e3d-40cf-8af9-e28fb1df1e20\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/07\nreferences:\n- https://researchcenter.paloaltonetworks.com/2018/02/unit42-sofacy-attacks-multiple-government-entities/\n- https://www.reverse.it/sample/e3399d4802f9e6d6d539e3ae57e7ea9a54610a7c4155a6541df8e94d67af086e?environmentId=100\n- https://twitter.com/ClearskySec/status/960924755355369472\nstatus: test\ntags:\n- attack.g0007\n- attack.execution\n- attack.t1059.003\n- attack.defense_evasion\n- car.2013-10-002\n- attack.t1218.011\ntitle: Sofacy Trojan Loader Activity\n",
+                            "sigma:id": "ba778144-5e3d-40cf-8af9-e28fb1df1e20",
+                            "title": "Sofacy Trojan Loader Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ac8666b-046f-4201-8aba-1951aaec03a3",
+                        "lookup_data": {
+                            "description": "Detects a suspicious command line execution that includes an URL and AppData string in the command line parameters as used by several droppers (js/vbs > powershell)",
+                            "raw": "author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community\ndate: 2019/01/16\ndescription: Detects a suspicious command line execution that includes an URL and\n  AppData string in the command line parameters as used by several droppers (js/vbs\n  > powershell)\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - http\n    - ://\n    - '%AppData%'\n    Image|endswith: \\cmd.exe\nfalsepositives:\n- High\nfields:\n- CommandLine\n- ParentCommandLine\nid: 1ac8666b-046f-4201-8aba-1951aaec03a3\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.hybrid-analysis.com/sample/3a1f01206684410dbe8f1900bbeaaa543adfcd07368ba646b499fa5274b9edf6?environmentId=100\n- https://www.hybrid-analysis.com/sample/f16c729aad5c74f19784a24257236a8bbe27f7cdc4a89806031ec7f1bebbd475?environmentId=100\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\n- attack.t1059.001\n- attack.command_and_control\n- attack.t1105\ntitle: Command Line Execution with Suspicious URL and AppData Strings\n",
+                            "sigma:id": "1ac8666b-046f-4201-8aba-1951aaec03a3",
+                            "title": "Command Line Execution with Suspicious URL and AppData Strings",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df",
+                        "lookup_data": {
+                            "description": "Detects changes to the EC2 instance startup script. The shell script will be executed as root/SYSTEM every time the specific instances are booted up.",
+                            "raw": "author: faloker\ndate: 2020/02/12\ndescription: Detects changes to the EC2 instance startup script. The shell script\n  will be executed as root/SYSTEM every time the specific instances are booted up.\ndetection:\n  condition: selection_source\n  selection_source:\n    eventName: ModifyInstanceAttribute\n    eventSource: ec2.amazonaws.com\n    requestParameters.attribute: userData\nfalsepositives:\n- Valid changes to the startup script\nid: 1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df\nlevel: high\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/06/07\nreferences:\n- https://github.com/RhinoSecurityLabs/pacu/blob/866376cd711666c775bbfcde0524c817f2c5b181/pacu/modules/ec2__startup_shell_script/main.py#L9\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.004\ntitle: AWS EC2 Startup Shell Script Change\n",
+                            "sigma:id": "1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df",
+                            "title": "AWS EC2 Startup Shell Script Change",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cddf373-ef00-4112-ad72-960ac29bac34",
+                        "lookup_data": {
+                            "description": "Detects command line parameters used by Koadic hack tool",
+                            "raw": "author: wagga, Jonhnathan Ribeiro, oscd.community\ndate: 2020/01/12\ndescription: Detects command line parameters used by Koadic hack tool\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - /q\n    - /c\n    - chcp\n    Image|endswith: \\cmd.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 5cddf373-ef00-4112-ad72-960ac29bac34\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://unit42.paloaltonetworks.com/unit42-sofacy-groups-parallel-attacks/\n- https://github.com/offsecginger/koadic/blob/457f9a3ff394c989cdb4c599ab90eb34fb2c762c/data/stager/js/stdlib.js\n- https://blog.f-secure.com/hunting-for-koadic-a-com-based-rootkit/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.007\ntitle: Koadic Execution\n",
+                            "sigma:id": "5cddf373-ef00-4112-ad72-960ac29bac34",
+                            "title": "Koadic Execution",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1059.003",
+                "display_name": "Command and Scripting Interpreter: Windows Command Shell",
+                "atomic_tests": [
+                    {
+                        "name": "Create and Execute Batch Script",
+                        "auto_generated_guid": "9e8894c0-50bd-4525-a96c-d4ac78ece388",
+                        "description": "Creates and executes a simple batch script. Upon execution, CMD will briefly launch to run the batch script then close again.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_to_execute": {
+                                "description": "Command to execute within script.",
+                                "type": "string",
+                                "default": "dir"
+                            },
+                            "script_path": {
+                                "description": "Script path.",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1059.003_script.bat"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Batch file must exist on disk at specified location (#{script_path})\n",
+                                "prereq_command": "if (Test-Path \"#{script_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item \"#{script_path}\" -Force | Out-Null\nSet-Content -Path \"#{script_path}\" -Value \"#{command_to_execute}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process \"#{script_path}\"\n",
+                            "cleanup_command": "Remove-Item \"#{script_path}\" -Force -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Writes text to a file and displays it.",
+                        "auto_generated_guid": "127b4afe-2346-4192-815c-69042bec570e",
+                        "description": "Writes text to a file and display the results. This test is intended to emulate the dropping of a malicious file to disk.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_contents_path": {
+                                "description": "Path to the file that the command prompt will drop.",
+                                "type": "path",
+                                "default": "%TEMP%\\test.bin"
+                            },
+                            "message": {
+                                "description": "Message that will be written to disk and then displayed.",
+                                "type": "string",
+                                "default": "Hello from the Windows Command Prompt!"
+                            }
+                        },
+                        "executor": {
+                            "command": "echo \"#{message}\" > \"#{file_contents_path}\" & type \"#{file_contents_path}\"\n",
+                            "cleanup_command": "del \"#{file_contents_path}\" >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Suspicious Execution via Windows Command Shell",
+                        "auto_generated_guid": "d0eb3597-a1b3-4d65-b33b-2cda8d397f20",
+                        "description": "Command line executed via suspicious invocation. Example is from the 2021 Threat Detection Report by Red Canary.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "File to output to",
+                                "type": "string",
+                                "default": "hello.txt"
+                            },
+                            "input_message": {
+                                "description": "Message to write to file",
+                                "type": "string",
+                                "default": "Hello, from CMD!"
+                            }
+                        },
+                        "executor": {
+                            "command": "%LOCALAPPDATA:~-3,1%md /c echo #{input_message} > #{output_file} & type #{output_file}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Simulate BlackByte Ransomware Print Bombing",
+                        "auto_generated_guid": "6b2903ac-8f36-450d-9ad5-b220e8a2dcb9",
+                        "description": "This test attempts to open a file a specified number of times in Wordpad, then prints the contents. \nIt is designed to mimic BlackByte ransomware's print bombing technique, where tree.dll, which contains the ransom note, is opened in Wordpad 75 times and then printed. \nSee https://redcanary.com/blog/blackbyte-ransomware/. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_to_print": {
+                                "description": "File to be opened/printed by Wordpad.",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1059_003note.txt"
+                            },
+                            "max_to_print": {
+                                "description": "The maximum number of Wordpad windows the test will open/print.",
+                                "type": "integer",
+                                "default": 75
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "File to print must exist on disk at specified location (#{file_to_print})\n",
+                                "prereq_command": "if (test-path \"#{file_to_print}\"){exit 0} else {exit 1}\n",
+                                "get_prereq_command": "new-item \"#{file_to_print}\" -value \"This file has been created by T1059.003 Test 4\" -Force | Out-Null\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmd /c \"for /l %x in (1,1,#{max_to_print}) do start wordpad.exe /p #{file_to_print}\" | out-null\n",
+                            "cleanup_command": "stop-process -name wordpad -force -erroraction silentlycontinue\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Command Prompt read contents from CMD file and execute",
+                        "auto_generated_guid": "df81db1b-066c-4802-9bc8-b6d030c3ba8e",
+                        "description": "Simulate Raspberry Robin using the \"standard-in\" command prompt feature cmd `/R <` to read and execute a file via cmd.exe\nSee https://redcanary.com/blog/raspberry-robin/. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_file": {
+                                "description": "CMD file that is read by Command Prompt and execute, which launches calc.exe",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1059.003\\src\\t1059.003_cmd.cmd"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "CMD file must exist on disk at specified location (#{input_file})\n",
+                                "prereq_command": "if (Test-Path \"#{input_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{input_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1059.003/src/t1059.003_cmd.cmd\" -OutFile \"#{input_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmd /r cmd<\"#{input_file}\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Command prompt writing script to file then executes it",
+                        "auto_generated_guid": "00682c9f-7df4-4df8-950b-6dcaaa3ad9af",
+                        "description": "    Simulate DarkGate malware's second stage by writing a VBscript to disk directly from the command prompt then executing it.\n    The script will execute 'whoami' then exit.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "script_path": {
+                                "description": "Path in which the script will be written.",
+                                "type": "path",
+                                "default": "%TEMP%\\"
+                            },
+                            "script_name": {
+                                "description": "Script name (without the extension)",
+                                "type": "string",
+                                "default": "AtomicTest"
+                            }
+                        },
+                        "executor": {
+                            "command": " c:\\windows\\system32\\cmd.exe /c cd /d #{script_path} & echo Set objShell = CreateObject(\"WScript.Shell\"):Set objExec = objShell.Exec(\"whoami\"):Set objExec = Nothing:Set objShell = Nothing > #{script_name}.vbs & #{script_name}.vbs",
+                            "cleanup_command": "del \"#{script_name}.vbs\" >nul 2>&1",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:05:07"
+}

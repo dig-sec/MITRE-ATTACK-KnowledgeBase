@@ -1,0 +1,626 @@
+{
+    "id": "T1490",
+    "name": "Inhibit System Recovery",
+    "description": "Adversaries may delete or remove built-in operating system data and turn off services designed to aid in the recovery of a corrupted system to prevent recovery.(Citation: Talos Olympic Destroyer 2018)(Citation: FireEye WannaCry 2017) Operating systems may contain features that can help fix corrupted systems, such as a backup catalog, volume shadow copies, and automatic repair features. Adversaries may disable or delete system recovery features to augment the effects of [Data Destruction](T1485) and [Data Encrypted for Impact](T1486).(Citation: Talos Olympic Destroyer 2018)(Citation: FireEye WannaCry 2017)\nA number of native Windows utilities have been used by adversaries to disable or delete system recovery features:\n* `vssadmin.exe` can be used to delete all volume shadow copies on a system - `vssadmin.exe delete shadows /all /quiet`\n* [Windows Management Instrumentation](T1047) can be used to delete volume shadow copies - `wmic shadowcopy delete`\n* `wbadmin.exe` can be used to delete the Windows Backup Catalog - `wbadmin.exe delete catalog -quiet`\n* `bcdedit.exe` can be used to disable automatic Windows recovery features by modifying boot configuration data - `bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures & bcdedit /set {default} recoveryenabled no`",
+    "platforms": "Windows, macOS, Linux",
+    "kill_chain_phases": "Impact",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Service: Service Metadata, Windows Registry: Windows Registry Key Modification, File: File Deletion",
+    "detection": "Use process monitoring to monitor the execution and command line parameters of binaries involved in inhibiting system recovery, such as vssadmin, wbadmin, and bcdedit. The Windows event logs, ex. Event ID 524 indicating a system catalog was deleted, may contain entries associated with suspicious activity.\nMonitor the status of services involved in system recovery. Monitor the registry for changes associated with system recovery features (ex: the creation of `HKEY_CURRENT_USERSoftwarePoliciesMicrosoftPreviousVersionsDisableLocalPage`).",
+    "url": "https://attack.mitre.org/techniques/T1490",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "a4420f93-5386-4290-b780-f4f66abc7070",
+                "atomic_attack_name": "Modify VSS Service Permissions",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Allow Service Access Using Security Descriptor Tampering Via Sc.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sc_sdset_allow_service_changes.yml",
+                        "remote_content": "title: Allow Service Access Using Security Descriptor Tampering Via Sc.EXE\nid: 6c8fbee5-dee8-49bc-851d-c3142d02aa47\nrelated:\n    - id: a537cfc3-4297-4789-92b5-345bfd845ad0 # Generic SD tampering\n      type: similar\nstatus: test\ndescription: Detects suspicious DACL modifications to allow access to a service from a suspicious trustee. This can be used to override access restrictions set by previous ACLs.\nreferences:\n    - https://twitter.com/0gtweet/status/1628720819537936386\n    - https://itconnect.uw.edu/tools-services-support/it-systems-infrastructure/msinf/other-help/understanding-sddl-syntax/\n    - https://learn.microsoft.com/en-us/windows/win32/secauthz/sid-strings\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-28\ntags:\n    - attack.persistence\n    - attack.t1543.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_sc:\n        - Image|endswith: '\\sc.exe'\n        - OriginalFileName: 'sc.exe'\n    selection_sdset:\n        CommandLine|contains|all:\n            - 'sdset'\n            - 'A;' # Allow Access\n    selection_trustee:\n        CommandLine|contains:\n            - ';IU' # Interactively logged-on user\n            - ';SU' # Service logon user\n            - ';BA' # Built-in administrators\n            - ';SY' # Local system\n            - ';WD' # Everyone\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Service Security Descriptor Tampering Via Sc.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sc_sdset_modification.yml",
+                        "remote_content": "title: Service Security Descriptor Tampering Via Sc.EXE\nid: 98c5aeef-32d5-492f-b174-64a691896d25\nrelated:\n    - id: 99cf1e02-00fb-4c0d-8375-563f978dfd37 # Deny Service Access\n      type: similar\n    - id: a537cfc3-4297-4789-92b5-345bfd845ad0 # Specific Technique\n      type: similar\nstatus: test\ndescription: Detection of sc.exe utility adding a new service with special permission which hides that service.\nreferences:\n    - https://blog.talosintelligence.com/2021/10/threat-hunting-in-large-datasets-by.html\n    - https://www.sans.org/blog/red-team-tactics-hiding-windows-services/\n    - https://twitter.com/Alh4zr3d/status/1580925761996828672\n    - https://twitter.com/0gtweet/status/1628720819537936386\n    - https://itconnect.uw.edu/tools-services-support/it-systems-infrastructure/msinf/other-help/understanding-sddl-syntax/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-28\ntags:\n    - attack.persistence\n    - attack.defense-evasion\n    - attack.privilege-escalation\n    - attack.t1574.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\sc.exe'\n        - OriginalFileName: 'sc.exe'\n    selection_cli:\n        CommandLine|contains: 'sdset'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Deny Service Access Using Security Descriptor Tampering Via Sc.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sc_sdset_deny_service_access.yml",
+                        "remote_content": "title: Deny Service Access Using Security Descriptor Tampering Via Sc.EXE\nid: 99cf1e02-00fb-4c0d-8375-563f978dfd37\nrelated:\n    - id: 98c5aeef-32d5-492f-b174-64a691896d25 # Generic SD tampering\n      type: similar\n    - id: a537cfc3-4297-4789-92b5-345bfd845ad0 # Specific Technique\n      type: similar\nstatus: test\ndescription: Detects suspicious DACL modifications to deny access to a service that affects critical trustees. This can be used to hide services or make them unstoppable.\nreferences:\n    - https://www.sans.org/blog/red-team-tactics-hiding-windows-services/\n    - https://itconnect.uw.edu/tools-services-support/it-systems-infrastructure/msinf/other-help/understanding-sddl-syntax/\n    - https://learn.microsoft.com/en-us/windows/win32/secauthz/sid-strings\nauthor: Jonhnathan Ribeiro, oscd.community\ndate: 2020-10-16\nmodified: 2023-02-28\ntags:\n    - attack.persistence\n    - attack.t1543.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_sc:\n        - Image|endswith: '\\sc.exe'\n        - OriginalFileName: 'sc.exe'\n    selection_sdset:\n        CommandLine|contains|all:\n            - 'sdset'\n            - 'D;' # Deny Access\n    selection_trustee:\n        CommandLine|contains:\n            - ';IU' # Interactively logged-on user\n            - ';SU' # Service logon user\n            - ';BA' # Built-in administrators\n            - ';SY' # Local system\n            - ';WD' # Everyone\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "da558b07-69ae-41b9-b9d4-4d98154a7049",
+                "atomic_attack_name": "Windows - vssadmin Resize Shadowstorage Volume",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Deletion Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml",
+                        "remote_content": "title: Shadow Copies Deletion Using Operating Systems Utilities\nid: c947b146-0abc-4c87-9c64-b17e9d7274a2\nstatus: stable\ndescription: Shadow Copies deletion using operating systems utilities\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://blog.talosintelligence.com/2017/05/wannacry.html\n    - https://securingtomorrow.mcafee.com/other-blogs/mcafee-labs/new-teslacrypt-ransomware-arrives-via-spam/\n    - https://www.bleepingcomputer.com/news/security/why-everyone-should-disable-vssadmin-exe-now/\n    - https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\n    - https://github.com/Neo23x0/Raccine#the-process\n    - https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/gen_ransomware_command_lines.yar\n    - https://redcanary.com/blog/intelligence-insights-october-2021/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/blackbyte-exbyte-ransomware\nauthor: Florian Roth (Nextron Systems), Michael Haag, Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community, Andreas Hunkeler (@Karneades)\ndate: 2019-10-22\nmodified: 2022-11-03\ntags:\n    - attack.defense-evasion\n    - attack.impact\n    - attack.t1070\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection1_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n              - '\\diskshadow.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n              - 'diskshadow.exe'\n    selection1_cli:\n        CommandLine|contains|all:\n            - 'shadow'  # will match \"delete shadows\" and \"shadowcopy delete\" and \"shadowstorage\"\n            - 'delete'\n    selection2_img:\n        - Image|endswith: '\\wbadmin.exe'\n        - OriginalFileName: 'WBADMIN.EXE'\n    selection2_cli:\n        CommandLine|contains|all:\n            - 'delete'\n            - 'catalog'\n            - 'quiet' # will match -quiet or /quiet\n    selection3_img:\n        - Image|endswith: '\\vssadmin.exe'\n        - OriginalFileName: 'VSSADMIN.EXE'\n    selection3_cli:\n        CommandLine|contains|all:\n            - 'resize'\n            - 'shadowstorage'\n        CommandLine|contains:\n            - 'unbounded'\n            - '/MaxSize='\n    condition: (all of selection1*) or (all of selection2*) or (all of selection3*)\nfields:\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Legitimate Administrator deletes Shadow Copies using operating systems utilities for legitimate reason\n    - LANDesk LDClient Ivanti-PSModule (PS EncodedCommand)\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "1c68c68d-83a4-4981-974e-8993055fa034",
+                "atomic_attack_name": "Windows - Disable the SR scheduled task",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Disable Important Scheduled Task",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_disable.yml",
+                        "remote_content": "title: Disable Important Scheduled Task\nid: 9ac94dc8-9042-493c-ba45-3b5e7c86b980\nrelated:\n    - id: 7595ba94-cf3b-4471-aa03-4f6baa9e5fad # Security-Audting Eventlog\n      type: similar\nstatus: test\ndescription: Detects when adversaries stop services or processes by disabling their respective scheduled tasks in order to conduct data destructive activities\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-8---windows---disable-the-sr-scheduled-task\n    - https://twitter.com/MichalKoczwara/status/1553634816016498688\n    - https://thedfirreport.com/2021/10/18/icedid-to-xinglocker-ransomware-in-24-hours/\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems), X__Junior\ndate: 2021-12-26\nmodified: 2024-08-25\ntags:\n    - attack.impact\n    - attack.t1489\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains|all:\n            - '/Change'\n            - '/TN'\n            - '/disable'\n        CommandLine|contains:\n            # Add more important tasks\n            - '\\Windows\\BitLocker'\n            - '\\Windows\\ExploitGuard'\n            - '\\Windows\\ExploitGuard\\ExploitGuard MDM policy Refresh'\n            - '\\Windows\\SystemRestore\\SR'\n            - '\\Windows\\UpdateOrchestrator\\'\n            - '\\Windows\\Windows Defender\\'\n            - '\\Windows\\WindowsBackup\\'\n            - '\\Windows\\WindowsUpdate\\'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "6b1dbaf6-cc8a-4ea6-891f-6058569653bf",
+                "atomic_attack_name": "Windows - Delete Backup Files",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "File Deletion Via Del",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_del_execution.yml",
+                        "remote_content": "title: File Deletion Via Del\nid: 379fa130-190e-4c3f-b7bc-6c8e834485f3\nstatus: test\ndescription: |\n    Detects execution of the builtin \"del\"/\"erase\" commands in order to delete files.\n    Adversaries may delete files left behind by the actions of their intrusion activity.\n    Malware, tools, or other non-native files dropped or created on a system by an adversary may leave traces to indicate to what was done within a network and how.\n    Removal of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/erase\nauthor: frack113\ndate: 2022-01-15\nmodified: 2024-03-05\ntags:\n    - attack.defense-evasion\n    - attack.t1070.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_del:\n        CommandLine|contains:\n            - 'del '\n            - 'erase '\n    selection_flags:\n        CommandLine|contains|windash:\n            - ' -f' # Force deleting of read-only files.\n            - ' -s' # Delete specified files from all subdirectories.\n            - ' -q' # Quiet mode, do not ask if ok to delete on global wildcard\n    condition: all of selection_*\nfalsepositives:\n    - False positives levels will differ Depending on the environment. You can use a combination of ParentImage and other keywords from the CommandLine field to filter legitimate activity\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "39a295ca-7059-4a88-86f6-09556c1211e7",
+                "atomic_attack_name": "Windows - Delete Volume Shadow Copies via WMI with PowerShell",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Deletion Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml",
+                        "remote_content": "title: Shadow Copies Deletion Using Operating Systems Utilities\nid: c947b146-0abc-4c87-9c64-b17e9d7274a2\nstatus: stable\ndescription: Shadow Copies deletion using operating systems utilities\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://blog.talosintelligence.com/2017/05/wannacry.html\n    - https://securingtomorrow.mcafee.com/other-blogs/mcafee-labs/new-teslacrypt-ransomware-arrives-via-spam/\n    - https://www.bleepingcomputer.com/news/security/why-everyone-should-disable-vssadmin-exe-now/\n    - https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\n    - https://github.com/Neo23x0/Raccine#the-process\n    - https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/gen_ransomware_command_lines.yar\n    - https://redcanary.com/blog/intelligence-insights-october-2021/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/blackbyte-exbyte-ransomware\nauthor: Florian Roth (Nextron Systems), Michael Haag, Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community, Andreas Hunkeler (@Karneades)\ndate: 2019-10-22\nmodified: 2022-11-03\ntags:\n    - attack.defense-evasion\n    - attack.impact\n    - attack.t1070\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection1_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n              - '\\diskshadow.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n              - 'diskshadow.exe'\n    selection1_cli:\n        CommandLine|contains|all:\n            - 'shadow'  # will match \"delete shadows\" and \"shadowcopy delete\" and \"shadowstorage\"\n            - 'delete'\n    selection2_img:\n        - Image|endswith: '\\wbadmin.exe'\n        - OriginalFileName: 'WBADMIN.EXE'\n    selection2_cli:\n        CommandLine|contains|all:\n            - 'delete'\n            - 'catalog'\n            - 'quiet' # will match -quiet or /quiet\n    selection3_img:\n        - Image|endswith: '\\vssadmin.exe'\n        - OriginalFileName: 'VSSADMIN.EXE'\n    selection3_cli:\n        CommandLine|contains|all:\n            - 'resize'\n            - 'shadowstorage'\n        CommandLine|contains:\n            - 'unbounded'\n            - '/MaxSize='\n    condition: (all of selection1*) or (all of selection2*) or (all of selection3*)\nfields:\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Legitimate Administrator deletes Shadow Copies using operating systems utilities for legitimate reason\n    - LANDesk LDClient Ivanti-PSModule (PS EncodedCommand)\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Deletion of Volume Shadow Copies via WMI with PowerShell",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_shadowcopy_deletion.yml",
+                        "remote_content": "title: Deletion of Volume Shadow Copies via WMI with PowerShell\nid: 21ff4ca9-f13a-41ad-b828-0077b2af2e40\nrelated:\n    - id: e17121b4-ef2a-4418-8a59-12fb1631fa9e\n      type: derived\n    - id: c1337eb8-921a-4b59-855b-4ba188ddcc42\n      type: similar\nstatus: test\ndescription: Detects deletion of Windows Volume Shadow Copies with PowerShell code and Get-WMIObject. This technique is used by numerous ransomware families such as Sodinokibi/REvil\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-5---windows---delete-volume-shadow-copies-via-wmi-with-powershell\n    - https://www.elastic.co/guide/en/security/current/volume-shadow-copy-deletion-via-powershell.html\nauthor: Tim Rauch, Elastic (idea)\ndate: 2022-09-20\nmodified: 2022-12-30\ntags:\n    - attack.impact\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_get:\n        CommandLine|contains:\n            - 'Get-WmiObject'\n            - 'gwmi'\n            - 'Get-CimInstance'\n            - 'gcim'\n    selection_shadowcopy:\n        CommandLine|contains: 'Win32_ShadowCopy'\n    selection_delete:\n        CommandLine|contains:\n            - '.Delete()'\n            - 'Remove-WmiObject'\n            - 'rwmi'\n            - 'Remove-CimInstance'\n            - 'rcim'\n    condition: all of selection*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "cf21060a-80b3-4238-a595-22525de4ab81",
+                "atomic_attack_name": "Windows - Disable Windows Recovery Console Repair",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Boot Configuration Tampering Via Bcdedit.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_bcdedit_boot_conf_tamper.yml",
+                        "remote_content": "title: Boot Configuration Tampering Via Bcdedit.EXE\nid: 1444443e-6757-43e4-9ea4-c8fc705f79a2\nstatus: stable\ndescription: Detects the use of the bcdedit command to tamper with the boot configuration data. This technique is often times used by malware or attackers as a destructive way before launching ransomware.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md\n    - https://eqllib.readthedocs.io/en/latest/analytics/c4732632-9c1d-4980-9fa8-1d98c93f918e.html\nauthor: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019-10-24\nmodified: 2023-02-15\ntags:\n    - attack.impact\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\bcdedit.exe'\n        - OriginalFileName: 'bcdedit.exe'\n    selection_set:\n        CommandLine|contains: 'set'\n    selection_cli:\n        - CommandLine|contains|all:\n              - 'bootstatuspolicy'\n              - 'ignoreallfailures'\n        - CommandLine|contains|all:\n              - 'recoveryenabled'\n              - 'no'\n    condition: all of selection_*\nfields:\n    - ComputerName\n    - User\n    - CommandLine\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "6a3ff8dd-f49c-4272-a658-11c2fe58bd88",
+                "atomic_attack_name": "Windows - Delete Volume Shadow Copies via WMI",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Deletion Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml",
+                        "remote_content": "title: Shadow Copies Deletion Using Operating Systems Utilities\nid: c947b146-0abc-4c87-9c64-b17e9d7274a2\nstatus: stable\ndescription: Shadow Copies deletion using operating systems utilities\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://blog.talosintelligence.com/2017/05/wannacry.html\n    - https://securingtomorrow.mcafee.com/other-blogs/mcafee-labs/new-teslacrypt-ransomware-arrives-via-spam/\n    - https://www.bleepingcomputer.com/news/security/why-everyone-should-disable-vssadmin-exe-now/\n    - https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\n    - https://github.com/Neo23x0/Raccine#the-process\n    - https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/gen_ransomware_command_lines.yar\n    - https://redcanary.com/blog/intelligence-insights-october-2021/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/blackbyte-exbyte-ransomware\nauthor: Florian Roth (Nextron Systems), Michael Haag, Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community, Andreas Hunkeler (@Karneades)\ndate: 2019-10-22\nmodified: 2022-11-03\ntags:\n    - attack.defense-evasion\n    - attack.impact\n    - attack.t1070\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection1_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n              - '\\diskshadow.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n              - 'diskshadow.exe'\n    selection1_cli:\n        CommandLine|contains|all:\n            - 'shadow'  # will match \"delete shadows\" and \"shadowcopy delete\" and \"shadowstorage\"\n            - 'delete'\n    selection2_img:\n        - Image|endswith: '\\wbadmin.exe'\n        - OriginalFileName: 'WBADMIN.EXE'\n    selection2_cli:\n        CommandLine|contains|all:\n            - 'delete'\n            - 'catalog'\n            - 'quiet' # will match -quiet or /quiet\n    selection3_img:\n        - Image|endswith: '\\vssadmin.exe'\n        - OriginalFileName: 'VSSADMIN.EXE'\n    selection3_cli:\n        CommandLine|contains|all:\n            - 'resize'\n            - 'shadowstorage'\n        CommandLine|contains:\n            - 'unbounded'\n            - '/MaxSize='\n    condition: (all of selection1*) or (all of selection2*) or (all of selection3*)\nfields:\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Legitimate Administrator deletes Shadow Copies using operating systems utilities for legitimate reason\n    - LANDesk LDClient Ivanti-PSModule (PS EncodedCommand)\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1490",
+                "atomic_attack_guid": "43819286-91a9-4369-90ed-d31fb4da2c01",
+                "atomic_attack_name": "Windows - Delete Volume Shadow Copies",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Deletion Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml",
+                        "remote_content": "title: Shadow Copies Deletion Using Operating Systems Utilities\nid: c947b146-0abc-4c87-9c64-b17e9d7274a2\nstatus: stable\ndescription: Shadow Copies deletion using operating systems utilities\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://blog.talosintelligence.com/2017/05/wannacry.html\n    - https://securingtomorrow.mcafee.com/other-blogs/mcafee-labs/new-teslacrypt-ransomware-arrives-via-spam/\n    - https://www.bleepingcomputer.com/news/security/why-everyone-should-disable-vssadmin-exe-now/\n    - https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\n    - https://github.com/Neo23x0/Raccine#the-process\n    - https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/gen_ransomware_command_lines.yar\n    - https://redcanary.com/blog/intelligence-insights-october-2021/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/blackbyte-exbyte-ransomware\nauthor: Florian Roth (Nextron Systems), Michael Haag, Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community, Andreas Hunkeler (@Karneades)\ndate: 2019-10-22\nmodified: 2022-11-03\ntags:\n    - attack.defense-evasion\n    - attack.impact\n    - attack.t1070\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection1_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n              - '\\diskshadow.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n              - 'diskshadow.exe'\n    selection1_cli:\n        CommandLine|contains|all:\n            - 'shadow'  # will match \"delete shadows\" and \"shadowcopy delete\" and \"shadowstorage\"\n            - 'delete'\n    selection2_img:\n        - Image|endswith: '\\wbadmin.exe'\n        - OriginalFileName: 'WBADMIN.EXE'\n    selection2_cli:\n        CommandLine|contains|all:\n            - 'delete'\n            - 'catalog'\n            - 'quiet' # will match -quiet or /quiet\n    selection3_img:\n        - Image|endswith: '\\vssadmin.exe'\n        - OriginalFileName: 'VSSADMIN.EXE'\n    selection3_cli:\n        CommandLine|contains|all:\n            - 'resize'\n            - 'shadowstorage'\n        CommandLine|contains:\n            - 'unbounded'\n            - '/MaxSize='\n    condition: (all of selection1*) or (all of selection2*) or (all of selection3*)\nfields:\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Legitimate Administrator deletes Shadow Copies using operating systems utilities for legitimate reason\n    - LANDesk LDClient Ivanti-PSModule (PS EncodedCommand)\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "37774c23-25a1-4adb-bb6d-8bb9fd59c0f8",
+                    "29fd07fc-9cfd-4331-b7fd-cc18dfa21052",
+                    "d223b46b-5621-4037-88fe-fda32eead684",
+                    "f1531fa4-5b84-4342-8f68-9cf3fdbd83d4",
+                    "89f75308-5b1b-4390-b2d8-d6b2340efaf8",
+                    "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+                    "c1337eb8-921a-4b59-855b-4ba188ddcc42",
+                    "5de03871-5d46-4539-a82d-3aa992a69a83",
+                    "b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046",
+                    "34493f6d-9441-45df-9cb4-4de473709081",
+                    "c73124a7-3e89-44a3-bdc1-25fe4df754b1",
+                    "333cdbe8-27bb-4246-bf82-b41a0dca4b70",
+                    "f57f8d16-1f39-4dcb-a604-6c73d9b54b3d",
+                    "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+                    "671ffc77-50a7-464f-9e3d-9ea2b493b26b",
+                    "1444443e-6757-43e4-9ea4-c8fc705f79a2",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "41d40bff-377a-43e2-8e1b-2e543069e079",
+                    "f5d8eed6-48a9-4cdf-a3d7-d1ffa99c3d2a",
+                    "56cb2bd3-5525-46bd-a454-ea895a5b4d0d",
+                    "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                    "bb25b897-bfc7-4128-839d-52e9764dbfa6",
+                    "06125661-3814-4e03-bfa2-1e4411c60ac3",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                    "e17121b4-ef2a-4418-8a59-12fb1631fa9e",
+                    "87df9ee1-5416-453a-8a08-e8d4a51e9ce1"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "37774c23-25a1-4adb-bb6d-8bb9fd59c0f8",
+                        "lookup_data": {
+                            "description": "Detects the image load of VSS DLL by uncommon executables",
+                            "raw": "author: frack113\ndate: 2022/10/31\ndescription: Detects the image load of VSS DLL by uncommon executables\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_legit:\n    Image|startswith:\n    - C:\\Windows\\\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n    - C:\\ProgramData\\Package Cache\\\n  selection:\n    ImageLoaded|endswith:\n    - \\vsstrace.dll\n    - \\vssapi.dll\nfalsepositives:\n- Unknown\nid: 37774c23-25a1-4adb-bb6d-8bb9fd59c0f8\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/14\nreferences:\n- https://github.com/ORCx41/DeleteShadowCopies\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.impact\n- attack.t1490\ntitle: Image Load of VSS Dll by Uncommon Executable\n",
+                            "sigma:id": "37774c23-25a1-4adb-bb6d-8bb9fd59c0f8",
+                            "title": "Image Load of VSS Dll by Uncommon Executable",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "29fd07fc-9cfd-4331-b7fd-cc18dfa21052",
+                        "lookup_data": {
+                            "description": "Detects specific process characteristics of Maze ransomware word document droppers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/05/08\ndescription: Detects specific process characteristics of Maze ransomware word document\n  droppers\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image|endswith: .tmp\n    ParentImage|endswith: \\WINWORD.exe\n  selection2:\n    CommandLine|endswith: shadowcopy delete\n    Image|endswith: \\wmic.exe\n    ParentImage|contains: \\Temp\\\n  selection3:\n    CommandLine|contains: \\..\\..\\system32\n    CommandLine|endswith: shadowcopy delete\nfalsepositives:\n- Unlikely\nfields:\n- ComputerName\n- User\n- Image\nid: 29fd07fc-9cfd-4331-b7fd-cc18dfa21052\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/06/27\nreferences:\n- https://www.fireeye.com/blog/threat-research/2020/05/tactics-techniques-procedures-associated-with-maze-ransomware-incidents.html\n- https://app.any.run/tasks/51e7185c-52d7-4efb-ac0d-e86340053473/\n- https://app.any.run/tasks/65a79440-373a-4725-8d74-77db9f2abda4/\nstatus: test\ntags:\n- attack.execution\n- attack.t1204.002\n- attack.t1047\n- attack.impact\n- attack.t1490\ntitle: Maze Ransomware\n",
+                            "sigma:id": "29fd07fc-9cfd-4331-b7fd-cc18dfa21052",
+                            "title": "Maze Ransomware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d223b46b-5621-4037-88fe-fda32eead684",
+                        "lookup_data": {
+                            "description": "Detects the addition of new root, CA or AuthRoot certificates to the Windows registry",
+                            "raw": "author: frack113\ndate: 2022/04/04\ndescription: Detects the addition of new root, CA or AuthRoot certificates to the\n  Windows registry\ndetection:\n  condition: selection\n  selection:\n    Details: Binary Data\n    EventType: Setvalue\n    TargetObject|contains:\n    - \\SOFTWARE\\Microsoft\\SystemCertificates\\Root\\Certificates\\\n    - \\SOFTWARE\\Policies\\Microsoft\\SystemCertificates\\Root\\Certificates\\\n    - \\SOFTWARE\\Microsoft\\EnterpriseCertificates\\Root\\Certificates\\\n    - \\SOFTWARE\\Microsoft\\SystemCertificates\\CA\\Certificates\\\n    - \\SOFTWARE\\Policies\\Microsoft\\SystemCertificates\\CA\\Certificates\\\n    - \\SOFTWARE\\Microsoft\\EnterpriseCertificates\\CA\\Certificates\\\n    - \\SOFTWARE\\Microsoft\\SystemCertificates\\AuthRoot\\Certificates\\\n    - \\SOFTWARE\\Policies\\Microsoft\\SystemCertificates\\AuthRoot\\Certificates\\\n    - \\SOFTWARE\\Microsoft\\EnterpriseCertificates\\AuthRoot\\Certificates\\\n    TargetObject|endswith: \\Blob\nfalsepositives:\n- Unknown\nid: d223b46b-5621-4037-88fe-fda32eead684\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/06/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1553.004/T1553.004.md#atomic-test-6---add-root-certificate-to-currentuser-certificate-store\n- https://posts.specterops.io/code-signing-certificate-cloning-attacks-and-defenses-6f98657fc6ec\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1490\ntitle: New Root or CA or AuthRoot Certificate to Store\n",
+                            "sigma:id": "d223b46b-5621-4037-88fe-fda32eead684",
+                            "title": "New Root or CA or AuthRoot Certificate to Store",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f1531fa4-5b84-4342-8f68-9cf3fdbd83d4",
+                        "lookup_data": {
+                            "description": "Detects specific process parameters as seen in DTRACK infections",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/10/30\ndescription: Detects specific process parameters as seen in DTRACK infections\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' echo EEEE > '\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: f1531fa4-5b84-4342-8f68-9cf3fdbd83d4\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://securelist.com/my-name-is-dtrack/93338/\n- https://app.any.run/tasks/4bc9860d-ab51-4077-9e09-59ad346b92fd/\n- https://app.any.run/tasks/ce4deab5-3263-494f-93e3-afb2b9d79f14/\nstatus: stable\ntags:\n- attack.impact\n- attack.t1490\ntitle: DTRACK Process Creation\n",
+                            "sigma:id": "f1531fa4-5b84-4342-8f68-9cf3fdbd83d4",
+                            "title": "DTRACK Process Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "89f75308-5b1b-4390-b2d8-d6b2340efaf8",
+                        "lookup_data": {
+                            "description": "Deletes the Windows systemstatebackup using wbadmin.exe.\nThis technique is used by numerous ransomware families.\nThis may only be successful on server platforms that have Windows Backup enabled.\n",
+                            "raw": "author: frack113\ndate: 2021/12/13\ndescription: 'Deletes the Windows systemstatebackup using wbadmin.exe.\n\n  This technique is used by numerous ransomware families.\n\n  This may only be successful on server platforms that have Windows Backup enabled.\n\n  '\ndetection:\n  condition: all of wbadmin_*\n  wbadmin_cmd:\n    CommandLine|contains|all:\n    - 'delete '\n    - 'systemstatebackup '\n    - -keepVersions:0\n  wbadmin_exe:\n  - Image|endswith: \\wbadmin.exe\n  - CommandLine|contains: wbadmin\nfalsepositives:\n- Unknown\nid: 89f75308-5b1b-4390-b2d8-d6b2340efaf8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/02/28\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-5---windows---delete-volume-shadow-copies-via-wmi-with-powershell\nstatus: test\ntags:\n- attack.impact\n- attack.t1490\ntitle: Wbadmin Delete Systemstatebackup\n",
+                            "sigma:id": "89f75308-5b1b-4390-b2d8-d6b2340efaf8",
+                            "title": "Wbadmin Delete Systemstatebackup",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+                        "lookup_data": {
+                            "description": "Shadow Copies deletion using operating systems utilities",
+                            "raw": "author: Florian Roth (Nextron Systems), Michael Haag, Teymur Kheirkhabarov, Daniil\n  Yugoslavskiy, oscd.community, Andreas Hunkeler (@Karneades)\ndate: 2019/10/22\ndescription: Shadow Copies deletion using operating systems utilities\ndetection:\n  condition: (all of selection1*) or (all of selection2*) or (all of selection3*)\n  selection1_cli:\n    CommandLine|contains|all:\n    - shadow\n    - delete\n  selection1_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wmic.exe\n    - \\vssadmin.exe\n    - \\diskshadow.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n    - wmic.exe\n    - VSSADMIN.EXE\n    - diskshadow.exe\n  selection2_cli:\n    CommandLine|contains|all:\n    - delete\n    - catalog\n    - quiet\n  selection2_img:\n  - Image|endswith: \\wbadmin.exe\n  - OriginalFileName: WBADMIN.EXE\n  selection3_cli:\n    CommandLine|contains:\n    - unbounded\n    - /MaxSize=\n    CommandLine|contains|all:\n    - resize\n    - shadowstorage\n  selection3_img:\n  - Image|endswith: \\vssadmin.exe\n  - OriginalFileName: VSSADMIN.EXE\nfalsepositives:\n- Legitimate Administrator deletes Shadow Copies using operating systems utilities\n  for legitimate reason\n- LANDesk LDClient Ivanti-PSModule (PS EncodedCommand)\nfields:\n- CommandLine\n- ParentCommandLine\nid: c947b146-0abc-4c87-9c64-b17e9d7274a2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/03\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://blog.talosintelligence.com/2017/05/wannacry.html\n- https://securingtomorrow.mcafee.com/other-blogs/mcafee-labs/new-teslacrypt-ransomware-arrives-via-spam/\n- https://www.bleepingcomputer.com/news/security/why-everyone-should-disable-vssadmin-exe-now/\n- https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\n- https://github.com/Neo23x0/Raccine#the-process\n- https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/gen_ransomware_command_lines.yar\n- https://redcanary.com/blog/intelligence-insights-october-2021/\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/blackbyte-exbyte-ransomware\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.impact\n- attack.t1070\n- attack.t1490\ntitle: Shadow Copies Deletion Using Operating Systems Utilities\n",
+                            "sigma:id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+                            "title": "Shadow Copies Deletion Using Operating Systems Utilities",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1337eb8-921a-4b59-855b-4ba188ddcc42",
+                        "lookup_data": {
+                            "description": "Detects deletion of Windows Volume Shadow Copies with PowerShell code and Get-WMIObject. This technique is used by numerous ransomware families such as Sodinokibi/REvil",
+                            "raw": "author: Tim Rauch\ndate: 2022/09/20\ndescription: Detects deletion of Windows Volume Shadow Copies with PowerShell code\n  and Get-WMIObject. This technique is used by numerous ransomware families such as\n  Sodinokibi/REvil\ndetection:\n  condition: all of selection*\n  selection_delete:\n    ScriptBlockText|contains:\n    - .Delete()\n    - Remove-WmiObject\n    - rwmi\n    - Remove-CimInstance\n    - rcim\n  selection_get:\n    ScriptBlockText|contains:\n    - Get-WmiObject\n    - gwmi\n    - Get-CimInstance\n    - gcim\n  selection_shadowcopy:\n    ScriptBlockText|contains: Win32_Shadowcopy\nfalsepositives:\n- Unknown\nid: c1337eb8-921a-4b59-855b-4ba188ddcc42\nlevel: high\nlogsource:\n  category: ps_script\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-5---windows---delete-volume-shadow-copies-via-wmi-with-powershell\n- https://www.elastic.co/guide/en/security/current/volume-shadow-copy-deletion-via-powershell.html\nrelated:\n- id: e17121b4-ef2a-4418-8a59-12fb1631fa9e\n  type: derived\n- id: 21ff4ca9-f13a-41ad-b828-0077b2af2e40\n  type: similar\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1490\ntitle: Deletion of Volume Shadow Copies via WMI with PowerShell - PS Script\n",
+                            "sigma:id": "c1337eb8-921a-4b59-855b-4ba188ddcc42",
+                            "title": "Deletion of Volume Shadow Copies via WMI with PowerShell - PS Script",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5de03871-5d46-4539-a82d-3aa992a69a83",
+                        "lookup_data": {
+                            "description": "Detects the modification of the registry to disable a system restore on the computer",
+                            "raw": "author: frack113\ndate: 2022/04/04\ndescription: Detects the modification of the registry to disable a system restore\n  on the computer\ndetection:\n  condition: selection\n  selection:\n    Details: DWORD (0x00000001)\n    EventType: Setvalue\n    TargetObject|contains:\n    - \\Policies\\Microsoft\\Windows NT\\SystemRestore\n    - \\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore\n    TargetObject|endswith:\n    - DisableConfig\n    - DisableSR\nfalsepositives:\n- Unknown\nid: 5de03871-5d46-4539-a82d-3aa992a69a83\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-9---disable-system-restore-through-registry\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1490\ntitle: Registry Disable System Restore\n",
+                            "sigma:id": "5de03871-5d46-4539-a82d-3aa992a69a83",
+                            "title": "Registry Disable System Restore",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046",
+                        "lookup_data": {
+                            "description": "HermeticWiper | New Destructive Malware Used In Cyber Attacks on Ukraine",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1664880605",
+                            "uuid": "b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "34493f6d-9441-45df-9cb4-4de473709081",
+                        "lookup_data": {
+                            "description": "#StopRansomware: MedusaLocker",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/34493f6d-9441-45df-9cb4-4de473709081.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1657009711",
+                            "uuid": "34493f6d-9441-45df-9cb4-4de473709081",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c73124a7-3e89-44a3-bdc1-25fe4df754b1",
+                        "lookup_data": {
+                            "description": "Detects a copy execution that targets a shadow copy (sometimes used to copy registry hives that are in use)",
+                            "raw": "author: Max Altgelt (Nextron Systems), Tobias Michalski (Nextron Systems)\ndate: 2021/08/09\ndescription: Detects a copy execution that targets a shadow copy (sometimes used to\n  copy registry hives that are in use)\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: copy \\\\\\\\\\?\\\\GLOBALROOT\\\\Device\\\\HarddiskVolumeShadowCopy\nfalsepositives:\n- Some rare backup scenarios\nid: c73124a7-3e89-44a3-bdc1-25fe4df754b1\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/13\nreferences:\n- https://twitter.com/vxunderground/status/1423336151860002816?s=20\n- https://www.virustotal.com/gui/file/03e9b8c2e86d6db450e5eceec057d7e369ee2389b9daecaf06331a95410aa5f8/detection\n- https://pentestlab.blog/2018/07/04/dumping-domain-password-hashes/\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1490\ntitle: Copy from Volume Shadow Copy\n",
+                            "sigma:id": "c73124a7-3e89-44a3-bdc1-25fe4df754b1",
+                            "title": "Copy from Volume Shadow Copy",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "333cdbe8-27bb-4246-bf82-b41a0dca4b70",
+                        "lookup_data": {
+                            "description": "Detects the image load of vss_ps.dll by uncommon executables",
+                            "raw": "author: Markus Neis, @markus_neis\ndate: 2021/07/07\ndescription: Detects the image load of vss_ps.dll by uncommon executables\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_legit:\n    Image|endswith:\n    - \\svchost.exe\n    - \\msiexec.exe\n    - \\vssvc.exe\n    - \\srtasks.exe\n    - \\tiworker.exe\n    - \\dllhost.exe\n    - \\searchindexer.exe\n    - \\dismhost.exe\n    - \\taskhostw.exe\n    - \\clussvc.exe\n    - \\thor64.exe\n    - \\thor.exe\n    - \\rundll32.exe\n    - \\inetsrv\\iissetup.exe\n    - \\inetsrv\\appcmd.exe\n    - \\WmiPrvSE.exe\n    Image|startswith: C:\\Windows\\\n  filter_programfiles:\n    Image|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n  filter_update:\n    CommandLine|contains: \\dismhost.exe {\n    CommandLine|startswith: C:\\$WinREAgent\\Scratch\\\n  selection:\n    ImageLoaded|endswith: \\vss_ps.dll\nfalsepositives:\n- Unknown\nid: 333cdbe8-27bb-4246-bf82-b41a0dca4b70\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/31\nreferences:\n- https://www.virustotal.com/gui/file/ba88ca45589fae0139a40ca27738a8fc2dfbe1be5a64a9558f4e0f52b35c5add\n- https://twitter.com/am0nsec/status/1412232114980982787\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.impact\n- attack.t1490\ntitle: Image Load of VSS_PS.dll by Uncommon Executable\n",
+                            "sigma:id": "333cdbe8-27bb-4246-bf82-b41a0dca4b70",
+                            "title": "Image Load of VSS_PS.dll by Uncommon Executable",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f57f8d16-1f39-4dcb-a604-6c73d9b54b3d",
+                        "lookup_data": {
+                            "description": "Detects a command that accesses password storing registry hives via volume shadow backups",
+                            "raw": "author: Max Altgelt (Nextron Systems), Tobias Michalski (Nextron Systems)\ndate: 2021/08/09\ndescription: Detects a command that accesses password storing registry hives via volume\n  shadow backups\ndetection:\n  condition: all of selection*\n  selection_1:\n    CommandLine|contains: \\\\\\\\\\?\\\\GLOBALROOT\\\\Device\\\\HarddiskVolumeShadowCopy\n  selection_2:\n    CommandLine|contains:\n    - \\\\NTDS.dit\n    - \\\\SYSTEM\n    - \\\\SECURITY\n    - C:\\\\tmp\\\\log\nfalsepositives:\n- Some rare backup scenarios\nid: f57f8d16-1f39-4dcb-a604-6c73d9b54b3d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://twitter.com/vxunderground/status/1423336151860002816?s=20\n- https://www.virustotal.com/gui/file/03e9b8c2e86d6db450e5eceec057d7e369ee2389b9daecaf06331a95410aa5f8/detection\n- https://pentestlab.blog/2018/07/04/dumping-domain-password-hashes/\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1490\ntitle: Sensitive Registry Access via Volume Shadow Copy\n",
+                            "sigma:id": "f57f8d16-1f39-4dcb-a604-6c73d9b54b3d",
+                            "title": "Sensitive Registry Access via Volume Shadow Copy",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+                        "lookup_data": {
+                            "description": "Detects deletion of Windows Volume Shadow Copies with PowerShell code and Get-WMIObject. This technique is used by numerous ransomware families such as Sodinokibi/REvil",
+                            "raw": "author: Tim Rauch\ndate: 2022/09/20\ndescription: Detects deletion of Windows Volume Shadow Copies with PowerShell code\n  and Get-WMIObject. This technique is used by numerous ransomware families such as\n  Sodinokibi/REvil\ndetection:\n  condition: all of selection*\n  selection_delete:\n    CommandLine|contains:\n    - .Delete()\n    - Remove-WmiObject\n    - rwmi\n    - Remove-CimInstance\n    - rcim\n  selection_get:\n    CommandLine|contains:\n    - Get-WmiObject\n    - gwmi\n    - Get-CimInstance\n    - gcim\n  selection_shadowcopy:\n    CommandLine|contains: Win32_Shadowcopy\nfalsepositives:\n- Unknown\nid: 21ff4ca9-f13a-41ad-b828-0077b2af2e40\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-5---windows---delete-volume-shadow-copies-via-wmi-with-powershell\n- https://www.elastic.co/guide/en/security/current/volume-shadow-copy-deletion-via-powershell.html\nrelated:\n- id: e17121b4-ef2a-4418-8a59-12fb1631fa9e\n  type: derived\n- id: c1337eb8-921a-4b59-855b-4ba188ddcc42\n  type: similar\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1490\ntitle: Deletion of Volume Shadow Copies via WMI with PowerShell\n",
+                            "sigma:id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+                            "title": "Deletion of Volume Shadow Copies via WMI with PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "671ffc77-50a7-464f-9e3d-9ea2b493b26b",
+                        "lookup_data": {
+                            "description": "Modifications to a config that will serve an adversary's impacts or persistence",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Modifications to a config that will serve an adversary's impacts or persistence\ndetection:\n  condition: keywords\n  keywords:\n  - ip http server\n  - ip https server\n  - kron policy-list\n  - kron occurrence\n  - policy-list\n  - access-list\n  - ip access-group\n  - archive maximum\nfalsepositives:\n- Legitimate administrators may run these commands\nfields:\n- CmdSet\nid: 671ffc77-50a7-464f-9e3d-9ea2b493b26b\nlevel: medium\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.persistence\n- attack.impact\n- attack.t1490\n- attack.t1505\n- attack.t1565.002\n- attack.t1053\ntitle: Cisco Modify Configuration\n",
+                            "sigma:id": "671ffc77-50a7-464f-9e3d-9ea2b493b26b",
+                            "title": "Cisco Modify Configuration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1444443e-6757-43e4-9ea4-c8fc705f79a2",
+                        "lookup_data": {
+                            "description": "Identifies use of the bcdedit command to delete boot configuration data. This tactic is sometimes used as by malware or an attacker as a destructive technique.",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019/10/24\ndescription: Identifies use of the bcdedit command to delete boot configuration data.\n  This tactic is sometimes used as by malware or an attacker as a destructive technique.\ndetection:\n  condition: all of selection*\n  selection1:\n  - Image|endswith: \\bcdedit.exe\n  - OriginalFileName: bcdedit.exe\n  selection2:\n    CommandLine|contains: set\n  selection3:\n  - CommandLine|contains|all:\n    - bootstatuspolicy\n    - ignoreallfailures\n  - CommandLine|contains|all:\n    - recoveryenabled\n    - 'no'\nfalsepositives:\n- Unlikely\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 1444443e-6757-43e4-9ea4-c8fc705f79a2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md\n- https://eqllib.readthedocs.io/en/latest/analytics/c4732632-9c1d-4980-9fa8-1d98c93f918e.html\nstatus: stable\ntags:\n- attack.impact\n- attack.t1490\ntitle: Modification of Boot Configuration\n",
+                            "sigma:id": "1444443e-6757-43e4-9ea4-c8fc705f79a2",
+                            "title": "Modification of Boot Configuration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "41d40bff-377a-43e2-8e1b-2e543069e079",
+                        "lookup_data": {
+                            "description": "Detects WannaCry ransomware activity",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom U. @c_APT_ure (collection), oscd.community,\n  Jonhnathan Ribeiro\ndate: 2019/01/16\ndescription: Detects WannaCry ransomware activity\ndetection:\n  condition: 1 of selection*\n  selection1:\n  - Image|endswith:\n    - \\tasksche.exe\n    - \\mssecsvc.exe\n    - \\taskdl.exe\n    - \\taskhsvc.exe\n    - \\taskse.exe\n    - \\111.exe\n    - \\lhdfrgui.exe\n    - \\linuxnew.exe\n    - \\wannacry.exe\n  - Image|contains: WanaDecryptor\n  selection2:\n  - CommandLine|contains|all:\n    - icacls\n    - /grant\n    - Everyone:F\n    - /T\n    - /C\n    - /Q\n  - CommandLine|contains|all:\n    - bcdedit\n    - /set\n    - '{default}'\n    - recoveryenabled\n    - 'no'\n  - CommandLine|contains|all:\n    - wbadmin\n    - delete\n    - catalog\n    - -quiet\n  - CommandLine|contains: '@Please_Read_Me@.txt'\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 41d40bff-377a-43e2-8e1b-2e543069e079\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/02/24\nreferences:\n- https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1210\n- attack.discovery\n- attack.t1083\n- attack.defense_evasion\n- attack.t1222.001\n- attack.impact\n- attack.t1486\n- attack.t1490\ntitle: WannaCry Ransomware\n",
+                            "sigma:id": "41d40bff-377a-43e2-8e1b-2e543069e079",
+                            "title": "WannaCry Ransomware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f5d8eed6-48a9-4cdf-a3d7-d1ffa99c3d2a",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1490",
+                            "mitre-cti:description": "Adversaries may delete or remove built-in operating system data and turn off services designed to aid in the recovery of a corrupted system to prevent recovery.(Citation: Talos Olympic Destroyer 2018)(Citation: FireEye WannaCry 2017) This may deny access to available backups and recovery options.\n\nOperating systems may contain features that can help fix corrupted systems, such as a backup catalog, volume shadow copies, and automatic repair features. Adversaries may disable or delete system recovery features to augment the effects of [Data Destruction](https://attack.mitre.org/techniques/T1485) and [Data Encrypted for Impact](https://attack.mitre.org/techniques/T1486).(Citation: Talos Olympic Destroyer 2018)(Citation: FireEye WannaCry 2017)\n\nA number of native Windows utilities have been used by adversaries to disable or delete system recovery features:\n\n* <code>vssadmin.exe</code> can be used to delete all volume shadow copies on a system - <code>vssadmin.exe delete shadows /all /quiet</code>\n* [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) can be used to delete volume shadow copies - <code>wmic shadowcopy delete</code>\n* <code>wbadmin.exe</code> can be used to delete the Windows Backup Catalog - <code>wbadmin.exe delete catalog -quiet</code>\n* <code>bcdedit.exe</code> can be used to disable automatic Windows recovery features by modifying boot configuration data - <code>bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures & bcdedit /set {default} recoveryenabled no</code>",
+                            "mitre-cti:name": "Inhibit System Recovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Yonatan Gotlib, Deep Instinct'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--f5d8eed6-48a9-4cdf-a3d7-d1ffa99c3d2a', 'created': '2019-04-02T13:54:43.136Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1490', 'url': 'https://attack.mitre.org/techniques/T1490'}, {'source_name': 'FireEye WannaCry 2017', 'url': 'https://www.fireeye.com/blog/threat-research/2017/05/wannacry-malware-profile.html', 'description': 'Berry, A., Homan, J., and Eitzman, R. (2017, May 23). WannaCry Malware Profile. Retrieved March 15, 2019.'}, {'source_name': 'Talos Olympic Destroyer 2018', 'url': 'https://blog.talosintelligence.com/2018/02/olympic-destroyer.html', 'description': 'Mercer, W. and Rascagneres, P. (2018, February 12). Olympic Destroyer Takes Aim At Winter Olympics. Retrieved March 14, 2019.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may delete or remove built-in operating system data and turn off services designed to aid in the recovery of a corrupted system to prevent recovery.(Citation: Talos Olympic Destroyer 2018)(Citation: FireEye WannaCry 2017) This may deny access to available backups and recovery options.\\n\\nOperating systems may contain features that can help fix corrupted systems, such as a backup catalog, volume shadow copies, and automatic repair features. Adversaries may disable or delete system recovery features to augment the effects of [Data Destruction](https://attack.mitre.org/techniques/T1485) and [Data Encrypted for Impact](https://attack.mitre.org/techniques/T1486).(Citation: Talos Olympic Destroyer 2018)(Citation: FireEye WannaCry 2017)\\n\\nA number of native Windows utilities have been used by adversaries to disable or delete system recovery features:\\n\\n* <code>vssadmin.exe</code> can be used to delete all volume shadow copies on a system - <code>vssadmin.exe delete shadows /all /quiet</code>\\n* [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) can be used to delete volume shadow copies - <code>wmic shadowcopy delete</code>\\n* <code>wbadmin.exe</code> can be used to delete the Windows Backup Catalog - <code>wbadmin.exe delete catalog -quiet</code>\\n* <code>bcdedit.exe</code> can be used to disable automatic Windows recovery features by modifying boot configuration data - <code>bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures & bcdedit /set {default} recoveryenabled no</code>', 'modified': '2022-04-19T23:26:59.186Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Inhibit System Recovery', 'x_mitre_detection': 'Use process monitoring to monitor the execution and command line parameters of binaries involved in inhibiting system recovery, such as vssadmin, wbadmin, and bcdedit. The Windows event logs, ex. Event ID 524 indicating a system catalog was deleted, may contain entries associated with suspicious activity.\\n\\nMonitor the status of services involved in system recovery. Monitor the registry for changes associated with system recovery features (ex: the creation of <code>HKEY_CURRENT_USER\\\\Software\\\\Policies\\\\Microsoft\\\\PreviousVersions\\\\DisableLocalPage</code>).', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'impact'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Service: Service Metadata', 'Windows Registry: Windows Registry Key Modification', 'File: File Deletion', 'Process: Process Creation', 'Command: Command Execution'], 'x_mitre_impact_type': ['Availability'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "56cb2bd3-5525-46bd-a454-ea895a5b4d0d",
+                        "lookup_data": {
+                            "description": "New data wiper malware used in Ukraine",
+                            "link": "http://www.botvrij.eu/data/feed-osint/56cb2bd3-5525-46bd-a454-ea895a5b4d0d.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1645960728",
+                            "uuid": "56cb2bd3-5525-46bd-a454-ea895a5b4d0d",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                        "lookup_data": {
+                            "description": "Ragnar Locker Ransomware Targeting the Energy Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/8dbeaaac-a671-4a02-8dab-5eec2a1c935b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1662991697",
+                            "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bb25b897-bfc7-4128-839d-52e9764dbfa6",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1490",
+                            "mitre-cti:description": "Consider technical controls to prevent the disabling of services or deletion of files involved in system recovery. \n\nConsider implementing IT disaster recovery plans that contain procedures for taking regular data backups that can be used to restore organizational data.(Citation: Ready.gov IT DRP) Ensure backups are stored off system and is protected from common methods adversaries may use to gain access and destroy the backups to prevent recovery.\n\nIdentify potentially malicious software and audit and/or block it by using whitelisting(Citation: Beechey 2010) tools, like AppLocker,(Citation: Windows Commands JPCERT)(Citation: NSA MS AppLocker) or Software Restriction Policies(Citation: Corio 2008) where appropriate.(Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Inhibit System Recovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--bb25b897-bfc7-4128-839d-52e9764dbfa6', 'type': 'course-of-action', 'created': '2019-04-22T13:54:51.385Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'url': 'https://attack.mitre.org/mitigations/T1490', 'source_name': 'mitre-attack', 'external_id': 'T1490'}, {'source_name': 'Ready.gov IT DRP', 'url': 'https://www.ready.gov/business/implementation/IT', 'description': 'Ready.gov. (n.d.). IT Disaster Recovery Plan. Retrieved March 15, 2019.'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.917Z', 'name': 'Inhibit System Recovery Mitigation', 'description': 'Consider technical controls to prevent the disabling of services or deletion of files involved in system recovery. \\n\\nConsider implementing IT disaster recovery plans that contain procedures for taking regular data backups that can be used to restore organizational data.(Citation: Ready.gov IT DRP) Ensure backups are stored off system and is protected from common methods adversaries may use to gain access and destroy the backups to prevent recovery.\\n\\nIdentify potentially malicious software and audit and/or block it by using whitelisting(Citation: Beechey 2010) tools, like AppLocker,(Citation: Windows Commands JPCERT)(Citation: NSA MS AppLocker) or Software Restriction Policies(Citation: Corio 2008) where appropriate.(Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "06125661-3814-4e03-bfa2-1e4411c60ac3",
+                        "lookup_data": {
+                            "description": "Adversaries may delete or remove built-in operating system data and turn off services designed to aid in the recovery of a corrupted system to prevent recovery.",
+                            "raw": "author: frack113\ndate: 2022/01/02\ndescription: Adversaries may delete or remove built-in operating system data and turn\n  off services designed to aid in the recovery of a corrupted system to prevent recovery.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\cmd.exe\n    TargetFilename|endswith:\n    - .VHD\n    - .bac\n    - .bak\n    - .wbcat\n    - .bkf\n    - .set\n    - .win\n    - .dsk\nfalsepositives:\n- Legitime usage\nid: 06125661-3814-4e03-bfa2-1e4411c60ac3\nlevel: medium\nlogsource:\n  category: file_delete\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-6---windows---delete-backup-files\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1490\ntitle: Deletes Backup Files\n",
+                            "sigma:id": "06125661-3814-4e03-bfa2-1e4411c60ac3",
+                            "title": "Deletes Backup Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e17121b4-ef2a-4418-8a59-12fb1631fa9e",
+                        "lookup_data": {
+                            "description": "Deletes Windows Volume Shadow Copies with PowerShell code and Get-WMIObject. This technique is used by numerous ransomware families such as Sodinokibi/REvil",
+                            "raw": "author: frack113\ndate: 2021/12/26\ndescription: Deletes Windows Volume Shadow Copies with PowerShell code and Get-WMIObject.\n  This technique is used by numerous ransomware families such as Sodinokibi/REvil\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - Get-WmiObject\n    - Win32_Shadowcopy\n    - .Delete()\nfalsepositives:\n- Unknown\nid: e17121b4-ef2a-4418-8a59-12fb1631fa9e\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md#atomic-test-5---windows---delete-volume-shadow-copies-via-wmi-with-powershell\nstatus: test\ntags:\n- attack.impact\n- attack.t1490\ntitle: Delete Volume Shadow Copies via WMI with PowerShell - PS Script\n",
+                            "sigma:id": "e17121b4-ef2a-4418-8a59-12fb1631fa9e",
+                            "title": "Delete Volume Shadow Copies via WMI with PowerShell - PS Script",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "87df9ee1-5416-453a-8a08-e8d4a51e9ce1",
+                        "lookup_data": {
+                            "description": "Shadow Copies deletion using operating systems utilities via PowerShell",
+                            "raw": "author: frack113\ndate: 2021/06/03\ndescription: Shadow Copies deletion using operating systems utilities via PowerShell\ndetection:\n  condition: selection\n  selection:\n    HostApplication|contains:\n    - Delete()\n    - Remove-WmiObject\n    HostApplication|contains|all:\n    - Get-WmiObject\n    - ' Win32_Shadowcopy'\nfalsepositives:\n- Legitimate Administrator deletes Shadow Copies using operating systems utilities\n  for legitimate reason\nfields:\n- HostApplication\nid: 87df9ee1-5416-453a-8a08-e8d4a51e9ce1\nlevel: high\nlogsource:\n  category: ps_classic_start\n  definition: fields have to be extract from event\n  product: windows\nmodified: 2021/10/16\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1490/T1490.md\n- https://www.fortinet.com/blog/threat-research/stomping-shadow-copies-a-second-look-into-deletion-methods\nstatus: stable\ntags:\n- attack.impact\n- attack.t1490\ntitle: Delete Volume Shadow Copies Via WMI With PowerShell\n",
+                            "sigma:id": "87df9ee1-5416-453a-8a08-e8d4a51e9ce1",
+                            "title": "Delete Volume Shadow Copies Via WMI With PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1490",
+                "display_name": "Inhibit System Recovery",
+                "atomic_tests": [
+                    {
+                        "name": "Windows - Delete Volume Shadow Copies",
+                        "auto_generated_guid": "43819286-91a9-4369-90ed-d31fb4da2c01",
+                        "description": "Deletes Windows Volume Shadow Copies. This technique is used by numerous ransomware families and APT malware such as Olympic Destroyer. Upon\nexecution, if no shadow volumes exist the message \"No items found that satisfy the query.\" will be displayed. If shadow volumes are present, it\nwill delete them without printing output to the screen. This is because the /quiet parameter was passed which also suppresses the y/n\nconfirmation prompt. Shadow copies can only be created on Windows server or Windows 8.\n\nhttps://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/cc788055(v=ws.11)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Create volume shadow copy of C:\\ . This prereq command only works on Windows Server or Windows 8.\n",
+                                "prereq_command": "if(!(vssadmin.exe list shadows | findstr \"No items found that satisfy the query.\")) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "vssadmin.exe create shadow /for=c:\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "vssadmin.exe delete shadows /all /quiet\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - Delete Volume Shadow Copies via WMI",
+                        "auto_generated_guid": "6a3ff8dd-f49c-4272-a658-11c2fe58bd88",
+                        "description": "Deletes Windows Volume Shadow Copies via WMI. This technique is used by numerous ransomware families and APT malware such as Olympic Destroyer.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Create volume shadow copy of C:\\ .\n",
+                                "prereq_command": "if(!(vssadmin.exe list shadows | findstr \"No items found that satisfy the query.\")) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "wmic shadowcopy call create Volume='C:\\'\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "wmic.exe shadowcopy delete\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - wbadmin Delete Windows Backup Catalog",
+                        "auto_generated_guid": "263ba6cb-ea2b-41c9-9d4e-b652dadd002c",
+                        "description": "Deletes Windows Backup Catalog. This technique is used by numerous ransomware families and APT malware such as Olympic Destroyer. Upon execution,\n\"The backup catalog has been successfully deleted.\" will be displayed in the PowerShell session.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "wbadmin delete catalog -quiet\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - Disable Windows Recovery Console Repair",
+                        "auto_generated_guid": "cf21060a-80b3-4238-a595-22525de4ab81",
+                        "description": "Disables repair by the Windows Recovery Console on boot. This technique is used by numerous ransomware families and APT malware such as Olympic Destroyer.\nUpon execution, \"The operation completed successfully.\" will be displayed in the powershell session.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures\nbcdedit.exe /set {default} recoveryenabled no\n",
+                            "cleanup_command": "bcdedit.exe /set {default} bootstatuspolicy DisplayAllFailures >nul 2>&1\nbcdedit.exe /set {default} recoveryenabled yes >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - Delete Volume Shadow Copies via WMI with PowerShell",
+                        "auto_generated_guid": "39a295ca-7059-4a88-86f6-09556c1211e7",
+                        "description": "Deletes Windows Volume Shadow Copies with PowerShell code and Get-WMIObject.\nThis technique is used by numerous ransomware families such as Sodinokibi/REvil.\nExecutes Get-WMIObject. Shadow copies can only be created on Windows server or Windows 8, so upon execution\nthere may be no output displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Get-WmiObject Win32_Shadowcopy | ForEach-Object {$_.Delete();}\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - Delete Backup Files",
+                        "auto_generated_guid": "6b1dbaf6-cc8a-4ea6-891f-6058569653bf",
+                        "description": "Deletes backup files in a manner similar to Ryuk ransomware. Upon exection, many \"access is denied\" messages will appear as the commands try\nto delete files from around the system.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "del /s /f /q c:\\*.VHD c:\\*.bac c:\\*.bak c:\\*.wbcat c:\\*.bkf c:\\Backup*.* c:\\backup*.* c:\\*.set c:\\*.win c:\\*.dsk\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - wbadmin Delete systemstatebackup",
+                        "auto_generated_guid": "584331dd-75bc-4c02-9e0b-17f5fd81c748",
+                        "description": "Deletes the Windows systemstatebackup using wbadmin.exe. This technique is used by numerous ransomware families. This may only be successful on server platforms that have Windows Backup enabled.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "wbadmin delete systemstatebackup -keepVersions:0\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - Disable the SR scheduled task",
+                        "auto_generated_guid": "1c68c68d-83a4-4981-974e-8993055fa034",
+                        "description": "Use schtasks.exe to disable the System Restore (SR) scheduled task\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "schtasks.exe /Change /TN \"\\Microsoft\\Windows\\SystemRestore\\SR\" /disable\n",
+                            "cleanup_command": "schtasks.exe /Change /TN \"\\Microsoft\\Windows\\SystemRestore\\SR\" /enable >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable System Restore Through Registry",
+                        "auto_generated_guid": "66e647d1-8741-4e43-b7c1-334760c2047f",
+                        "description": "Modify the registry of the currently logged in user using reg.exe via cmd console to disable system restore on the computer. \nSee how remcos RAT abuses this technique- https://www.virustotal.com/gui/file/2d7855bf6470aa323edf2949b54ce2a04d9e38770f1322c3d0420c2303178d91/details\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v \"DisableConfig\" /t \"REG_DWORD\" /d \"1\" /f\nreg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v \"DisableSR\" /t \"REG_DWORD\" /d \"1\" /f\nreg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore\" /v \"DisableConfig\" /t \"REG_DWORD\" /d \"1\" /f\nreg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore\" /v \"DisableSR\" /t \"REG_DWORD\" /d \"1\" /f\n",
+                            "cleanup_command": "reg delete \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v \"DisableConfig\" /f >nul 2>&1\nreg delete \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v \"DisableSR\" /f >nul 2>&1\nreg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore\" /v \"DisableConfig\" /f >nul 2>&1\nreg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore\" /v \"DisableSR\" /f >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows - vssadmin Resize Shadowstorage Volume",
+                        "auto_generated_guid": "da558b07-69ae-41b9-b9d4-4d98154a7049",
+                        "description": "Adversaries generally try to Resize Shadowstorage Volume using vssadmin.exe to avoid the shadow volumes being made again. This technique is typically found used by adversaries during a ransomware event and a precursor to deleting the shadowstorage.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "vssadmin resize shadowstorage /For=C: /On=C: /MaxSize=20%",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Modify VSS Service Permissions",
+                        "auto_generated_guid": "a4420f93-5386-4290-b780-f4f66abc7070",
+                        "description": "This atomic test alters the security settings of the Volume Shadow Copy Service (VSS) by modifying its permissions, potentially impacting system recovery operations. The specific permissions set by the command are as follows:\n- Deny Generic All (GA) permissions to Network Users (NU)\n- Deny GA permissions to Everyone (WD)\n- Deny GA permissions to Anonymous (AN)\n- Allow Full Access (FA) and Generic All (GA) permissions to Everyone (WD) in System ACL (SACL)\n- Allow Object Inherit and Inherit Only (OIIO) Full Access (FA) and GA permissions to Everyone (WD) in SACL\nThese permissions can significantly restrict VSS functionalities, including backup and restore operations. As such, it is essential to run this test only in a controlled environment with administrative privileges.\nA cleanup command is provided to reset VSS permissions to a common default configuration, which should be verified against your specific system's configuration. It's crucial to use this cleanup command after testing to ensure the system's backup and recovery capabilities remain functional. Running this test on a production system or critical environment is not recommended without proper precautions and a robust recovery plan.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "sc sdset VSS D:(D;;GA;;;NU)(D;;GA;;;WD)(D;;GA;;;AN)S:(AU;FA;GA;;;WD)(AU;OIIOFA;GA;;;WD)\n",
+                            "cleanup_command": "sc sdset VSS D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;LC;;;BU)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)\n"
+                        }
+                    },
+                    {
+                        "name": "Disable Time Machine",
+                        "auto_generated_guid": "ed952f70-91d4-445a-b7ff-30966bfb1aff",
+                        "description": "Disables Time Machine which is Apple's automated backup utility software. Attackers can use this to prevent backups from occurring and hinder the victim's ability to recover from any damage.\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "sudo tmutil disable",
+                            "cleanup_command": "sudo tmutil enable",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:37:14"
+}

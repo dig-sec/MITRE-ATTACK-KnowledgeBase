@@ -1,0 +1,248 @@
+{
+    "id": "T1547",
+    "name": "Boot or Logon Autostart Execution",
+    "description": "Adversaries may configure system settings to automatically execute a program during system boot or logon to maintain persistence or gain higher-level privileges on compromised systems. Operating systems may have mechanisms for automatically running a program on system boot or account logon.(Citation: Microsoft Run Key)(Citation: MSDN Authentication Packages)(Citation: Microsoft TimeProvider)(Citation: Cylance Reg Persistence Sept 2013)(Citation: Linux Kernel Programming)  These mechanisms may include automatically executing programs that are placed in specially designated directories or are referenced by repositories that store configuration information, such as the Windows Registry. An adversary may achieve the same goal by modifying or extending features of the kernel.\nSince some boot or logon autostart programs run with higher privileges, an adversary may leverage these to elevate privileges.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation",
+    "data_sources": "File: File Creation, Windows Registry: Windows Registry Key Creation, Windows Registry: Windows Registry Key Modification, File: File Modification, Command: Command Execution, Process: Process Creation, Module: Module Load, Kernel: Kernel Module Load, Driver: Driver Load, Process: OS API Execution",
+    "detection": "Monitor for additions or modifications of mechanisms that could be used to trigger autostart execution, such as relevant additions to the Registry. Look for changes that are not correlated with known updates, patches, or other planned administrative activity. Tools such as Sysinternals Autoruns may also be used to detect system autostart configuration changes that could be attempts at persistence.(Citation: TechNet Autoruns)  Changes to some autostart configuration settings may happen under normal conditions when legitimate software is installed.\nSuspicious program execution as autostart programs may show up as outlier processes that have not been seen before when compared against historical data.To increase confidence of malicious activity, data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.\nMonitor DLL loads by processes, specifically looking for DLLs that are not recognized or not normally loaded into a process. Look for abnormal process behavior that may be due to a process loading a malicious DLL.\nMonitor for abnormal usage of utilities and command-line parameters involved in kernel modification or driver installation.",
+    "url": "https://attack.mitre.org/techniques/T1547",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1547",
+                "atomic_attack_guid": "5cb0b071-8a5a-412f-839d-116beb2ed9f7",
+                "atomic_attack_name": "Driver Installation Using pnputil.exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Driver Install by pnputil.exe",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_lolbin_susp_driver_installed_by_pnputil.yml",
+                        "remote_content": "title: Suspicious Driver Install by pnputil.exe\nid: a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1\nstatus: test\ndescription: Detects when a possible suspicious driver is being installed via pnputil.exe lolbin\nreferences:\n    - https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax\n    - https://strontic.github.io/xcyclopedia/library/pnputil.exe-60EDC5E6BDBAEE441F2E3AEACD0340D2.html\nauthor: Hai Vaknin @LuxNoBulIshit, Avihay eldad  @aloneliassaf, Austin Songer @austinsonger\ndate: 2021-09-30\nmodified: 2022-10-09\ntags:\n    - attack.persistence\n    - attack.t1547\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '-i'\n            - '/install'\n            - '-a'\n            - '/add-driver'\n            - '.inf'\n        Image|endswith: '\\pnputil.exe'\n    condition: selection\nfields:\n    - ComputerName\n    - User\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Pnputil.exe being used may be performed by a system administrator.\n    - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.\n    - Pnputil.exe being executed from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule.\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1547",
+                "atomic_attack_guid": "cb01b3da-b0e7-4e24-bf6d-de5223526785",
+                "atomic_attack_name": "Add a driver",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Driver Install by pnputil.exe",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_lolbin_susp_driver_installed_by_pnputil.yml",
+                        "remote_content": "title: Suspicious Driver Install by pnputil.exe\nid: a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1\nstatus: test\ndescription: Detects when a possible suspicious driver is being installed via pnputil.exe lolbin\nreferences:\n    - https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax\n    - https://strontic.github.io/xcyclopedia/library/pnputil.exe-60EDC5E6BDBAEE441F2E3AEACD0340D2.html\nauthor: Hai Vaknin @LuxNoBulIshit, Avihay eldad  @aloneliassaf, Austin Songer @austinsonger\ndate: 2021-09-30\nmodified: 2022-10-09\ntags:\n    - attack.persistence\n    - attack.t1547\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '-i'\n            - '/install'\n            - '-a'\n            - '/add-driver'\n            - '.inf'\n        Image|endswith: '\\pnputil.exe'\n    condition: selection\nfields:\n    - ComputerName\n    - User\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Pnputil.exe being used may be performed by a system administrator.\n    - Verify whether the user identity, user agent, and/or hostname should be making changes in your environment.\n    - Pnputil.exe being executed from unfamiliar users should be investigated. If known behavior is causing false positives, it can be exempted from the rule.\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                    "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                    "1ecb2399-e8ba-4f6b-8ba7-5c27d49405cf",
+                    "a6976974-ea6f-4e97-818e-ea08625c52cb",
+                    "9577edbb-851f-4243-8c91-1d5b50c1a39b",
+                    "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+                    "277efb8f-60be-4f10-b4d3-037802f37167",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                    "f14e169e-9978-4c69-acb3-1cff8200bc36",
+                    "b98968aa-dbc0-4a9c-ac35-108363cbf8d5"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                        "lookup_data": {
+                            "description": "Aoqin Dragon | Newly-Discovered Chinese-linked APT Has Been Quietly Spying On Organizations For 10 Years",
+                            "link": "http://www.botvrij.eu/data/feed-osint/abfb5a93-e695-4ee9-bc10-541290bcd663.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1655839499",
+                            "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                        "lookup_data": {
+                            "description": "Buzzing in the Background: BumbleBee, a New Modular Backdoor Evolved From BookWorm",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/758d96ed-9dd4-4009-9270-65f2c3dd30cc.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603410",
+                            "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ecb2399-e8ba-4f6b-8ba7-5c27d49405cf",
+                        "lookup_data": {
+                            "capec": "CAPEC-564",
+                            "mitre-attack-id": "T1547",
+                            "mitre-cti:description": "Adversaries may configure system settings to automatically execute a program during system boot or logon to maintain persistence or gain higher-level privileges on compromised systems. Operating systems may have mechanisms for automatically running a program on system boot or account logon.(Citation: Microsoft Run Key)(Citation: MSDN Authentication Packages)(Citation: Microsoft TimeProvider)(Citation: Cylance Reg Persistence Sept 2013)(Citation: Linux Kernel Programming) These mechanisms may include automatically executing programs that are placed in specially designated directories or are referenced by repositories that store configuration information, such as the Windows Registry. An adversary may achieve the same goal by modifying or extending features of the kernel.\n\nSince some boot or logon autostart programs run with higher privileges, an adversary may leverage these to elevate privileges.",
+                            "mitre-cti:name": "Boot or Logon Autostart Execution",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--1ecb2399-e8ba-4f6b-8ba7-5c27d49405cf', 'created': '2020-01-23T17:46:59.535Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1547', 'url': 'https://attack.mitre.org/techniques/T1547'}, {'source_name': 'Cylance Reg Persistence Sept 2013', 'url': 'https://blog.cylance.com/windows-registry-persistence-part-2-the-run-keys-and-search-order', 'description': 'Langendorf, S. (2013, September 24). Windows Registry Persistence, Part 2: The Run Keys and Search-Order. Retrieved April 11, 2018.'}, {'source_name': 'MSDN Authentication Packages', 'url': 'https://msdn.microsoft.com/library/windows/desktop/aa374733.aspx', 'description': 'Microsoft. (n.d.). Authentication Packages. Retrieved March 1, 2017.'}, {'source_name': 'Microsoft Run Key', 'url': 'http://msdn.microsoft.com/en-us/library/aa376977', 'description': 'Microsoft. (n.d.). Run and RunOnce Registry Keys. Retrieved November 12, 2014.'}, {'source_name': 'Microsoft TimeProvider', 'url': 'https://msdn.microsoft.com/library/windows/desktop/ms725475.aspx', 'description': 'Microsoft. (n.d.). Time Provider. Retrieved March 26, 2018.'}, {'source_name': 'Linux Kernel Programming', 'url': 'https://www.tldp.org/LDP/lkmpg/2.4/lkmpg.pdf', 'description': 'Pomerantz, O., Salzman, P.. (2003, April 4). The Linux Kernel Module Programming Guide. Retrieved April 6, 2018.'}, {'source_name': 'TechNet Autoruns', 'url': 'https://technet.microsoft.com/en-us/sysinternals/bb963902', 'description': 'Russinovich, M. (2016, January 4). Autoruns for Windows v13.51. Retrieved June 6, 2016.'}, {'url': 'https://capec.mitre.org/data/definitions/564.html', 'source_name': 'capec', 'external_id': 'CAPEC-564'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may configure system settings to automatically execute a program during system boot or logon to maintain persistence or gain higher-level privileges on compromised systems. Operating systems may have mechanisms for automatically running a program on system boot or account logon.(Citation: Microsoft Run Key)(Citation: MSDN Authentication Packages)(Citation: Microsoft TimeProvider)(Citation: Cylance Reg Persistence Sept 2013)(Citation: Linux Kernel Programming) These mechanisms may include automatically executing programs that are placed in specially designated directories or are referenced by repositories that store configuration information, such as the Windows Registry. An adversary may achieve the same goal by modifying or extending features of the kernel.\\n\\nSince some boot or logon autostart programs run with higher privileges, an adversary may leverage these to elevate privileges.', 'modified': '2022-04-18T22:21:27.840Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Boot or Logon Autostart Execution', 'x_mitre_detection': 'Monitor for additions or modifications of mechanisms that could be used to trigger autostart execution, such as relevant additions to the Registry. Look for changes that are not correlated with known updates, patches, or other planned administrative activity. Tools such as Sysinternals Autoruns may also be used to detect system autostart configuration changes that could be attempts at persistence.(Citation: TechNet Autoruns)  Changes to some autostart configuration settings may happen under normal conditions when legitimate software is installed. \\n\\nSuspicious program execution as autostart programs may show up as outlier processes that have not been seen before when compared against historical data.To increase confidence of malicious activity, data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.\\n\\nMonitor DLL loads by processes, specifically looking for DLLs that are not recognized or not normally loaded into a process. Look for abnormal process behavior that may be due to a process loading a malicious DLL.\\n\\nMonitor for abnormal usage of utilities and command-line parameters involved in kernel modification or driver installation.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Process: Process Creation', 'Driver: Driver Load', 'Windows Registry: Windows Registry Key Creation', 'Kernel: Kernel Module Load', 'Module: Module Load', 'Windows Registry: Windows Registry Key Modification', 'Command: Command Execution', 'File: File Creation', 'File: File Modification', 'Process: OS API Execution'], 'x_mitre_permissions_required': ['User', 'Administrator', 'root'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a6976974-ea6f-4e97-818e-ea08625c52cb",
+                        "lookup_data": {
+                            "description": "Detects a phishing attack which expands a ZIP file containing a malicious shortcut.\nIf the victim expands the ZIP file via the explorer process, then the explorer process expands the malicious ZIP file and drops a malicious shortcut redirected to a backdoor into the Startup folder.\nAdditionally, the file name of the malicious shortcut in Startup folder contains {0AFACED1-E828-11D1-9187-B532F1E9575D} meaning the folder shortcut operation.\n",
+                            "raw": "author: Greg (rule)\ndate: 2022/07/21\ndescription: 'Detects a phishing attack which expands a ZIP file containing a malicious\n  shortcut.\n\n  If the victim expands the ZIP file via the explorer process, then the explorer process\n  expands the malicious ZIP file and drops a malicious shortcut redirected to a backdoor\n  into the Startup folder.\n\n  Additionally, the file name of the malicious shortcut in Startup folder contains\n  {0AFACED1-E828-11D1-9187-B532F1E9575D} meaning the folder shortcut operation.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\explorer.exe\n    TargetFilename|contains|all:\n    - \\Microsoft\\Windows\\Start Menu\\Programs\\Startup\n    - .lnk.{0AFACED1-E828-11D1-9187-B532F1E9575D}\nfalsepositives:\n- Unknown\nid: a6976974-ea6f-4e97-818e-ea08625c52cb\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2023/01/05\nreferences:\n- https://twitter.com/jonasLyk/status/1549338335243534336?t=CrmPocBGLbDyE4p6zTX1cg&s=19\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547\ntitle: Potential RipZip Attack on Startup Folder\n",
+                            "sigma:id": "a6976974-ea6f-4e97-818e-ea08625c52cb",
+                            "title": "Potential RipZip Attack on Startup Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9577edbb-851f-4243-8c91-1d5b50c1a39b",
+                        "lookup_data": {
+                            "description": "Detects creation/modification of Assistive Technology applications and persistence with usage of 'at'",
+                            "raw": "author: Mateusz Wydra, oscd.community\ndate: 2020/10/13\ndescription: Detects creation/modification of Assistive Technology applications and\n  persistence with usage of 'at'\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_atbroker:\n    Details: (Empty)\n    Image: C:\\Windows\\system32\\atbroker.exe\n    TargetObject|contains: \\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\Configuration\n  filter_uninstallers:\n    Image|startswith: C:\\Windows\\Installer\\MSI\n    TargetObject|contains: Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\n  selection:\n    TargetObject|contains:\n    - Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\n    - Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\Configuration\nfalsepositives:\n- Creation of non-default, legitimate at usage\nid: 9577edbb-851f-4243-8c91-1d5b50c1a39b\nlevel: medium\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2023/01/19\nreferences:\n- http://www.hexacorn.com/blog/2016/07/22/beyond-good-ol-run-key-part-42/\n- https://lolbas-project.github.io/lolbas/Binaries/Atbroker/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218\n- attack.persistence\n- attack.t1547\ntitle: Atbroker Registry Change\n",
+                            "sigma:id": "9577edbb-851f-4243-8c91-1d5b50c1a39b",
+                            "title": "Atbroker Registry Change",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+                        "lookup_data": {
+                            "description": "Detects when a possible suspicious driver is being installed via pnputil.exe lolbin",
+                            "raw": "author: Hai Vaknin @LuxNoBulIshit, Avihay eldad  @aloneliassaf, Austin Songer @austinsonger\ndate: 2021/09/30\ndescription: Detects when a possible suspicious driver is being installed via pnputil.exe\n  lolbin\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - -i\n    - /install\n    - -a\n    - /add-driver\n    - '.inf'\n    Image|endswith: \\pnputil.exe\nfalsepositives:\n- Pnputil.exe being used may be performed by a system administrator.\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- Pnputil.exe being executed from unfamiliar users should be investigated. If known\n  behavior is causing false positives, it can be exempted from the rule.\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://docs.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax\n- https://strontic.github.io/xcyclopedia/library/pnputil.exe-60EDC5E6BDBAEE441F2E3AEACD0340D2.html\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547\ntitle: Suspicious Driver Install by pnputil.exe\n",
+                            "sigma:id": "a2ea3ae7-d3d0-40a0-a55c-25a45c87cac1",
+                            "title": "Suspicious Driver Install by pnputil.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "277efb8f-60be-4f10-b4d3-037802f37167",
+                        "lookup_data": {
+                            "description": "Detects persistence registry keys for Recycle Bin",
+                            "raw": "author: frack113\ndate: 2021/11/18\ndescription: Detects persistence registry keys for Recycle Bin\ndetection:\n  condition: 1 of selection_*\n  selection_create:\n    EventType: RenameKey\n    NewName|contains: \\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\shell\\open\n  selection_set:\n    EventType: SetValue\n    TargetObject|contains: \\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\shell\\open\\command\\(Default)\nfalsepositives:\n- Unknown\nid: 277efb8f-60be-4f10-b4d3-037802f37167\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/12/06\nreferences:\n- https://github.com/vxunderground/VXUG-Papers/blob/751edb8d50f95bd7baa730adf2c6c3bb1b034276/The%20Persistence%20Series/Persistence%20via%20Recycle%20Bin/Persistence_via_Recycle_Bin.pdf\n- https://persistence-info.github.io/Data/recyclebin.html\n- https://www.hexacorn.com/blog/2018/05/28/beyond-good-ol-run-key-part-78-2/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547\ntitle: Registry Persistence Mechanisms in Recycle Bin\n",
+                            "sigma:id": "277efb8f-60be-4f10-b4d3-037802f37167",
+                            "title": "Registry Persistence Mechanisms in Recycle Bin",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f14e169e-9978-4c69-acb3-1cff8200bc36",
+                        "lookup_data": {
+                            "description": "Detects the suspicious execution of a utility to convert Windows 3.x .grp files or for persistence purposes by malicious software or actors",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/05/19\ndescription: Detects the suspicious execution of a utility to convert Windows 3.x\n  .grp files or for persistence purposes by malicious software or actors\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - grpconv.exe -o\n    - grpconv -o\nfalsepositives:\n- Unknown\nid: f14e169e-9978-4c69-acb3-1cff8200bc36\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/0gtweet/status/1526833181831200770\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547\ntitle: Suspicious GrpConv Execution\n",
+                            "sigma:id": "f14e169e-9978-4c69-acb3-1cff8200bc36",
+                            "title": "Suspicious GrpConv Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b98968aa-dbc0-4a9c-ac35-108363cbf8d5",
+                        "lookup_data": {
+                            "description": "Detects potential malicious modification of run keys by winekey or team9 backdoor",
+                            "raw": "author: omkar72\ndate: 2020/10/30\ndescription: Detects potential malicious modification of run keys by winekey or team9\n  backdoor\ndetection:\n  condition: selection\n  selection:\n    TargetObject|endswith: Software\\Microsoft\\Windows\\CurrentVersion\\Run\\Backup Mgr\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- Image\n- EventType\n- TargetObject\nid: b98968aa-dbc0-4a9c-ac35-108363cbf8d5\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.fireeye.com/blog/threat-research/2020/10/kegtap-and-singlemalt-with-a-ransomware-chaser.html\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547\ntitle: WINEKEY Registry Modification\n",
+                            "sigma:id": "b98968aa-dbc0-4a9c-ac35-108363cbf8d5",
+                            "title": "WINEKEY Registry Modification",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1547",
+                "display_name": "Boot or Logon Autostart Execution",
+                "atomic_tests": [
+                    {
+                        "name": "Add a driver",
+                        "auto_generated_guid": "cb01b3da-b0e7-4e24-bf6d-de5223526785",
+                        "description": "Install a driver via pnputil.exe lolbin\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "driver_inf": {
+                                "description": "A built-in, already installed windows driver inf",
+                                "type": "path",
+                                "default": "C:\\Windows\\INF\\usbstor.inf"
+                            }
+                        },
+                        "executor": {
+                            "command": "pnputil.exe /add-driver \"#{driver_inf}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Driver Installation Using pnputil.exe",
+                        "auto_generated_guid": "5cb0b071-8a5a-412f-839d-116beb2ed9f7",
+                        "description": "pnputil.exe is a native command-line utility in Windows to install drivers, this can be abused by to install malicious drivers. Ref: https://lolbas-project.github.io/lolbas/Binaries/Pnputil/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "driver_path": {
+                                "description": "Enter the driver file path to install (Default is used built-in windows driver - acpipmi.inf)",
+                                "type": "path",
+                                "default": "C:\\Windows\\INF\\acpipmi.inf"
+                            }
+                        },
+                        "executor": {
+                            "command": "pnputil.exe -i -a #{driver_path}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Leverage Virtual Channels to execute custom DLL during successful RDP session",
+                        "auto_generated_guid": "fdd45306-74f6-4ade-9a97-0a4895961228",
+                        "description": "Virtual Channels can be leveraged to alter RDP behavior using dedicated Addins.The mechanism is implemented using DLLs which can be executed during RDP session automatically. \nThe DLLs are loaded in the host system only after successful connection is established with the remote system.\nOnce the test is run, amsi.dll will be loaded on the host system during successful RDP session.\nBlog :https://learn.microsoft.com/en-us/windows/win32/termserv/terminal-services-virtual-channels?redirectedfrom=MSDN\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "Subkey_Added": {
+                                "description": "New Sub key added in the registry path",
+                                "type": "String",
+                                "default": "Malware"
+                            },
+                            "dll_inf": {
+                                "description": "custom DLL to be executed",
+                                "type": "Path",
+                                "default": "C:\\Windows\\System32\\amsi.dll"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg add \"HKEY_CURRENT_USER\\Software\\Microsoft\\Terminal Server Client\\Default\\Addins\\#{Subkey_Added}\" /v Name /t REG_SZ /d \"#{dll_inf}\" /f\n",
+                            "cleanup_command": "reg delete \"HKEY_CURRENT_USER\\Software\\Microsoft\\Terminal Server Client\\Default\\Addins\\#{Subkey_Added}\" /f      ",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:35:17"
+}

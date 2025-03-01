@@ -1,0 +1,253 @@
+{
+    "id": "T1027.004",
+    "name": "Compile After Delivery",
+    "description": "Adversaries may attempt to make payloads difficult to discover and analyze by delivering files to victims as uncompiled code. Text-based source code files may subvert analysis and scrutiny from protections targeting executables/binaries. These payloads will need to be compiled before execution; typically via native utilities such as csc.exe or GCC/MinGW.(Citation: ClearSky MuddyWater Nov 2018)\nSource code payloads may also be encrypted, encoded, and/or embedded within other files, such as those delivered as a [Phishing](T1566). Payloads may also be delivered in formats unrecognizable and inherently benign to the native OS (ex: EXEs on macOS/Linux) before later being (re)compiled into a proper executable binary with a bundled compiler and execution framework.(Citation: TrendMicro WindowsAppMac)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "File: File Metadata, File: File Creation, Process: Process Creation, Command: Command Execution",
+    "detection": "Monitor the execution file paths and command-line arguments for common compilers, such as csc.exe and GCC/MinGW, and correlate with other suspicious behavior to reduce false positives from normal user and administrator behavior. The compilation of payloads may also generate file creation and/or file write events. Look for non-native binary formats and cross-platform compiler and execution frameworks like Mono and determine if they have a legitimate purpose on the system.(Citation: TrendMicro WindowsAppMac) Typically these should only be used in specific and limited cases, like for software development.",
+    "url": "https://attack.mitre.org/techniques/T1027/004",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "b730a276-6b63-41b8-bcf8-55930c8fc6ee",
+                    "81ebd28b-9607-4478-bf06-974ed9d53ed7",
+                    "7b10f171-7f04-47c7-9fa2-5be43c76e535",
+                    "c726e0a2-a57a-4b7b-a973-d0f013246617",
+                    "dcaa3f04-70c3-427a-80b4-b870d73c94c4",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                    "e4a74e34-ecde-4aab-b2fb-9112dd01aed0"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "b730a276-6b63-41b8-bcf8-55930c8fc6ee",
+                        "lookup_data": {
+                            "description": "Detects a suspicious parent of csc.exe, which could by a sign of payload delivery",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/02/11\ndescription: Detects a suspicious parent of csc.exe, which could by a sign of payload\n  delivery\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\csc.exe\n    ParentImage|endswith:\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\mshta.exe\nfalsepositives:\n- Unknown\nid: b730a276-6b63-41b8-bcf8-55930c8fc6ee\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://twitter.com/SBousseaden/status/1094924091256176641\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\n- attack.defense_evasion\n- attack.t1218.005\n- attack.t1027.004\ntitle: Suspicious Parent of Csc.exe\n",
+                            "sigma:id": "b730a276-6b63-41b8-bcf8-55930c8fc6ee",
+                            "title": "Suspicious Parent of Csc.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "81ebd28b-9607-4478-bf06-974ed9d53ed7",
+                        "lookup_data": {
+                            "description": "Execute C# code located in the consoleapp folder",
+                            "raw": "author: Beyu Denis, oscd.community\ndate: 2019/10/26\ndescription: Execute C# code located in the consoleapp folder\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\dnx.exe\nfalsepositives:\n- Legitimate use of dnx.exe by legitimate user\nid: 81ebd28b-9607-4478-bf06-974ed9d53ed7\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Csi/\n- https://enigma0x3.net/2016/11/17/bypassing-application-whitelisting-by-using-dnx-exe/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218\n- attack.t1027.004\ntitle: Application Whitelisting Bypass via Dnx.exe\n",
+                            "sigma:id": "81ebd28b-9607-4478-bf06-974ed9d53ed7",
+                            "title": "Application Whitelisting Bypass via Dnx.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7b10f171-7f04-47c7-9fa2-5be43c76e535",
+                        "lookup_data": {
+                            "description": "Detects successful code compilation via Visual Basic Command Line Compiler that utilizes Windows Resource to Object Converter.",
+                            "raw": "author: \"Ensar \\u015Eamil, @sblmsrsn, @oscd_initiative\"\ndate: 2020/10/07\ndescription: Detects successful code compilation via Visual Basic Command Line Compiler\n  that utilizes Windows Resource to Object Converter.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\cvtres.exe\n    ParentImage|endswith: \\vbc.exe\nfalsepositives:\n- Utilization of this tool should not be seen in enterprise environment\nid: 7b10f171-7f04-47c7-9fa2-5be43c76e535\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Vbc/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027.004\ntitle: Visual Basic Command Line Compiler Usage\n",
+                            "sigma:id": "7b10f171-7f04-47c7-9fa2-5be43c76e535",
+                            "title": "Visual Basic Command Line Compiler Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c726e0a2-a57a-4b7b-a973-d0f013246617",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1027.004",
+                            "mitre-cti:description": "Adversaries may attempt to make payloads difficult to discover and analyze by delivering files to victims as uncompiled code. Text-based source code files may subvert analysis and scrutiny from protections targeting executables/binaries. These payloads will need to be compiled before execution; typically via native utilities such as csc.exe or GCC/MinGW.(Citation: ClearSky MuddyWater Nov 2018)\n\nSource code payloads may also be encrypted, encoded, and/or embedded within other files, such as those delivered as a [Phishing](https://attack.mitre.org/techniques/T1566). Payloads may also be delivered in formats unrecognizable and inherently benign to the native OS (ex: EXEs on macOS/Linux) before later being (re)compiled into a proper executable binary with a bundled compiler and execution framework.(Citation: TrendMicro WindowsAppMac)",
+                            "mitre-cti:name": "Compile After Delivery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Praetorian', 'Ye Yint Min Thu Htut, Offensive Security Team, DBS Bank'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--c726e0a2-a57a-4b7b-a973-d0f013246617', 'type': 'attack-pattern', 'created': '2020-03-16T15:30:57.711Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1027.004', 'url': 'https://attack.mitre.org/techniques/T1027/004'}, {'description': 'ClearSky Cyber Security. (2018, November). MuddyWater Operations in Lebanon and Oman: Using an Israeli compromised domain for a two-stage campaign. Retrieved November 29, 2018.', 'url': 'https://www.clearskysec.com/wp-content/uploads/2018/11/MuddyWater-Operations-in-Lebanon-and-Oman.pdf', 'source_name': 'ClearSky MuddyWater Nov 2018'}, {'source_name': 'TrendMicro WindowsAppMac', 'url': 'https://blog.trendmicro.com/trendlabs-security-intelligence/windows-app-runs-on-mac-downloads-info-stealer-and-adware/', 'description': 'Trend Micro. (2019, February 11). Windows App Runs on Mac, Downloads Info Stealer and Adware. Retrieved April 25, 2019.'}], 'modified': '2020-03-29T20:59:32.293Z', 'name': 'Compile After Delivery', 'description': 'Adversaries may attempt to make payloads difficult to discover and analyze by delivering files to victims as uncompiled code. Text-based source code files may subvert analysis and scrutiny from protections targeting executables/binaries. These payloads will need to be compiled before execution; typically via native utilities such as csc.exe or GCC/MinGW.(Citation: ClearSky MuddyWater Nov 2018)\\n\\nSource code payloads may also be encrypted, encoded, and/or embedded within other files, such as those delivered as a [Phishing](https://attack.mitre.org/techniques/T1566). Payloads may also be delivered in formats unrecognizable and inherently benign to the native OS (ex: EXEs on macOS/Linux) before later being (re)compiled into a proper executable binary with a bundled compiler and execution framework.(Citation: TrendMicro WindowsAppMac)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Monitor the execution file paths and command-line arguments for common compilers, such as csc.exe and GCC/MinGW, and correlate with other suspicious behavior to reduce false positives from normal user and administrator behavior. The compilation of payloads may also generate file creation and/or file write events. Look for non-native binary formats and cross-platform compiler and execution frameworks like Mono and determine if they have a legitimate purpose on the system.(Citation: TrendMicro WindowsAppMac) Typically these should only be used in specific and limited cases, like for software development.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'File: File Creation', 'Command: Command Execution', 'File: File Metadata'], 'x_mitre_defense_bypassed': ['Signature-based detection', 'Host intrusion prevention systems', 'Anti-virus', 'Binary Analysis', 'Static File Analysis'], 'x_mitre_permissions_required': ['User'], 'x_mitre_system_requirements': ['Compiler software (either native to the system or delivered by the adversary)']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dcaa3f04-70c3-427a-80b4-b870d73c94c4",
+                        "lookup_data": {
+                            "description": "Detects a suspicious execution of csc.exe, which uses a source in a suspicious folder (e.g. AppData)",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/08/24\ndescription: Detects a suspicious execution of csc.exe, which uses a source in a suspicious\n  folder (e.g. AppData)\ndetection:\n  condition: selection and not filter\n  filter:\n  - ParentImage|startswith: C:\\Program Files\n  - ParentImage|endswith:\n    - \\sdiagnhost.exe\n    - \\w3wp.exe\n    - \\choco.exe\n  - ParentCommandLine|contains: \\ProgramData\\Microsoft\\Windows Defender Advanced Threat\n      Protection\n  selection:\n    CommandLine|contains:\n    - \\AppData\\\n    - \\Windows\\Temp\\\n    Image|endswith: \\csc.exe\nfalsepositives:\n- Legitimate software from program files - https://twitter.com/gN3mes1s/status/1206874118282448897\n- Legitimate Microsoft software - https://twitter.com/gabriele_pippi/status/1206907900268072962\nid: dcaa3f04-70c3-427a-80b4-b870d73c94c4\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://securityboulevard.com/2019/08/agent-tesla-evading-edr-by-removing-api-hooks/\n- https://www.clearskysec.com/wp-content/uploads/2018/11/MuddyWater-Operations-in-Lebanon-and-Oman.pdf\n- https://app.any.run/tasks/c6993447-d1d8-414e-b856-675325e5aa09/\n- https://twitter.com/gN3mes1s/status/1206874118282448897\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027.004\ntitle: Suspicious Csc.exe Source File Folder\n",
+                            "sigma:id": "dcaa3f04-70c3-427a-80b4-b870d73c94c4",
+                            "title": "Suspicious Csc.exe Source File Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e4a74e34-ecde-4aab-b2fb-9112dd01aed0",
+                        "lookup_data": {
+                            "description": "When C# is compiled dynamically, a .cmdline file will be created as a part of the process.\nCertain processes are not typically observed compiling C# code, but can do so without touching disk.\nThis can be used to unpack a payload for execution\n",
+                            "raw": "author: frack113\ndate: 2022/01/09\ndescription: 'When C# is compiled dynamically, a .cmdline file will be created as\n  a part of the process.\n\n  Certain processes are not typically observed compiling C# code, but can do so without\n  touching disk.\n\n  This can be used to unpack a payload for execution\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: .cmdline\nfalsepositives:\n- Unknown\nid: e4a74e34-ecde-4aab-b2fb-9112dd01aed0\nlevel: low\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1027.004/T1027.004.md#atomic-test-2---dynamic-c-compile\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027.004\ntitle: Dynamic C Sharp Compile Artefact\n",
+                            "sigma:id": "e4a74e34-ecde-4aab-b2fb-9112dd01aed0",
+                            "title": "Dynamic C Sharp Compile Artefact",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1027.004",
+                "display_name": "Obfuscated Files or Information: Compile After Delivery",
+                "atomic_tests": [
+                    {
+                        "name": "Compile After Delivery using csc.exe",
+                        "auto_generated_guid": "ffcdbd6a-b0e8-487d-927a-09127fe9a206",
+                        "description": "Compile C# code using csc.exe binary used by .NET\nUpon execution an exe named T1027.004.exe will be placed in the temp folder\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output compiled binary",
+                                "type": "path",
+                                "default": "C:\\Windows\\Temp\\T1027.004.exe"
+                            },
+                            "input_file": {
+                                "description": "C# code that launches calc.exe from a hidden cmd.exe Window",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1027.004\\src\\calc.cs"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "C# file must exist on disk at specified location (#{input_file})\n",
+                                "prereq_command": "if (Test-Path \"#{input_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{input_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/calc.cs\" -OutFile \"#{input_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /out:#{output_file} \"#{input_file}\"\n",
+                            "cleanup_command": "del #{output_file} >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Dynamic C# Compile",
+                        "auto_generated_guid": "453614d8-3ba6-4147-acc0-7ec4b3e1faef",
+                        "description": "When C# is compiled dynamically, a .cmdline file will be created as a part of the process. \nCertain processes are not typically observed compiling C# code, but can do so without touching disk. This can be used to unpack a payload for execution.\nThe exe file that will be executed is named as T1027.004_DynamicCompile.exe is contained in the 'bin' folder of this atomic, and the source code to the file is in the 'src' folder.\nUpon execution, the exe will print 'T1027.004 Dynamic Compile'.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_file": {
+                                "description": "exe program containing dynamically compiled C# code",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1027.004\\bin\\T1027.004_DynamicCompile.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "exe file must exist on disk at specified location (#{input_file})\n",
+                                "prereq_command": "if (Test-Path \"#{input_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Invoke-WebRequest https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/bin/T1027.004_DynamicCompile.exe -OutFile \"#{input_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Invoke-Expression \"#{input_file}\"\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "C compile",
+                        "auto_generated_guid": "d0377aa6-850a-42b2-95f0-de558d80be57",
+                        "description": "Compile a c file with either gcc or clang on FreeBSD, Linux or Macos.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "input_file": {
+                                "description": "source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1027.004/src/T1027-004-test.c"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "the source file must exist on disk at specified location (#{input_file})\n",
+                                "prereq_command": "if [ -e  #{input_file} ]; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "wget https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/T1027-004-test.c -O \"#{input_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "gcc #{input_file} && ./a.out\nclang #{input_file} && ./a.out\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "CC compile",
+                        "auto_generated_guid": "da97bb11-d6d0-4fc1-b445-e443d1346efe",
+                        "description": "Compile a c file with either gcc or clang on FreeBSD, Linux or Macos.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "input_file": {
+                                "description": "source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1027.004/src/T1027-004-test.cc"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "the source file must exist on disk at specified location (#{input_file})\n",
+                                "prereq_command": "if [ -e  #{input_file} ]; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "wget https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/T1027-004-test.cc -O #{input_file}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "g++ #{input_file} && ./a.out\nclang++ #{input_file} && ./a.out\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Go compile",
+                        "auto_generated_guid": "78bd3fa7-773c-449e-a978-dc1f1500bc52",
+                        "description": "Compile a go file with golang on FreeBSD, Linux or Macos.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "input_file": {
+                                "description": "source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1027.004/src/T1027-004-test.go"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "the source file must exist on disk at specified location (#{input_file})\n",
+                                "prereq_command": "if [ -e  #{input_file} ]; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "wget https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/T1027-004-test.go -O #{input_file}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "go run #{input_file}\n",
+                            "name": "sh"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:09:13"
+}

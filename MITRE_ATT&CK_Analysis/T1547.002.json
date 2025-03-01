@@ -1,0 +1,67 @@
+{
+    "id": "T1547.002",
+    "name": "Authentication Package",
+    "description": "Adversaries may abuse authentication packages to execute DLLs when the system boots. Windows authentication package DLLs are loaded by the Local Security Authority (LSA) process at system start. They provide support for multiple logon processes and multiple security protocols to the operating system. (Citation: MSDN Authentication Packages)\nAdversaries can use the autostart mechanism provided by LSA authentication packages for persistence by placing a reference to a binary in the Windows Registry location `HKLMSYSTEMCurrentControlSetControlLsa` with the key value of `\"Authentication Packages\"=&lt;target binary&gt;`. The binary will then be executed by the system when the authentication packages are loaded.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation",
+    "data_sources": "Windows Registry: Windows Registry Key Modification, Module: Module Load, Command: Command Execution",
+    "detection": "Monitor the Registry for changes to the LSA Registry keys. Monitor the LSA process for DLL loads. Windows 8.1 and Windows Server 2012 R2 may generate events when unsigned DLLs try to load into the LSA by setting the Registry key `HKLMSOFTWAREMicrosoftWindows NTCurrentVersionImage File Execution OptionsLSASS.exe` with AuditLevel = 8. (Citation: Graeber 2014) (Citation: Microsoft Configure LSA)",
+    "url": "https://attack.mitre.org/techniques/T1547/002",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                    "b8cfed42-6a8a-4989-ad72-541af74475ec"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                        "lookup_data": {
+                            "description": "Detects potential suspicious behaviour using secedit.exe. Such as exporting or modifying the security policy",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/11/18\ndescription: Detects potential suspicious behaviour using secedit.exe. Such as exporting\n  or modifying the security policy\ndetection:\n  condition: selection_img and (1 of selection_flags_*)\n  selection_flags_configure:\n    CommandLine|contains|all:\n    - /configure\n    - /db\n  selection_flags_discovery:\n    CommandLine|contains|all:\n    - /export\n    - /cfg\n  selection_img:\n  - Image|endswith: \\secedit.exe\n  - OriginalFileName: SeCEdit\nfalsepositives:\n- Legitimate administrative use\nid: c2c76b77-32be-4d1f-82c9-7e544bdfe0eb\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://blueteamops.medium.com/secedit-and-i-know-it-595056dee53d\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/secedit\nstatus: experimental\ntags:\n- attack.discovery\n- attack.persistence\n- attack.defense_evasion\n- attack.credential_access\n- attack.privilege_escalation\n- attack.t1562.002\n- attack.t1547.001\n- attack.t1505.005\n- attack.t1556.002\n- attack.t1562\n- attack.t1574.007\n- attack.t1564.002\n- attack.t1546.008\n- attack.t1546.007\n- attack.t1547.014\n- attack.t1547.010\n- attack.t1547.002\n- attack.t1557\n- attack.t1082\ntitle: Potential Suspicious Activity Using SeCEdit\n",
+                            "sigma:id": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                            "title": "Potential Suspicious Activity Using SeCEdit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b8cfed42-6a8a-4989-ad72-541af74475ec",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1547.002",
+                            "mitre-cti:description": "Adversaries may abuse authentication packages to execute DLLs when the system boots. Windows authentication package DLLs are loaded by the Local Security Authority (LSA) process at system start. They provide support for multiple logon processes and multiple security protocols to the operating system.(Citation: MSDN Authentication Packages)\n\nAdversaries can use the autostart mechanism provided by LSA authentication packages for persistence by placing a reference to a binary in the Windows Registry location <code>HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\</code> with the key value of <code>\"Authentication Packages\"=&lt;target binary&gt;</code>. The binary will then be executed by the system when the authentication packages are loaded.",
+                            "mitre-cti:name": "Authentication Package",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--b8cfed42-6a8a-4989-ad72-541af74475ec', 'created': '2020-01-24T14:54:42.757Z', 'x_mitre_version': '1.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1547.002', 'url': 'https://attack.mitre.org/techniques/T1547/002'}, {'source_name': 'Graeber 2014', 'url': 'http://docplayer.net/20839173-Analysis-of-malicious-security-support-provider-dlls.html', 'description': 'Graeber, M. (2014, October). Analysis of Malicious Security Support Provider DLLs. Retrieved March 1, 2017.'}, {'source_name': 'Microsoft Configure LSA', 'url': 'https://technet.microsoft.com/en-us/library/dn408187.aspx', 'description': 'Microsoft. (2013, July 31). Configuring Additional LSA Protection. Retrieved June 24, 2015.'}, {'source_name': 'MSDN Authentication Packages', 'url': 'https://msdn.microsoft.com/library/windows/desktop/aa374733.aspx', 'description': 'Microsoft. (n.d.). Authentication Packages. Retrieved March 1, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may abuse authentication packages to execute DLLs when the system boots. Windows authentication package DLLs are loaded by the Local Security Authority (LSA) process at system start. They provide support for multiple logon processes and multiple security protocols to the operating system.(Citation: MSDN Authentication Packages)\\n\\nAdversaries can use the autostart mechanism provided by LSA authentication packages for persistence by placing a reference to a binary in the Windows Registry location <code>HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\</code> with the key value of <code>\"Authentication Packages\"=&lt;target binary&gt;</code>. The binary will then be executed by the system when the authentication packages are loaded.', 'modified': '2022-04-20T16:29:36.291Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Authentication Package', 'x_mitre_detection': 'Monitor the Registry for changes to the LSA Registry keys. Monitor the LSA process for DLL loads. Windows 8.1 and Windows Server 2012 R2 may generate events when unsigned DLLs try to load into the LSA by setting the Registry key <code>HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Image File Execution Options\\\\LSASS.exe</code> with AuditLevel = 8. (Citation: Graeber 2014) (Citation: Microsoft Configure LSA)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Command: Command Execution', 'Windows Registry: Windows Registry Key Modification', 'Module: Module Load'], 'x_mitre_permissions_required': ['Administrator'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1547.002",
+                "display_name": "Authentication Package",
+                "atomic_tests": [
+                    {
+                        "name": "Authentication Package",
+                        "auto_generated_guid": "be2590e8-4ac3-47ac-b4b5-945820f2fbe9",
+                        "description": "Establishes persistence using a custom authentication package for the Local Security Authority (LSA).\nAfter a reboot, Notepad.exe will be executed as child process of lsass.exe.\nPayload source code: https://github.com/tr4cefl0w/payloads/tree/master/T1547.002/package\n[Related blog](https://pentestlab.blog/2019/10/21/persistence-security-support-provider/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Copy-Item \"$PathToAtomicsFolder\\T1547.002\\bin\\package.dll\" C:\\Windows\\System32\\\nreg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Lsa\" /v \"Authentication Packages\" /t REG_MULTI_SZ /d \"msv1_0\\0package.dll\" /f\n",
+                            "cleanup_command": "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Lsa\" /v \"Authentication Packages\" /t REG_MULTI_SZ /d \"msv1_0\" /f\nrm -force C:\\windows\\system32\\package.dll\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:37:15"
+}

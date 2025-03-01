@@ -1,0 +1,521 @@
+{
+    "id": "T1057",
+    "name": "Process Discovery",
+    "description": "Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network. Adversaries may use the information from [Process Discovery](T1057) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\nIn Windows environments, adversaries could obtain details on running processes using the [Tasklist](S0057) utility via [cmd](S0106) or `Get-Process` via [PowerShell](T1059.001). Information about processes can also be extracted from the output of [Native API](T1106) calls such as `CreateToolhelp32Snapshot`. In Mac and Linux, this is accomplished with the `ps` command. Adversaries may also opt to enumerate processes via /proc.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Process: OS API Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\nNormal, benign system and network events that look like process discovery may be uncommon, depending on the environment and how they are used. Monitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1057",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1057",
+                "atomic_attack_guid": "11ba69ee-902e-4a0f-b3b6-418aed7d7ddb",
+                "atomic_attack_name": "Discover Specific Process - tasklist",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "LSASS Process Reconnaissance Via Findstr.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_findstr_lsass.yml",
+                        "remote_content": "title: LSASS Process Reconnaissance Via Findstr.EXE\nid: fe63010f-8823-4864-a96b-a7b4a0f7b929\nstatus: experimental\ndescription: Detects findstring commands that include the keyword lsass, which indicates recon actviity for the LSASS process PID\nreferences:\n    - https://blog.talosintelligence.com/2022/08/recent-cyber-attack.html?m=1\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-08-12\nmodified: 2024-06-04\ntags:\n    - attack.credential-access\n    - attack.t1552.006\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_findstr_img:\n        - Image|endswith:\n              - '\\find.exe'\n              - '\\findstr.exe'\n        - OriginalFileName:\n              - 'FIND.EXE'\n              - 'FINDSTR.EXE'\n    selection_findstr_cli:\n        CommandLine|contains: 'lsass'\n    selection_special:\n        CommandLine|contains|windash:\n            - ' /i \"lsass'\n            - ' /i lsass.exe'\n            - 'findstr \"lsass'\n            - 'findstr lsass'\n            - 'findstr.exe \"lsass'\n            - 'findstr.exe lsass'\n    condition: all of selection_findstr_* or selection_special\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Recon Command Output Piped To Findstr.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_findstr_recon_pipe_output.yml",
+                        "remote_content": "title: Recon Command Output Piped To Findstr.EXE\nid: ccb5742c-c248-4982-8c5c-5571b9275ad3\nrelated:\n    - id: fe63010f-8823-4864-a96b-a7b4a0f7b929\n      type: derived\nstatus: experimental\ndescription: |\n    Detects the execution of a potential recon command where the results are piped to \"findstr\". This is meant to trigger on inline calls of \"cmd.exe\" via the \"/c\" or \"/k\" for example.\n    Attackers often time use this technique to extract specific information they require in their reconnaissance phase.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/02cb591f75064ffe1e0df9ac3ed5972a2e491c97/atomics/T1057/T1057.md#atomic-test-6---discover-specific-process---tasklist\n    - https://www.hhs.gov/sites/default/files/manage-engine-vulnerability-sector-alert-tlpclear.pdf\n    - https://www.trendmicro.com/en_us/research/22/d/spring4shell-exploited-to-deploy-cryptocurrency-miners.html\nauthor: Nasreddine Bencherchali (Nextron Systems), frack113\ndate: 2023-07-06\nmodified: 2024-06-27\ntags:\n    - attack.discovery\n    - attack.t1057\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            # Note: Add additional CLI to increase and enhance coverage\n            # Note: We use wildcards in this instance to avoid writing a lot of variations that can be avoided easily. You can switch to regex if its supported by your backend.\n            - 'ipconfig*|*find'\n            - 'net*|*find'\n            - 'netstat*|*find'\n            - 'ping*|*find'\n            - 'systeminfo*|*find'\n            - 'tasklist*|*find'\n            - 'whoami*|*find'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Tasklist Discovery Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_tasklist_basic_execution.yml",
+                        "remote_content": "title: Suspicious Tasklist Discovery Command\nid: 63332011-f057-496c-ad8d-d2b6afb27f96\nstatus: test\ndescription: Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1057/T1057.md#atomic-test-2---process-discovery---tasklist\nauthor: frack113\ndate: 2021-12-11\nmodified: 2022-12-25\ntags:\n    - attack.discovery\n    - attack.t1057\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains: 'tasklist'\n        - Image|endswith: '\\tasklist.exe'\n        - OriginalFileName: 'tasklist.exe'\n    condition: selection\nfalsepositives:\n    - Likely from users, administrator and different internal and third party applications.\nlevel: informational\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1057",
+                "atomic_attack_guid": "640cbf6d-659b-498b-ba53-f6dd1a1cc02c",
+                "atomic_attack_name": "Process Discovery - wmic process",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Process Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_process.yml",
+                        "remote_content": "title: Process Reconnaissance Via Wmic.EXE\nid: 221b251a-357a-49a9-920a-271802777cc0\nstatus: test\ndescription: Detects the execution of \"wmic\" with the \"process\" flag, which adversary might use to list processes running on the compromised host or list installed software hotfixes and patches.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113\ndate: 2022-01-01\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: 'process'\n    filter_main_creation:\n        CommandLine|contains|all:\n            # Rule id 526be59f-a573-4eea-b5f7-f0973207634d for `wmic process call create #{process_to_execute}`\n            - 'call'\n            - 'create'\n    condition: all of selection* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1057",
+                "atomic_attack_guid": "c5806a4f-62b8-4900-980b-c7ec004e9908",
+                "atomic_attack_name": "Process Discovery - tasklist",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Tasklist Discovery Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_tasklist_basic_execution.yml",
+                        "remote_content": "title: Suspicious Tasklist Discovery Command\nid: 63332011-f057-496c-ad8d-d2b6afb27f96\nstatus: test\ndescription: Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1057/T1057.md#atomic-test-2---process-discovery---tasklist\nauthor: frack113\ndate: 2021-12-11\nmodified: 2022-12-25\ntags:\n    - attack.discovery\n    - attack.t1057\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains: 'tasklist'\n        - Image|endswith: '\\tasklist.exe'\n        - OriginalFileName: 'tasklist.exe'\n    condition: selection\nfalsepositives:\n    - Likely from users, administrator and different internal and third party applications.\nlevel: informational\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                    "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                    "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                    "170901d1-de11-4de7-bccb-8fa13678d857",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                    "4e2f5868-08d4-413d-899f-dc2f1508627b",
+                    "5d498330-f574-4889-bcc9-c53c950d210f",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                    "63332011-f057-496c-ad8d-d2b6afb27f96",
+                    "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                    "8f4a33ec-8b1f-4b80-a2f6-642b2e479580",
+                    "f6469191-1814-4dbe-a081-2a6daf83a10b",
+                    "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                    "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                    "5e55be1a-3a30-48ae-9934-4199950d210f",
+                    "af4c87ce-bdda-4215-b998-15220772e993",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                        "lookup_data": {
+                            "description": "Prynt Stealer Spotted In the Wild - A New Info Stealer Performing Clipper And Keylogger Activities",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/4b1c186d-8bf2-4297-9cbc-f8f00192770b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666601854",
+                            "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                        "lookup_data": {
+                            "description": "Operation Ghost - White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5d9b516c-e5f0-4e7c-a958-5d8c0a019371.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1571855044",
+                            "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - â€˜Operation Sharpshooterâ€™ Targets Global Defense, Critical Infrastructure",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c125ad1-a1a8-495e-ae07-48bd950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1544734085",
+                            "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "170901d1-de11-4de7-bccb-8fa13678d857",
+                        "lookup_data": {
+                            "description": "Detects Silence downloader. These commands are hardcoded into the binary.",
+                            "raw": "author: Alina Stepchenkova, Roman Rezvukhin, Group-IB, oscd.community\ndate: 2019/11/01\ndescription: Detects Silence downloader. These commands are hardcoded into the binary.\ndetection:\n  condition: selection_recon | near selection_persistence\n  selection_persistence:\n    CommandLine|contains: /C REG ADD \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"\n      /v \"WinNetworkSecurity\" /t REG_SZ /d\n  selection_recon:\n    CommandLine|contains: '>>'\n    CommandLine|endswith: temps.dat\n    Image|endswith:\n    - \\tasklist.exe\n    - \\qwinsta.exe\n    - \\ipconfig.exe\n    - \\hostname.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- Image\n- CommandLine\nid: 170901d1-de11-4de7-bccb-8fa13678d857\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\n- attack.discovery\n- attack.t1057\n- attack.t1082\n- attack.t1016\n- attack.t1033\n- attack.g0091\ntitle: Silence.Downloader V3\n",
+                            "sigma:id": "170901d1-de11-4de7-bccb-8fa13678d857",
+                            "title": "Silence.Downloader V3",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                        "lookup_data": {
+                            "description": "OSINT - Analyzing Operation GhostSecret: Attack Seeks to Steal Data Worldwide",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ae2129e-15b4-41e9-9428-4f1e02de0b81.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1524766410",
+                            "uuid": "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4e2f5868-08d4-413d-899f-dc2f1508627b",
+                        "lookup_data": {
+                            "description": "Detects process discovery commands. Adversaries may attempt to get information about running processes on a system.\nInformation obtained could be used to gain an understanding of common software/applications running on systems within the network\n",
+                            "raw": "author: \"\\xD6mer G\\xFCnal, oscd.community\"\ndate: 2020/10/06\ndescription: 'Detects process discovery commands. Adversaries may attempt to get information\n  about running processes on a system.\n\n  Information obtained could be used to gain an understanding of common software/applications\n  running on systems within the network\n\n  '\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - /ps\n    - /top\nfalsepositives:\n- Legitimate administration activities\nid: 4e2f5868-08d4-413d-899f-dc2f1508627b\nlevel: informational\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/07/07\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1057/T1057.md\nstatus: stable\ntags:\n- attack.discovery\n- attack.t1057\ntitle: Process Discovery\n",
+                            "sigma:id": "4e2f5868-08d4-413d-899f-dc2f1508627b",
+                            "title": "Process Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Sharpening the Machete",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d498330-f574-4889-bcc9-c53c950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566552908",
+                            "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - A journey to Zebrocy land",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ce6aa86-9cd8-4302-9dc9-4a59950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1563528054",
+                            "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "63332011-f057-496c-ad8d-d2b6afb27f96",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network",
+                            "raw": "author: frack113\ndate: 2021/12/11\ndescription: Adversaries may attempt to get information about running processes on\n  a system. Information obtained could be used to gain an understanding of common\n  software/applications running on systems within the network\ndetection:\n  condition: selection\n  selection:\n  - CommandLine|contains: tasklist\n  - Image|endswith: \\tasklist.exe\n  - OriginalFileName: tasklist.exe\nfalsepositives:\n- Administrator, hotline ask to user\nid: 63332011-f057-496c-ad8d-d2b6afb27f96\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1057/T1057.md#atomic-test-2---process-discovery---tasklist\nstatus: test\ntags:\n- attack.discovery\n- attack.t1057\ntitle: Suspicious Tasklist Discovery Command\n",
+                            "sigma:id": "63332011-f057-496c-ad8d-d2b6afb27f96",
+                            "title": "Suspicious Tasklist Discovery Command",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                        "lookup_data": {
+                            "description": "Turla: A Galaxy of Opportunity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/54dd4ef7-f7b2-418e-a191-5def4fbb0033.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1673286950",
+                            "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8f4a33ec-8b1f-4b80-a2f6-642b2e479580",
+                        "lookup_data": {
+                            "capec": "CAPEC-573",
+                            "mitre-attack-id": "T1057",
+                            "mitre-cti:description": "Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network. Adversaries may use the information from [Process Discovery](https://attack.mitre.org/techniques/T1057) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\n\nIn Windows environments, adversaries could obtain details on running processes using the [Tasklist](https://attack.mitre.org/software/S0057) utility via [cmd](https://attack.mitre.org/software/S0106) or <code>Get-Process</code> via [PowerShell](https://attack.mitre.org/techniques/T1059/001). Information about processes can also be extracted from the output of [Native API](https://attack.mitre.org/techniques/T1106) calls such as <code>CreateToolhelp32Snapshot</code>. In Mac and Linux, this is accomplished with the <code>ps</code> command. Adversaries may also opt to enumerate processes via /proc.",
+                            "mitre-cti:name": "Process Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--8f4a33ec-8b1f-4b80-a2f6-642b2e479580', 'type': 'attack-pattern', 'created': '2017-05-31T21:30:48.728Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1057', 'external_id': 'T1057'}, {'external_id': 'CAPEC-573', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/573.html'}], 'modified': '2020-03-26T18:05:53.130Z', 'name': 'Process Discovery', 'description': 'Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network. Adversaries may use the information from [Process Discovery](https://attack.mitre.org/techniques/T1057) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\\n\\nIn Windows environments, adversaries could obtain details on running processes using the [Tasklist](https://attack.mitre.org/software/S0057) utility via [cmd](https://attack.mitre.org/software/S0106) or <code>Get-Process</code> via [PowerShell](https://attack.mitre.org/techniques/T1059/001). Information about processes can also be extracted from the output of [Native API](https://attack.mitre.org/techniques/T1106) calls such as <code>CreateToolhelp32Snapshot</code>. In Mac and Linux, this is accomplished with the <code>ps</code> command. Adversaries may also opt to enumerate processes via /proc.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\\n\\nNormal, benign system and network events that look like process discovery may be uncommon, depending on the environment and how they are used. Monitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).', 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: OS API Execution', 'Command: Command Execution', 'Process: Process Creation'], 'x_mitre_permissions_required': ['User', 'Administrator', 'SYSTEM'], 'x_mitre_system_requirements': ['Administrator, SYSTEM may provide better process ownership details'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f6469191-1814-4dbe-a081-2a6daf83a10b",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1057",
+                            "mitre-cti:description": "Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about processes, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Process Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--f6469191-1814-4dbe-a081-2a6daf83a10b', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1057', 'url': 'https://attack.mitre.org/mitigations/T1057', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.656Z', 'name': 'Process Discovery Mitigation', 'description': 'Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about processes, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                        "lookup_data": {
+                            "description": "Find information about network devices that is not stored in config files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Find information about network devices that is not stored in config files\ndetection:\n  condition: keywords\n  keywords:\n  - dir\n  - show processes\n  - show arp\n  - show cdp\n  - show version\n  - show ip route\n  - show ip interface\n  - show ip sockets\n  - show users\n  - show ssh\n  - show clock\nfalsepositives:\n- Commonly used by administrators for troubleshooting\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 9705a6a1-6db6-4a16-a987-15b7151e299b\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\n- attack.t1201\n- attack.t1057\n- attack.t1018\n- attack.t1082\n- attack.t1016\n- attack.t1049\n- attack.t1033\n- attack.t1124\ntitle: Cisco Discovery\n",
+                            "sigma:id": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                            "title": "Cisco Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                        "lookup_data": {
+                            "description": "Turla PowerShell blogpost",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5ced8da1-0960-40bc-b5dc-2fed0a016219.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1559232101",
+                            "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                        "lookup_data": {
+                            "description": "Ragnar Locker Ransomware Targeting the Energy Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/8dbeaaac-a671-4a02-8dab-5eec2a1c935b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1662991697",
+                            "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                        "lookup_data": {
+                            "description": "Interesting Recon Script",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e55be1a-3a30-48ae-9934-4199950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1582912038",
+                            "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "af4c87ce-bdda-4215-b998-15220772e993",
+                        "lookup_data": {
+                            "description": "Get the processes that are running on the local computer.",
+                            "raw": "author: frack113\ndate: 2022/03/17\ndescription: Get the processes that are running on the local computer.\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains: Get-Process\nfalsepositives:\n- Legitimate PowerShell scripts\nid: af4c87ce-bdda-4215-b998-15220772e993\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1057/T1057.md#atomic-test-3---process-discovery---get-process\n- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-process?view=powershell-7\nstatus: test\ntags:\n- attack.discovery\n- attack.t1057\ntitle: Suspicious Process Discovery With Get-Process\n",
+                            "sigma:id": "af4c87ce-bdda-4215-b998-15220772e993",
+                            "title": "Suspicious Process Discovery With Get-Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1057",
+                "display_name": "Process Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "Process Discovery - ps",
+                        "auto_generated_guid": "4ff64f0b-aaf2-4866-b39d-38d9791407cc",
+                        "description": "Utilize ps to identify processes.\n\nUpon successful execution, sh will execute ps and output to /tmp/loot.txt.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "path of output file",
+                                "type": "path",
+                                "default": "/tmp/loot.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "ps >> #{output_file}\nps aux >> #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Process Discovery - tasklist",
+                        "auto_generated_guid": "c5806a4f-62b8-4900-980b-c7ec004e9908",
+                        "description": "Utilize tasklist to identify processes.\n\nUpon successful execution, cmd.exe will execute tasklist.exe to list processes. Output will be via stdout. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "tasklist\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Process Discovery - Get-Process",
+                        "auto_generated_guid": "3b3809b6-a54b-4f5b-8aff-cb51f2e97b34",
+                        "description": "Utilize Get-Process PowerShell cmdlet to identify processes.\n\nUpon successful execution, powershell.exe will execute Get-Process to list processes. Output will be via stdout. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Get-Process\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Process Discovery - get-wmiObject",
+                        "auto_generated_guid": "b51239b4-0129-474f-a2b4-70f855b9f2c2",
+                        "description": "Utilize get-wmiObject PowerShell cmdlet to identify processes.\n\nUpon successful execution, powershell.exe will execute get-wmiObject to list processes. Output will be via stdout. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "get-wmiObject -class Win32_Process\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Process Discovery - wmic process",
+                        "auto_generated_guid": "640cbf6d-659b-498b-ba53-f6dd1a1cc02c",
+                        "description": "Utilize windows management instrumentation to identify processes.\n\nUpon successful execution, WMIC will execute process to list processes. Output will be via stdout. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "wmic process get /format:list\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Discover Specific Process - tasklist",
+                        "auto_generated_guid": "11ba69ee-902e-4a0f-b3b6-418aed7d7ddb",
+                        "description": "Adversaries may use command line tools to discover specific processes in preparation of further attacks. \nExamples of this could be discovering the PID of lsass.exe to dump its memory or discovering whether specific security processes (e.g. AV or EDR) are running.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "process_to_enumerate": {
+                                "description": "Process name string to search for.",
+                                "type": "string",
+                                "default": "lsass"
+                            }
+                        },
+                        "executor": {
+                            "command": "tasklist | findstr #{process_to_enumerate}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Process Discovery - Process Hacker",
+                        "auto_generated_guid": "966f4c16-1925-4d9b-8ce0-01334ee0867d",
+                        "description": "Process Hacker can be exploited to infiltrate system processes, identify weak points, or achieve unauthorized control over systems. However, its malicious use can often be flagged by security defenses, rendering it a perilous tool for illegitimate purposes.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "processhacker_exe": {
+                                "description": "Process hacker installation executables.",
+                                "type": "string",
+                                "default": "ProcessHacker.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Process Hacker must be installed in the location",
+                                "prereq_command": "if (Test-Path \"c:\\Program Files\\Process Hacker 2\\#{processhacker_exe}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Downloading Process Hacker\nNew-Item -Type Directory \"C:\\Temp\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://versaweb.dl.sourceforge.net/project/processhacker/processhacker2/processhacker-2.39-setup.exe\" -OutFile \"C:\\Temp\\ExternalPayloads\\processhacker-2.39-setup.exe\"\nWrite-Host Installing Process Hacker\nStart-Process \"c:\\Temp\\ExternalPayloads\\processhacker-2.39-setup.exe\" -Wait -ArgumentList \"/s\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process -FilePath \"$Env:ProgramFiles\\Process Hacker 2\\#{processhacker_exe}\"",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Process Discovery - PC Hunter",
+                        "auto_generated_guid": "b4ca838d-d013-4461-bf2c-f7132617b409",
+                        "description": "PC Hunter is a toolkit with access to hundreds of settings including kernels, kernel modules, processes, network, startup, and more. When abused, this tool can allow threat actors to effectively access sensitive processes, collect system information, and terminate security software.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "pchunter64_exe": {
+                                "description": "Process hacker installation executables.",
+                                "type": "string",
+                                "default": "PChunter64.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "PCHunter must be present in device",
+                                "prereq_command": "if (Get-ChildItem -Path C:\\ -Include *PCHunter64* -File -Recurse -ErrorAction SilentlyContinue) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Downloading PC Hunter\nNew-Item -Type Directory \"C:\\Temp\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://www.snapfiles.com/directdl/PCHunter_free.zip\" -OutFile \"C:\\Temp\\ExternalPayloads\\PCHunter_free.zip\"\nExpand-Archive -LiteralPath 'C:\\Temp\\ExternalPayloads\\PCHunter_free.zip' -DestinationPath C:\\Temp\\ExternalPayloads\nWrite-Host Unzipping Installing Process Hunter"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process -FilePath \"C:\\Temp\\ExternalPayloads\\PCHunter_free\\#{pchunter64_exe}\"",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Launch Taskmgr from cmd to View running processes",
+                        "auto_generated_guid": "4fd35378-39aa-481e-b7c4-e3bf49375c67",
+                        "description": "An adverary may launch taskmgr.exe with the /7 switch via command prompt to view processes running on the system.\n[Reference](https://github.com/trellix-enterprise/ac3-threat-sightings/blob/main/sightings/Sightings_Conti_Ransomware.yml)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "taskmgr.exe /7\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:00:37"
+}

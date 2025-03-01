@@ -1,0 +1,96 @@
+{
+    "id": "T1006",
+    "name": "Direct Volume Access",
+    "description": "Adversaries may directly access a volume to bypass file access controls and file system monitoring. Windows allows programs to have direct access to logical volumes. Programs with direct access may read and write files directly from the drive by analyzing file system data structures. This technique bypasses Windows file access controls as well as file system monitoring tools. (Citation: Hakobyan 2009)\nUtilities, such as NinjaCopy, exist to perform these actions in PowerShell. (Citation: Github PowerSploit Ninjacopy)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Command: Command Execution, Drive: Drive Access",
+    "detection": "Monitor handle opens on drive volumes that are made by processes to determine when they may directly access logical drives. (Citation: Github PowerSploit Ninjacopy)\nMonitor processes and command-line arguments for actions that could be taken to copy files from the logical drive and evade common file system protections. Since this technique may also be used through [PowerShell](T1059.001), additional logging of PowerShell scripts is recommended.",
+    "url": "https://attack.mitre.org/techniques/T1006",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "fb0647d7-371a-4553-8e20-33bbbe122956",
+                    "db809f10-56ce-4420-8c86-d6a7d793c79c",
+                    "0c8ab3eb-df48-4b9c-ace7-beacaac81cc5",
+                    "902286b2-96cc-4dd7-931f-e7340c9961da"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "fb0647d7-371a-4553-8e20-33bbbe122956",
+                        "lookup_data": {
+                            "description": "Detects access to a raw disk on a host to evade detection by security products.",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/12/20\ndescription: Detects access to a raw disk on a host to evade detection by security\n  products.\ndetection:\n  condition: selection_debugfs | near selection_tools\n  selection_debugfs:\n    a0: debugfs\n    type: EXECVE\n  selection_tools:\n    a0:\n    - df\n    - lsblk\n    - pvs\n    - fdisk\n    - blkid\n    - parted\n    - hwinfo\n    - inxi\n    type: EXECVE\n  timeframe: 5m\nfalsepositives:\n- Unknown\nid: fb0647d7-371a-4553-8e20-33bbbe122956\nlevel: medium\nlogsource:\n  product: linux\n  service: auditd\nreferences:\n- https://twitter.com/0xm1rch/status/1600857731073654784?s=20&t=MdrBPqv4hnBEfAJBayMCZA\n- https://github.com/Neo23x0/auditd/blob/master/audit.rules\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1006\ntitle: Use of Debugfs to Access a Raw Disk\n",
+                            "sigma:id": "fb0647d7-371a-4553-8e20-33bbbe122956",
+                            "title": "Use of Debugfs to Access a Raw Disk",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "db809f10-56ce-4420-8c86-d6a7d793c79c",
+                        "lookup_data": {
+                            "description": "Detects raw disk access using uncommon tools, which could indicate possible defense evasion attempts",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/10/22\ndescription: Detects raw disk access using uncommon tools, which could indicate possible\n  defense evasion attempts\ndetection:\n  condition: not 1 of filter_*\n  filter_Keybase:\n    Image|endswith: \\Keybase\\upd.exe\n  filter_floppy:\n    Device|contains: floppy\n  filter_generic:\n    Image|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SystemApps\\\n    - C:\\Windows\\WinSxS\\\n    - C:\\Windows\\servicing\\\n    - C:\\Windows\\CCM\\\n    - C:\\Windows\\uus\\\n  filter_github_desktop:\n    Image|contains: \\AppData\\Local\\GitHubDesktop\\app-\n    Image|endswith: \\resources\\app\\git\\mingw64\\bin\\git.exe\n    Image|startswith: C:\\Users\\\n  filter_microsoft_appdata:\n    Image|contains|all:\n    - C:\\Users\\\n    - \\AppData\\\n    - \\Microsoft\\\n  filter_nextron:\n    Image|endswith: \\thor.exe\n    Image|startswith: C:\\Windows\\Temp\\asgard2-agent\\\n  filter_setuphost:\n    Image: C:\\$WINDOWS.~BT\\Sources\\SetupHost.exe\n  filter_specific:\n    Image:\n    - C:\\Windows\\UUS\\amd64\\MoUsoCoreWorker.exe\n    - C:\\Windows\\explorer.exe\n  filter_ssd_nvme:\n    Image|endswith:\n    - \\HostMetadata\\NVMEHostmetadata.exe\n    - \\Executables\\SSDUpdate.exe\n    Image|startswith: C:\\Windows\\Temp\\\n  filter_startmenu_xphost:\n    Image|endswith: \\StartMenuExperienceHost.exe\n    Image|startswith: C:\\Windows\\SystemApps\\Microsoft.Windows.StartMenuExperienceHost\n  filter_system_images:\n    Image:\n    - System\n    - Registry\n  filter_system_process:\n    ProcessId: 4\n  filter_windefender:\n    Image|endswith: \\MsMpEng.exe\n    Image|startswith: C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\\n  filter_windows_update_box:\n    Image|endswith: \\WindowsUpdateBox.exe\n    Image|startswith: C:\\Windows\\SoftwareDistribution\\Download\nfalsepositives:\n- Legitimate Administrator using tool for raw access or ongoing forensic investigation\nfields:\n- ComputerName\n- Image\n- ProcessID\n- Device\nid: db809f10-56ce-4420-8c86-d6a7d793c79c\nlevel: low\nlogsource:\n  category: raw_access_thread\n  product: windows\nmodified: 2023/01/18\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1006\ntitle: Potential Defense Evasion Via Raw Disk Access By Uncommon Tools\n",
+                            "sigma:id": "db809f10-56ce-4420-8c86-d6a7d793c79c",
+                            "title": "Potential Defense Evasion Via Raw Disk Access By Uncommon Tools",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0c8ab3eb-df48-4b9c-ace7-beacaac81cc5",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1006",
+                            "mitre-cti:description": "Adversaries may directly access a volume to bypass file access controls and file system monitoring. Windows allows programs to have direct access to logical volumes. Programs with direct access may read and write files directly from the drive by analyzing file system data structures. This technique bypasses Windows file access controls as well as file system monitoring tools. (Citation: Hakobyan 2009)\n\nUtilities, such as NinjaCopy, exist to perform these actions in PowerShell. (Citation: Github PowerSploit Ninjacopy)",
+                            "mitre-cti:name": "Direct Volume Access",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--0c8ab3eb-df48-4b9c-ace7-beacaac81cc5', 'type': 'attack-pattern', 'created': '2017-05-31T21:30:20.934Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1006', 'url': 'https://attack.mitre.org/techniques/T1006'}, {'url': 'http://www.codeproject.com/Articles/32169/FDump-Dumping-File-Sectors-Directly-from-Disk-usin', 'description': 'Hakobyan, A. (2009, January 8). FDump - Dumping File Sectors Directly from Disk using Logical Offsets. Retrieved November 12, 2014.', 'source_name': 'Hakobyan 2009'}, {'url': 'https://github.com/PowerShellMafia/PowerSploit/blob/master/Exfiltration/Invoke-NinjaCopy.ps1', 'description': 'Bialek, J. (2015, December 16). Invoke-NinjaCopy.ps1. Retrieved June 2, 2016.', 'source_name': 'Github PowerSploit Ninjacopy'}], 'modified': '2021-02-09T14:09:00.753Z', 'name': 'Direct Volume Access', 'description': 'Adversaries may directly access a volume to bypass file access controls and file system monitoring. Windows allows programs to have direct access to logical volumes. Programs with direct access may read and write files directly from the drive by analyzing file system data structures. This technique bypasses Windows file access controls as well as file system monitoring tools. (Citation: Hakobyan 2009)\\n\\nUtilities, such as NinjaCopy, exist to perform these actions in PowerShell. (Citation: Github PowerSploit Ninjacopy)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Monitor handle opens on drive volumes that are made by processes to determine when they may directly access logical drives. (Citation: Github PowerSploit Ninjacopy)\\n\\nMonitor processes and command-line arguments for actions that could be taken to copy files from the logical drive and evade common file system protections. Since this technique may also be used through [PowerShell](https://attack.mitre.org/techniques/T1059/001), additional logging of PowerShell scripts is recommended.', 'x_mitre_version': '2.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Drive: Drive Access', 'Command: Command Execution'], 'x_mitre_defense_bypassed': ['File monitoring', 'File system access controls'], 'x_mitre_permissions_required': ['Administrator'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "902286b2-96cc-4dd7-931f-e7340c9961da",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1006",
+                            "mitre-cti:description": "Identify potentially malicious software that may be used to access logical drives in this manner, and audit and/or block it by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "File System Logical Offsets Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--902286b2-96cc-4dd7-931f-e7340c9961da', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1006', 'url': 'https://attack.mitre.org/mitigations/T1006', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2021-08-23T20:25:19.208Z', 'name': 'File System Logical Offsets Mitigation', 'description': 'Identify potentially malicious software that may be used to access logical drives in this manner, and audit and/or block it by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1006",
+                "display_name": "Direct Volume Access",
+                "atomic_tests": [
+                    {
+                        "name": "Read volume boot sector via DOS device path (PowerShell)",
+                        "auto_generated_guid": "88f6327e-51ec-4bbf-b2e8-3fea534eab8b",
+                        "description": "This test uses PowerShell to open a handle on the drive volume via the `\\\\.\\` [DOS device path specifier](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#dos-device-paths) and perform direct access read of the first few bytes of the volume.\nOn success, a hex dump of the first 11 bytes of the volume is displayed.\n\nFor a NTFS volume, it should correspond to the following sequence ([NTFS partition boot sector](https://en.wikipedia.org/wiki/NTFS#Partition_Boot_Sector_(VBR))):\n```\n           00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n\n00000000   EB 52 90 4E 54 46 53 20 20 20 20                 ëR?NTFS\n```",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "volume": {
+                                "description": "Drive letter of the volume to access",
+                                "type": "string",
+                                "default": "C:"
+                            }
+                        },
+                        "executor": {
+                            "command": "$buffer = New-Object byte[] 11\n$handle = New-Object IO.FileStream \"\\\\.\\#{volume}\", 'Open', 'Read', 'ReadWrite'\n$handle.Read($buffer, 0, $buffer.Length)\n$handle.Close()\nFormat-Hex -InputObject $buffer\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:45:40"
+}

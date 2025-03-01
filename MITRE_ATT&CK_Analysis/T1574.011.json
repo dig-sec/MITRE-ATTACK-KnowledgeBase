@@ -1,0 +1,199 @@
+{
+    "id": "T1574.011",
+    "name": "Services Registry Permissions Weakness",
+    "description": "Adversaries may execute their own malicious payloads by hijacking the Registry entries used by services. Adversaries may use flaws in the permissions for Registry keys related to services to redirect from the originally specified executable to one that they control, in order to launch their own code when a service starts. Windows stores local service configuration information in the Registry under `HKLMSYSTEMCurrentControlSetServices`. The information stored under a service's Registry keys can be manipulated to modify a service's execution parameters through tools such as the service controller, sc.exe,  [PowerShell](T1059.001), or [Reg](S0075). Access to Registry keys is controlled through access control lists and user permissions. (Citation: Registry Key Security)(Citation: malware_hides_service)\nIf the permissions for users and groups are not properly set and allow access to the Registry keys for a service, adversaries may change the service's binPath/ImagePath to point to a different executable under their control. When the service starts or is restarted, then the adversary-controlled program will execute, allowing the adversary to establish persistence and/or privilege escalation to the account context the service is set to execute under (local/domain account, SYSTEM, LocalService, or NetworkService).\nAdversaries may also alter other Registry keys in the service’s Registry tree. For example, the `FailureCommand` key may be changed so that the service is executed in an elevated context anytime the service fails or is intentionally corrupted.(Citation: Kansa Service related collectors)(Citation: Tweet Registry Perms Weakness)\nThe `Performance` key contains the name of a driver service's performance DLL and the names of several exported functions in the DLL.(Citation: microsoft_services_registry_tree) If the `Performance` key is not already present and if an adversary-controlled user has the `Create Subkey` permission, adversaries may create the `Performance` key in the service’s Registry tree to point to a malicious DLL.(Citation: insecure_reg_perms)\nAdversaries may also add the `Parameters` key, which stores driver-specific data, or other custom subkeys for their malicious services to establish persistence or enable other malicious activities.(Citation: microsoft_services_registry_tree)(Citation: troj_zegost) Additionally, If adversaries launch their malicious services using svchost.exe, the service’s file may be identified using `HKEY_LOCAL_MACHINESYSTEMCurrentControlSetServicesservicenameParametersServiceDll`.(Citation: malware_hides_service)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation, Defense Evasion",
+    "data_sources": "Windows Registry: Windows Registry Key Modification, Process: Process Creation, Service: Service Metadata, Command: Command Execution",
+    "detection": "Service changes are reflected in the Registry. Modification to existing services should not occur frequently. If a service binary path or failure parameters are changed to values that are not typical for that service and does not correlate with software updates, then it may be due to malicious activity. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current service information. (Citation: Autoruns for Windows) Look for changes to services that do not correlate with known software, patch cycles, etc. Suspicious program execution through services may show up as outlier processes that have not been seen before when compared against historical data.\nMonitor processes and command-line arguments for actions that could be done to modify services. Remote access tools with built-in features may interact directly with the Windows API to perform these functions outside of typical system utilities. Services may also be changed through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001), so additional logging may need to be configured to gather the appropriate data.",
+    "url": "https://attack.mitre.org/techniques/T1574/011",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "22d80745-6f2c-46da-826b-77adaededd74",
+                    "9b0b7ac3-6223-47aa-a3fd-e8f211e637db",
+                    "953945c5-22fe-4a92-9f8a-a9edc1e522da",
+                    "95afc12e-3cbb-40c3-9340-84a032e596a3",
+                    "0f9c21f1-6a73-4b0e-9809-cb562cb8d981",
+                    "d937b75f-a665-4480-88a5-2f20e9f9b22a",
+                    "38879043-7e1e-47a9-8d46-6bec88e201df",
+                    "a537cfc3-4297-4789-92b5-345bfd845ad0",
+                    "17cc750b-e95b-4d7d-9dde-49e0de24148c",
+                    "514e4c3a-c77d-4cde-a00f-046425e2301e"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "22d80745-6f2c-46da-826b-77adaededd74",
+                        "lookup_data": {
+                            "description": "Detects usage of the \"Set-Service\" powershell cmdlet to configure a new SecurityDescriptor that allows a service to be hidden from other utilities such as \"sc.exe\", \"Get-Service\"...etc. (Works only in powershell 7)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/24\ndescription: Detects usage of the \"Set-Service\" powershell cmdlet to configure a new\n  SecurityDescriptor that allows a service to be hidden from other utilities such\n  as \"sc.exe\", \"Get-Service\"...etc. (Works only in powershell 7)\ndetection:\n  condition: all of selection_*\n  selection_sddl_flag:\n    ScriptBlockText|contains:\n    - '-SecurityDescriptorSddl '\n    - '-sd '\n  selection_set_service:\n    ScriptBlockText|contains:\n    - ;;;IU\n    - ;;;SU\n    - ;;;BA\n    - ;;;SY\n    - ;;;WD\n    ScriptBlockText|contains|all:\n    - 'Set-Service '\n    - D;;\nfalsepositives:\n- Rare intended use of hidden services\n- Rare FP could occure due to the non linearity of the ScriptBlockText log\nid: 22d80745-6f2c-46da-826b-77adaededd74\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://twitter.com/Alh4zr3d/status/1580925761996828672\n- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-service?view=powershell-7.2\nrelated:\n- id: a95b9b42-1308-4735-a1af-abb1c5e6f5ac\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1574.011\ntitle: Suspicious Service DACL Modification Via Set-Service Cmdlet - PS\n",
+                            "sigma:id": "22d80745-6f2c-46da-826b-77adaededd74",
+                            "title": "Suspicious Service DACL Modification Via Set-Service Cmdlet - PS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9b0b7ac3-6223-47aa-a3fd-e8f211e637db",
+                        "lookup_data": {
+                            "description": "Adversaries may execute their own malicious payloads by hijacking the Registry entries used by services.\nAdversaries may use flaws in the permissions for registry to redirect from the originally specified executable to one that they control, in order to launch their own code at Service start.\nWindows stores local service configuration information in the Registry under HKLM\\SYSTEM\\CurrentControlSet\\Services\n",
+                            "raw": "author: frack113\ndate: 2021/12/30\ndescription: 'Adversaries may execute their own malicious payloads by hijacking the\n  Registry entries used by services.\n\n  Adversaries may use flaws in the permissions for registry to redirect from the originally\n  specified executable to one that they control, in order to launch their own code\n  at Service start.\n\n  Windows stores local service configuration information in the Registry under HKLM\\SYSTEM\\CurrentControlSet\\Services\n\n  '\ndetection:\n  condition: all of selection*\n  selection:\n    CommandLine|contains|all:\n    - 'add '\n    - SYSTEM\\CurrentControlSet\\Services\\\n    - ' ImagePath '\n    Image|endswith: \\reg.exe\n  selection_value:\n    CommandLine|contains:\n    - ' /d '\n    - ' -d '\nfalsepositives:\n- Unknown\nid: 9b0b7ac3-6223-47aa-a3fd-e8f211e637db\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/03/29\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1574.011/T1574.011.md#atomic-test-2---service-imagepath-change-with-regexe\nstatus: test\ntags:\n- attack.persistence\n- attack.t1574.011\ntitle: Service ImagePath Change with Reg.exe\n",
+                            "sigma:id": "9b0b7ac3-6223-47aa-a3fd-e8f211e637db",
+                            "title": "Service ImagePath Change with Reg.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "953945c5-22fe-4a92-9f8a-a9edc1e522da",
+                        "lookup_data": {
+                            "description": "Detects usage of the \"Set-Service\" powershell cmdlet to configure a new SecurityDescriptor that allows a service to be hidden from other utilities such as \"sc.exe\", \"Get-Service\"...etc. (Works only in powershell 7)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/17\ndescription: Detects usage of the \"Set-Service\" powershell cmdlet to configure a new\n  SecurityDescriptor that allows a service to be hidden from other utilities such\n  as \"sc.exe\", \"Get-Service\"...etc. (Works only in powershell 7)\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - '-SecurityDescriptorSddl '\n    - '-sd '\n    ScriptBlockText|contains|all:\n    - 'Set-Service '\n    - DCLCWPDTSD\nfalsepositives:\n- Rare intended use of hidden services\n- Rare FP could occure due to the non linearity of the ScriptBlockText log\nid: 953945c5-22fe-4a92-9f8a-a9edc1e522da\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://twitter.com/Alh4zr3d/status/1580925761996828672\n- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-service?view=powershell-7.2\nrelated:\n- id: 514e4c3a-c77d-4cde-a00f-046425e2301e\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1574.011\ntitle: Abuse of Service Permissions to Hide Services Via Set-Service - PS\n",
+                            "sigma:id": "953945c5-22fe-4a92-9f8a-a9edc1e522da",
+                            "title": "Abuse of Service Permissions to Hide Services Via Set-Service - PS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "95afc12e-3cbb-40c3-9340-84a032e596a3",
+                        "lookup_data": {
+                            "description": "Adversaries may execute their own malicious payloads by hijacking the Registry entries used by services.\nAdversaries may use flaws in the permissions for registry to redirect from the originally specified executable to one that they control, in order to launch their own code at Service start.\nWindows stores local service configuration information in the Registry under HKLM\\SYSTEM\\CurrentControlSet\\Services\n",
+                            "raw": "author: frack113\ndate: 2021/12/30\ndescription: 'Adversaries may execute their own malicious payloads by hijacking the\n  Registry entries used by services.\n\n  Adversaries may use flaws in the permissions for registry to redirect from the originally\n  specified executable to one that they control, in order to launch their own code\n  at Service start.\n\n  Windows stores local service configuration information in the Registry under HKLM\\SYSTEM\\CurrentControlSet\\Services\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - get-acl\n    - REGISTRY::HKLM\\SYSTEM\\CurrentControlSet\\Services\\\nfalsepositives:\n- Legitimate administrative script\nid: 95afc12e-3cbb-40c3-9340-84a032e596a3\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1574.011/T1574.011.md#atomic-test-1---service-registry-permissions-weakness\n- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.security/get-acl?view=powershell-7.2\nstatus: test\ntags:\n- attack.persistence\n- attack.t1574.011\ntitle: Service Registry Permissions Weakness Check\n",
+                            "sigma:id": "95afc12e-3cbb-40c3-9340-84a032e596a3",
+                            "title": "Service Registry Permissions Weakness Check",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0f9c21f1-6a73-4b0e-9809-cb562cb8d981",
+                        "lookup_data": {
+                            "description": "Detect modification of services configuration (ImagePath, FailureCommand and ServiceDLL) in registry by processes with Medium integrity level",
+                            "raw": "author: Teymur Kheirkhabarov\ndate: 2019/10/26\ndescription: Detect modification of services configuration (ImagePath, FailureCommand\n  and ServiceDLL) in registry by processes with Medium integrity level\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - \\ImagePath\n    - \\FailureCommand\n    - \\ServiceDll\n    CommandLine|contains|all:\n    - ControlSet\n    - services\n    IntegrityLevel: Medium\nfalsepositives:\n- Unknown\nid: 0f9c21f1-6a73-4b0e-9809-cb562cb8d981\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-privilege-escalation-in-windows-environment\n- https://pentestlab.blog/2017/03/31/insecure-registry-permissions/\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1574.011\ntitle: Potential Privilege Escalation via Service Permissions Weakness\n",
+                            "sigma:id": "0f9c21f1-6a73-4b0e-9809-cb562cb8d981",
+                            "title": "Potential Privilege Escalation via Service Permissions Weakness",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d937b75f-a665-4480-88a5-2f20e9f9b22a",
+                        "lookup_data": {
+                            "description": "Detection of sc.exe utility spawning by user with Medium integrity level to change service ImagePath or FailureCommand",
+                            "raw": "author: Teymur Kheirkhabarov\ndate: 2019/10/26\ndescription: Detection of sc.exe utility spawning by user with Medium integrity level\n  to change service ImagePath or FailureCommand\ndetection:\n  condition: scbynonadmin and 1 of selection_*\n  scbynonadmin:\n    Image|endswith: \\sc.exe\n    IntegrityLevel: Medium\n  selection_binpath:\n    CommandLine|contains|all:\n    - config\n    - binPath\n  selection_failure:\n    CommandLine|contains|all:\n    - failure\n    - command\nfalsepositives:\n- Unknown\nid: d937b75f-a665-4480-88a5-2f20e9f9b22a\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-privilege-escalation-in-windows-environment\n- https://pentestlab.blog/2017/03/30/weak-service-permissions/\nstatus: test\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1574.011\ntitle: Possible Privilege Escalation via Weak Service Permissions\n",
+                            "sigma:id": "d937b75f-a665-4480-88a5-2f20e9f9b22a",
+                            "title": "Possible Privilege Escalation via Weak Service Permissions",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "38879043-7e1e-47a9-8d46-6bec88e201df",
+                        "lookup_data": {
+                            "description": "Detects modification of an existing service on a compromised host in order to execute an arbitrary payload when the service is started or killed as a method of persistence.",
+                            "raw": "author: Sreeman\ndate: 2020/09/29\ndescription: Detects modification of an existing service on a compromised host in\n  order to execute an arbitrary payload when the service is started or killed as a\n  method of persistence.\ndetection:\n  condition: selection_sc or all of selection_reg_*\n  selection_reg_ext:\n    CommandLine|contains:\n    - .sh\n    - .exe\n    - .dll\n    - .bin$\n    - .bat\n    - .cmd\n    - .js\n    - .msh$\n    - .reg$\n    - .scr\n    - .ps\n    - .vb\n    - .jar\n    - .pl\n  selection_reg_img:\n  - CommandLine|contains|all:\n    - 'reg '\n    - 'add '\n    - FailureCommand\n  - CommandLine|contains|all:\n    - 'reg '\n    - 'add '\n    - ImagePath\n  selection_sc:\n  - CommandLine|contains|all:\n    - 'sc '\n    - 'config '\n    - binpath=\n  - CommandLine|contains|all:\n    - 'sc '\n    - failure\n    - command=\nfalsepositives:\n- Unknown\nid: 38879043-7e1e-47a9-8d46-6bec88e201df\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/31\nreferences:\n- https://pentestlab.blog/2020/01/22/persistence-modify-existing-service/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1543.003\n- attack.t1574.011\ntitle: Modification Of Existing Services For Persistence\n",
+                            "sigma:id": "38879043-7e1e-47a9-8d46-6bec88e201df",
+                            "title": "Modification Of Existing Services For Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a537cfc3-4297-4789-92b5-345bfd845ad0",
+                        "lookup_data": {
+                            "description": "Detection of sc.exe utility adding a new service with special permission which hides that service.",
+                            "raw": "author: Andreas Hunkeler (@Karneades)\ndate: 2021/12/20\ndescription: Detection of sc.exe utility adding a new service with special permission\n  which hides that service.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains|all:\n    - sdset\n    - DCLCWPDTSD\n  selection_img:\n  - Image|endswith: \\sc.exe\n  - OriginalFileName: sc.exe\nfalsepositives:\n- Rare intended use of hidden services\nid: a537cfc3-4297-4789-92b5-345bfd845ad0\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/08\nreferences:\n- https://blog.talosintelligence.com/2021/10/threat-hunting-in-large-datasets-by.html\n- https://www.sans.org/blog/red-team-tactics-hiding-windows-services/\n- https://twitter.com/Alh4zr3d/status/1580925761996828672\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1574.011\ntitle: Abuse of Service Permissions to Hide Services in Tools\n",
+                            "sigma:id": "a537cfc3-4297-4789-92b5-345bfd845ad0",
+                            "title": "Abuse of Service Permissions to Hide Services in Tools",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "17cc750b-e95b-4d7d-9dde-49e0de24148c",
+                        "lookup_data": {
+                            "capec": "CAPEC-478",
+                            "mitre-attack-id": "T1574.011",
+                            "mitre-cti:description": "Adversaries may execute their own malicious payloads by hijacking the Registry entries used by services. Adversaries may use flaws in the permissions for Registry keys related to services to redirect from the originally specified executable to one that they control, in order to launch their own code when a service starts. Windows stores local service configuration information in the Registry under <code>HKLM\\SYSTEM\\CurrentControlSet\\Services</code>. The information stored under a service's Registry keys can be manipulated to modify a service's execution parameters through tools such as the service controller, sc.exe,  [PowerShell](https://attack.mitre.org/techniques/T1059/001), or [Reg](https://attack.mitre.org/software/S0075). Access to Registry keys is controlled through access control lists and user permissions. (Citation: Registry Key Security)(Citation: malware_hides_service)\n\nIf the permissions for users and groups are not properly set and allow access to the Registry keys for a service, adversaries may change the service's binPath/ImagePath to point to a different executable under their control. When the service starts or is restarted, then the adversary-controlled program will execute, allowing the adversary to establish persistence and/or privilege escalation to the account context the service is set to execute under (local/domain account, SYSTEM, LocalService, or NetworkService).\n\nAdversaries may also alter other Registry keys in the service’s Registry tree. For example, the <code>FailureCommand</code> key may be changed so that the service is executed in an elevated context anytime the service fails or is intentionally corrupted.(Citation: Kansa Service related collectors)(Citation: Tweet Registry Perms Weakness)\n\nThe <code>Performance</code> key contains the name of a driver service's performance DLL and the names of several exported functions in the DLL.(Citation: microsoft_services_registry_tree) If the <code>Performance</code> key is not already present and if an adversary-controlled user has the <code>Create Subkey</code> permission, adversaries may create the <code>Performance</code> key in the service’s Registry tree to point to a malicious DLL.(Citation: insecure_reg_perms)\n\nAdversaries may also add the <code>Parameters</code> key, which stores driver-specific data, or other custom subkeys for their malicious services to establish persistence or enable other malicious activities.(Citation: microsoft_services_registry_tree)(Citation: troj_zegost) Additionally, If adversaries launch their malicious services using svchost.exe, the service’s file may be identified using <code>HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\servicename\\Parameters\\ServiceDll</code>.(Citation: malware_hides_service)",
+                            "mitre-cti:name": "Services Registry Permissions Weakness",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Travis Smith, Tripwire', 'Matthew Demaske, Adaptforward'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--17cc750b-e95b-4d7d-9dde-49e0de24148c', 'created': '2020-03-13T11:42:14.444Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1574.011', 'url': 'https://attack.mitre.org/techniques/T1574/011'}, {'source_name': 'Tweet Registry Perms Weakness', 'url': 'https://twitter.com/r0wdy_/status/936365549553991680', 'description': '@r0wdy_. (2017, November 30). Service Recovery Parameters. Retrieved April 9, 2018.'}, {'source_name': 'insecure_reg_perms', 'url': 'https://itm4n.github.io/windows-registry-rpceptmapper-eop/', 'description': 'Clément Labro. (2020, November 12). Windows RpcEptMapper Service Insecure Registry Permissions EoP. Retrieved August 25, 2021.'}, {'source_name': 'Kansa Service related collectors', 'url': 'https://trustedsignal.blogspot.com/2014/05/kansa-service-related-collectors-and.html', 'description': 'Hull, D.. (2014, May 3). Kansa: Service related collectors and analysis. Retrieved October 10, 2019.'}, {'source_name': 'malware_hides_service', 'url': 'https://www.bleepingcomputer.com/tutorials/how-malware-hides-as-a-service/', 'description': 'Lawrence Abrams. (2004, September 10). How Malware hides and is installed as a Service. Retrieved August 30, 2021.'}, {'source_name': 'Autoruns for Windows', 'url': 'https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns', 'description': 'Mark Russinovich. (2019, June 28). Autoruns for Windows v13.96. Retrieved March 13, 2020.'}, {'source_name': 'Registry Key Security', 'url': 'https://docs.microsoft.com/en-us/windows/win32/sysinfo/registry-key-security-and-access-rights?redirectedfrom=MSDN', 'description': 'Microsoft. (2018, May 31). Registry Key Security and Access Rights. Retrieved March 16, 2017.'}, {'source_name': 'microsoft_services_registry_tree', 'url': 'https://docs.microsoft.com/en-us/windows-hardware/drivers/install/hklm-system-currentcontrolset-services-registry-tree', 'description': 'Microsoft. (2021, August 5). HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Services Registry Tree. Retrieved August 25, 2021.'}, {'source_name': 'troj_zegost', 'url': 'https://www.trendmicro.com/vinfo/us/threat-encyclopedia/malware/troj_zegost', 'description': 'Trend Micro. (2012, October 9). TROJ_ZEGOST. Retrieved September 2, 2021.'}, {'url': 'https://capec.mitre.org/data/definitions/478.html', 'source_name': 'capec', 'external_id': 'CAPEC-478'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"Adversaries may execute their own malicious payloads by hijacking the Registry entries used by services. Adversaries may use flaws in the permissions for Registry keys related to services to redirect from the originally specified executable to one that they control, in order to launch their own code when a service starts. Windows stores local service configuration information in the Registry under <code>HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Services</code>. The information stored under a service's Registry keys can be manipulated to modify a service's execution parameters through tools such as the service controller, sc.exe,  [PowerShell](https://attack.mitre.org/techniques/T1059/001), or [Reg](https://attack.mitre.org/software/S0075). Access to Registry keys is controlled through access control lists and user permissions. (Citation: Registry Key Security)(Citation: malware_hides_service)\\n\\nIf the permissions for users and groups are not properly set and allow access to the Registry keys for a service, adversaries may change the service's binPath/ImagePath to point to a different executable under their control. When the service starts or is restarted, then the adversary-controlled program will execute, allowing the adversary to establish persistence and/or privilege escalation to the account context the service is set to execute under (local/domain account, SYSTEM, LocalService, or NetworkService).\\n\\nAdversaries may also alter other Registry keys in the service’s Registry tree. For example, the <code>FailureCommand</code> key may be changed so that the service is executed in an elevated context anytime the service fails or is intentionally corrupted.(Citation: Kansa Service related collectors)(Citation: Tweet Registry Perms Weakness)\\n\\nThe <code>Performance</code> key contains the name of a driver service's performance DLL and the names of several exported functions in the DLL.(Citation: microsoft_services_registry_tree) If the <code>Performance</code> key is not already present and if an adversary-controlled user has the <code>Create Subkey</code> permission, adversaries may create the <code>Performance</code> key in the service’s Registry tree to point to a malicious DLL.(Citation: insecure_reg_perms)\\n\\nAdversaries may also add the <code>Parameters</code> key, which stores driver-specific data, or other custom subkeys for their malicious services to establish persistence or enable other malicious activities.(Citation: microsoft_services_registry_tree)(Citation: troj_zegost) Additionally, If adversaries launch their malicious services using svchost.exe, the service’s file may be identified using <code>HKEY_LOCAL_MACHINE\\\\SYSTEM\\\\CurrentControlSet\\\\Services\\\\servicename\\\\Parameters\\\\ServiceDll</code>.(Citation: malware_hides_service)\", 'modified': '2022-05-05T04:53:45.640Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Services Registry Permissions Weakness', 'x_mitre_detection': 'Service changes are reflected in the Registry. Modification to existing services should not occur frequently. If a service binary path or failure parameters are changed to values that are not typical for that service and does not correlate with software updates, then it may be due to malicious activity. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.\\n\\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current service information. (Citation: Autoruns for Windows) Look for changes to services that do not correlate with known software, patch cycles, etc. Suspicious program execution through services may show up as outlier processes that have not been seen before when compared against historical data.\\n\\nMonitor processes and command-line arguments for actions that could be done to modify services. Remote access tools with built-in features may interact directly with the Windows API to perform these functions outside of typical system utilities. Services may also be changed through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001), so additional logging may need to be configured to gather the appropriate data.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Service: Service Modification', 'Windows Registry: Windows Registry Key Modification', 'Command: Command Execution', 'Process: Process Creation'], 'x_mitre_permissions_required': ['Administrator', 'User'], 'x_mitre_effective_permissions': ['SYSTEM'], 'x_mitre_defense_bypassed': ['Application Control'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "514e4c3a-c77d-4cde-a00f-046425e2301e",
+                        "lookup_data": {
+                            "description": "Detects usage of the \"Set-Service\" powershell cmdlet to configure a new SecurityDescriptor that allows a service to be hidden from other utilities such as \"sc.exe\", \"Get-Service\"...etc. (Works only in powershell 7)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/17\ndescription: Detects usage of the \"Set-Service\" powershell cmdlet to configure a new\n  SecurityDescriptor that allows a service to be hidden from other utilities such\n  as \"sc.exe\", \"Get-Service\"...etc. (Works only in powershell 7)\ndetection:\n  condition: all of selection_*\n  selection_cmdlet:\n    CommandLine|contains:\n    - '-SecurityDescriptorSddl '\n    - '-sd '\n  selection_img:\n  - Image|endswith: \\pwsh.exe\n  - OriginalFileName: pwsh.dll\n  selection_sddl:\n    CommandLine|contains|all:\n    - 'Set-Service '\n    - DCLCWPDTSD\nfalsepositives:\n- Rare intended use of hidden services\nid: 514e4c3a-c77d-4cde-a00f-046425e2301e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/Alh4zr3d/status/1580925761996828672\n- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-service?view=powershell-7.2\nrelated:\n- id: a537cfc3-4297-4789-92b5-345bfd845ad0\n  type: derived\n- id: 953945c5-22fe-4a92-9f8a-a9edc1e522da\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1574.011\ntitle: Abuse of Service Permissions to Hide Services Via Set-Service\n",
+                            "sigma:id": "514e4c3a-c77d-4cde-a00f-046425e2301e",
+                            "title": "Abuse of Service Permissions to Hide Services Via Set-Service",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1574.011",
+                "display_name": "Hijack Execution Flow: Services Registry Permissions Weakness",
+                "atomic_tests": [
+                    {
+                        "name": "Service Registry Permissions Weakness",
+                        "auto_generated_guid": "f7536d63-7fd4-466f-89da-7e48d550752a",
+                        "description": "Service registry permissions weakness check and then which can lead to privilege escalation with ImagePath. eg.\nreg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\#{weak_service_name}\" /f /v ImagePath /d \"C:\\temp\\AtomicRedteam.exe\"\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "weak_service_name": {
+                                "description": "weak service check",
+                                "type": "string",
+                                "default": "weakservicename"
+                            }
+                        },
+                        "executor": {
+                            "command": "get-acl REGISTRY::HKLM\\SYSTEM\\CurrentControlSet\\Services\\* |FL\nget-acl REGISTRY::HKLM\\SYSTEM\\CurrentControlSet\\Services\\#{weak_service_name} |FL\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Service ImagePath Change with reg.exe",
+                        "auto_generated_guid": "f38e9eea-e1d7-4ba6-b716-584791963827",
+                        "description": "Change Service registry ImagePath of a bengin service to a malicious file\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "weak_service_name": {
+                                "description": "weak service name",
+                                "type": "string",
+                                "default": "calcservice"
+                            },
+                            "weak_service_path": {
+                                "description": "weak service path",
+                                "type": "string",
+                                "default": "%windir%\\system32\\win32calc.exe"
+                            },
+                            "malicious_service_path": {
+                                "description": "malicious service path",
+                                "type": "string",
+                                "default": "%windir%\\system32\\cmd.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The service must exist (#{weak_service_name})\n",
+                                "prereq_command": "if (Get-Service #{weak_service_name}) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "sc.exe create #{weak_service_name} binpath= \"#{weak_service_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "reg.exe add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\#{weak_service_name}\" /f /v ImagePath /d \"#{malicious_service_path}\"\n",
+                            "cleanup_command": "sc.exe delete #{weak_service_name}\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 17:31:49"
+}

@@ -1,0 +1,153 @@
+{
+    "id": "T1546.011",
+    "name": "Application Shimming",
+    "description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by application shims. The Microsoft Windows Application Compatibility Infrastructure/Framework (Application Shim) was created to allow for backward compatibility of software as the operating system codebase changes over time. For example, the application shimming feature allows developers to apply fixes to applications (without rewriting code) that were created for Windows XP so that it will work with Windows 10. (Citation: Elastic Process Injection July 2017)\nWithin the framework, shims are created to act as a buffer between the program (or more specifically, the Import Address Table) and the Windows OS. When a program is executed, the shim cache is referenced to determine if the program requires the use of the shim database (.sdb). If so, the shim database uses hooking to redirect the code as necessary in order to communicate with the OS.\nA list of all shims currently installed by the default Windows installer (sdbinst.exe) is kept in:\n* `%WINDIR%AppPatchsysmain.sdb` and\n* `hklmsoftwaremicrosoftwindows ntcurrentversionappcompatflagsinstalledsdb`\nCustom databases are stored in:\n* `%WINDIR%AppPatchcustom & %WINDIR%AppPatchAppPatch64Custom` and\n* `hklmsoftwaremicrosoftwindows ntcurrentversionappcompatflagscustom`\nTo keep shims secure, Windows designed them to run in user mode so they cannot modify the kernel and you must have administrator privileges to install a shim. However, certain shims can be used to [Bypass User Account Control](T1548.002) (UAC and RedirectEXE), inject DLLs into processes (InjectDLL), disable Data Execution Prevention (DisableNX) and Structure Exception Handling (DisableSEH), and intercept memory addresses (GetProcAddress).\nUtilizing these shims may allow an adversary to perform several malicious acts such as elevate privileges, install backdoors, disable defenses like Windows Defender, etc. (Citation: FireEye Application Shimming) Shims can also be abused to establish persistence by continuously being invoked by affected programs.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution, Module: Module Load, File: File Modification",
+    "detection": "There are several public tools available that will detect shims that are currently available (Citation: Black Hat 2015 App Shim):\n* Shim-Process-Scanner - checks memory of every running process for any shim flags\n* Shim-Detector-Lite - detects installation of custom shim databases\n* Shim-Guard - monitors registry for any shim installations\n* ShimScanner - forensic tool to find active shims in memory\n* ShimCacheMem - Volatility plug-in that pulls shim cache from memory (note: shims are only cached after reboot)\nMonitor process execution for sdbinst.exe and command-line arguments for potential indications of application shim abuse.",
+    "url": "https://attack.mitre.org/techniques/T1546/011",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1546.011",
+                "atomic_attack_guid": "aefd6866-d753-431f-a7a4-215ca7e3f13d",
+                "atomic_attack_name": "New shim database files created in the default shim database directory",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1546.011",
+                "atomic_attack_guid": "9ab27e22-ee62-4211-962b-d36d9a0e6a18",
+                "atomic_attack_name": "Application Shim Installation",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Shim Database Persistence via Sdbinst.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sdbinst_shim_persistence.yml",
+                        "remote_content": "title: Potential Shim Database Persistence via Sdbinst.EXE\nid: 517490a7-115a-48c6-8862-1a481504d5a8\nrelated:\n    - id: 18ee686c-38a3-4f65-9f44-48a077141f42\n      type: similar\nstatus: test\ndescription: |\n    Detects installation of a new shim using sdbinst.exe.\n    Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by application shims\nreferences:\n    - https://www.mandiant.com/resources/blog/fin7-shim-databases-persistence\nauthor: Markus Neis\ndate: 2019-01-16\nmodified: 2023-12-06\ntags:\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1546.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\sdbinst.exe'\n        - OriginalFileName: 'sdbinst.exe'\n    selection_cli:\n        CommandLine|contains: '.sdb'\n    filter_optional_iis:\n        ParentImage|endswith: '\\msiexec.exe'\n        CommandLine|contains:\n            # Expected behavior for IIS Express (e.g. https://www.hybrid-analysis.com/sample/15d4ff941f77f7bdfc9dfb2399b7b952a0a2c860976ef3e835998ff4796e5e91?environmentId=120)\n            - ':\\Program Files (x86)\\IIS Express\\iisexpressshim.sdb'\n            - ':\\Program Files\\IIS Express\\iisexpressshim.sdb'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "42fe883a-21ea-4cfb-b94a-78b6476dcc83",
+                    "dfb5b4e8-91d0-4291-b40a-e3b0d3942c45",
+                    "517490a7-115a-48c6-8862-1a481504d5a8"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "42fe883a-21ea-4cfb-b94a-78b6476dcc83",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546.011",
+                            "mitre-cti:description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by application shims. The Microsoft Windows Application Compatibility Infrastructure/Framework (Application Shim) was created to allow for backward compatibility of software as the operating system codebase changes over time. For example, the application shimming feature allows developers to apply fixes to applications (without rewriting code) that were created for Windows XP so that it will work with Windows 10. (Citation: Elastic Process Injection July 2017)\n\nWithin the framework, shims are created to act as a buffer between the program (or more specifically, the Import Address Table) and the Windows OS. When a program is executed, the shim cache is referenced to determine if the program requires the use of the shim database (.sdb). If so, the shim database uses hooking to redirect the code as necessary in order to communicate with the OS. \n\nA list of all shims currently installed by the default Windows installer (sdbinst.exe) is kept in:\n\n* <code>%WINDIR%\\AppPatch\\sysmain.sdb</code> and\n* <code>hklm\\software\\microsoft\\windows nt\\currentversion\\appcompatflags\\installedsdb</code>\n\nCustom databases are stored in:\n\n* <code>%WINDIR%\\AppPatch\\custom & %WINDIR%\\AppPatch\\AppPatch64\\Custom</code> and\n* <code>hklm\\software\\microsoft\\windows nt\\currentversion\\appcompatflags\\custom</code>\n\nTo keep shims secure, Windows designed them to run in user mode so they cannot modify the kernel and you must have administrator privileges to install a shim. However, certain shims can be used to [Bypass User Account Control](https://attack.mitre.org/techniques/T1548/002) (UAC and RedirectEXE), inject DLLs into processes (InjectDLL), disable Data Execution Prevention (DisableNX) and Structure Exception Handling (DisableSEH), and intercept memory addresses (GetProcAddress).\n\nUtilizing these shims may allow an adversary to perform several malicious acts such as elevate privileges, install backdoors, disable defenses like Windows Defender, etc. (Citation: FireEye Application Shimming) Shims can also be abused to establish persistence by continuously being invoked by affected programs.",
+                            "mitre-cti:name": "Application Shimming",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--42fe883a-21ea-4cfb-b94a-78b6476dcc83', 'type': 'attack-pattern', 'created': '2020-01-24T14:56:24.231Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.011', 'url': 'https://attack.mitre.org/techniques/T1546/011'}, {'url': 'https://www.endgame.com/blog/technical-blog/ten-process-injection-techniques-technical-survey-common-and-trending-process', 'description': 'Hosseini, A. (2017, July 18). Ten Process Injection Techniques: A Technical Survey Of Common And Trending Process Injection Techniques. Retrieved December 7, 2017.', 'source_name': 'Elastic Process Injection July 2017'}, {'source_name': 'FireEye Application Shimming', 'url': 'http://files.brucon.org/2015/Tomczak_and_Ballenthin_Shims_for_the_Win.pdf', 'description': 'Ballenthin, W., Tomczak, J.. (2015). The Real Shim Shary. Retrieved May 4, 2020.'}, {'url': 'https://www.blackhat.com/docs/eu-15/materials/eu-15-Pierce-Defending-Against-Malicious-Application-Compatibility-Shims-wp.pdf', 'description': 'Pierce, Sean. (2015, November). Defending Against Malicious Application Compatibility Shims. Retrieved June 22, 2017.', 'source_name': 'Black Hat 2015 App Shim'}], 'modified': '2020-11-10T18:29:31.094Z', 'name': 'Application Shimming', 'description': 'Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by application shims. The Microsoft Windows Application Compatibility Infrastructure/Framework (Application Shim) was created to allow for backward compatibility of software as the operating system codebase changes over time. For example, the application shimming feature allows developers to apply fixes to applications (without rewriting code) that were created for Windows XP so that it will work with Windows 10. (Citation: Elastic Process Injection July 2017)\\n\\nWithin the framework, shims are created to act as a buffer between the program (or more specifically, the Import Address Table) and the Windows OS. When a program is executed, the shim cache is referenced to determine if the program requires the use of the shim database (.sdb). If so, the shim database uses hooking to redirect the code as necessary in order to communicate with the OS. \\n\\nA list of all shims currently installed by the default Windows installer (sdbinst.exe) is kept in:\\n\\n* <code>%WINDIR%\\\\AppPatch\\\\sysmain.sdb</code> and\\n* <code>hklm\\\\software\\\\microsoft\\\\windows nt\\\\currentversion\\\\appcompatflags\\\\installedsdb</code>\\n\\nCustom databases are stored in:\\n\\n* <code>%WINDIR%\\\\AppPatch\\\\custom & %WINDIR%\\\\AppPatch\\\\AppPatch64\\\\Custom</code> and\\n* <code>hklm\\\\software\\\\microsoft\\\\windows nt\\\\currentversion\\\\appcompatflags\\\\custom</code>\\n\\nTo keep shims secure, Windows designed them to run in user mode so they cannot modify the kernel and you must have administrator privileges to install a shim. However, certain shims can be used to [Bypass User Account Control](https://attack.mitre.org/techniques/T1548/002) (UAC and RedirectEXE), inject DLLs into processes (InjectDLL), disable Data Execution Prevention (DisableNX) and Structure Exception Handling (DisableSEH), and intercept memory addresses (GetProcAddress).\\n\\nUtilizing these shims may allow an adversary to perform several malicious acts such as elevate privileges, install backdoors, disable defenses like Windows Defender, etc. (Citation: FireEye Application Shimming) Shims can also be abused to establish persistence by continuously being invoked by affected programs.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'There are several public tools available that will detect shims that are currently available (Citation: Black Hat 2015 App Shim):\\n\\n* Shim-Process-Scanner - checks memory of every running process for any shim flags\\n* Shim-Detector-Lite - detects installation of custom shim databases\\n* Shim-Guard - monitors registry for any shim installations\\n* ShimScanner - forensic tool to find active shims in memory\\n* ShimCacheMem - Volatility plug-in that pulls shim cache from memory (note: shims are only cached after reboot)\\n\\nMonitor process execution for sdbinst.exe and command-line arguments for potential indications of application shim abuse.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Module: Module Load', 'File: File Modification', 'Command: Command Execution', 'Windows Registry: Windows Registry Key Modification'], 'x_mitre_permissions_required': ['Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dfb5b4e8-91d0-4291-b40a-e3b0d3942c45",
+                        "lookup_data": {
+                            "description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by application shims.\nThe Microsoft Windows Application Compatibility Infrastructure/Framework (Application Shim) was created to allow for backward compatibility of software as the operating system codebase changes over time\n",
+                            "raw": "author: frack113\ndate: 2021/12/30\ndescription: 'Adversaries may establish persistence and/or elevate privileges by executing\n  malicious content triggered by application shims.\n\n  The Microsoft Windows Application Compatibility Infrastructure/Framework (Application\n  Shim) was created to allow for backward compatibility of software as the operating\n  system codebase changes over time\n\n  '\ndetection:\n  condition: selection and not filter\n  filter:\n    Details: ''\n  selection:\n    EventType: SetValue\n    TargetObject|startswith:\n    - HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\InstalledSDB\\\n    - HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Custom\\\nfalsepositives:\n- Unknown\nid: dfb5b4e8-91d0-4291-b40a-e3b0d3942c45\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.011/T1546.011.md#atomic-test-3---registry-key-creation-andor-modification-events-for-sdb\n- https://www.fireeye.com/blog/threat-research/2017/05/fin7-shim-databases-persistence.html\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.011\ntitle: Potential Persistence Via Shim Database Modification\n",
+                            "sigma:id": "dfb5b4e8-91d0-4291-b40a-e3b0d3942c45",
+                            "title": "Potential Persistence Via Shim Database Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "517490a7-115a-48c6-8862-1a481504d5a8",
+                        "lookup_data": {
+                            "description": "Detects installation of a new shim using sdbinst.exe. A shim can be used to load malicious DLLs into applications.",
+                            "raw": "author: Markus Neis\ndate: 2019/01/16\ndescription: Detects installation of a new shim using sdbinst.exe. A shim can be used\n  to load malicious DLLs into applications.\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: iisexpressshim.sdb\n  selection:\n    CommandLine|contains: .sdb\n    Image|endswith: \\sdbinst.exe\nfalsepositives:\n- Unknown\nid: 517490a7-115a-48c6-8862-1a481504d5a8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.fireeye.com/blog/threat-research/2017/05/fin7-shim-databases-persistence.html\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.011\ntitle: Possible Shim Database Persistence via sdbinst.exe\n",
+                            "sigma:id": "517490a7-115a-48c6-8862-1a481504d5a8",
+                            "title": "Possible Shim Database Persistence via sdbinst.exe",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.011",
+                "display_name": "Event Triggered Execution: Application Shimming",
+                "atomic_tests": [
+                    {
+                        "name": "Application Shim Installation",
+                        "auto_generated_guid": "9ab27e22-ee62-4211-962b-d36d9a0e6a18",
+                        "description": "Install a shim database. This technique is used for privilege escalation and bypassing user access control.\nUpon execution, \"Installation of AtomicShim complete.\" will be displayed. To verify the shim behavior, run \nthe AtomicTest.exe from the <PathToAtomicsFolder>\\\\T1546.011\\\\bin directory. You should see a message box appear\nwith \"Atomic Shim DLL Test!\" as defined in the AtomicTest.dll. To better understand what is happening, review\nthe source code files is the <PathToAtomicsFolder>\\\\T1546.011\\\\src directory.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to the shim database file",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1546.011\\bin\\AtomicShimx86.sdb"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Shim database file must exist on disk at specified location (#{file_path})\n",
+                                "prereq_command": "if (Test-Path \"#{file_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nNew-Item -Type Directory (split-path \"#{file_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.011/bin/AtomicShimx86.sdb\" -OutFile \"#{file_path}\"\n"
+                            },
+                            {
+                                "description": "AtomicTest.dll must exist at c:\\Tools\\AtomicTest.dll\n",
+                                "prereq_command": "if (Test-Path c:\\Tools\\AtomicTest.dll) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path c:\\Tools\\AtomicTest.dll) -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.011/bin/AtomicTest.dll\" -OutFile c:\\Tools\\AtomicTest.dll\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sdbinst.exe \"#{file_path}\"\n",
+                            "cleanup_command": "sdbinst.exe -u \"#{file_path}\" >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "New shim database files created in the default shim database directory",
+                        "auto_generated_guid": "aefd6866-d753-431f-a7a4-215ca7e3f13d",
+                        "description": "Upon execution, check the \"C:\\Windows\\apppatch\\Custom\\\" folder for the new shim database\n\nhttps://www.fireeye.com/blog/threat-research/2017/05/fin7-shim-databases-persistence.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Copy-Item \"$PathToAtomicsFolder\\T1546.011\\bin\\T1546.011CompatDatabase.sdb\" C:\\Windows\\apppatch\\Custom\\T1546.011CompatDatabase.sdb\nCopy-Item \"$PathToAtomicsFolder\\T1546.011\\bin\\T1546.011CompatDatabase.sdb\" C:\\Windows\\apppatch\\Custom\\Custom64\\T1546.011CompatDatabase.sdb\n",
+                            "cleanup_command": "Remove-Item C:\\Windows\\apppatch\\Custom\\T1546.011CompatDatabase.sdb -ErrorAction Ignore\nRemove-Item C:\\Windows\\apppatch\\Custom\\Custom64\\T1546.011CompatDatabase.sdb -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Registry key creation and/or modification events for SDB",
+                        "auto_generated_guid": "9b6a06f9-ab5e-4e8d-8289-1df4289db02f",
+                        "description": "Create registry keys in locations where fin7 typically places SDB patches. Upon execution, output will be displayed describing\nthe registry keys that were created. These keys can also be viewed using the Registry Editor.\n\nhttps://www.fireeye.com/blog/threat-research/2017/05/fin7-shim-databases-persistence.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "New-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Custom\" -Name \"AtomicRedTeamT1546.011\" -Value \"AtomicRedTeamT1546.011\"\nNew-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\InstalledSDB\" -Name \"AtomicRedTeamT1546.011\" -Value \"AtomicRedTeamT1546.011\"\n",
+                            "cleanup_command": "Remove-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Custom\" -Name \"AtomicRedTeamT1546.011\" -ErrorAction Ignore\nRemove-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\InstalledSDB\" -Name \"AtomicRedTeamT1546.011\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:30:50"
+}

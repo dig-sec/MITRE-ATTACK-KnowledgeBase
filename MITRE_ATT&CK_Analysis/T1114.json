@@ -1,0 +1,139 @@
+{
+    "id": "T1114",
+    "name": "Email Collection",
+    "description": "Adversaries may target user email to collect sensitive information. Emails may contain sensitive data, including trade secrets or personal information, that can prove valuable to adversaries. Adversaries can collect or forward email from mail servers or clients.",
+    "platforms": "Windows, Office 365, Google Workspace, macOS, Linux",
+    "kill_chain_phases": "Collection",
+    "data_sources": "File: File Access, Network Traffic: Network Connection Creation, Logon Session: Logon Session Creation, Command: Command Execution, Application Log: Application Log Content",
+    "detection": "There are likely a variety of ways an adversary could collect email from a target, each with a different mechanism for detection.\nFile access of local system email files for Exfiltration, unusual processes connecting to an email server within a network, or unusual access patterns or authentication attempts on a public-facing webmail server may all be indicators of malicious activity.\nMonitor processes and command-line arguments for actions that could be taken to gather local email files. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).\nDetection is challenging because all messages forwarded because of an auto-forwarding rule have the same presentation as a manually forwarded message. It is also possible for the user to not be aware of the addition of such an auto-forwarding rule and not suspect that their account has been compromised; email-forwarding rules alone will not affect the normal usage patterns or operations of the email account.\nAuto-forwarded messages generally contain specific detectable artifacts that may be present in the header; such artifacts would be platform-specific. Examples include `X-MS-Exchange-Organization-AutoForwarded` set to true, `X-MailFwdBy` and `X-Forwarded-To`. The `forwardingSMTPAddress` parameter used in a forwarding process that is managed by administrators and not by user actions. All messages for the mailbox are forwarded to the specified SMTP address. However, unlike typical client-side rules, the message does not appear as forwarded in the mailbox; it appears as if it were sent directly to the specified destination mailbox.(Citation: Microsoft Tim McMichael Exchange Mail Forwarding 2) High volumes of emails that bear the `X-MS-Exchange-Organization-AutoForwarded` header (indicating auto-forwarding) without a corresponding number of emails that match the appearance of a forwarded message may indicate that further investigation is needed at the administrator level rather than user-level.",
+    "url": "https://attack.mitre.org/techniques/T1114",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "24549159-ac1b-479c-8175-d42aea947cae",
+                    "18b88d08-d73e-4f21-bc25-4b9892a4fdd0",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "1608f3e1-598a-42f4-a01a-2e252e81728f",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "5cccb246-0da0-4c93-a463-61fe0a016219",
+                    "5b773e07-e694-458b-b99c-27f30a016219",
+                    "25676e10-2121-446e-80a4-71ff8506af47",
+                    "383caaa3-c46a-4f61-b2e3-653eb132f0e7",
+                    "6897cd82-6664-11ed-9022-0242ac120002"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "24549159-ac1b-479c-8175-d42aea947cae",
+                        "lookup_data": {
+                            "description": "This events that are generated when using the hacktool Ruler by Sensepost",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/05/31\ndescription: This events that are generated when using the hacktool Ruler by Sensepost\ndetection:\n  condition: (1 of selection*)\n  selection1:\n    EventID: 4776\n    Workstation: RULER\n  selection2:\n    EventID:\n    - 4624\n    - 4625\n    WorkstationName: RULER\nfalsepositives:\n- Go utilities that use staaldraad awesome NTLM library\nid: 24549159-ac1b-479c-8175-d42aea947cae\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://github.com/sensepost/ruler\n- https://github.com/sensepost/ruler/issues/47\n- https://github.com/staaldraad/go-ntlm/blob/cd032d41aa8ce5751c07cb7945400c0f5c81e2eb/ntlm/ntlmv1.go#L427\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4776\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4624\nstatus: test\ntags:\n- attack.discovery\n- attack.execution\n- attack.t1087\n- attack.t1114\n- attack.t1059\n- attack.t1550.002\ntitle: Hacktool Ruler\n",
+                            "sigma:id": "24549159-ac1b-479c-8175-d42aea947cae",
+                            "title": "Hacktool Ruler",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "18b88d08-d73e-4f21-bc25-4b9892a4fdd0",
+                        "lookup_data": {
+                            "description": "Alert on when a user has performed an eDiscovery search or exported a PST file from the search. This PST file usually has sensitive information including email body content",
+                            "raw": "author: Sorina Ionescu\ndate: 2022/02/08\ndescription: Alert on when a user has performed an eDiscovery search or exported a\n  PST file from the search. This PST file usually has sensitive information including\n  email body content\ndetection:\n  condition: selection\n  selection:\n    eventName: eDiscovery search started or exported\n    eventSource: SecurityComplianceCenter\n    status: success\nfalsepositives:\n- PST export can be done for legitimate purposes but due to the sensitive nature of\n  its content it must be monitored.\nid: 18b88d08-d73e-4f21-bc25-4b9892a4fdd0\nlevel: medium\nlogsource:\n  definition: Requires the 'eDiscovery search or exported' alert to be enabled\n  product: m365\n  service: threat_management\nmodified: 2022/11/17\nreferences:\n- https://learn.microsoft.com/en-us/microsoft-365/compliance/alert-policies?view=o365-worldwide\nrelated:\n- id: 6897cd82-6664-11ed-9022-0242ac120002\n  type: similar\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1114\ntitle: PST Export Alert Using eDiscovery Alert\n",
+                            "sigma:id": "18b88d08-d73e-4f21-bc25-4b9892a4fdd0",
+                            "title": "PST Export Alert Using eDiscovery Alert",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1608f3e1-598a-42f4-a01a-2e252e81728f",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1114",
+                            "mitre-cti:description": "Adversaries may target user email to collect sensitive information. Emails may contain sensitive data, including trade secrets or personal information, that can prove valuable to adversaries. Adversaries can collect or forward email from mail servers or clients. ",
+                            "mitre-cti:name": "Email Collection",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Office 365', 'Google Workspace', 'macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Swetha Prabakaran, Microsoft Threat Intelligence Center (MSTIC)'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--1608f3e1-598a-42f4-a01a-2e252e81728f', 'type': 'attack-pattern', 'created': '2017-05-31T21:31:25.454Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1114', 'url': 'https://attack.mitre.org/techniques/T1114'}, {'description': 'McMichael, T.. (2015, June 8). Exchange and Office 365 Mail Forwarding. Retrieved October 8, 2019.', 'url': 'https://blogs.technet.microsoft.com/timmcmic/2015/06/08/exchange-and-office-365-mail-forwarding-2/', 'source_name': 'Microsoft Tim McMichael Exchange Mail Forwarding 2'}], 'modified': '2021-10-15T20:19:33.750Z', 'name': 'Email Collection', 'description': 'Adversaries may target user email to collect sensitive information. Emails may contain sensitive data, including trade secrets or personal information, that can prove valuable to adversaries. Adversaries can collect or forward email from mail servers or clients. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}], 'x_mitre_detection': 'There are likely a variety of ways an adversary could collect email from a target, each with a different mechanism for detection.\\n\\nFile access of local system email files for Exfiltration, unusual processes connecting to an email server within a network, or unusual access patterns or authentication attempts on a public-facing webmail server may all be indicators of malicious activity.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather local email files. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).\\n\\nDetection is challenging because all messages forwarded because of an auto-forwarding rule have the same presentation as a manually forwarded message. It is also possible for the user to not be aware of the addition of such an auto-forwarding rule and not suspect that their account has been compromised; email-forwarding rules alone will not affect the normal usage patterns or operations of the email account.\\n\\nAuto-forwarded messages generally contain specific detectable artifacts that may be present in the header; such artifacts would be platform-specific. Examples include <code>X-MS-Exchange-Organization-AutoForwarded</code> set to true, <code>X-MailFwdBy</code> and <code>X-Forwarded-To</code>. The <code>forwardingSMTPAddress</code> parameter used in a forwarding process that is managed by administrators and not by user actions. All messages for the mailbox are forwarded to the specified SMTP address. However, unlike typical client-side rules, the message does not appear as forwarded in the mailbox; it appears as if it were sent directly to the specified destination mailbox.(Citation: Microsoft Tim McMichael Exchange Mail Forwarding 2) High volumes of emails that bear the <code>X-MS-Exchange-Organization-AutoForwarded</code> header (indicating auto-forwarding) without a corresponding number of emails that match the appearance of a forwarded message may indicate that further investigation is needed at the administrator level rather than user-level.', 'x_mitre_version': '2.3', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Logon Session: Logon Session Creation', 'Application Log: Application Log Content', 'File: File Access', 'Network Traffic: Network Connection Creation'], 'x_mitre_permissions_required': ['User'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cccb246-0da0-4c93-a463-61fe0a016219",
+                        "lookup_data": {
+                            "description": "ESET Turla LightNeuron Research",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5cccb246-0da0-4c93-a463-61fe0a016219.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1607525139",
+                            "uuid": "5cccb246-0da0-4c93-a463-61fe0a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5b773e07-e694-458b-b99c-27f30a016219",
+                        "lookup_data": {
+                            "description": "Turla Outlook White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5b773e07-e694-458b-b99c-27f30a016219.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1535462383",
+                            "uuid": "5b773e07-e694-458b-b99c-27f30a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25676e10-2121-446e-80a4-71ff8506af47",
+                        "lookup_data": {
+                            "description": "Detects adding and using Exchange PowerShell snap-ins to export mailbox data. As seen used by HAFNIUM and APT27",
+                            "raw": "author: FPT.EagleEye, Nasreddine Bencherchali\ndate: 2021/03/03\ndescription: Detects adding and using Exchange PowerShell snap-ins to export mailbox\n  data. As seen used by HAFNIUM and APT27\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: Add-PSSnapin\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n  selection_module:\n    CommandLine|contains:\n    - Microsoft.Exchange.Powershell.Snapin\n    - Microsoft.Exchange.Management.PowerShell.SnapIn\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 25676e10-2121-446e-80a4-71ff8506af47\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/09\nreferences:\n- https://www.volexity.com/blog/2021/03/02/active-exploitation-of-microsoft-exchange-zero-day-vulnerabilities/\n- https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers/\n- https://www.intrinsec.com/apt27-analysis/\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.collection\n- attack.t1114\ntitle: Exchange PowerShell Snap-Ins Usage\n",
+                            "sigma:id": "25676e10-2121-446e-80a4-71ff8506af47",
+                            "title": "Exchange PowerShell Snap-Ins Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "383caaa3-c46a-4f61-b2e3-653eb132f0e7",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1114",
+                            "mitre-cti:description": "Use of encryption provides an added layer of security to sensitive information sent over email. Encryption using public key cryptography requires the adversary to obtain the private certificate along with an encryption key to decrypt messages.\n\nUse of two-factor authentication for public-facing webmail servers is also a recommended best practice to minimize the usefulness of user names and passwords to adversaries.\n\nIdentify unnecessary system utilities or potentially malicious software that may be used to collect email data files or access the corporate email server, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Email Collection Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--383caaa3-c46a-4f61-b2e3-653eb132f0e7', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1114', 'url': 'https://attack.mitre.org/mitigations/T1114', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2021-08-23T20:25:19.380Z', 'name': 'Email Collection Mitigation', 'description': 'Use of encryption provides an added layer of security to sensitive information sent over email. Encryption using public key cryptography requires the adversary to obtain the private certificate along with an encryption key to decrypt messages.\\n\\nUse of two-factor authentication for public-facing webmail servers is also a recommended best practice to minimize the usefulness of user names and passwords to adversaries.\\n\\nIdentify unnecessary system utilities or potentially malicious software that may be used to collect email data files or access the corporate email server, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6897cd82-6664-11ed-9022-0242ac120002",
+                        "lookup_data": {
+                            "description": "Alert when a user has performed an export to a search using 'New-ComplianceSearchAction' with the '-Export' flag. This detection will detect PST export even if the 'eDiscovery search or exported' alert is disabled in the O365.This rule will apply to ExchangePowerShell usage and from the cloud.",
+                            "raw": "author: Nikita Khalimonenkov\ndate: 2022/11/17\ndescription: Alert when a user has performed an export to a search using 'New-ComplianceSearchAction'\n  with the '-Export' flag. This detection will detect PST export even if the 'eDiscovery\n  search or exported' alert is disabled in the O365.This rule will apply to ExchangePowerShell\n  usage and from the cloud.\ndetection:\n  condition: selection\n  selection:\n    Payload|contains|all:\n    - New-ComplianceSearchAction\n    - Export\n    - pst\n    eventSource: SecurityComplianceCenter\nfalsepositives:\n- Exporting a PST can be done for legitimate purposes by legitimate sources, but due\n  to the sensitive nature of PST content, it must be monitored.\nid: 6897cd82-6664-11ed-9022-0242ac120002\nlevel: medium\nlogsource:\n  product: m365\n  service: threat_management\nreferences:\n- https://learn.microsoft.com/en-us/powershell/module/exchange/new-compliancesearchaction?view=exchange-ps\nrelated:\n- id: 18b88d08-d73e-4f21-bc25-4b9892a4fdd0\n  type: similar\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1114\ntitle: PST Export Alert Using New-ComplianceSearchAction\n",
+                            "sigma:id": "6897cd82-6664-11ed-9022-0242ac120002",
+                            "title": "PST Export Alert Using New-ComplianceSearchAction",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": []
+    },
+    "timestamp": "2025-02-28 13:08:11"
+}

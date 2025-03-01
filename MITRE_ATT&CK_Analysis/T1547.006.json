@@ -1,0 +1,209 @@
+{
+    "id": "T1547.006",
+    "name": "Kernel Modules and Extensions",
+    "description": "Adversaries may modify the kernel to automatically execute programs on system boot. Loadable Kernel Modules (LKMs) are pieces of code that can be loaded and unloaded into the kernel upon demand. They extend the functionality of the kernel without the need to reboot the system. For example, one type of module is the device driver, which allows the kernel to access hardware connected to the system. (Citation: Linux Kernel Programming)\nWhen used maliciously, LKMs can be a type of kernel-mode [Rootkit](T1014) that run with the highest operating system privilege (Ring 0). (Citation: Linux Kernel Module Programming Guide) Common features of LKM based rootkits include: hiding itself, selective hiding of files, processes and network activity, as well as log tampering, providing authenticated backdoors and enabling root access to non-privileged users. (Citation: iDefense Rootkit Overview)\nKernel extensions, also called kext, are used for macOS to load functionality onto a system similar to LKMs for Linux. They are loaded and unloaded through `kextload` and `kextunload` commands. Since macOS Catalina 10.15, kernel extensions have been deprecated on macOS systems.(Citation: Apple Kernel Extension Deprecation)\nAdversaries can use LKMs and kexts to covertly persist on a system and elevate privileges. Examples have been found in the wild and there are some open source projects. (Citation: Volatility Phalanx2) (Citation: CrowdStrike Linux Rootkit) (Citation: GitHub Reptile) (Citation: GitHub Diamorphine)(Citation: RSAC 2015 San Francisco Patrick Wardle) (Citation: Synack Secure Kernel Extension Broken)(Citation: Securelist Ventir) (Citation: Trend Micro Skidmap)",
+    "platforms": "macOS, Linux",
+    "kill_chain_phases": "Persistence, Privilege Escalation",
+    "data_sources": "File: File Modification, Command: Command Execution, File: File Creation, Kernel: Kernel Module Load",
+    "detection": "Loading, unloading, and manipulating modules on Linux systems can be detected by monitoring for the following commands: `modprobe`, `insmod`, `lsmod`, `rmmod`, or `modinfo` (Citation: Linux Loadable Kernel Module Insert and Remove LKMs) LKMs are typically loaded into `/lib/modules` and have had the extension .ko (\"kernel object\") since version 2.6 of the Linux kernel. (Citation: Wikipedia Loadable Kernel Module)\nAdversaries may run commands on the target system before loading a malicious module in order to ensure that it is properly compiled. (Citation: iDefense Rootkit Overview) Adversaries may also execute commands to identify the exact version of the running Linux kernel and/or download multiple versions of the same .ko (kernel object) files to use the one appropriate for the running system.(Citation: Trend Micro Skidmap) Many LKMs require Linux headers (specific to the target kernel) in order to compile properly. These are typically obtained through the operating systems package manager and installed like a normal package. On Ubuntu and Debian based systems this can be accomplished by running: `apt-get install linux-headers-$(uname -r)` On RHEL and CentOS based systems this can be accomplished by running: `yum install kernel-devel-$(uname -r)`\nOn macOS, monitor for execution of `kextload` commands and user installed kernel extensions performing abnormal and/or potentially malicious activity (such as creating network connections). Monitor for new rows added in the `kext_policy` table. KextPolicy stores a list of user approved (non Apple) kernel extensions and a partial history of loaded kernel modules in a SQLite database, `/var/db/SystemPolicyConfiguration/KextPolicy`.(Citation: User Approved Kernel Extension Pike’s)(Citation: Purves Kextpocalypse 2)(Citation: Apple Developer Configuration Profile)",
+    "url": "https://attack.mitre.org/techniques/T1547/006",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1547.006",
+                "atomic_attack_guid": "687dcb93-9656-4853-9c36-9977315e9d23",
+                "atomic_attack_name": "Linux - Load Kernel Module via insmod",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Insert Kernel Module Using Insmod Utility",
+                        "rule_link": "https://research.splunk.com/endpoint/18b5a1a0-6326-11ec-943a-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Linux Sudo OR Su Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/4b00f134-6d6a-11ec-a90c-acde48001122/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "a1b52199-c8c5-438a-9ded-656f1d0888c6",
+                    "106d7cbd-80ff-4985-b682-a7043e5acb72",
+                    "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "a1b52199-c8c5-438a-9ded-656f1d0888c6",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1547.006",
+                            "mitre-cti:description": "Adversaries may modify the kernel to automatically execute programs on system boot. Loadable Kernel Modules (LKMs) are pieces of code that can be loaded and unloaded into the kernel upon demand. They extend the functionality of the kernel without the need to reboot the system. For example, one type of module is the device driver, which allows the kernel to access hardware connected to the system.(Citation: Linux Kernel Programming) \n\nWhen used maliciously, LKMs can be a type of kernel-mode [Rootkit](https://attack.mitre.org/techniques/T1014) that run with the highest operating system privilege (Ring 0).(Citation: Linux Kernel Module Programming Guide) Common features of LKM based rootkits include: hiding itself, selective hiding of files, processes and network activity, as well as log tampering, providing authenticated backdoors, and enabling root access to non-privileged users.(Citation: iDefense Rootkit Overview)\n\nKernel extensions, also called kext, are used in macOS to load functionality onto a system similar to LKMs for Linux. Since the kernel is responsible for enforcing security and the kernel extensions run as apart of the kernel, kexts are not governed by macOS security policies. Kexts are loaded and unloaded through <code>kextload</code> and <code>kextunload</code> commands. Kexts need to be signed with a developer ID that is granted privileges by Apple allowing it to sign Kernel extensions. Developers without these privileges may still sign kexts but they will not load unless SIP is disabled. If SIP is enabled, the kext signature is verified before being added to the AuxKC.(Citation: System and kernel extensions in macOS)\n\nSince macOS Catalina 10.15, kernel extensions have been deprecated in favor of System Extensions. However, kexts are still allowed as \"Legacy System Extensions\" since there is no System Extension for Kernel Programming Interfaces.(Citation: Apple Kernel Extension Deprecation)\n\nAdversaries can use LKMs and kexts to conduct [Persistence](https://attack.mitre.org/tactics/TA0003) and/or [Privilege Escalation](https://attack.mitre.org/tactics/TA0004) on a system. Examples have been found in the wild, and there are some relevant open source projects as well.(Citation: Volatility Phalanx2)(Citation: CrowdStrike Linux Rootkit)(Citation: GitHub Reptile)(Citation: GitHub Diamorphine)(Citation: RSAC 2015 San Francisco Patrick Wardle)(Citation: Synack Secure Kernel Extension Broken)(Citation: Securelist Ventir)(Citation: Trend Micro Skidmap)",
+                            "mitre-cti:name": "Kernel Modules and Extensions",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Wayne Silva, F-Secure Countercept', 'Anastasios Pingios', 'Jeremy Galloway', 'Red Canary', 'Eric Kaiser @ideologysec'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--a1b52199-c8c5-438a-9ded-656f1d0888c6', 'created': '2020-01-24T17:42:23.339Z', 'x_mitre_version': '1.3', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1547.006', 'url': 'https://attack.mitre.org/techniques/T1547/006'}, {'source_name': 'Apple Developer Configuration Profile', 'url': 'https://developer.apple.com/business/documentation/Configuration-Profile-Reference.pdf', 'description': 'Apple. (2019, May 3). Configuration Profile Reference. Retrieved September 23, 2021.'}, {'source_name': 'Apple Kernel Extension Deprecation', 'url': 'https://developer.apple.com/support/kernel-extensions/', 'description': 'Apple. (n.d.). Deprecated Kernel Extensions and System Extension Alternatives. Retrieved November 4, 2020.'}, {'source_name': 'System and kernel extensions in macOS', 'url': 'https://support.apple.com/guide/deployment/system-and-kernel-extensions-in-macos-depa5fb8376f/web', 'description': 'Apple. (n.d.). System and kernel extensions in macOS. Retrieved March 31, 2022.'}, {'source_name': 'GitHub Reptile', 'url': 'https://github.com/f0rb1dd3n/Reptile', 'description': 'Augusto, I. (2018, March 8). Reptile - LMK Linux rootkit. Retrieved April 9, 2018.'}, {'source_name': 'Volatility Phalanx2', 'url': 'https://volatility-labs.blogspot.com/2012/10/phalanx-2-revealed-using-volatility-to.html', 'description': 'Case, A. (2012, October 10). Phalanx 2 Revealed: Using Volatility to Analyze an Advanced Linux Rootkit. Retrieved April 9, 2018.'}, {'source_name': 'iDefense Rootkit Overview', 'url': 'http://www.megasecurity.org/papers/Rootkits.pdf', 'description': 'Chuvakin, A. (2003, February). An Overview of Rootkits. Retrieved April 6, 2018.'}, {'source_name': 'Linux Loadable Kernel Module Insert and Remove LKMs', 'url': 'http://tldp.org/HOWTO/Module-HOWTO/x197.html', 'description': 'Henderson, B. (2006, September 24). How To Insert And Remove LKMs. Retrieved April 9, 2018.'}, {'source_name': 'CrowdStrike Linux Rootkit', 'url': 'https://www.crowdstrike.com/blog/http-iframe-injecting-linux-rootkit/', 'description': 'Kurtz, G. (2012, November 19). HTTP iframe Injecting Linux Rootkit. Retrieved December 21, 2017.'}, {'source_name': 'GitHub Diamorphine', 'url': 'https://github.com/m0nad/Diamorphine', 'description': 'Mello, V. (2018, March 8). Diamorphine - LMK rootkit for Linux Kernels 2.6.x/3.x/4.x (x86 and x86_64). Retrieved April 9, 2018.'}, {'source_name': 'Securelist Ventir', 'url': 'https://securelist.com/the-ventir-trojan-assemble-your-macos-spy/67267/', 'description': 'Mikhail, K. (2014, October 16). The Ventir Trojan: assemble your MacOS spy. Retrieved April 6, 2018.'}, {'source_name': 'User Approved Kernel Extension Pike’s', 'url': 'https://pikeralpha.wordpress.com/2017/08/29/user-approved-kernel-extension-loading/', 'description': 'Pikeralpha. (2017, August 29). User Approved Kernel Extension Loading…. Retrieved September 23, 2021.'}, {'source_name': 'Linux Kernel Module Programming Guide', 'url': 'http://www.tldp.org/LDP/lkmpg/2.4/html/x437.html', 'description': 'Pomerantz, O., Salzman, P. (2003, April 4). Modules vs Programs. Retrieved April 6, 2018.'}, {'source_name': 'Linux Kernel Programming', 'url': 'https://www.tldp.org/LDP/lkmpg/2.4/lkmpg.pdf', 'description': 'Pomerantz, O., Salzman, P.. (2003, April 4). The Linux Kernel Module Programming Guide. Retrieved April 6, 2018.'}, {'source_name': 'Trend Micro Skidmap', 'url': 'https://blog.trendmicro.com/trendlabs-security-intelligence/skidmap-linux-malware-uses-rootkit-capabilities-to-hide-cryptocurrency-mining-payload/', 'description': 'Remillano, A., Urbanec, J. (2019, September 19). Skidmap Linux Malware Uses Rootkit Capabilities to Hide Cryptocurrency-Mining Payload. Retrieved June 4, 2020.'}, {'source_name': 'Purves Kextpocalypse 2', 'url': 'https://richard-purves.com/2017/11/09/mdm-and-the-kextpocalypse-2/', 'description': 'Richard Purves. (2017, November 9). MDM and the Kextpocalypse . Retrieved September 23, 2021.'}, {'source_name': 'RSAC 2015 San Francisco Patrick Wardle', 'url': 'https://www.virusbulletin.com/uploads/pdf/conference/vb2014/VB2014-Wardle.pdf', 'description': 'Wardle, P. (2015, April). Malware Persistence on OS X Yosemite. Retrieved April 6, 2018.'}, {'source_name': 'Synack Secure Kernel Extension Broken', 'url': 'https://www.synack.com/2017/09/08/high-sierras-secure-kernel-extension-loading-is-broken/', 'description': 'Wardle, P. (2017, September 8). High Sierra’s ‘Secure Kernel Extension Loading’ is Broken. Retrieved April 6, 2018.'}, {'source_name': 'Wikipedia Loadable Kernel Module', 'url': 'https://en.wikipedia.org/wiki/Loadable_kernel_module#Linux', 'description': 'Wikipedia. (2018, March 17). Loadable kernel module. Retrieved April 9, 2018.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may modify the kernel to automatically execute programs on system boot. Loadable Kernel Modules (LKMs) are pieces of code that can be loaded and unloaded into the kernel upon demand. They extend the functionality of the kernel without the need to reboot the system. For example, one type of module is the device driver, which allows the kernel to access hardware connected to the system.(Citation: Linux Kernel Programming)\\xa0\\n\\nWhen used maliciously, LKMs can be a type of kernel-mode [Rootkit](https://attack.mitre.org/techniques/T1014) that run with the highest operating system privilege (Ring 0).(Citation: Linux Kernel Module Programming Guide)\\xa0Common features of LKM based rootkits include: hiding itself, selective hiding of files, processes and network activity, as well as log tampering, providing authenticated backdoors, and enabling root access to non-privileged users.(Citation: iDefense Rootkit Overview)\\n\\nKernel extensions, also called kext, are used in macOS to load functionality onto a system similar to LKMs for Linux. Since the kernel is responsible for enforcing security and the kernel extensions run as apart of the kernel, kexts are not governed by macOS security policies. Kexts are loaded and unloaded through <code>kextload</code> and <code>kextunload</code> commands. Kexts need to be signed with a developer ID that is granted privileges by Apple allowing it to sign Kernel extensions. Developers without these privileges may still sign kexts but they will not load unless SIP is disabled. If SIP is enabled, the kext signature is verified before being added to the AuxKC.(Citation: System and kernel extensions in macOS)\\n\\nSince macOS Catalina 10.15, kernel extensions have been deprecated in favor of System Extensions. However, kexts are still allowed as \"Legacy System Extensions\" since there is no System Extension for Kernel Programming Interfaces.(Citation: Apple Kernel Extension Deprecation)\\n\\nAdversaries can use LKMs and kexts to conduct [Persistence](https://attack.mitre.org/tactics/TA0003) and/or [Privilege Escalation](https://attack.mitre.org/tactics/TA0004) on a system. Examples have been found in the wild, and there are some relevant open source projects as well.(Citation: Volatility Phalanx2)(Citation: CrowdStrike Linux Rootkit)(Citation: GitHub Reptile)(Citation: GitHub Diamorphine)(Citation: RSAC 2015 San Francisco Patrick Wardle)(Citation: Synack Secure Kernel Extension Broken)(Citation: Securelist Ventir)(Citation: Trend Micro Skidmap)', 'modified': '2022-04-20T18:53:39.406Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Kernel Modules and Extensions', 'x_mitre_detection': 'Loading, unloading, and manipulating modules on Linux systems can be detected by monitoring for the following commands: <code>modprobe</code>, <code>insmod</code>, <code>lsmod</code>, <code>rmmod</code>, or <code>modinfo</code> (Citation: Linux Loadable Kernel Module Insert and Remove LKMs) LKMs are typically loaded into <code>/lib/modules</code> and have had the extension .ko (\"kernel object\") since version 2.6 of the Linux kernel. (Citation: Wikipedia Loadable Kernel Module)\\n\\nAdversaries may run commands on the target system before loading a malicious module in order to ensure that it is properly compiled. (Citation: iDefense Rootkit Overview) Adversaries may also execute commands to identify the exact version of the running Linux kernel and/or download multiple versions of the same .ko (kernel object) files to use the one appropriate for the running system.(Citation: Trend Micro Skidmap) Many LKMs require Linux headers (specific to the target kernel) in order to compile properly.\\xa0These are typically obtained through the operating systems package manager and installed like a normal package. On Ubuntu and Debian based systems this can be accomplished by running: <code>apt-get install linux-headers-$(uname -r)</code> On RHEL and CentOS based systems this can be accomplished by running: <code>yum install kernel-devel-$(uname -r)</code>\\n\\nOn macOS, monitor for execution of <code>kextload</code> commands and user installed kernel extensions performing abnormal and/or potentially malicious activity (such as creating network connections). Monitor for new rows added in the <code>kext_policy</code> table. KextPolicy stores a list of user approved (non Apple) kernel extensions and a partial history of loaded kernel modules in a SQLite database, <code>/var/db/SystemPolicyConfiguration/KextPolicy</code>.(Citation: User Approved Kernel Extension Pike’s)(Citation: Purves Kextpocalypse 2)(Citation: Apple Developer Configuration Profile)\\n', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['File: File Creation', 'File: File Modification', 'Command: Command Execution', 'Process: Process Creation', 'Kernel: Kernel Module Load'], 'x_mitre_permissions_required': ['root'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "106d7cbd-80ff-4985-b682-a7043e5acb72",
+                        "lookup_data": {
+                            "description": "Detects loading of kernel modules with insmod command.\nLoadable Kernel Modules (LKMs) are pieces of code that can be loaded and unloaded into the kernel upon demand.\nAdversaries may use LKMs to obtain persistence within the system or elevate the privileges.\n",
+                            "raw": "author: Pawel Mazur\ndate: 2021/11/02\ndescription: 'Detects loading of kernel modules with insmod command.\n\n  Loadable Kernel Modules (LKMs) are pieces of code that can be loaded and unloaded\n  into the kernel upon demand.\n\n  Adversaries may use LKMs to obtain persistence within the system or elevate the\n  privileges.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    comm: insmod\n    exe: /usr/bin/kmod\n    type: SYSCALL\nfalsepositives:\n- Unknown\nid: 106d7cbd-80ff-4985-b682-a7043e5acb72\nlevel: high\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.006/T1547.006.md\n- https://linux.die.net/man/8/insmod\n- https://man7.org/linux/man-pages/man8/kmod.8.html\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1547.006\ntitle: Loading of Kernel Module via Insmod\n",
+                            "sigma:id": "106d7cbd-80ff-4985-b682-a7043e5acb72",
+                            "title": "Loading of Kernel Module via Insmod",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                        "lookup_data": {
+                            "description": "FontOnLake: Previously unknown malware family targeting Linux",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633682506",
+                            "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1547.006",
+                "display_name": "Boot or Logon Autostart Execution: Kernel Modules and Extensions",
+                "atomic_tests": [
+                    {
+                        "name": "Linux - Load Kernel Module via insmod",
+                        "auto_generated_guid": "687dcb93-9656-4853-9c36-9977315e9d23",
+                        "description": "This test uses the insmod command to load a kernel module for Linux.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "module_name": {
+                                "description": "Name of the kernel module name.",
+                                "type": "string",
+                                "default": "T1547006"
+                            },
+                            "module_path": {
+                                "description": "Folder used to store the module.",
+                                "type": "path",
+                                "default": "/tmp/T1547.006/T1547006.ko"
+                            },
+                            "temp_folder": {
+                                "description": "Temp folder used to compile the code.",
+                                "type": "path",
+                                "default": "/tmp/T1547.006"
+                            },
+                            "module_source_path": {
+                                "description": "Path to download Gsecdump binary file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1547.006/src"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "The kernel module must exist on disk at specified location\n",
+                                "prereq_command": "if [ -f #{module_path} ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "if [ ! -d #{temp_folder} ]; then mkdir #{temp_folder}; touch #{temp_folder}/safe_to_delete; fi;\ncp #{module_source_path}/* #{temp_folder}/\ncd #{temp_folder}; make\nif [ ! -f #{module_path} ]; then mv #{temp_folder}/#{module_name}.ko #{module_path}; fi;\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo insmod #{module_path}\n",
+                            "cleanup_command": "sudo rmmod #{module_name}\n[ -f #{temp_folder}/safe_to_delete ] && rm -rf #{temp_folder}\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "MacOS - Load Kernel Module via kextload and kmutil",
+                        "auto_generated_guid": "f4391089-d3a5-4dd1-ab22-0419527f2672",
+                        "description": "This test uses the kextload and kmutil commands to load and unload a MacOS kernel module.\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "module_path": {
+                                "description": "Folder used to store the module.",
+                                "type": "path",
+                                "default": "/Library/Extensions/SoftRAID.kext"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "The kernel module must exist on disk at specified location\n",
+                                "prereq_command": "if [ -d #{module_path} ] ; then exit 0; else exit 1 ; fi\n",
+                                "get_prereq_command": "exit 1\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "set -x\nsudo kextload #{module_path}\nkextstat 2>/dev/null | grep SoftRAID\nsudo kextunload #{module_path}\nsudo kmutil load -p #{module_path}\nkextstat 2>/dev/null | grep SoftRAID\nsudo kmutil unload -p #{module_path}\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "MacOS - Load Kernel Module via KextManagerLoadKextWithURL()",
+                        "auto_generated_guid": "f0007753-beb3-41ea-9948-760785e4c1e5",
+                        "description": "This test uses the IOKit API to load a kernel module for macOS.\nHarcoded to use SoftRAID kext\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "src_path": {
+                                "description": "Folder used to store the module.",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1547.006/src/macos_kextload.c"
+                            },
+                            "exe_path": {
+                                "description": "Folder used to store the module.",
+                                "type": "path",
+                                "default": "/tmp/T1547006_iokit_loader"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "The kernel module must exist on disk at specified location\n",
+                                "prereq_command": "if [ -f \"#{exe_path}\" ]; then exit 0 ; else exit 1; fi\n",
+                                "get_prereq_command": "cc -o #{exe_path} #{src_path} -framework IOKit -framework Foundation\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo #{exe_path}\nkextstat 2>/dev/null | grep SoftRAID\nsudo kextunload /Library/Extensions/SoftRAID.kext\n",
+                            "name": "bash",
+                            "elevation_required": true,
+                            "cleanup_command": "rm -f #{exe_path}\n"
+                        }
+                    },
+                    {
+                        "name": "Snake Malware Kernel Driver Comadmin",
+                        "auto_generated_guid": "e5cb5564-cc7b-4050-86e8-f2d9eec1941f",
+                        "description": "The following Atomic Test will write an file, comadmin.dat, to disk. From the report, Snake's installer drops the kernel driver and a custom DLL which is used to load the driver into a\nsingle AES encrypted file on disk. Typically, this file is named “comadmin.dat” and is stored in the %windows%\\system32\\Com directory. \nThis Atomic Test will write a hardcoded named file to disk in the com directory named comadmin.dat.\n[Snake Malware - CISA](https://media.defense.gov/2023/May/09/2003218554/-1/-1/0/JOINT_CSA_HUNTING_RU_INTEL_SNAKE_MALWARE_20230509.PDF)  \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$examplePath = Join-Path $env:windir \"system32\\Com\"; if (-not (Test-Path $examplePath)) { New-Item -ItemType Directory -Path $examplePath | Out-Null }; $exampleName = \"comadmin.dat\"; $exampleFullPath = Join-Path $examplePath $exampleName; $randomBytes = New-Object Byte[] 0x1000; (New-Object Random).NextBytes($randomBytes); [System.IO.File]::WriteAllBytes($exampleFullPath, $randomBytes)\n",
+                            "cleanup_command": "$examplePath = Join-Path $env:windir \"system32\\Com\"; $exampleName = \"comadmin.dat\"; $exampleFullPath = Join-Path $examplePath $exampleName; if (Test-Path $exampleFullPath) { Remove-Item $exampleFullPath -Force }\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:40:55"
+}

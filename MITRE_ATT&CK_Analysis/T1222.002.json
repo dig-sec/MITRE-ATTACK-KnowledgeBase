@@ -1,0 +1,669 @@
+{
+    "id": "T1222.002",
+    "name": "Linux and Mac File and Directory Permissions Modification",
+    "description": "Adversaries may modify file or directory permissions/attributes to evade access control lists (ACLs) and access protected files.(Citation: Hybrid Analysis Icacls1 June 2018)(Citation: Hybrid Analysis Icacls2 May 2018) File and directory permissions are commonly managed by ACLs configured by the file or directory owner, or users with the appropriate permissions. File and directory ACL implementations vary by platform, but generally explicitly designate which users or groups can perform which actions (read, write, execute, etc.).\nMost Linux and Linux-based platforms provide a standard set of permission groups (user, group, and other) and a standard set of permissions (read, write, and execute) that are applied to each group. While nuances of each platform’s permissions implementation may vary, most of the platforms provide two primary commands used to manipulate file and directory ACLs: `chown` (short for change owner), and `chmod` (short for change mode).\nAdversarial may use these commands to make themselves the owner of files and directories or change the mode if current permissions allow it. They could subsequently lock others out of the file. Specific file and directory modifications may be a required step for many techniques, such as establishing Persistence via [Unix Shell Configuration Modification](T1546.004) or tainting/hijacking other instrumental binary/configuration files via [Hijack Execution Flow](T1574).(Citation: 20 macOS Common Tools and Techniques)",
+    "platforms": "macOS, Linux",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Command: Command Execution, File: File Metadata",
+    "detection": "Monitor and investigate attempts to modify ACLs and file/directory ownership. Many of the commands used to modify ACLs and file/directory ownership are built-in system utilities and may generate a high false positive alert rate, so compare against baseline knowledge for how systems are typically used and correlate modification events with other indications of malicious activity where possible. Commonly abused command arguments include `chmod +x`, `chmod -R 755`, and `chmod 777`.(Citation: 20 macOS Common Tools and Techniques)\nConsider enabling file/directory permission change auditing on folders containing key binary/configuration files.",
+    "url": "https://attack.mitre.org/techniques/T1222/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "18592ba1-5f88-4e3c-abc8-ab1c6042e389",
+                "atomic_attack_name": "Chown through c script",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Sudo OR Su Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/4b00f134-6d6a-11ec-a90c-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "e7469fe2-ad41-4382-8965-99b94dd3c13f",
+                "atomic_attack_name": "chattr - Remove immutable file attribute",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Remove Immutable File Attribute",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_chattr_immutable_removal.yml",
+                        "remote_content": "title: Remove Immutable File Attribute\nid: 34979410-e4b5-4e5d-8cfb-389fdff05c12\nrelated:\n    - id: a5b977d6-8a81-4475-91b9-49dbfcd941f7\n      type: derived\nstatus: test\ndescription: Detects usage of the 'chattr' utility to remove immutable file attribute.\nreferences:\n    - https://www.trendmicro.com/en_us/research/22/i/how-malicious-actors-abuse-native-linux-tools-in-their-attacks.html\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-15\ntags:\n    - attack.defense-evasion\n    - attack.t1222.002\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        Image|endswith: '/chattr'\n        CommandLine|contains: ' -i '\n    condition: selection\nfalsepositives:\n    - Administrator interacting with immutable files (e.g. for instance backups).\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "3b015515-b3d8-44e9-b8cd-6fa84faf30b2",
+                "atomic_attack_name": "chown - Change file or folder ownership recursively",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Linux Change File Owner To Root",
+                        "rule_link": "https://research.splunk.com/endpoint/c1400ea2-6257-11ec-ad49-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "967ba79d-f184-4e0e-8d09-6362b3162e99",
+                "atomic_attack_name": "chown - Change file or folder mode ownership only",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Linux Change File Owner To Root",
+                        "rule_link": "https://research.splunk.com/endpoint/c1400ea2-6257-11ec-ad49-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "b78598be-ff39-448f-a463-adbf2a5b7848",
+                "atomic_attack_name": "chown - Change file or folder ownership and group recursively",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "d169e71b-85f9-44ec-8343-27093ff3dfc0",
+                "atomic_attack_name": "chown - Change file or folder ownership and group",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "0451125c-b5f6-488f-993b-5a32b09f7d8f",
+                "atomic_attack_name": "chmod - Change file or folder mode (symbolic mode) recursively",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Chmod Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_chmod_directories.yml",
+                        "remote_content": "title: Chmod Suspicious Directory\nid: 6419afd1-3742-47a5-a7e6-b50386cd15f8\nstatus: test\ndescription: Detects chmod targeting files in abnormal directory paths.\nreferences:\n    - https://www.intezer.com/blog/malware-analysis/new-backdoor-sysjoker/\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1222.002/T1222.002.md\nauthor: 'Christopher Peacock @SecurePeacock, SCYTHE @scythe_io'\ndate: 2022-06-03\ntags:\n    - attack.defense-evasion\n    - attack.t1222.002\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        Image|endswith: '/chmod'\n        CommandLine|contains:\n            - '/tmp/'\n            - '/.Library/'\n            - '/etc/'\n            - '/opt/'\n    condition: selection\nfalsepositives:\n    - Admin changing file permissions.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "ea79f937-4a4d-4348-ace6-9916aec453a4",
+                "atomic_attack_name": "chmod - Change file or folder mode (numeric mode) recursively",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Chmod Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_chmod_directories.yml",
+                        "remote_content": "title: Chmod Suspicious Directory\nid: 6419afd1-3742-47a5-a7e6-b50386cd15f8\nstatus: test\ndescription: Detects chmod targeting files in abnormal directory paths.\nreferences:\n    - https://www.intezer.com/blog/malware-analysis/new-backdoor-sysjoker/\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1222.002/T1222.002.md\nauthor: 'Christopher Peacock @SecurePeacock, SCYTHE @scythe_io'\ndate: 2022-06-03\ntags:\n    - attack.defense-evasion\n    - attack.t1222.002\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        Image|endswith: '/chmod'\n        CommandLine|contains:\n            - '/tmp/'\n            - '/.Library/'\n            - '/etc/'\n            - '/opt/'\n    condition: selection\nfalsepositives:\n    - Admin changing file permissions.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "fc9d6695-d022-4a80-91b1-381f5c35aff3",
+                "atomic_attack_name": "chmod - Change file or folder mode (symbolic mode)",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Chmod Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_chmod_directories.yml",
+                        "remote_content": "title: Chmod Suspicious Directory\nid: 6419afd1-3742-47a5-a7e6-b50386cd15f8\nstatus: test\ndescription: Detects chmod targeting files in abnormal directory paths.\nreferences:\n    - https://www.intezer.com/blog/malware-analysis/new-backdoor-sysjoker/\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1222.002/T1222.002.md\nauthor: 'Christopher Peacock @SecurePeacock, SCYTHE @scythe_io'\ndate: 2022-06-03\ntags:\n    - attack.defense-evasion\n    - attack.t1222.002\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        Image|endswith: '/chmod'\n        CommandLine|contains:\n            - '/tmp/'\n            - '/.Library/'\n            - '/etc/'\n            - '/opt/'\n    condition: selection\nfalsepositives:\n    - Admin changing file permissions.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1222.002",
+                "atomic_attack_guid": "34ca1464-de9d-40c6-8c77-690adf36a135",
+                "atomic_attack_name": "chmod - Change file or folder mode (numeric mode)",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Chmod Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_chmod_directories.yml",
+                        "remote_content": "title: Chmod Suspicious Directory\nid: 6419afd1-3742-47a5-a7e6-b50386cd15f8\nstatus: test\ndescription: Detects chmod targeting files in abnormal directory paths.\nreferences:\n    - https://www.intezer.com/blog/malware-analysis/new-backdoor-sysjoker/\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1222.002/T1222.002.md\nauthor: 'Christopher Peacock @SecurePeacock, SCYTHE @scythe_io'\ndate: 2022-06-03\ntags:\n    - attack.defense-evasion\n    - attack.t1222.002\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        Image|endswith: '/chmod'\n        CommandLine|contains:\n            - '/tmp/'\n            - '/.Library/'\n            - '/etc/'\n            - '/opt/'\n    condition: selection\nfalsepositives:\n    - Admin changing file permissions.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "09b130a2-a77e-4af0-a361-f46f9aad1345",
+                    "6419afd1-3742-47a5-a7e6-b50386cd15f8",
+                    "74c01ace-0152-4094-8ae2-6fd776dd43e5",
+                    "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                    "a5b977d6-8a81-4475-91b9-49dbfcd941f7",
+                    "34979410-e4b5-4e5d-8cfb-389fdff05c12"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "09b130a2-a77e-4af0-a361-f46f9aad1345",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1222.002",
+                            "mitre-cti:description": "Adversaries may modify file or directory permissions/attributes to evade access control lists (ACLs) and access protected files.(Citation: Hybrid Analysis Icacls1 June 2018)(Citation: Hybrid Analysis Icacls2 May 2018) File and directory permissions are commonly managed by ACLs configured by the file or directory owner, or users with the appropriate permissions. File and directory ACL implementations vary by platform, but generally explicitly designate which users or groups can perform which actions (read, write, execute, etc.).\n\nMost Linux and Linux-based platforms provide a standard set of permission groups (user, group, and other) and a standard set of permissions (read, write, and execute) that are applied to each group. While nuances of each platform’s permissions implementation may vary, most of the platforms provide two primary commands used to manipulate file and directory ACLs: <code>chown</code> (short for change owner), and <code>chmod</code> (short for change mode).\n\nAdversarial may use these commands to make themselves the owner of files and directories or change the mode if current permissions allow it. They could subsequently lock others out of the file. Specific file and directory modifications may be a required step for many techniques, such as establishing Persistence via [Unix Shell Configuration Modification](https://attack.mitre.org/techniques/T1546/004) or tainting/hijacking other instrumental binary/configuration files via [Hijack Execution Flow](https://attack.mitre.org/techniques/T1574).(Citation: 20 macOS Common Tools and Techniques) ",
+                            "mitre-cti:name": "Linux and Mac File and Directory Permissions Modification",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--09b130a2-a77e-4af0-a361-f46f9aad1345', 'type': 'attack-pattern', 'created': '2020-02-04T19:24:27.774Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1222.002', 'url': 'https://attack.mitre.org/techniques/T1222/002'}, {'url': 'https://www.hybrid-analysis.com/sample/ef0d2628823e8e0a0de3b08b8eacaf41cf284c086a948bdfd67f4e4373c14e4d?environmentId=100', 'description': 'Hybrid Analysis. (2018, June 12). c9b65b764985dfd7a11d3faf599c56b8.exe. Retrieved August 19, 2018.', 'source_name': 'Hybrid Analysis Icacls1 June 2018'}, {'url': 'https://www.hybrid-analysis.com/sample/22dab012c3e20e3d9291bce14a2bfc448036d3b966c6e78167f4626f5f9e38d6?environmentId=110', 'description': 'Hybrid Analysis. (2018, May 30). 2a8efbfadd798f6111340f7c1c956bee.dll. Retrieved August 19, 2018.', 'source_name': 'Hybrid Analysis Icacls2 May 2018'}, {'source_name': '20 macOS Common Tools and Techniques', 'url': 'https://labs.sentinelone.com/20-common-tools-techniques-used-by-macos-threat-actors-malware/', 'description': 'Phil Stokes. (2021, February 16). 20 Common Tools & Techniques Used by macOS Threat Actors & Malware. Retrieved August 23, 2021.'}], 'modified': '2021-09-13T21:08:09.985Z', 'name': 'Linux and Mac File and Directory Permissions Modification', 'description': 'Adversaries may modify file or directory permissions/attributes to evade access control lists (ACLs) and access protected files.(Citation: Hybrid Analysis Icacls1 June 2018)(Citation: Hybrid Analysis Icacls2 May 2018) File and directory permissions are commonly managed by ACLs configured by the file or directory owner, or users with the appropriate permissions. File and directory ACL implementations vary by platform, but generally explicitly designate which users or groups can perform which actions (read, write, execute, etc.).\\n\\nMost Linux and Linux-based platforms provide a standard set of permission groups (user, group, and other) and a standard set of permissions (read, write, and execute) that are applied to each group. While nuances of each platform’s permissions implementation may vary, most of the platforms provide two primary commands used to manipulate file and directory ACLs: <code>chown</code> (short for change owner), and <code>chmod</code> (short for change mode).\\n\\nAdversarial may use these commands to make themselves the owner of files and directories or change the mode if current permissions allow it. They could subsequently lock others out of the file. Specific file and directory modifications may be a required step for many techniques, such as establishing Persistence via [Unix Shell Configuration Modification](https://attack.mitre.org/techniques/T1546/004) or tainting/hijacking other instrumental binary/configuration files via [Hijack Execution Flow](https://attack.mitre.org/techniques/T1574).(Citation: 20 macOS Common Tools and Techniques) ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Monitor and investigate attempts to modify ACLs and file/directory ownership. Many of the commands used to modify ACLs and file/directory ownership are built-in system utilities and may generate a high false positive alert rate, so compare against baseline knowledge for how systems are typically used and correlate modification events with other indications of malicious activity where possible. Commonly abused command arguments include <code>chmod +x</code>, <code>chmod -R 755</code>, and <code>chmod 777</code>.(Citation: 20 macOS Common Tools and Techniques) \\n\\nConsider enabling file/directory permission change auditing on folders containing key binary/configuration files.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution', 'File: File Metadata'], 'x_mitre_permissions_required': ['User', 'root']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6419afd1-3742-47a5-a7e6-b50386cd15f8",
+                        "lookup_data": {
+                            "description": "Detects chmod targeting files in abnormal directory paths.",
+                            "raw": "author: Christopher Peacock @SecurePeacock, SCYTHE @scythe_io\ndate: 2022/06/03\ndescription: Detects chmod targeting files in abnormal directory paths.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - /tmp/\n    - /.Library/\n    - /etc/\n    - /opt/\n    Image|endswith: /chmod\nfalsepositives:\n- Admin changing file permissions.\nid: 6419afd1-3742-47a5-a7e6-b50386cd15f8\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://www.intezer.com/blog/malware-analysis/new-backdoor-sysjoker/\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1222.002/T1222.002.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1222.002\ntitle: Chmod Suspicious Directory\n",
+                            "sigma:id": "6419afd1-3742-47a5-a7e6-b50386cd15f8",
+                            "title": "Chmod Suspicious Directory",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74c01ace-0152-4094-8ae2-6fd776dd43e5",
+                        "lookup_data": {
+                            "description": "Detects file and folder permission changes.",
+                            "raw": "author: Jakob Weinzettl, oscd.community\ndate: 2019/09/23\ndescription: Detects file and folder permission changes.\ndetection:\n  condition: selection\n  selection:\n    a0|contains:\n    - chmod\n    - chown\n    type: EXECVE\nfalsepositives:\n- User interacting with files permissions (normal/daily behaviour).\nid: 74c01ace-0152-4094-8ae2-6fd776dd43e5\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1222.002/T1222.002.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1222.002\ntitle: File or Folder Permissions Change\n",
+                            "sigma:id": "74c01ace-0152-4094-8ae2-6fd776dd43e5",
+                            "title": "File or Folder Permissions Change",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                        "lookup_data": {
+                            "description": "FontOnLake: Previously unknown malware family targeting Linux",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633682506",
+                            "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a5b977d6-8a81-4475-91b9-49dbfcd941f7",
+                        "lookup_data": {
+                            "description": "Detects removing immutable file attribute.",
+                            "raw": "author: Jakob Weinzettl, oscd.community\ndate: 2019/09/23\ndescription: Detects removing immutable file attribute.\ndetection:\n  condition: selection\n  selection:\n    a0|contains: chattr\n    a1|contains: -i\n    type: EXECVE\nfalsepositives:\n- Administrator interacting with immutable files (e.g. for instance backups).\nid: a5b977d6-8a81-4475-91b9-49dbfcd941f7\nlevel: medium\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/11/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1222.002/T1222.002.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1222.002\ntitle: Remove Immutable File Attribute - Auditd\n",
+                            "sigma:id": "a5b977d6-8a81-4475-91b9-49dbfcd941f7",
+                            "title": "Remove Immutable File Attribute - Auditd",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "34979410-e4b5-4e5d-8cfb-389fdff05c12",
+                        "lookup_data": {
+                            "description": "Detects usage of the 'chattr' utility to remove immutable file attribute.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/15\ndescription: Detects usage of the 'chattr' utility to remove immutable file attribute.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' -i '\n    Image|endswith: /chattr\nfalsepositives:\n- Administrator interacting with immutable files (e.g. for instance backups).\nid: 34979410-e4b5-4e5d-8cfb-389fdff05c12\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://www.trendmicro.com/en_us/research/22/i/how-malicious-actors-abuse-native-linux-tools-in-their-attacks.html\nrelated:\n- id: a5b977d6-8a81-4475-91b9-49dbfcd941f7\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1222.002\ntitle: Remove Immutable File Attribute\n",
+                            "sigma:id": "34979410-e4b5-4e5d-8cfb-389fdff05c12",
+                            "title": "Remove Immutable File Attribute",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1222.002",
+                "display_name": "File and Directory Permissions Modification: FreeBSD, Linux and Mac File and Directory Permissions Modification",
+                "atomic_tests": [
+                    {
+                        "name": "chmod - Change file or folder mode (numeric mode)",
+                        "auto_generated_guid": "34ca1464-de9d-40c6-8c77-690adf36a135",
+                        "description": "Changes a file or folder's permissions using chmod and a specified numeric mode.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "numeric_mode": {
+                                "description": "Specified numeric mode value",
+                                "type": "integer",
+                                "default": 755
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002"
+                            }
+                        },
+                        "executor": {
+                            "command": "chmod #{numeric_mode} #{file_or_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "chmod - Change file or folder mode (symbolic mode)",
+                        "auto_generated_guid": "fc9d6695-d022-4a80-91b1-381f5c35aff3",
+                        "description": "Changes a file or folder's permissions using chmod and a specified symbolic mode.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "symbolic_mode": {
+                                "description": "Specified symbolic mode value",
+                                "type": "string",
+                                "default": "a+w"
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002"
+                            }
+                        },
+                        "executor": {
+                            "command": "chmod #{symbolic_mode} #{file_or_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "chmod - Change file or folder mode (numeric mode) recursively",
+                        "auto_generated_guid": "ea79f937-4a4d-4348-ace6-9916aec453a4",
+                        "description": "Changes a file or folder's permissions recursively using chmod and a specified numeric mode.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "numeric_mode": {
+                                "description": "Specified numeric mode value",
+                                "type": "integer",
+                                "default": 755
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002"
+                            }
+                        },
+                        "executor": {
+                            "command": "chmod -R #{numeric_mode} #{file_or_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "chmod - Change file or folder mode (symbolic mode) recursively",
+                        "auto_generated_guid": "0451125c-b5f6-488f-993b-5a32b09f7d8f",
+                        "description": "Changes a file or folder's permissions recursively using chmod and a specified symbolic mode.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "symbolic_mode": {
+                                "description": "Specified symbolic mode value",
+                                "type": "string",
+                                "default": "a+w"
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002"
+                            }
+                        },
+                        "executor": {
+                            "command": "chmod -R #{symbolic_mode} #{file_or_folder}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "chown - Change file or folder ownership and group",
+                        "auto_generated_guid": "d169e71b-85f9-44ec-8343-27093ff3dfc0",
+                        "description": "Changes a file or folder's ownership and group information using chown.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "owner": {
+                                "description": "Username of desired owner",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002/T1222.002.yaml"
+                            },
+                            "group": {
+                                "description": "Group name of desired group",
+                                "type": "string",
+                                "default": "root"
+                            }
+                        },
+                        "executor": {
+                            "command": "chown #{owner}:#{group} #{file_or_folder}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "chown - Change file or folder ownership and group recursively",
+                        "auto_generated_guid": "b78598be-ff39-448f-a463-adbf2a5b7848",
+                        "description": "Changes a file or folder's ownership and group information recursively using chown.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "owner": {
+                                "description": "Username of desired owner",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002"
+                            },
+                            "group": {
+                                "description": "Group name of desired group",
+                                "type": "string",
+                                "default": "root"
+                            }
+                        },
+                        "executor": {
+                            "command": "chown -R #{owner}:#{group} #{file_or_folder}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "chown - Change file or folder mode ownership only",
+                        "auto_generated_guid": "967ba79d-f184-4e0e-8d09-6362b3162e99",
+                        "description": "Changes a file or folder's ownership only using chown.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "owner": {
+                                "description": "Username of desired owner",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002/T1222.002.yaml"
+                            }
+                        },
+                        "executor": {
+                            "command": "chown #{owner} #{file_or_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "chown - Change file or folder ownership recursively",
+                        "auto_generated_guid": "3b015515-b3d8-44e9-b8cd-6fa84faf30b2",
+                        "description": "Changes a file or folder's ownership only recursively using chown.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "owner": {
+                                "description": "Username of desired owner",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "file_or_folder": {
+                                "description": "Path of the file or folder",
+                                "type": "path",
+                                "default": "/tmp/AtomicRedTeam/atomics/T1222.002"
+                            }
+                        },
+                        "executor": {
+                            "command": "chown -R #{owner} #{file_or_folder}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "chattr - Remove immutable file attribute",
+                        "auto_generated_guid": "e7469fe2-ad41-4382-8965-99b94dd3c13f",
+                        "description": "Remove's a file's `immutable` attribute using `chattr`.\nThis technique was used by the threat actor Rocke during the compromise of Linux web servers.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "file_to_modify": {
+                                "description": "Path of the file",
+                                "type": "path",
+                                "default": "/var/spool/cron/root"
+                            }
+                        },
+                        "executor": {
+                            "command": "chattr -i #{file_to_modify}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "chflags - Remove immutable file attribute",
+                        "auto_generated_guid": "60eee3ea-2ebd-453b-a666-c52ce08d2709",
+                        "description": "Remove's a file's `immutable` attribute using `chflags`.\nThis technique was used by the threat actor Rocke during the compromise of Linux web servers.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "file_to_modify": {
+                                "description": "Path of the file",
+                                "type": "path",
+                                "default": "/tmp/T1222.002.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "touch #{file_to_modify}\nchflags simmutable #{file_to_modify}\nchflags nosimmutable #{file_to_modify}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Chmod through c script",
+                        "auto_generated_guid": "973631cf-6680-4ffa-a053-045e1b6b67ab",
+                        "description": "chmods a file using a c script\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "source_file": {
+                                "description": "Path of c source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1222.002/src/T1222.002.c"
+                            },
+                            "compiled_file": {
+                                "description": "Path of compiled file",
+                                "type": "path",
+                                "default": "/tmp/T1222002"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Compile the script from (#{source_file}). Destination is #{compiled_file}\n",
+                                "prereq_command": "gcc #{source_file} -o #{compiled_file}\n",
+                                "get_prereq_command": "gcc #{source_file} -o #{compiled_file}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{compiled_file} /tmp/ T1222002\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Chmod through c script (freebsd)",
+                        "auto_generated_guid": "da40b5fe-3098-4b3b-a410-ff177e49ee2e",
+                        "description": "chmods a file using a c script\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "source_file": {
+                                "description": "Path of c source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1222.002/src/T1222.002.c"
+                            },
+                            "compiled_file": {
+                                "description": "Path of compiled file",
+                                "type": "path",
+                                "default": "/tmp/T1222002"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Compile the script from (#{source_file}). Destination is #{compiled_file}\n",
+                                "prereq_command": "cc #{source_file} -o #{compiled_file}\n",
+                                "get_prereq_command": "cc #{source_file} -o #{compiled_file}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{compiled_file} /tmp/ T1222002\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Chown through c script",
+                        "auto_generated_guid": "18592ba1-5f88-4e3c-abc8-ab1c6042e389",
+                        "description": "chowns a file to root using a c script\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "source_file": {
+                                "description": "Path of c source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1222.002/src/chown.c"
+                            },
+                            "compiled_file": {
+                                "description": "Path of compiled file",
+                                "type": "path",
+                                "default": "/tmp/T1222002own"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Compile the script from (#{source_file}). Destination is #{compiled_file}\n",
+                                "prereq_command": "gcc #{source_file} -o #{compiled_file}\n",
+                                "get_prereq_command": "gcc #{source_file} -o #{compiled_file}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo #{compiled_file} #{source_file}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Chown through c script (freebsd)",
+                        "auto_generated_guid": "eb577a19-b730-4918-9b03-c5edcf51dc4e",
+                        "description": "chowns a file to root using a c script\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "source_file": {
+                                "description": "Path of c source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1222.002/src/chown.c"
+                            },
+                            "compiled_file": {
+                                "description": "Path of compiled file",
+                                "type": "path",
+                                "default": "/tmp/T1222002own"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Compile the script from (#{source_file}). Destination is #{compiled_file}\n",
+                                "prereq_command": "cc #{source_file} -o #{compiled_file}\n",
+                                "get_prereq_command": "cc #{source_file} -o #{compiled_file}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{compiled_file} #{source_file}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:27:57"
+}

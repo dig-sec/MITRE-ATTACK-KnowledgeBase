@@ -1,0 +1,200 @@
+{
+    "id": "T1218.003",
+    "name": "CMSTP",
+    "description": "Adversaries may abuse CMSTP to proxy execution of malicious code. The Microsoft Connection Manager Profile Installer (CMSTP.exe) is a command-line program used to install Connection Manager service profiles. (Citation: Microsoft Connection Manager Oct 2009) CMSTP.exe accepts an installation information file (INF) as a parameter and installs a service profile leveraged for remote access connections.\nAdversaries may supply CMSTP.exe with INF files infected with malicious commands. (Citation: Twitter CMSTP Usage Jan 2018) Similar to [Regsvr32](T1218.010) / ”Squiblydoo”, CMSTP.exe may be abused to load and execute DLLs (Citation: MSitPros CMSTP Aug 2017)  and/or COM scriptlets (SCT) from remote servers. (Citation: Twitter CMSTP Jan 2018) (Citation: GitHub Ultimate AppLocker Bypass List) (Citation: Endurant CMSTP July 2018) This execution may also bypass AppLocker and other application control defenses since CMSTP.exe is a legitimate, signed Microsoft application.\nCMSTP.exe can also be abused to [Bypass User Account Control](T1548.002) and execute arbitrary commands from a malicious INF through an auto-elevated COM interface. (Citation: MSitPros CMSTP Aug 2017) (Citation: GitHub Ultimate AppLocker Bypass List) (Citation: Endurant CMSTP July 2018)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Network Traffic: Network Connection Creation",
+    "detection": "Use process monitoring to detect and analyze the execution and arguments of CMSTP.exe. Compare recent invocations of CMSTP.exe with prior history of known good arguments and loaded files to determine anomalous and potentially adversarial activity.\nSysmon events can also be used to identify potential abuses of CMSTP.exe. Detection strategy may depend on the specific adversary procedure, but potential rules include: (Citation: Endurant CMSTP July 2018)\n* To detect loading and execution of local/remote payloads - Event 1 (Process creation) where ParentImage contains CMSTP.exe and/or Event 3 (Network connection) where Image contains CMSTP.exe and DestinationIP is external.\n* To detect [Bypass User Account Control](T1548.002) via an auto-elevated COM interface - Event 10 (ProcessAccess) where CallTrace contains CMLUA.dll and/or Event 12 or 13 (RegistryEvent) where TargetObject contains CMMGR32.exe. Also monitor for events, such as the creation of processes (Sysmon Event 1), that involve auto-elevated CMSTP COM interfaces such as CMSTPLUA (3E5FC7F9-9A51-4367-9063-A120244FBEC7) and CMLUAUTIL (3E000D72-A845-4CD9-BD83-80C07C3B881F).",
+    "url": "https://attack.mitre.org/techniques/T1218/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1218.003",
+                "atomic_attack_guid": "748cb4f6-2fb3-4e97-b7ad-b22635a09ab0",
+                "atomic_attack_name": "CMSTP Executing UAC Bypass",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Bypass UAC via CMSTP",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_uac_bypass_cmstp.yml",
+                        "remote_content": "title: Bypass UAC via CMSTP\nid: e66779cc-383e-4224-a3a4-267eeb585c40\nstatus: test\ndescription: Detect commandline usage of Microsoft Connection Manager Profile Installer (cmstp.exe) to install specially formatted local .INF files\nreferences:\n    - https://eqllib.readthedocs.io/en/latest/analytics/e584f1a1-c303-4885-8a66-21360c90995b.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.003/T1218.003.md\n    - https://lolbas-project.github.io/lolbas/Binaries/Cmstp/\nauthor: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019-10-24\nmodified: 2022-08-30\ntags:\n    - attack.privilege-escalation\n    - attack.defense-evasion\n    - attack.t1548.002\n    - attack.t1218.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmstp.exe'\n        - OriginalFileName: 'CMSTP.EXE'\n    selection_cli:\n        CommandLine|contains:\n            - '/s'\n            - '-s'\n            - '/au'\n            - '-au'\n            - '/ni'\n            - '-ni'\n    condition: all of selection*\nfields:\n    - ComputerName\n    - User\n    - CommandLine\nfalsepositives:\n    - Legitimate use of cmstp.exe utility by legitimate user\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.003",
+                "atomic_attack_guid": "34e63321-9683-496b-bbc1-7566bc55e624",
+                "atomic_attack_name": "CMSTP Executing Remote Scriptlet",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Bypass UAC via CMSTP",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_uac_bypass_cmstp.yml",
+                        "remote_content": "title: Bypass UAC via CMSTP\nid: e66779cc-383e-4224-a3a4-267eeb585c40\nstatus: test\ndescription: Detect commandline usage of Microsoft Connection Manager Profile Installer (cmstp.exe) to install specially formatted local .INF files\nreferences:\n    - https://eqllib.readthedocs.io/en/latest/analytics/e584f1a1-c303-4885-8a66-21360c90995b.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.003/T1218.003.md\n    - https://lolbas-project.github.io/lolbas/Binaries/Cmstp/\nauthor: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019-10-24\nmodified: 2022-08-30\ntags:\n    - attack.privilege-escalation\n    - attack.defense-evasion\n    - attack.t1548.002\n    - attack.t1218.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmstp.exe'\n        - OriginalFileName: 'CMSTP.EXE'\n    selection_cli:\n        CommandLine|contains:\n            - '/s'\n            - '-s'\n            - '/au'\n            - '-au'\n            - '/ni'\n            - '-ni'\n    condition: all of selection*\nfields:\n    - ComputerName\n    - User\n    - CommandLine\nfalsepositives:\n    - Legitimate use of cmstp.exe utility by legitimate user\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "75e508f7-932d-4ebc-af77-269237a84ce1",
+                    "7d4cdc5a-0076-40ca-aac8-f7e714570e47",
+                    "e66779cc-383e-4224-a3a4-267eeb585c40",
+                    "efafe0bf-4238-479e-af8f-797bd3490d2d",
+                    "3b4b232a-af90-427c-a22f-30b0c0837b95",
+                    "4b60e6f2-bf39-47b4-b4ea-398e33cfe253",
+                    "4cbc6a62-9e34-4f94-8a19-5c1a11392a49",
+                    "b6d235fc-1d38-4b12-adbe-325f06728f37"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "75e508f7-932d-4ebc-af77-269237a84ce1",
+                        "lookup_data": {
+                            "description": "Detects cmstp loading \"dll\" or \"ocx\" files from suspicious locations",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/30\ndescription: Detects cmstp loading \"dll\" or \"ocx\" files from suspicious locations\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|contains:\n    - \\Users\\\n    - \\AppData\\Local\\Temp\\\n    - \\PerfLogs\\\n    - \\Windows\\Temp\\\n    ImageLoaded|endswith:\n    - .dll\n    - .ocx\n    Image|endswith: \\cmstp.exe\nfalsepositives:\n- Unikely\nid: 75e508f7-932d-4ebc-af77-269237a84ce1\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/TTPs/Defense%20Evasion/T1218%20-%20Signed%20Binary%20Proxy%20Execution/T1218.003%20-%20CMSTP/Procedures.yaml\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.003\ntitle: Cmstp Suspicious DLL Load\n",
+                            "sigma:id": "75e508f7-932d-4ebc-af77-269237a84ce1",
+                            "title": "Cmstp Suspicious DLL Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7d4cdc5a-0076-40ca-aac8-f7e714570e47",
+                        "lookup_data": {
+                            "description": "Detects various indicators of Microsoft Connection Manager Profile Installer execution",
+                            "raw": "author: Nik Seetharaman\ndate: 2018/07/16\ndescription: Detects various indicators of Microsoft Connection Manager Profile Installer\n  execution\ndetection:\n  condition: selection\n  selection:\n    ParentImage|endswith: \\cmstp.exe\nfalsepositives:\n- Legitimate CMSTP use (unlikely in modern enterprise environments)\nfields:\n- CommandLine\n- ParentCommandLine\n- Details\nid: 7d4cdc5a-0076-40ca-aac8-f7e714570e47\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2020/12/23\nreferences:\n- https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1218.003\n- attack.g0069\n- car.2019-04-001\ntitle: CMSTP Execution Process Creation\n",
+                            "sigma:id": "7d4cdc5a-0076-40ca-aac8-f7e714570e47",
+                            "title": "CMSTP Execution Process Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e66779cc-383e-4224-a3a4-267eeb585c40",
+                        "lookup_data": {
+                            "description": "Detect commandline usage of Microsoft Connection Manager Profile Installer (cmstp.exe) to install specially formatted local .INF files",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019/10/24\ndescription: Detect commandline usage of Microsoft Connection Manager Profile Installer\n  (cmstp.exe) to install specially formatted local .INF files\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains:\n    - /s\n    - -s\n    - /au\n    - -au\n    - /ni\n    - -ni\n  selection_img:\n  - Image|endswith: \\cmstp.exe\n  - OriginalFileName: CMSTP.EXE\nfalsepositives:\n- Legitimate use of cmstp.exe utility by legitimate user\nfields:\n- ComputerName\n- User\n- CommandLine\nid: e66779cc-383e-4224-a3a4-267eeb585c40\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/30\nreferences:\n- https://eqllib.readthedocs.io/en/latest/analytics/e584f1a1-c303-4885-8a66-21360c90995b.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.003/T1218.003.md\n- https://lolbas-project.github.io/lolbas/Binaries/Cmstp/\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1548.002\n- attack.t1218.003\ntitle: Bypass UAC via CMSTP\n",
+                            "sigma:id": "e66779cc-383e-4224-a3a4-267eeb585c40",
+                            "title": "Bypass UAC via CMSTP",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "efafe0bf-4238-479e-af8f-797bd3490d2d",
+                        "lookup_data": {
+                            "description": "Detects suspicious network connection by Cmstp",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/30\ndescription: Detects suspicious network connection by Cmstp\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\cmstp.exe\n    Initiated: 'true'\nfalsepositives:\n- Unknown\nid: efafe0bf-4238-479e-af8f-797bd3490d2d\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nreferences:\n- https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.003\ntitle: Cmstp Making Network Connection\n",
+                            "sigma:id": "efafe0bf-4238-479e-af8f-797bd3490d2d",
+                            "title": "Cmstp Making Network Connection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3b4b232a-af90-427c-a22f-30b0c0837b95",
+                        "lookup_data": {
+                            "description": "Detects various indicators of Microsoft Connection Manager Profile Installer execution",
+                            "raw": "author: Nik Seetharaman\ndate: 2018/07/16\ndescription: Detects various indicators of Microsoft Connection Manager Profile Installer\n  execution\ndetection:\n  condition: selection\n  selection:\n    CallTrace|contains: cmlua.dll\nfalsepositives:\n- Legitimate CMSTP use (unlikely in modern enterprise environments)\nfields:\n- CommandLine\n- ParentCommandLine\n- Details\nid: 3b4b232a-af90-427c-a22f-30b0c0837b95\nlevel: high\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2021/06/27\nreferences:\n- https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1218.003\n- attack.execution\n- attack.t1559.001\n- attack.g0069\n- attack.g0080\n- car.2019-04-001\ntitle: CMSTP Execution Process Access\n",
+                            "sigma:id": "3b4b232a-af90-427c-a22f-30b0c0837b95",
+                            "title": "CMSTP Execution Process Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4b60e6f2-bf39-47b4-b4ea-398e33cfe253",
+                        "lookup_data": {
+                            "description": "Detects UAC Bypass Attempt Using Microsoft Connection Manager Profile Installer Autoelevate-capable COM Objects (e.g. UACMe ID of 41, 43, 58 or 65)",
+                            "raw": "author: Nik Seetharaman, Christian Burkard (Nextron Systems)\ndate: 2019/07/31\ndescription: Detects UAC Bypass Attempt Using Microsoft Connection Manager Profile\n  Installer Autoelevate-capable COM Objects (e.g. UACMe ID of 41, 43, 58 or 65)\ndetection:\n  condition: selection\n  selection:\n    IntegrityLevel:\n    - High\n    - System\n    ParentCommandLine|contains:\n    - ' /Processid:{3E5FC7F9-9A51-4367-9063-A120244FBEC7}'\n    - ' /Processid:{3E000D72-A845-4CD9-BD83-80C07C3B881F}'\n    - ' /Processid:{BD54C901-076B-434E-B6C7-17C531F4AB41}'\n    - ' /Processid:{D2E7041B-2927-42FB-8E9F-7CE93B6DC937}'\n    - ' /Processid:{E9495B87-D950-4AB5-87A5-FF6D70BF3E90}'\n    ParentImage|endswith: \\DllHost.exe\nfalsepositives:\n- Legitimate CMSTP use (unlikely in modern enterprise environments)\nfields:\n- CommandLine\n- ParentCommandLine\n- Hashes\nid: 4b60e6f2-bf39-47b4-b4ea-398e33cfe253\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/\n- https://twitter.com/hFireF0X/status/897640081053364225\n- https://medium.com/falconforce/falconfriday-detecting-uac-bypasses-0xff16-86c2a9107abf\n- https://github.com/hfiref0x/UACME\nstatus: stable\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1548.002\n- attack.t1218.003\n- attack.g0069\n- car.2019-04-001\ntitle: CMSTP UAC Bypass via COM Object Access\n",
+                            "sigma:id": "4b60e6f2-bf39-47b4-b4ea-398e33cfe253",
+                            "title": "CMSTP UAC Bypass via COM Object Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4cbc6a62-9e34-4f94-8a19-5c1a11392a49",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1218.003",
+                            "mitre-cti:description": "Adversaries may abuse CMSTP to proxy execution of malicious code. The Microsoft Connection Manager Profile Installer (CMSTP.exe) is a command-line program used to install Connection Manager service profiles. (Citation: Microsoft Connection Manager Oct 2009) CMSTP.exe accepts an installation information file (INF) as a parameter and installs a service profile leveraged for remote access connections.\n\nAdversaries may supply CMSTP.exe with INF files infected with malicious commands. (Citation: Twitter CMSTP Usage Jan 2018) Similar to [Regsvr32](https://attack.mitre.org/techniques/T1218/010) / ”Squiblydoo”, CMSTP.exe may be abused to load and execute DLLs (Citation: MSitPros CMSTP Aug 2017)  and/or COM scriptlets (SCT) from remote servers. (Citation: Twitter CMSTP Jan 2018) (Citation: GitHub Ultimate AppLocker Bypass List) (Citation: Endurant CMSTP July 2018) This execution may also bypass AppLocker and other application control defenses since CMSTP.exe is a legitimate binary that may be signed by Microsoft.\n\nCMSTP.exe can also be abused to [Bypass User Account Control](https://attack.mitre.org/techniques/T1548/002) and execute arbitrary commands from a malicious INF through an auto-elevated COM interface. (Citation: MSitPros CMSTP Aug 2017) (Citation: GitHub Ultimate AppLocker Bypass List) (Citation: Endurant CMSTP July 2018)",
+                            "mitre-cti:name": "CMSTP",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Nik Seetharaman, Palantir', 'Ye Yint Min Thu Htut, Offensive Security Team, DBS Bank'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--4cbc6a62-9e34-4f94-8a19-5c1a11392a49', 'type': 'attack-pattern', 'created': '2020-01-23T18:27:30.656Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1218.003', 'url': 'https://attack.mitre.org/techniques/T1218/003'}, {'url': 'https://docs.microsoft.com/previous-versions/windows/it-pro/windows-server-2003/cc786431(v=ws.10)', 'description': 'Microsoft. (2009, October 8). How Connection Manager Works. Retrieved April 11, 2018.', 'source_name': 'Microsoft Connection Manager Oct 2009'}, {'url': 'https://twitter.com/ItsReallyNick/status/958789644165894146', 'description': 'Carr, N. (2018, January 31). Here is some early bad cmstp.exe... Retrieved April 11, 2018.', 'source_name': 'Twitter CMSTP Usage Jan 2018'}, {'url': 'https://msitpros.com/?p=3960', 'description': 'Moe, O. (2017, August 15). Research on CMSTP.exe. Retrieved April 11, 2018.', 'source_name': 'MSitPros CMSTP Aug 2017'}, {'url': 'https://twitter.com/NickTyrer/status/958450014111633408', 'description': 'Tyrer, N. (2018, January 30). CMSTP.exe - remote .sct execution applocker bypass. Retrieved April 11, 2018.', 'source_name': 'Twitter CMSTP Jan 2018'}, {'url': 'https://github.com/api0cradle/UltimateAppLockerByPassList', 'description': 'Moe, O. (2018, March 1). Ultimate AppLocker Bypass List. Retrieved April 10, 2018.', 'source_name': 'GitHub Ultimate AppLocker Bypass List'}, {'url': 'http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/', 'description': 'Seetharaman, N. (2018, July 7). Detecting CMSTP-Enabled Code Execution and UAC Bypass With Sysmon.. Retrieved August 6, 2018.', 'source_name': 'Endurant CMSTP July 2018'}], 'modified': '2022-03-11T18:38:36.109Z', 'name': 'CMSTP', 'description': 'Adversaries may abuse CMSTP to proxy execution of malicious code. The Microsoft Connection Manager Profile Installer (CMSTP.exe) is a command-line program used to install Connection Manager service profiles. (Citation: Microsoft Connection Manager Oct 2009) CMSTP.exe accepts an installation information file (INF) as a parameter and installs a service profile leveraged for remote access connections.\\n\\nAdversaries may supply CMSTP.exe with INF files infected with malicious commands. (Citation: Twitter CMSTP Usage Jan 2018) Similar to [Regsvr32](https://attack.mitre.org/techniques/T1218/010) / ”Squiblydoo”, CMSTP.exe may be abused to load and execute DLLs (Citation: MSitPros CMSTP Aug 2017)  and/or COM scriptlets (SCT) from remote servers. (Citation: Twitter CMSTP Jan 2018) (Citation: GitHub Ultimate AppLocker Bypass List) (Citation: Endurant CMSTP July 2018) This execution may also bypass AppLocker and other application control defenses since CMSTP.exe is a legitimate binary that may be signed by Microsoft.\\n\\nCMSTP.exe can also be abused to [Bypass User Account Control](https://attack.mitre.org/techniques/T1548/002) and execute arbitrary commands from a malicious INF through an auto-elevated COM interface. (Citation: MSitPros CMSTP Aug 2017) (Citation: GitHub Ultimate AppLocker Bypass List) (Citation: Endurant CMSTP July 2018)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Use process monitoring to detect and analyze the execution and arguments of CMSTP.exe. Compare recent invocations of CMSTP.exe with prior history of known good arguments and loaded files to determine anomalous and potentially adversarial activity.\\n\\nSysmon events can also be used to identify potential abuses of CMSTP.exe. Detection strategy may depend on the specific adversary procedure, but potential rules include: (Citation: Endurant CMSTP July 2018)\\n\\n* To detect loading and execution of local/remote payloads - Event 1 (Process creation) where ParentImage contains CMSTP.exe and/or Event 3 (Network connection) where Image contains CMSTP.exe and DestinationIP is external.\\n* To detect [Bypass User Account Control](https://attack.mitre.org/techniques/T1548/002) via an auto-elevated COM interface - Event 10 (ProcessAccess) where CallTrace contains CMLUA.dll and/or Event 12 or 13 (RegistryEvent) where TargetObject contains CMMGR32.exe. Also monitor for events, such as the creation of processes (Sysmon Event 1), that involve auto-elevated CMSTP COM interfaces such as CMSTPLUA (3E5FC7F9-9A51-4367-9063-A120244FBEC7) and CMLUAUTIL (3E000D72-A845-4CD9-BD83-80C07C3B881F).', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '2.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Connection Creation', 'Process: Process Creation', 'Command: Command Execution'], 'x_mitre_defense_bypassed': ['Anti-virus', 'Application control'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b6d235fc-1d38-4b12-adbe-325f06728f37",
+                        "lookup_data": {
+                            "description": "Detects various indicators of Microsoft Connection Manager Profile Installer execution",
+                            "raw": "author: Nik Seetharaman\ndate: 2018/07/16\ndescription: Detects various indicators of Microsoft Connection Manager Profile Installer\n  execution\ndetection:\n  condition: selection\n  selection:\n    TargetObject|contains: \\cmmgr32.exe\nfalsepositives:\n- Legitimate CMSTP use (unlikely in modern enterprise environments)\nfields:\n- CommandLine\n- ParentCommandLine\n- Details\nid: b6d235fc-1d38-4b12-adbe-325f06728f37\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2020/12/23\nreferences:\n- https://web.archive.org/web/20190720093911/http://www.endurant.io/cmstp/detecting-cmstp-enabled-code-execution-and-uac-bypass-with-sysmon/\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1218.003\n- attack.g0069\n- car.2019-04-001\ntitle: CMSTP Execution Registry Event\n",
+                            "sigma:id": "b6d235fc-1d38-4b12-adbe-325f06728f37",
+                            "title": "CMSTP Execution Registry Event",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1218.003",
+                "display_name": "Signed Binary Proxy Execution: CMSTP",
+                "atomic_tests": [
+                    {
+                        "name": "CMSTP Executing Remote Scriptlet",
+                        "auto_generated_guid": "34e63321-9683-496b-bbc1-7566bc55e624",
+                        "description": "Adversaries may supply CMSTP.exe with INF files infected with malicious commands\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "inf_file_path": {
+                                "description": "Path to the INF file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.003\\src\\T1218.003.inf"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "INF file must exist on disk at specified location (#{inf_file_path})\n",
+                                "prereq_command": "if (Test-Path \"#{inf_file_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_file_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.003/src/T1218.003.inf\" -OutFile \"#{inf_file_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmstp.exe /s \"#{inf_file_path}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "CMSTP Executing UAC Bypass",
+                        "auto_generated_guid": "748cb4f6-2fb3-4e97-b7ad-b22635a09ab0",
+                        "description": "Adversaries may invoke cmd.exe (or other malicious commands) by embedding them in the RunPreSetupCommandsSection of an INF file\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "inf_file_uac": {
+                                "description": "Path to the INF file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.003\\src\\T1218.003_uacbypass.inf"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "INF file must exist on disk at specified location (#{inf_file_uac})\n",
+                                "prereq_command": "if (Test-Path \"#{inf_file_uac}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_file_uac}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.003/src/T1218.003_uacbypass.inf\" -OutFile \"#{inf_file_uac}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmstp.exe /s \"#{inf_file_uac}\" /au\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:13:21"
+}

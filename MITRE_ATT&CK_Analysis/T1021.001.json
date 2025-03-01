@@ -1,0 +1,415 @@
+{
+    "id": "T1021.001",
+    "name": "Remote Desktop Protocol",
+    "description": "Adversaries may use [Valid Accounts](T1078) to log into a computer using the Remote Desktop Protocol (RDP). The adversary may then perform actions as the logged-on user.\nRemote desktop is a common feature in operating systems. It allows a user to log into an interactive session with a system desktop graphical user interface on a remote system. Microsoft refers to its implementation of the Remote Desktop Protocol (RDP) as Remote Desktop Services (RDS).(Citation: TechNet Remote Desktop Services)\nAdversaries may connect to a remote system over RDP/RDS to expand access if the service is enabled and allows access to accounts with known credentials. Adversaries will likely use Credential Access techniques to acquire credentials to use with RDP. Adversaries may also use RDP in conjunction with the [Accessibility Features](T1546.008) technique for Persistence.(Citation: Alperovitch Malware)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Lateral Movement",
+    "data_sources": "Process: Process Creation, Network Traffic: Network Connection Creation, Network Traffic: Network Traffic Flow, Logon Session: Logon Session Creation",
+    "detection": "Use of RDP may be legitimate, depending on the network environment and how it is used. Other factors, such as access patterns and activity that occurs after a remote login, may indicate suspicious or malicious behavior with RDP. Monitor for user accounts logged into systems they would not normally access or access patterns to multiple systems over a relatively short period of time.",
+    "url": "https://attack.mitre.org/techniques/T1021/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1021.001",
+                "atomic_attack_guid": "01d1c6c0-faf0-408e-b368-752a02285cb2",
+                "atomic_attack_name": "Disable NLA for RDP via Command Prompt",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Tampering With RDP Related Registry Keys Via Reg.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_rdp_keys_tamper.yml",
+                        "remote_content": "title: Potential Tampering With RDP Related Registry Keys Via Reg.EXE\nid: 0d5675be-bc88-4172-86d3-1e96a4476536\nstatus: test\ndescription: Detects the execution of \"reg.exe\" for enabling/disabling the RDP service on the host by tampering with the 'CurrentControlSet\\Control\\Terminal Server' values\nreferences:\n    - https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nauthor: pH-T (Nextron Systems), @Kostastsale, @TheDFIRReport\ndate: 2022-02-12\nmodified: 2023-02-05\ntags:\n    - attack.defense-evasion\n    - attack.lateral-movement\n    - attack.t1021.001\n    - attack.t1112\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_main_img:\n        - Image|endswith: '\\reg.exe'\n        - OriginalFileName: 'reg.exe'\n    selection_main_cli:\n        CommandLine|contains|all:\n            - ' add '\n            - '\\CurrentControlSet\\Control\\Terminal Server'\n            - 'REG_DWORD'\n            - ' /f'\n    selection_values_1:\n        CommandLine|contains|all:\n            - 'Licensing Core'\n            - 'EnableConcurrentSessions'\n    selection_values_2:\n        CommandLine|contains:\n            - 'WinStations\\RDP-Tcp'\n            - 'MaxInstanceCount'\n            - 'fEnableWinStation'\n            - 'TSUserEnabled'\n            - 'TSEnabled'\n            - 'TSAppCompat'\n            - 'IdleWinStationPoolCount'\n            - 'TSAdvertise'\n            - 'AllowTSConnections'\n            - 'fSingleSessionPerUser'\n            - 'fDenyTSConnections'\n    condition: all of selection_main_* and 1 of selection_values_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1021.001",
+                "atomic_attack_guid": "74ace21e-a31c-4f7d-b540-53e4eb6d1f73",
+                "atomic_attack_name": "Changing RDP Port to Non Standard Port via Command_Prompt",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "New Firewall Rule Added Via Netsh.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_netsh_fw_add_rule.yml",
+                        "remote_content": "title: New Firewall Rule Added Via Netsh.EXE\nid: cd5cfd80-aa5f-44c0-9c20-108c4ae12e3c\nstatus: test\ndescription: Detects the addition of a new rule to the Windows firewall via netsh\nreferences:\n    - https://web.archive.org/web/20190508165435/https://www.operationblockbuster.com/wp-content/uploads/2016/02/Operation-Blockbuster-RAT-and-Staging-Report.pdf\nauthor: Markus Neis, Sander Wiebing\ndate: 2019-01-29\nmodified: 2023-02-10\ntags:\n    - attack.defense-evasion\n    - attack.t1562.004\n    - attack.s0246\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\netsh.exe'\n        - OriginalFileName: 'netsh.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - ' firewall '\n            - ' add '\n    filter_optional_dropbox:\n        CommandLine|contains:\n            - 'advfirewall firewall add rule name=Dropbox dir=in action=allow \"program=?:\\Program Files (x86)\\Dropbox\\Client\\Dropbox.exe\" enable=yes profile=Any'\n            - 'advfirewall firewall add rule name=Dropbox dir=in action=allow \"program=?:\\Program Files\\Dropbox\\Client\\Dropbox.exe\" enable=yes profile=Any'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - Legitimate administration activity\n    - Software installations\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Tampering With RDP Related Registry Keys Via Reg.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_rdp_keys_tamper.yml",
+                        "remote_content": "title: Potential Tampering With RDP Related Registry Keys Via Reg.EXE\nid: 0d5675be-bc88-4172-86d3-1e96a4476536\nstatus: test\ndescription: Detects the execution of \"reg.exe\" for enabling/disabling the RDP service on the host by tampering with the 'CurrentControlSet\\Control\\Terminal Server' values\nreferences:\n    - https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nauthor: pH-T (Nextron Systems), @Kostastsale, @TheDFIRReport\ndate: 2022-02-12\nmodified: 2023-02-05\ntags:\n    - attack.defense-evasion\n    - attack.lateral-movement\n    - attack.t1021.001\n    - attack.t1112\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_main_img:\n        - Image|endswith: '\\reg.exe'\n        - OriginalFileName: 'reg.exe'\n    selection_main_cli:\n        CommandLine|contains|all:\n            - ' add '\n            - '\\CurrentControlSet\\Control\\Terminal Server'\n            - 'REG_DWORD'\n            - ' /f'\n    selection_values_1:\n        CommandLine|contains|all:\n            - 'Licensing Core'\n            - 'EnableConcurrentSessions'\n    selection_values_2:\n        CommandLine|contains:\n            - 'WinStations\\RDP-Tcp'\n            - 'MaxInstanceCount'\n            - 'fEnableWinStation'\n            - 'TSUserEnabled'\n            - 'TSEnabled'\n            - 'TSAppCompat'\n            - 'IdleWinStationPoolCount'\n            - 'TSAdvertise'\n            - 'AllowTSConnections'\n            - 'fSingleSessionPerUser'\n            - 'fDenyTSConnections'\n    condition: all of selection_main_* and 1 of selection_values_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "1fc0809e-06bf-4de3-ad52-25e5263b7623",
+                    "f72aa3e8-49f9-4c7d-bd74-f8ab84ff9bbb",
+                    "b1e5da3b-ca8e-4adf-915c-9921f3d85481",
+                    "28219fd4-56f3-470c-90ae-bdaeb006502e",
+                    "2f974656-6d83-4059-bbdf-68ac5403422f",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "ffa28e60-bdb1-46e0-9f82-05f7a61cc06e",
+                    "51e33403-2a37-4d66-a574-1fda1782cc31",
+                    "636fd943-5631-4cc9-890a-4f400563533c",
+                    "eb062747-2193-45de-8fa2-e62549c37ddf",
+                    "48a61b29-389f-4032-b317-b30de6b95314",
+                    "327f48c1-a6db-4eb8-875a-f6981f1b0183",
+                    "5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4",
+                    "ed74fe75-7594-4b4b-ae38-e38e3fd2eb23",
+                    "0d5675be-bc88-4172-86d3-1e96a4476536",
+                    "954f0af7-62dd-418f-b3df-a84bc2c7a774",
+                    "8e5c03fa-b7f0-11ea-b242-07e0576828d9",
+                    "5bed80b6-b3e8-428e-a3ae-d3c757589e41",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1fc0809e-06bf-4de3-ad52-25e5263b7623",
+                        "lookup_data": {
+                            "description": "Detects connections from routable IPs to an RDP listener - which is indicative of a publicly-accessible RDP service.",
+                            "raw": "author: Josh Brower @DefensiveDepth\ndate: 2020/08/22\ndescription: Detects connections from routable IPs to an RDP listener - which is indicative\n  of a publicly-accessible RDP service.\ndetection:\n  condition: not selection\n  selection:\n    id.orig_h|startswith:\n    - 192.168.\n    - '10.'\n    - 172.16.\n    - 172.17.\n    - 172.18.\n    - 172.19.\n    - 172.20.\n    - 172.21.\n    - 172.22.\n    - 172.23.\n    - 172.24.\n    - 172.25.\n    - 172.26.\n    - 172.27.\n    - 172.28.\n    - 172.29.\n    - 172.30.\n    - 172.31.\n    - fd\n    - 2620:83:800f\nfalsepositives:\n- Although it is recommended to NOT have RDP exposed to the internet, verify that\n  this is a) allowed b) the server has not already been compromised via some brute\n  force or remote exploit since it has been exposed to the internet. Work to secure\n  the server if you are unable to remove it from being exposed to the internet.\nfields:\n- id.orig_h\n- id.resp_h\nid: 1fc0809e-06bf-4de3-ad52-25e5263b7623\nlevel: high\nlogsource:\n  product: zeek\n  service: rdp\nmodified: 2022/12/25\nreferences:\n- https://attack.mitre.org/techniques/T1021/001/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Publicly Accessible RDP Service\n",
+                            "sigma:id": "1fc0809e-06bf-4de3-ad52-25e5263b7623",
+                            "title": "Publicly Accessible RDP Service",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f72aa3e8-49f9-4c7d-bd74-f8ab84ff9bbb",
+                        "lookup_data": {
+                            "description": "Detects a suspicious RDP session redirect using tscon.exe",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/03/17\ndescription: Detects a suspicious RDP session redirect using tscon.exe\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' /dest:rdp-tcp:'\nfalsepositives:\n- Unknown\nid: f72aa3e8-49f9-4c7d-bd74-f8ab84ff9bbb\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- http://www.korznikov.com/2017/03/0-day-or-feature-privilege-escalation.html\n- https://medium.com/@networksecurity/rdp-hijacking-how-to-hijack-rds-and-remoteapp-sessions-transparently-to-move-through-an-da2a1e73a5f6\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1563.002\n- attack.t1021.001\n- car.2013-07-002\ntitle: Suspicious RDP Redirect Using TSCON\n",
+                            "sigma:id": "f72aa3e8-49f9-4c7d-bd74-f8ab84ff9bbb",
+                            "title": "Suspicious RDP Redirect Using TSCON",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b1e5da3b-ca8e-4adf-915c-9921f3d85481",
+                        "lookup_data": {
+                            "description": "Detects svchost hosting RDP termsvcs communicating to target systems on TCP port 80 or 443",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/04/29\ndescription: Detects svchost hosting RDP termsvcs communicating to target systems\n  on TCP port 80 or 443\ndetection:\n  condition: selection\n  selection:\n    DestinationPort:\n    - 80\n    - 443\n    Image|endswith: \\svchost.exe\n    Initiated: 'true'\n    SourcePort: 3389\nfalsepositives:\n- Unknown\nid: b1e5da3b-ca8e-4adf-915c-9921f3d85481\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://twitter.com/tekdefense/status/1519711183162556416?s=12&t=OTsHCBkQOTNs1k3USz65Zg\n- https://www.mandiant.com/resources/bypassing-network-restrictions-through-rdp-tunneling\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\n- car.2013-07-002\ntitle: RDP to HTTP or HTTPS Target Ports\n",
+                            "sigma:id": "b1e5da3b-ca8e-4adf-915c-9921f3d85481",
+                            "title": "RDP to HTTP or HTTPS Target Ports",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "28219fd4-56f3-470c-90ae-bdaeb006502e",
+                        "lookup_data": {
+                            "description": "Targeted attack on industrial enterprises and public institutions",
+                            "link": "http://www.botvrij.eu/data/feed-osint/28219fd4-56f3-470c-90ae-bdaeb006502e.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1660346860",
+                            "uuid": "28219fd4-56f3-470c-90ae-bdaeb006502e",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2f974656-6d83-4059-bbdf-68ac5403422f",
+                        "lookup_data": {
+                            "description": "Detects process execution patterns found in intrusions related to the Hermetic Wiper malware attacks against Ukraine in February 2022",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/25\ndescription: Detects process execution patterns found in intrusions related to the\n  Hermetic Wiper malware attacks against Ukraine in February 2022\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image|endswith: \\policydefinitions\\postgresql.exe\n  selection2:\n  - CommandLine|contains:\n    - CSIDL_SYSTEM_DRIVE\\temp\\sys.tmp\n    - ' 1> \\\\\\\\127.0.0.1\\ADMIN$\\__16'\n  - CommandLine|contains|all:\n    - 'powershell -c '\n    - '\\comsvcs.dll MiniDump '\n    - \\winupd.log full\nfalsepositives:\n- Unknown\nid: 2f974656-6d83-4059-bbdf-68ac5403422f\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ukraine-wiper-malware-russia\nstatus: experimental\ntags:\n- attack.execution\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Hermetic Wiper TG Process Patterns\n",
+                            "sigma:id": "2f974656-6d83-4059-bbdf-68ac5403422f",
+                            "title": "Hermetic Wiper TG Process Patterns",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ffa28e60-bdb1-46e0-9f82-05f7a61cc06e",
+                        "lookup_data": {
+                            "description": "Detects suspicious command line in which a user gets added to the local Remote Desktop Users group",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/12/06\ndescription: Detects suspicious command line in which a user gets added to the local\n  Remote Desktop Users group\ndetection:\n  condition: all of selection_*\n  selection_group:\n    CommandLine|contains:\n    - Remote Desktop Users\n    - \"Utilisateurs du Bureau \\xE0 distance\"\n    - Usuarios de escritorio remoto\n  selection_main:\n  - CommandLine|contains|all:\n    - 'localgroup '\n    - ' /add'\n  - CommandLine|contains|all:\n    - 'Add-LocalGroupMember '\n    - ' -Group '\nfalsepositives:\n- Administrative activity\nfields:\n- CommandLine\n- ParentCommandLine\nid: ffa28e60-bdb1-46e0-9f82-05f7a61cc06e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://www.microsoft.com/security/blog/2021/11/16/evolving-trends-in-iranian-threat-actor-activity-mstic-presentation-at-cyberwarcon-2021/\nrelated:\n- id: ad720b90-25ad-43ff-9b5e-5c841facc8e5\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.lateral_movement\n- attack.t1133\n- attack.t1136.001\n- attack.t1021.001\ntitle: Suspicious Add User to Remote Desktop Users Group\n",
+                            "sigma:id": "ffa28e60-bdb1-46e0-9f82-05f7a61cc06e",
+                            "title": "Suspicious Add User to Remote Desktop Users Group",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "51e33403-2a37-4d66-a574-1fda1782cc31",
+                        "lookup_data": {
+                            "description": "RDP login with localhost source address may be a tunnelled login",
+                            "raw": "author: Thomas Patzke\ndate: 2019/01/28\ndescription: RDP login with localhost source address may be a tunnelled login\ndetection:\n  condition: selection\n  selection:\n    EventID: 4624\n    IpAddress:\n    - ::1\n    - 127.0.0.1\n    LogonType: 10\nfalsepositives:\n- Unknown\nid: 51e33403-2a37-4d66-a574-1fda1782cc31\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://www.fireeye.com/blog/threat-research/2019/01/bypassing-network-restrictions-through-rdp-tunneling.html\nstatus: test\ntags:\n- attack.lateral_movement\n- car.2013-07-002\n- attack.t1021.001\ntitle: RDP Login from Localhost\n",
+                            "sigma:id": "51e33403-2a37-4d66-a574-1fda1782cc31",
+                            "title": "RDP Login from Localhost",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "636fd943-5631-4cc9-890a-4f400563533c",
+                        "lookup_data": {
+                            "description": "Scraper: DeftTorero: tactics, techniques and procedures of intrusions revealed",
+                            "link": "http://www.botvrij.eu/data/feed-osint/636fd943-5631-4cc9-890a-4f400563533c.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1665780788",
+                            "uuid": "636fd943-5631-4cc9-890a-4f400563533c",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eb062747-2193-45de-8fa2-e62549c37ddf",
+                        "lookup_data": {
+                            "capec": "CAPEC-555",
+                            "mitre-attack-id": "T1021.001",
+                            "mitre-cti:description": "Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to log into a computer using the Remote Desktop Protocol (RDP). The adversary may then perform actions as the logged-on user.\n\nRemote desktop is a common feature in operating systems. It allows a user to log into an interactive session with a system desktop graphical user interface on a remote system. Microsoft refers to its implementation of the Remote Desktop Protocol (RDP) as Remote Desktop Services (RDS).(Citation: TechNet Remote Desktop Services) \n\nAdversaries may connect to a remote system over RDP/RDS to expand access if the service is enabled and allows access to accounts with known credentials. Adversaries will likely use Credential Access techniques to acquire credentials to use with RDP. Adversaries may also use RDP in conjunction with the [Accessibility Features](https://attack.mitre.org/techniques/T1546/008) or [Terminal Services DLL](https://attack.mitre.org/techniques/T1505/005) for Persistence.(Citation: Alperovitch Malware)",
+                            "mitre-cti:name": "Remote Desktop Protocol",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Matthew Demaske, Adaptforward'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--eb062747-2193-45de-8fa2-e62549c37ddf', 'type': 'attack-pattern', 'created': '2020-02-11T18:23:26.059Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1021.001', 'url': 'https://attack.mitre.org/techniques/T1021/001'}, {'external_id': 'CAPEC-555', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/555.html'}, {'url': 'https://technet.microsoft.com/en-us/windowsserver/ee236407.aspx', 'description': 'Microsoft. (n.d.). Remote Desktop Services. Retrieved June 1, 2016.', 'source_name': 'TechNet Remote Desktop Services'}, {'url': 'http://blog.crowdstrike.com/adversary-tricks-crowdstrike-treats/', 'description': 'Alperovitch, D. (2014, October 31). Malware-Free Intrusions. Retrieved November 4, 2014.', 'source_name': 'Alperovitch Malware'}], 'modified': '2022-03-28T16:07:44.605Z', 'name': 'Remote Desktop Protocol', 'description': 'Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to log into a computer using the Remote Desktop Protocol (RDP). The adversary may then perform actions as the logged-on user.\\n\\nRemote desktop is a common feature in operating systems. It allows a user to log into an interactive session with a system desktop graphical user interface on a remote system. Microsoft refers to its implementation of the Remote Desktop Protocol (RDP) as Remote Desktop Services (RDS).(Citation: TechNet Remote Desktop Services) \\n\\nAdversaries may connect to a remote system over RDP/RDS to expand access if the service is enabled and allows access to accounts with known credentials. Adversaries will likely use Credential Access techniques to acquire credentials to use with RDP. Adversaries may also use RDP in conjunction with the [Accessibility Features](https://attack.mitre.org/techniques/T1546/008) or [Terminal Services DLL](https://attack.mitre.org/techniques/T1505/005) for Persistence.(Citation: Alperovitch Malware)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'lateral-movement'}], 'x_mitre_detection': 'Use of RDP may be legitimate, depending on the network environment and how it is used. Other factors, such as access patterns and activity that occurs after a remote login, may indicate suspicious or malicious behavior with RDP. Monitor for user accounts logged into systems they would not normally access or access patterns to multiple systems over a relatively short period of time.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Connection Creation', 'Logon Session: Logon Session Creation', 'Process: Process Creation', 'Network Traffic: Network Traffic Flow'], 'x_mitre_permissions_required': ['Remote Desktop Users', 'User'], 'x_mitre_system_requirements': ['RDP service enabled, account in the Remote Desktop Users group']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "48a61b29-389f-4032-b317-b30de6b95314",
+                        "lookup_data": {
+                            "description": "Detects suspicious Plink tunnel port forwarding to a local port",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/01/19\ndescription: Detects suspicious Plink tunnel port forwarding to a local port\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' -R '\n    Description: Command-line SSH, Telnet, and Rlogin client\nfalsepositives:\n- Administrative activity using a remote port forwarding to a local port\nid: 48a61b29-389f-4032-b317-b30de6b95314\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.real-sec.com/2019/04/bypassing-network-restrictions-through-rdp-tunneling/\n- https://medium.com/@informationsecurity/remote-ssh-tunneling-with-plink-exe-7831072b3d7d\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Suspicious Plink Port Forwarding\n",
+                            "sigma:id": "48a61b29-389f-4032-b317-b30de6b95314",
+                            "title": "Suspicious Plink Port Forwarding",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "327f48c1-a6db-4eb8-875a-f6981f1b0183",
+                        "lookup_data": {
+                            "description": "Detects suspicious SSH tunnel port forwarding to a local port",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/12\ndescription: Detects suspicious SSH tunnel port forwarding to a local port\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' -R '\n    Image|endswith: \\ssh.exe\nfalsepositives:\n- Administrative activity using a remote port forwarding to a local port\nid: 327f48c1-a6db-4eb8-875a-f6981f1b0183\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/25\nreferences:\n- https://www.absolomb.com/2018-01-26-Windows-Privilege-Escalation-Guide/\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Port Forwarding Attempt Via SSH\n",
+                            "sigma:id": "327f48c1-a6db-4eb8-875a-f6981f1b0183",
+                            "title": "Port Forwarding Attempt Via SSH",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4",
+                        "lookup_data": {
+                            "description": "Detects svchost hosting RDP termsvcs communicating with the loopback address and on TCP port 3389",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/02/16\ndescription: Detects svchost hosting RDP termsvcs communicating with the loopback\n  address and on TCP port 3389\ndetection:\n  condition: selection and selection2\n  selection:\n    Image|endswith: \\svchost.exe\n    Initiated: 'true'\n    SourcePort: 3389\n  selection2:\n  - DestinationIp|startswith: '127.'\n  - DestinationIp: ::1\nfalsepositives:\n- Unknown\nid: 5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/SBousseaden/status/1096148422984384514\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1572\n- attack.lateral_movement\n- attack.t1021.001\n- car.2013-07-002\ntitle: RDP Over Reverse SSH Tunnel\n",
+                            "sigma:id": "5f699bc5-5446-4a4a-a0b7-5ef2885a3eb4",
+                            "title": "RDP Over Reverse SSH Tunnel",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ed74fe75-7594-4b4b-ae38-e38e3fd2eb23",
+                        "lookup_data": {
+                            "description": "Detects Non-Standard Tools Connecting to TCP port 3389 indicating possible lateral movement",
+                            "raw": "author: Markus Neis\ndate: 2019/05/15\ndescription: Detects Non-Standard Tools Connecting to TCP port 3389 indicating possible\n  lateral movement\ndetection:\n  condition: selection and not filter\n  filter:\n  - Image|endswith:\n    - \\mstsc.exe\n    - \\RTSApp.exe\n    - \\RTS2App.exe\n    - \\RDCMan.exe\n    - \\ws_TunnelService.exe\n    - \\RSSensor.exe\n    - \\RemoteDesktopManagerFree.exe\n    - \\RemoteDesktopManager.exe\n    - \\RemoteDesktopManager64.exe\n    - \\mRemoteNG.exe\n    - \\mRemote.exe\n    - \\Terminals.exe\n    - \\spiceworks-finder.exe\n    - \\FSDiscovery.exe\n    - \\FSAssessment.exe\n    - \\MobaRTE.exe\n    - \\chrome.exe\n    - \\System32\\dns.exe\n    - \\thor.exe\n    - \\thor64.exe\n    - \\Passwordstate.exe\n    - \\Avast Software\\Avast\\AvastSvc.exe\n    - \\Ranger\\SentinelRanger.exe\n    - \\Avast\\AvastSvc.exe\n  - Image|startswith: C:\\Program Files\\SplunkUniversalForwarder\\bin\\\n  - Image: C:\\Program Files\\Mozilla Firefox\\firefox.exe\n  selection:\n    DestinationPort: 3389\n    Initiated: 'true'\nfalsepositives:\n- Other Remote Desktop RDP tools\n- Domain controller using dns.exe\nid: ed74fe75-7594-4b4b-ae38-e38e3fd2eb23\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/09/02\nreferences:\n- https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2019-0708\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.001\n- car.2013-07-002\ntitle: Suspicious Outbound RDP Connections\n",
+                            "sigma:id": "ed74fe75-7594-4b4b-ae38-e38e3fd2eb23",
+                            "title": "Suspicious Outbound RDP Connections",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0d5675be-bc88-4172-86d3-1e96a4476536",
+                        "lookup_data": {
+                            "description": "Detects the execution of reg.exe and subsequent command line arguments for enabling RDP service on the host by tampering with the 'CurrentControlSet\\Control\\Terminal Server' subkeys",
+                            "raw": "author: '@Kostastsale, @TheDFIRReport, slightly modified by pH-T (Nextron Systems)'\ndate: 2022/02/12\ndescription: Detects the execution of reg.exe and subsequent command line arguments\n  for enabling RDP service on the host by tampering with the 'CurrentControlSet\\Control\\Terminal\n  Server' subkeys\ndetection:\n  condition: selection_cli and 1 of selection_values_*\n  selection_cli:\n    CommandLine|contains|all:\n    - ' add '\n    - \\CurrentControlSet\\Control\\Terminal Server\n    - REG_DWORD\n    - ' /f'\n    Image|endswith: \\reg.exe\n  selection_values_1:\n    CommandLine|contains|all:\n    - Licensing Core\n    - EnableConcurrentSessions\n  selection_values_2:\n    CommandLine|contains:\n    - WinStations\\RDP-Tcp\n    - MaxInstanceCount\n    - fEnableWinStation\n    - TSUserEnabled\n    - TSEnabled\n    - TSAppCompat\n    - IdleWinStationPoolCount\n    - TSAdvertise\n    - AllowTSConnections\n    - fSingleSessionPerUser\n    - fDenyTSConnections\nfalsepositives:\n- Unknown\nid: 0d5675be-bc88-4172-86d3-1e96a4476536\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.lateral_movement\n- attack.t1021.001\n- attack.t1112\ntitle: Enabling RDP Service via Reg.exe\n",
+                            "sigma:id": "0d5675be-bc88-4172-86d3-1e96a4476536",
+                            "title": "Enabling RDP Service via Reg.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "954f0af7-62dd-418f-b3df-a84bc2c7a774",
+                        "lookup_data": {
+                            "description": "Adversaries may use Valid Accounts to log into a computer using the Remote Desktop Protocol (RDP). The adversary may then perform actions as the logged-on user.",
+                            "raw": "author: frack113\ndate: 2022/01/07\ndescription: Adversaries may use Valid Accounts to log into a computer using the Remote\n  Desktop Protocol (RDP). The adversary may then perform actions as the logged-on\n  user.\ndetection:\n  condition: all of selection_mstsc* and not 1 of filter_mstsc_* or all of selection_cmdkey*\n  filter_mstsc_1:\n    CommandLine|contains: C:\\ProgramData\\Microsoft\\WSL\\wslg.rdp\n    ParentImage: C:\\Windows\\System32\\lxss\\wslhost.exe\n  selection_cmdkey_cli:\n    CommandLine|contains|all:\n    - ' /g'\n    - ' /u'\n    - ' /p'\n  selection_cmdkey_img:\n  - Image|endswith: \\cmdkey.exe\n  - OriginalFileName: cmdkey.exe\n  selection_mstsc_cli:\n    CommandLine|contains: ' /v:'\n  selection_mstsc_img:\n  - Image|endswith: \\mstsc.exe\n  - OriginalFileName: mstsc.exe\nfalsepositives:\n- WSL (Windows Sub System For Linux)\n- Other currently unknown software\nid: 954f0af7-62dd-418f-b3df-a84bc2c7a774\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1021.001/T1021.001.md#t1021001---remote-desktop-protocol\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/mstsc\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Remote Desktop Protocol Use Mstsc\n",
+                            "sigma:id": "954f0af7-62dd-418f-b3df-a84bc2c7a774",
+                            "title": "Remote Desktop Protocol Use Mstsc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8e5c03fa-b7f0-11ea-b242-07e0576828d9",
+                        "lookup_data": {
+                            "description": "This event is generated when an authenticated user who is not allowed to log on remotely attempts to connect to this computer through Remote Desktop.\nOften, this event can be generated by attackers when searching for available windows servers in the network.\n",
+                            "raw": "author: Pushkarev Dmitry\ndate: 2020/06/27\ndescription: 'This event is generated when an authenticated user who is not allowed\n  to log on remotely attempts to connect to this computer through Remote Desktop.\n\n  Often, this event can be generated by attackers when searching for available windows\n  servers in the network.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    EventID: 4825\nfalsepositives:\n- Valid user was not added to RDP group\nfields:\n- EventCode\n- AccountName\n- ClientAddress\nid: 8e5c03fa-b7f0-11ea-b242-07e0576828d9\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/event.aspx?eventid=4825\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.001\ntitle: Denied Access To Remote Desktop\n",
+                            "sigma:id": "8e5c03fa-b7f0-11ea-b242-07e0576828d9",
+                            "title": "Denied Access To Remote Desktop",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5bed80b6-b3e8-428e-a3ae-d3c757589e41",
+                        "lookup_data": {
+                            "description": "Detects svchost hosting RDP termsvcs communicating with the loopback address",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/02/16\ndescription: Detects svchost hosting RDP termsvcs communicating with the loopback\n  address\ndetection:\n  condition: selection and ( sourceRDP or destinationRDP ) and not 1 of filter*\n  destinationRDP:\n    DestPort: 3389\n    SourceAddress:\n    - 127.*\n    - ::1\n  filter_app_container:\n    FilterOrigin: AppContainer Loopback\n  filter_thor:\n    Application|endswith:\n    - \\thor.exe\n    - \\thor64.exe\n  selection:\n    EventID: 5156\n  sourceRDP:\n    DestAddress:\n    - 127.*\n    - ::1\n    SourcePort: 3389\nfalsepositives:\n- Programs that connect locally to the RDP port\nid: 5bed80b6-b3e8-428e-a3ae-d3c757589e41\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/09/02\nreferences:\n- https://twitter.com/SBousseaden/status/1096148422984384514\n- https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES/blob/44fbe85f72ee91582876b49678f9a26292a155fb/Command%20and%20Control/DE_RDP_Tunnel_5156.evtx\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.command_and_control\n- attack.lateral_movement\n- attack.t1090.001\n- attack.t1090.002\n- attack.t1021.001\n- car.2013-07-002\ntitle: RDP over Reverse SSH Tunnel WFP\n",
+                            "sigma:id": "5bed80b6-b3e8-428e-a3ae-d3c757589e41",
+                            "title": "RDP over Reverse SSH Tunnel WFP",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1021.001",
+                "display_name": "Remote Services: Remote Desktop Protocol",
+                "atomic_tests": [
+                    {
+                        "name": "RDP to DomainController",
+                        "auto_generated_guid": "355d4632-8cb9-449d-91ce-b566d0253d3e",
+                        "description": "Attempt an RDP session via Remote Desktop Application to a DomainController.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "logonserver": {
+                                "description": "ComputerName argument default %logonserver%",
+                                "type": "string",
+                                "default": "$ENV:logonserver.TrimStart(\"\\\")"
+                            },
+                            "domain": {
+                                "description": "domain argument default %USERDOMAIN%",
+                                "type": "string",
+                                "default": "$Env:USERDOMAIN"
+                            },
+                            "username": {
+                                "description": "Username argument default %username%",
+                                "type": "string",
+                                "default": "$ENV:USERNAME"
+                            },
+                            "password": {
+                                "description": "Password",
+                                "type": "string",
+                                "default": "1password2!"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Computer must be domain joined\n",
+                                "prereq_command": "if((Get-CIMInstance -Class Win32_ComputerSystem).PartOfDomain) { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "Write-Host Joining this computer to a domain must be done manually\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "$Server=#{logonserver}\n$User = Join-Path #{domain} #{username}\n$Password=\"#{password}\"\ncmdkey /generic:TERMSRV/$Server /user:$User /pass:$Password\nmstsc /v:$Server\necho \"RDP connection established\"\n",
+                            "cleanup_command": "$p=Tasklist /svc /fi \"IMAGENAME eq mstsc.exe\" /fo csv | convertfrom-csv\nif(-not ([string]::IsNullOrEmpty($p.PID))) { Stop-Process -Id $p.PID }\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Changing RDP Port to Non Standard Port via Powershell",
+                        "auto_generated_guid": "2f840dd4-8a2e-4f44-beb3-6b2399ea3771",
+                        "description": "Changing RDP Port to Non Standard Port via Powershell\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "OLD_Remote_Port": {
+                                "description": "Default RDP Listening Port",
+                                "type": "string",
+                                "default": "3389"
+                            },
+                            "NEW_Remote_Port": {
+                                "description": "New RDP Listening Port",
+                                "type": "string",
+                                "default": "4489"
+                            }
+                        },
+                        "executor": {
+                            "command": "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp' -name \"PortNumber\" -Value #{NEW_Remote_Port}\nNew-NetFirewallRule -DisplayName 'RDPPORTLatest-TCP-In' -Profile 'Public' -Direction Inbound -Action Allow -Protocol TCP -LocalPort #{NEW_Remote_Port}\n",
+                            "cleanup_command": "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp' -name \"PortNumber\" -Value #{OLD_Remote_Port}\nRemove-NetFirewallRule -DisplayName \"RDPPORTLatest-TCP-In\" -ErrorAction Ignore \nGet-Service TermService | Restart-Service -Force -ErrorAction Ignore \n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Changing RDP Port to Non Standard Port via Command_Prompt",
+                        "auto_generated_guid": "74ace21e-a31c-4f7d-b540-53e4eb6d1f73",
+                        "description": "Changing RDP Port to Non Standard Port via Command_Prompt\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "OLD_Remote_Port": {
+                                "description": "Default RDP Listening Port",
+                                "type": "string",
+                                "default": "3389"
+                            },
+                            "NEW_Remote_Port": {
+                                "description": "New RDP Listening Port",
+                                "type": "string",
+                                "default": "4489"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg add \"HKLM\\System\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp\" /v PortNumber /t REG_DWORD /d #{NEW_Remote_Port} /f\nnetsh advfirewall firewall add rule name=\"RDPPORTLatest-TCP-In\" dir=in action=allow protocol=TCP localport=#{NEW_Remote_Port}\n",
+                            "cleanup_command": "reg add \"HKLM\\System\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp\" /v PortNumber /t REG_DWORD /d #{OLD_Remote_Port} /f >nul 2>&1\nnetsh advfirewall firewall delete rule name=\"RDPPORTLatest-TCP-In\" >nul 2>&1\nnet stop TermService /y >nul 2>&1\nnet start TermService >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable NLA for RDP via Command Prompt",
+                        "auto_generated_guid": "01d1c6c0-faf0-408e-b368-752a02285cb2",
+                        "description": "Disables network-level authentication (NLA) for RDP by changing a registry key via Command Prompt\nDisabling NLA for RDP can allow remote user interaction with the Windows sign-in screen prior to authentication. According to Microsoft, Flax Typhoon actors used this technique implementation to achieve persistence on victim systems: https://www.microsoft.com/en-us/security/blog/2023/08/24/flax-typhoon-using-legitimate-software-to-quietly-access-taiwanese-organizations/\nSee also: https://github.com/EmpireProject/Empire/blob/master/lib/modules/powershell/management/enable_rdp.py\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "Default_UserAuthentication": {
+                                "description": "Default UserAuthentication registry value",
+                                "type": "string",
+                                "default": "1"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp\" /v UserAuthentication /d 0 /t REG_DWORD /f\n",
+                            "cleanup_command": "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp\" /v UserAuthentication /d #{Default_UserAuthentication} /t REG_DWORD -f >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:58:26"
+}

@@ -1,0 +1,131 @@
+{
+    "id": "T1218.009",
+    "name": "Regsvcs/Regasm",
+    "description": "Adversaries may abuse Regsvcs and Regasm to proxy execution of code through a trusted Windows utility. Regsvcs and Regasm are Windows command-line utilities that are used to register .NET [Component Object Model](T1559.001) (COM) assemblies. Both are digitally signed by Microsoft. (Citation: MSDN Regsvcs) (Citation: MSDN Regasm)\nBoth utilities may be used to bypass application control through use of attributes within the binary to specify code that should be run before registration or unregistration: `[ComRegisterFunction]` or `[ComUnregisterFunction]` respectively. The code with the registration and unregistration attributes will be executed even if the process is run under insufficient privileges and fails to execute. (Citation: LOLBAS Regsvcs)(Citation: LOLBAS Regasm)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Command: Command Execution",
+    "detection": "Use process monitoring to monitor the execution and arguments of Regsvcs.exe and Regasm.exe. Compare recent invocations of Regsvcs.exe and Regasm.exe with prior history of known good arguments and executed binaries to determine anomalous and potentially adversarial activity. Command arguments used before and after Regsvcs.exe or Regasm.exe invocation may also be useful in determining the origin and purpose of the binary being executed.",
+    "url": "https://attack.mitre.org/techniques/T1218/009",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "cc368ed0-2411-45dc-a222-510ace303cb2",
+                    "82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719",
+                    "c48a67ee-b657-45c1-91bf-6cdbe27205f8"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "cc368ed0-2411-45dc-a222-510ace303cb2",
+                        "lookup_data": {
+                            "description": "Detects suspicious execution of Regasm/Regsvcs utilities",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/25\ndescription: Detects suspicious execution of Regasm/Regsvcs utilities\ndetection:\n  condition: all of selection_* or (selection_img and not filter_dll)\n  filter_dll:\n    CommandLine|contains: .dll\n  selection_dir:\n    CommandLine|contains:\n    - \\Users\\Public\\\n    - \\AppData\\Local\\Temp\\\n    - \\Desktop\\\n    - \\Downloads\\\n    - \\PerfLogs\\\n    - \\Windows\\Temp\\\n    - \\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\n  selection_img:\n  - Image|endswith:\n    - \\Regsvcs.exe\n    - \\Regasm.exe\n  - OriginalFileName:\n    - RegSvcs.exe\n    - RegAsm.exe\nfalsepositives:\n- Unknown\nid: cc368ed0-2411-45dc-a222-510ace303cb2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.fortiguard.com/threat-signal-report/4718?s=09\n- https://lolbas-project.github.io/lolbas/Binaries/Regasm/\n- https://lolbas-project.github.io/lolbas/Binaries/Regsvcs/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.009\ntitle: Regasm/Regsvcs Suspicious Execution\n",
+                            "sigma:id": "cc368ed0-2411-45dc-a222-510ace303cb2",
+                            "title": "Regasm/Regsvcs Suspicious Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719",
+                        "lookup_data": {
+                            "description": "Detects execution of executables that can be used to bypass Applocker whitelisting",
+                            "raw": "author: juju4\ndate: 2019/01/16\ndescription: Detects execution of executables that can be used to bypass Applocker\n  whitelisting\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - \\msdt.exe\n    - \\installutil.exe\n    - \\regsvcs.exe\n    - \\regasm.exe\n    - \\msbuild.exe\n    - \\ieexec.exe\nfalsepositives:\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\n- Using installutil to add features for .NET applications (primarily would occur in\n  developer environments)\nid: 82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2020/09/01\nreferences:\n- https://github.com/subTee/ApplicationWhitelistBypassTechniques/blob/master/TheList.txt\n- https://room362.com/post/2014/2014-01-16-application-whitelist-bypass-using-ieexec-dot-exe/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1118\n- attack.t1218.004\n- attack.t1121\n- attack.t1218.009\n- attack.t1127\n- attack.t1127.001\n- attack.t1170\n- attack.t1218.005\n- attack.t1218\ntitle: Possible Applocker Bypass\n",
+                            "sigma:id": "82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719",
+                            "title": "Possible Applocker Bypass",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c48a67ee-b657-45c1-91bf-6cdbe27205f8",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1218.009",
+                            "mitre-cti:description": "Adversaries may abuse Regsvcs and Regasm to proxy execution of code through a trusted Windows utility. Regsvcs and Regasm are Windows command-line utilities that are used to register .NET [Component Object Model](https://attack.mitre.org/techniques/T1559/001) (COM) assemblies. Both are binaries that may be digitally signed by Microsoft. (Citation: MSDN Regsvcs) (Citation: MSDN Regasm)\n\nBoth utilities may be used to bypass application control through use of attributes within the binary to specify code that should be run before registration or unregistration: <code>[ComRegisterFunction]</code> or <code>[ComUnregisterFunction]</code> respectively. The code with the registration and unregistration attributes will be executed even if the process is run under insufficient privileges and fails to execute. (Citation: LOLBAS Regsvcs)(Citation: LOLBAS Regasm)",
+                            "mitre-cti:name": "Regsvcs/Regasm",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Casey Smith'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--c48a67ee-b657-45c1-91bf-6cdbe27205f8', 'type': 'attack-pattern', 'created': '2020-01-23T19:42:16.439Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1218.009', 'url': 'https://attack.mitre.org/techniques/T1218/009'}, {'source_name': 'MSDN Regsvcs', 'description': 'Microsoft. (n.d.). Regsvcs.exe (.NET Services Installation Tool). Retrieved July 1, 2016.', 'url': 'https://msdn.microsoft.com/en-us/library/04za0hca.aspx'}, {'source_name': 'MSDN Regasm', 'description': 'Microsoft. (n.d.). Regasm.exe (Assembly Registration Tool). Retrieved July 1, 2016.', 'url': 'https://msdn.microsoft.com/en-us/library/tzat5yw6.aspx'}, {'source_name': 'LOLBAS Regsvcs', 'url': 'https://lolbas-project.github.io/lolbas/Binaries/Regsvcs/', 'description': 'LOLBAS. (n.d.). Regsvcs.exe. Retrieved July 31, 2019.'}, {'source_name': 'LOLBAS Regasm', 'url': 'https://lolbas-project.github.io/lolbas/Binaries/Regasm/', 'description': 'LOLBAS. (n.d.). Regasm.exe. Retrieved July 31, 2019.'}], 'modified': '2022-03-11T18:55:48.725Z', 'name': 'Regsvcs/Regasm', 'description': 'Adversaries may abuse Regsvcs and Regasm to proxy execution of code through a trusted Windows utility. Regsvcs and Regasm are Windows command-line utilities that are used to register .NET [Component Object Model](https://attack.mitre.org/techniques/T1559/001) (COM) assemblies. Both are binaries that may be digitally signed by Microsoft. (Citation: MSDN Regsvcs) (Citation: MSDN Regasm)\\n\\nBoth utilities may be used to bypass application control through use of attributes within the binary to specify code that should be run before registration or unregistration: <code>[ComRegisterFunction]</code> or <code>[ComUnregisterFunction]</code> respectively. The code with the registration and unregistration attributes will be executed even if the process is run under insufficient privileges and fails to execute. (Citation: LOLBAS Regsvcs)(Citation: LOLBAS Regasm)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Use process monitoring to monitor the execution and arguments of Regsvcs.exe and Regasm.exe. Compare recent invocations of Regsvcs.exe and Regasm.exe with prior history of known good arguments and executed binaries to determine anomalous and potentially adversarial activity. Command arguments used before and after Regsvcs.exe or Regasm.exe invocation may also be useful in determining the origin and purpose of the binary being executed.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '2.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution'], 'x_mitre_defense_bypassed': ['Digital Certificate Validation', 'Application control'], 'x_mitre_permissions_required': ['User', 'Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1218.009",
+                "display_name": "Signed Binary Proxy Execution: Regsvcs/Regasm",
+                "atomic_tests": [
+                    {
+                        "name": "Regasm Uninstall Method Call Test",
+                        "auto_generated_guid": "71bfbfac-60b1-4fc0-ac8b-2cedbbdcb112",
+                        "description": "Executes the Uninstall Method, No Admin Rights Required. Upon execution, \"I shouldn't really execute either.\" will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Location of the payload",
+                                "type": "path",
+                                "default": "%tmp%\\T1218.009.dll"
+                            },
+                            "source_file": {
+                                "description": "Location of the CSharp source_file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.009\\src\\T1218.009.cs"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The CSharp source file must exist on disk at specified location (#{source_file})\n",
+                                "prereq_command": "if (Test-Path \"#{source_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{source_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.009/src/T1218.009.cs\" -OutFile \"#{source_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe /r:System.EnterpriseServices.dll /out:\"#{output_file}\" /target:library \"#{source_file}\"\nC:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\regasm.exe /U #{output_file}\n",
+                            "cleanup_command": "del #{output_file} >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Regsvcs Uninstall Method Call Test",
+                        "auto_generated_guid": "fd3c1c6a-02d2-4b72-82d9-71c527abb126",
+                        "description": "Executes the Uninstall Method, No Admin Rights Required, Requires SNK. Upon execution, \"I shouldn't really execute\" will be displayed\nalong with other information about the assembly being installed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Location of the payload",
+                                "type": "path",
+                                "default": "$Env:TEMP\\T1218.009.dll"
+                            },
+                            "source_file": {
+                                "description": "Location of the CSharp source_file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.009\\src\\T1218.009.cs"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The CSharp source file must exist on disk at specified location (#{source_file})\n",
+                                "prereq_command": "if (Test-Path \"#{source_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{source_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.009/src/T1218.009.cs\" -OutFile \"#{source_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "$key = 'BwIAAAAkAABSU0EyAAQAAAEAAQBhXtvkSeH85E31z64cAX+X2PWGc6DHP9VaoD13CljtYau9SesUzKVLJdHphY5ppg5clHIGaL7nZbp6qukLH0lLEq/vW979GWzVAgSZaGVCFpuk6p1y69cSr3STlzljJrY76JIjeS4+RhbdWHp99y8QhwRllOC0qu/WxZaffHS2te/PKzIiTuFfcP46qxQoLR8s3QZhAJBnn9TGJkbix8MTgEt7hD1DC2hXv7dKaC531ZWqGXB54OnuvFbD5P2t+vyvZuHNmAy3pX0BDXqwEfoZZ+hiIk1YUDSNOE79zwnpVP1+BN0PK5QCPCS+6zujfRlQpJ+nfHLLicweJ9uT7OG3g/P+JpXGN0/+Hitolufo7Ucjh+WvZAU//dzrGny5stQtTmLxdhZbOsNDJpsqnzwEUfL5+o8OhujBHDm/ZQ0361mVsSVWrmgDPKHGGRx+7FbdgpBEq3m15/4zzg343V9NBwt1+qZU+TSVPU0wRvkWiZRerjmDdehJIboWsx4V8aiWx8FPPngEmNz89tBAQ8zbIrJFfmtYnj1fFmkNu3lglOefcacyYEHPX/tqcBuBIg/cpcDHps/6SGCCciX3tufnEeDMAQjmLku8X4zHcgJx6FpVK7qeEuvyV0OGKvNor9b/WKQHIHjkzG+z6nWHMoMYV5VMTZ0jLM5aZQ6ypwmFZaNmtL6KDzKv8L1YN2TkKjXEoWulXNliBpelsSJyuICplrCTPGGSxPGihT3rpZ9tbLZUefrFnLNiHfVjNi53Yg4='\n$Content = [System.Convert]::FromBase64String($key)\nSet-Content $env:Temp\\key.snk -Value $Content -Encoding Byte\nC:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe /r:System.EnterpriseServices.dll /out:\"#{output_file}\" /target:library /keyfile:$env:Temp\\key.snk #{source_file}\nC:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\regsvcs.exe #{output_file}\n",
+                            "cleanup_command": "Remove-Item #{output_file} -ErrorAction Ignore | Out-Null\n$parentpath = Split-Path -Path \"#{output_file}\"\nRemove-Item $parentpath\\key.snk -ErrorAction Ignore | Out-Null\nRemove-Item $parentpath\\T1218.009.tlb -ErrorAction Ignore | Out-Null\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:17:47"
+}

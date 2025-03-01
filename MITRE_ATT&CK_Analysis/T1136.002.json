@@ -1,0 +1,320 @@
+{
+    "id": "T1136.002",
+    "name": "Domain Account",
+    "description": "Adversaries may create a domain account to maintain access to victim systems. Domain accounts are those managed by Active Directory Domain Services where access and permissions are configured across systems and services that are part of that domain. Domain accounts can cover user, administrator, and service accounts. With a sufficient level of access, the `net user /add /domain` command can be used to create a domain account.\nSuch accounts may be used to establish secondary credentialed access that do not require persistent remote access tools to be deployed on the system.",
+    "platforms": "Windows, macOS, Linux",
+    "kill_chain_phases": "Persistence",
+    "data_sources": "User Account: User Account Creation, Process: Process Creation, Command: Command Execution",
+    "detection": "Monitor for processes and command-line parameters associated with domain account creation, such as `net user /add /domain`. Collect data on account creation within a network. Event ID 4720 is generated when a user account is created on a Windows domain controller. (Citation: Microsoft User Creation Event) Perform regular audits of domain accounts to detect suspicious accounts that may have been created by an adversary.",
+    "url": "https://attack.mitre.org/techniques/T1136/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1136.002",
+                "atomic_attack_guid": "dc7726d2-8ccb-4cc6-af22-0d5afb53a548",
+                "atomic_attack_name": "Create a new account similar to ANONYMOUS LOGON",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "New User Created Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_user_add.yml",
+                        "remote_content": "title: New User Created Via Net.EXE\nid: cd219ff3-fa99-45d4-8380-a7d15116c6dc\nrelated:\n    - id: b9f0e6f5-09b4-4358-bae4-08408705bd5c\n      type: similar\nstatus: test\ndescription: Identifies the creation of local users via the net.exe command.\nreferences:\n    - https://eqllib.readthedocs.io/en/latest/analytics/014c3f51-89c6-40f1-ac9c-5688f26090ab.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1136.001/T1136.001.md\nauthor: Endgame, JHasenbusch (adapted to Sigma for oscd.community)\ndate: 2018-10-30\nmodified: 2023-02-21\ntags:\n    - attack.persistence\n    - attack.t1136.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'user'\n            - 'add'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate user creation.\n    - Better use event IDs for user creation rather than command line rules.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Network Connection Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/640337e5-6e41-4b7f-af06-9d9eab5e1e2d/"
+                    },
+                    {
+                        "rule_name": "Domain Account Discovery With Net App",
+                        "rule_link": "https://research.splunk.com/endpoint/98f6a534-04c2-11ec-96b2-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1136.002",
+                "atomic_attack_guid": "fcec2963-9951-4173-9bfa-98d8b7834e62",
+                "atomic_attack_name": "Create a new Windows domain admin user",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Domain Group Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/f2f14ac7-fa81-471a-80d5-7eb65c3c7349/"
+                    },
+                    {
+                        "rule_name": "Elevated Group Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/a23a0e20-0b1b-4a07-82e5-ec5f70811e7a/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "7610cada-1499-41a4-b3dd-46467b68d177",
+                    "b29a93fb-087c-4b5b-a84d-ee3309e69d08",
+                    "304afd73-55a5-4bb9-8c21-0b1fc84ea9e4",
+                    "83e15192-96d8-476c-aa39-0317de8dba80",
+                    "1bbf25b9-8038-4154-a50b-118f2a32be27"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "7610cada-1499-41a4-b3dd-46467b68d177",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1136.002",
+                            "mitre-cti:description": "Adversaries may create a domain account to maintain access to victim systems. Domain accounts are those managed by Active Directory Domain Services where access and permissions are configured across systems and services that are part of that domain. Domain accounts can cover user, administrator, and service accounts. With a sufficient level of access, the <code>net user /add /domain</code> command can be used to create a domain account.\n\nSuch accounts may be used to establish secondary credentialed access that do not require persistent remote access tools to be deployed on the system.",
+                            "mitre-cti:name": "Domain Account",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--7610cada-1499-41a4-b3dd-46467b68d177', 'type': 'attack-pattern', 'created': '2020-01-28T14:05:17.825Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1136.002', 'url': 'https://attack.mitre.org/techniques/T1136/002'}, {'source_name': 'Microsoft User Creation Event', 'description': 'Lich, B., Miroshnikov, A. (2017, April 5). 4720(S): A user account was created. Retrieved June 30, 2017.', 'url': 'https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4720'}], 'modified': '2020-03-23T18:12:36.696Z', 'name': 'Domain Account', 'description': 'Adversaries may create a domain account to maintain access to victim systems. Domain accounts are those managed by Active Directory Domain Services where access and permissions are configured across systems and services that are part of that domain. Domain accounts can cover user, administrator, and service accounts. With a sufficient level of access, the <code>net user /add /domain</code> command can be used to create a domain account.\\n\\nSuch accounts may be used to establish secondary credentialed access that do not require persistent remote access tools to be deployed on the system.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Monitor for processes and command-line parameters associated with domain account creation, such as <code>net user /add /domain</code>. Collect data on account creation within a network. Event ID 4720 is generated when a user account is created on a Windows domain controller. (Citation: Microsoft User Creation Event) Perform regular audits of domain accounts to detect suspicious accounts that may have been created by an adversary.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'User Account: User Account Creation'], 'x_mitre_permissions_required': ['Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b29a93fb-087c-4b5b-a84d-ee3309e69d08",
+                        "lookup_data": {
+                            "description": "Adversaries may create a domain account to maintain access to victim systems.\nDomain accounts are those managed by Active Directory Domain Services where access and permissions are configured across systems and services that are part of that domain..\n",
+                            "raw": "author: frack113\ndate: 2021/12/28\ndescription: 'Adversaries may create a domain account to maintain access to victim\n  systems.\n\n  Domain accounts are those managed by Active Directory Domain Services where access\n  and permissions are configured across systems and services that are part of that\n  domain..\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains: System.DirectoryServices.AccountManagement\nfalsepositives:\n- Legitimate administrative script\nid: b29a93fb-087c-4b5b-a84d-ee3309e69d08\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1136.002/T1136.002.md#atomic-test-3---create-a-new-domain-account-using-powershell\n- https://docs.microsoft.com/en-us/dotnet/api/system.directoryservices.accountmanagement?view=dotnet-plat-ext-6.0\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.002\ntitle: Manipulation of User Computer or Group Security Principals Across AD\n",
+                            "sigma:id": "b29a93fb-087c-4b5b-a84d-ee3309e69d08",
+                            "title": "Manipulation of User Computer or Group Security Principals Across AD",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "304afd73-55a5-4bb9-8c21-0b1fc84ea9e4",
+                        "lookup_data": {
+                            "description": "Detects creation of the PSEXEC key file. Which is created anytime a PsExec command is executed and gets written to the file system and will be recorded in the USN Journal on the target system",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/21\ndescription: Detects creation of the PSEXEC key file. Which is created anytime a PsExec\n  command is executed and gets written to the file system and will be recorded in\n  the USN Journal on the target system\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: .key\n    TargetFilename|startswith: C:\\Windows\\PSEXEC-\nfalsepositives:\n- Unlikely\nid: 304afd73-55a5-4bb9-8c21-0b1fc84ea9e4\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://aboutdfir.com/the-key-to-identify-psexec/\n- https://twitter.com/davisrichardg/status/1616518800584704028\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.execution\n- attack.persistence\n- attack.t1136.002\n- attack.t1543.003\n- attack.t1570\n- attack.s0029\ntitle: Potential PSEXEC Remote Execution - FileCreation\n",
+                            "sigma:id": "304afd73-55a5-4bb9-8c21-0b1fc84ea9e4",
+                            "title": "Potential PSEXEC Remote Execution - FileCreation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                        "lookup_data": {
+                            "description": "OSINT - Uber Breach & Attack Analysis",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/83e15192-96d8-476c-aa39-0317de8dba80.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666020853",
+                            "uuid": "83e15192-96d8-476c-aa39-0317de8dba80",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1bbf25b9-8038-4154-a50b-118f2a32be27",
+                        "lookup_data": {
+                            "description": "Detects the creation of suspicious accounts similar to ANONYMOUS LOGON, such as using additional spaces. Created as an covering detection for exclusion of Logon Type 3 from ANONYMOUS LOGON accounts.",
+                            "raw": "author: James Pemberton / @4A616D6573\ndate: 2019/10/31\ndescription: Detects the creation of suspicious accounts similar to ANONYMOUS LOGON,\n  such as using additional spaces. Created as an covering detection for exclusion\n  of Logon Type 3 from ANONYMOUS LOGON accounts.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4720\n    SamAccountName|contains|all:\n    - ANONYMOUS\n    - LOGON\nfalsepositives:\n- Unknown\nid: 1bbf25b9-8038-4154-a50b-118f2a32be27\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/SBousseaden/status/1189469425482829824\nstatus: test\ntags:\n- attack.persistence\n- attack.t1136.001\n- attack.t1136.002\ntitle: Suspicious Windows ANONYMOUS LOGON Local Account Created\n",
+                            "sigma:id": "1bbf25b9-8038-4154-a50b-118f2a32be27",
+                            "title": "Suspicious Windows ANONYMOUS LOGON Local Account Created",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1136.002",
+                "display_name": "Create Account: Domain Account",
+                "atomic_tests": [
+                    {
+                        "name": "Create a new Windows domain admin user",
+                        "auto_generated_guid": "fcec2963-9951-4173-9bfa-98d8b7834e62",
+                        "description": "Creates a new domain admin user in a command prompt.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "T1136.002_Admin"
+                            },
+                            "password": {
+                                "description": "Password of the user to create",
+                                "type": "string",
+                                "default": "T1136_pass123!"
+                            },
+                            "group": {
+                                "description": "Domain administrator group to which add the user to",
+                                "type": "string",
+                                "default": "Domain Admins"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user \"#{username}\" \"#{password}\" /add /domain\nnet group \"#{group}\" \"#{username}\" /add /domain\n",
+                            "cleanup_command": "net user \"#{username}\" >nul 2>&1 /del /domain\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Create a new account similar to ANONYMOUS LOGON",
+                        "auto_generated_guid": "dc7726d2-8ccb-4cc6-af22-0d5afb53a548",
+                        "description": "Create a new account similar to ANONYMOUS LOGON in a command prompt.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of the user to create",
+                                "type": "string",
+                                "default": "ANONYMOUS  LOGON"
+                            },
+                            "password": {
+                                "description": "Password of the user to create",
+                                "type": "string",
+                                "default": "T1136_pass123!"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user \"#{username}\" \"#{password}\" /add /domain\n",
+                            "cleanup_command": "net user \"#{username}\" >nul 2>&1 /del /domain\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Create a new Domain Account using PowerShell",
+                        "auto_generated_guid": "5a3497a4-1568-4663-b12a-d4a5ed70c7d7",
+                        "description": "Creates a new Domain User using the credentials of the Current User\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Name of the Account to be created",
+                                "type": "string",
+                                "default": "T1136.002_Admin"
+                            },
+                            "password": {
+                                "description": "Password of the Account to be created",
+                                "type": "string",
+                                "default": "T1136_pass123!"
+                            }
+                        },
+                        "executor": {
+                            "command": "$SamAccountName = '#{username}'\n$AccountPassword = ConvertTo-SecureString '#{password}' -AsPlainText -Force\nAdd-Type -AssemblyName System.DirectoryServices.AccountManagement\n$Context = New-Object -TypeName System.DirectoryServices.AccountManagement.PrincipalContext -ArgumentList ([System.DirectoryServices.AccountManagement.ContextType]::Domain)\n$User = New-Object -TypeName System.DirectoryServices.AccountManagement.UserPrincipal -ArgumentList ($Context)\n$User.SamAccountName = $SamAccountName\n$TempCred = New-Object System.Management.Automation.PSCredential('a', $AccountPassword)\n$User.SetPassword($TempCred.GetNetworkCredential().Password)\n$User.Enabled = $True\n$User.PasswordNotRequired = $False\n$User.DisplayName = $SamAccountName\n$User.Save()\n$User\n",
+                            "cleanup_command": "cmd /c \"net user #{username} /del >nul 2>&1\"\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Active Directory Create Admin Account",
+                        "auto_generated_guid": "562aa072-524e-459a-ba2b-91f1afccf5ab",
+                        "description": "Use Admin Credentials to Create A Domain Admin Account\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "The domain to be tested",
+                                "type": "string",
+                                "default": "example"
+                            },
+                            "top_level_domain": {
+                                "description": "The top level domain (.com, .test, .remote, etc... following domain, minus the .)",
+                                "type": "string",
+                                "default": "test"
+                            },
+                            "admin_user": {
+                                "description": "username@domain of a user with admin privileges",
+                                "type": "string",
+                                "default": "admin@example.test"
+                            },
+                            "admin_password": {
+                                "description": "password of the user with admin privileges referenced in admin_user",
+                                "type": "string",
+                                "default": "s3CurePssw0rD!"
+                            },
+                            "domain_controller": {
+                                "description": "Name of the domain_controller machine, defined in etc/hosts",
+                                "type": "string",
+                                "default": "adVM"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Packages sssd-ad sssd-tools realmd adcli installed and realm available\n",
+                                "prereq_command": "which ldapadd && which ldapmodify\n",
+                                "get_prereq_command": "echo ldapadd or ldapmodify not found; exit 1\n"
+                            }
+                        ],
+                        "executor": {
+                            "elevation_required": false,
+                            "command": "echo \"dn: CN=Admin User,CN=Users,DC=#{domain},DC=#{top_level_domain}\\nchangetype: add\\nobjectClass: top\\nobjectClass: person\\nobjectClass: organizationalPerson\\nobjectClass: user\\ncn: Admin User\\nsn: User\\ngivenName: Atomic User\\nuserPrincipalName: adminuser@#{domain}.#{top_level_domain}\\nsAMAccountName: adminuser\\nuserAccountControl: 512\\nuserPassword: {CLEARTEXT}s3CureP4ssword123!\\nmemberOf: CN=Domain Admins,CN=Users,DC=#{domain},DC=#{top_level_domain}\" > tempadmin.ldif\necho ldapadd -H ldap://#{domain}.#{top_level_domain}:389 -x -D #{admin_user} -w #{admin_password} -f tempadmin.ldif\nldapadd -H ldap://#{domain}.#{top_level_domain}:389 -x -D #{admin_user} -w #{admin_password} -f tempadmin.ldif\n",
+                            "cleanup_command": "echo removing Atomic User (temporary user)\necho \"dn: cn=Atomic User,cn=Users,dc=scwxscratch,dc=dev\\nchangetype: delete\" > deleteuser.ldif\nldapmodify -H ldap://#{domain_controller}:389 -x -D #{admin_user} -w #{admin_password} -f deleteuser.ldif\nrm deleteuser.ldif\nrm tempadmin.ldif\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Active Directory Create User Account (Non-elevated)",
+                        "auto_generated_guid": "8c992cb3-a46e-4fd5-b005-b1bab185af31",
+                        "description": "Use Admin Credentials to Create A Normal Account (as means of entry)\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "The domain to be tested",
+                                "type": "string",
+                                "default": "example"
+                            },
+                            "top_level_domain": {
+                                "description": "The top level domain (.com, .test, .remote, etc... following domain, minus the .)",
+                                "type": "string",
+                                "default": "test"
+                            },
+                            "admin_user": {
+                                "description": "username@domain of a user with admin privileges",
+                                "type": "string",
+                                "default": "user@example.test"
+                            },
+                            "admin_password": {
+                                "description": "password of the user",
+                                "type": "string",
+                                "default": "s3CurePssw0rD!"
+                            },
+                            "domain_controller": {
+                                "description": "Name of the domain_controller machine, defined in etc/hosts",
+                                "type": "string",
+                                "default": "adVM"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Packages sssd-ad sssd-tools realmd adcli installed and realm available, ldapadd, ldapmodify\n",
+                                "prereq_command": "which ldapadd\nwhich ldapmodify\n",
+                                "get_prereq_command": "echo ldapadd or ldapmodify not found; exit 1\n"
+                            }
+                        ],
+                        "executor": {
+                            "elevation_required": false,
+                            "command": "echo \"dn: cn=Atomic User, cn=Users,dc=#{domain},dc=#{top_level_domain}\\nobjectClass: person\\ncn: Atomic User\\nsn: User\" > tempadmin.ldif\necho ldapadd -H ldap://#{domain}.#{top_level_domain}:389 -x -D #{admin_user} -w #{admin_password} -f tempadmin.ldif\nldapadd -H ldap://#{domain}.#{top_level_domain}:389 -x -D #{admin_user} -w #{admin_password} -f tempadmin.ldif\n",
+                            "cleanup_command": "echo removing Atomic User (temporary user)\necho \"dn: cn=Atomic User,cn=Users,dc=scwxscratch,dc=dev\\nchangetype: delete\" > deleteuser.ldif\nldapmodify -H ldap://#{domain_controller}:389 -x -D #{admin_user} -w #{admin_password} -f deleteuser.ldif\nrm deleteuser.ldif\nrm tempadmin.ldif\n",
+                            "name": "sh"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:31:57"
+}

@@ -1,0 +1,575 @@
+{
+    "id": "T1070.004",
+    "name": "File Deletion",
+    "description": "Adversaries may delete files left behind by the actions of their intrusion activity. Malware, tools, or other non-native files dropped or created on a system by an adversary may leave traces to indicate to what was done within a network and how. Removal of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\nThere are tools available from the host operating system to perform cleanup, but adversaries may use other tools as well. Examples include native [cmd](S0106) functions such as DEL, secure deletion tools such as Windows Sysinternals SDelete, or other third-party file deletion tools. (Citation: Trend Micro APT Attack Tools)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "File: File Deletion, Command: Command Execution",
+    "detection": "It may be uncommon for events related to benign command-line functions such as DEL or third-party utilities or tools to be found in an environment, depending on the user base and how systems are typically used. Monitoring for command-line deletion functions to correlate with binaries or other files that an adversary may drop and remove may lead to detection of malicious activity. Another good practice is monitoring for known deletion and secure deletion tools that are not already on systems within an enterprise network that an adversary could introduce. Some monitoring tools may collect command-line arguments, but may not capture DEL commands since DEL is a native function within cmd.exe.",
+    "url": "https://attack.mitre.org/techniques/T1070/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1070.004",
+                "atomic_attack_guid": "039b4b10-2900-404b-b67f-4b6d49aa6499",
+                "atomic_attack_name": "Overwrite and delete a file with shred",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Shred Overwrite Command",
+                        "rule_link": "https://research.splunk.com/endpoint/c1952cf1-643c-4965-82de-11c067cbae76/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.004",
+                "atomic_attack_guid": "562d737f-2fc6-4b09-8c2a-7f8ff0828480",
+                "atomic_attack_name": "Delete a single file - FreeBSD/Linux/macOS",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "File Deletion",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_file_deletion.yml",
+                        "remote_content": "title: File Deletion\nid: 30aed7b6-d2c1-4eaf-9382-b6bc43e50c57\nstatus: stable\ndescription: Detects file deletion using \"rm\", \"shred\" or \"unlink\" commands which are used often by adversaries to delete files left behind by the actions of their intrusion activity\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\nauthor: Ömer Günal, oscd.community\ndate: 2020-10-07\nmodified: 2022-09-15\ntags:\n    - attack.defense-evasion\n    - attack.t1070.004\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        Image|endswith:\n            - '/rm'     # covers /rmdir as well\n            - '/shred'\n            - '/unlink'\n    condition: selection\nfalsepositives:\n    - Legitimate administration activities\nlevel: informational\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.004",
+                "atomic_attack_guid": "f723d13d-48dc-4317-9990-cf43a9ac0bf2",
+                "atomic_attack_name": "Clears Recycle bin via rd",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Recursive Delete of Directory In Batch CMD",
+                        "rule_link": "https://research.splunk.com/endpoint/ba570b3a-d356-11eb-8358-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.004",
+                "atomic_attack_guid": "ded937c4-2add-42f7-9c2c-c742b7a98698",
+                "atomic_attack_name": "Delete an entire folder - Windows cmd",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "File And SubFolder Enumeration Via Dir Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_dir_execution.yml",
+                        "remote_content": "title: File And SubFolder Enumeration Via Dir Command\nid: 7c9340a9-e2ee-4e43-94c5-c54ebbea1006\nstatus: test\ndescription: |\n    Detects usage of the \"dir\" command part of Widows CMD with the \"/S\" command line flag in order to enumerate files in a specified directory and all subdirectories.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1217/T1217.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2024-04-14\ntags:\n    - attack.discovery\n    - attack.t1217\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: Cmd.Exe\n    selection_cli:\n        CommandLine|contains|windash: 'dir*-s'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Directory Removal Via Rmdir",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_rmdir_execution.yml",
+                        "remote_content": "title: Directory Removal Via Rmdir\nid: 41ca393d-538c-408a-ac27-cf1e038be80c\nstatus: test\ndescription: |\n    Detects execution of the builtin \"rmdir\" command in order to delete directories.\n    Adversaries may delete files left behind by the actions of their intrusion activity.\n    Malware, tools, or other non-native files dropped or created on a system by an adversary may leave traces to indicate to what was done within a network and how.\n    Removal of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/erase\nauthor: frack113\ndate: 2022-01-15\nmodified: 2023-03-07\ntags:\n    - attack.defense-evasion\n    - attack.t1070.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_rmdir:\n        CommandLine|contains: 'rmdir'\n    selection_flags:\n        CommandLine|contains:\n            - '/s'\n            - '/q'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Indicator Removal Via Rmdir",
+                        "rule_link": "https://research.splunk.com/endpoint/c4566d2c-b094-48a1-9c59-d66e22065560/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.004",
+                "atomic_attack_guid": "36f96049-0ad7-4a5f-8418-460acaeb92fb",
+                "atomic_attack_name": "Delete Prefetch File",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Copy From Or To Admin Share Or Sysvol Folder",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_lateral_movement.yml",
+                        "remote_content": "title: Copy From Or To Admin Share Or Sysvol Folder\nid: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\nstatus: test\ndescription: Detects a copy command or a copy utility execution to or from an Admin share or remote\nreferences:\n    - https://twitter.com/SBousseaden/status/1211636381086339073\n    - https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\n    - https://www.elastic.co/guide/en/security/current/remote-file-copy-to-a-hidden-share.html\n    - https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nauthor: Florian Roth (Nextron Systems), oscd.community, Teymur Kheirkhabarov @HeirhabarovT, Zach Stanford @svch0st, Nasreddine Bencherchali\ndate: 2019-12-30\nmodified: 2023-11-15\ntags:\n    - attack.lateral-movement\n    - attack.collection\n    - attack.exfiltration\n    - attack.t1039\n    - attack.t1048\n    - attack.t1021.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_target:\n        CommandLine|contains:\n            - '\\\\\\\\*$'\n            - '\\Sysvol\\'\n    selection_other_tools:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    selection_cmd_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cmd_cli:\n        CommandLine|contains: 'copy'\n    selection_pwsh_img:\n        - Image|contains:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_pwsh_cli:\n        CommandLine|contains:\n            - 'copy-item'\n            - 'copy '\n            - 'cpi '\n            - ' cp '\n            - 'move '\n            - 'move-item'\n            - ' mi '\n            - ' mv '\n    condition: selection_target and (selection_other_tools or all of selection_cmd_* or all of selection_pwsh_*)\nfalsepositives:\n    - Administrative scripts\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.004",
+                "atomic_attack_guid": "861ea0b4-708a-4d17-848d-186c9c7f17e3",
+                "atomic_attack_name": "Delete a single file - Windows cmd",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "File Deletion Via Del",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_del_execution.yml",
+                        "remote_content": "title: File Deletion Via Del\nid: 379fa130-190e-4c3f-b7bc-6c8e834485f3\nstatus: test\ndescription: |\n    Detects execution of the builtin \"del\"/\"erase\" commands in order to delete files.\n    Adversaries may delete files left behind by the actions of their intrusion activity.\n    Malware, tools, or other non-native files dropped or created on a system by an adversary may leave traces to indicate to what was done within a network and how.\n    Removal of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/erase\nauthor: frack113\ndate: 2022-01-15\nmodified: 2024-03-05\ntags:\n    - attack.defense-evasion\n    - attack.t1070.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_del:\n        CommandLine|contains:\n            - 'del '\n            - 'erase '\n    selection_flags:\n        CommandLine|contains|windash:\n            - ' -f' # Force deleting of read-only files.\n            - ' -s' # Delete specified files from all subdirectories.\n            - ' -q' # Quiet mode, do not ask if ok to delete on global wildcard\n    condition: all of selection_*\nfalsepositives:\n    - False positives levels will differ Depending on the environment. You can use a combination of ParentImage and other keywords from the CommandLine field to filter legitimate activity\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "9703792d-fd9a-456d-a672-ff92efe4806a",
+                    "39a80702-d7ca-4a83-b776-525b1f86a36d",
+                    "6ddab845-b1b8-49c2-bbf7-1a11967f64bc",
+                    "71d65515-c436-43c0-841b-236b1f32c21e",
+                    "54786ddc-5b8a-11ed-9b6a-0242ac120002",
+                    "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                    "0a1f9d29-6465-4776-b091-7f43b26e4c89",
+                    "204b17ae-4007-471b-917b-b917b315c5db",
+                    "b8af5f36-1361-4ebe-9e76-e36128d947bf",
+                    "379fa130-190e-4c3f-b7bc-6c8e834485f3",
+                    "9841b233-8df8-4ad7-9133-b0b4402a9014",
+                    "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                    "d63a3fb8-9452-4e9d-a60a-54be68d5998c",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                    "b1decb61-ed83-4339-8e95-53ea51901720",
+                    "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                    "30aed7b6-d2c1-4eaf-9382-b6bc43e50c57"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9703792d-fd9a-456d-a672-ff92efe4806a",
+                        "lookup_data": {
+                            "description": "Detects backup catalog deletions",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom U. @c_APT_ure (collection)\ndate: 2017/05/12\ndescription: Detects backup catalog deletions\ndetection:\n  condition: selection\n  selection:\n    EventID: 524\n    Provider_Name: Microsoft-Windows-Backup\nfalsepositives:\n- Unknown\nid: 9703792d-fd9a-456d-a672-ff92efe4806a\nlevel: medium\nlogsource:\n  product: windows\n  service: application\nmodified: 2022/12/25\nreferences:\n- https://technet.microsoft.com/en-us/library/cc742154(v=ws.11).aspx\n- https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Backup Catalog Deleted\n",
+                            "sigma:id": "9703792d-fd9a-456d-a672-ff92efe4806a",
+                            "title": "Backup Catalog Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "39a80702-d7ca-4a83-b776-525b1f86a36d",
+                        "lookup_data": {
+                            "description": "Detects renaming of file while deletion with SDelete tool.",
+                            "raw": "author: Thomas Patzke\ndate: 2017/06/14\ndescription: Detects renaming of file while deletion with SDelete tool.\ndetection:\n  condition: selection\n  selection:\n    EventID:\n    - 4656\n    - 4663\n    - 4658\n    ObjectName|endswith:\n    - .AAA\n    - .ZZZ\nfalsepositives:\n- Legitimate usage of SDelete\nid: 39a80702-d7ca-4a83-b776-525b1f86a36d\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://jpcertcc.github.io/ToolAnalysisResultSheet/details/sdelete.htm\n- https://www.jpcert.or.jp/english/pub/sr/ir_research.html\n- https://docs.microsoft.com/en-gb/sysinternals/downloads/sdelete\nstatus: test\ntags:\n- attack.impact\n- attack.defense_evasion\n- attack.t1070.004\n- attack.t1027.005\n- attack.t1485\n- attack.t1553.002\n- attack.s0195\ntitle: Secure Deletion with SDelete\n",
+                            "sigma:id": "39a80702-d7ca-4a83-b776-525b1f86a36d",
+                            "title": "Secure Deletion with SDelete",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6ddab845-b1b8-49c2-bbf7-1a11967f64bc",
+                        "lookup_data": {
+                            "description": "A General detection to trigger for the deletion of files by Sysinternals SDelete. It looks for the common name pattern used to rename files.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection to trigger for the deletion of files by Sysinternals\n  SDelete. It looks for the common name pattern used to rename files.\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_wireshark:\n    TargetFilename|endswith: \\Wireshark\\radius\\dictionary.alcatel-lucent.aaa\n  selection:\n    TargetFilename|endswith:\n    - .AAA\n    - .ZZZ\nfalsepositives:\n- Legitime usage of SDelete\nid: 6ddab845-b1b8-49c2-bbf7-1a11967f64bc\nlevel: medium\nlogsource:\n  category: file_delete\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/9\n- https://threathunterplaybook.com/evals/apt29/detections/4.B.4_83D62033-105A-4A02-8B75-DAB52D8D51EC.html\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Sysinternals SDelete File Deletion\n",
+                            "sigma:id": "6ddab845-b1b8-49c2-bbf7-1a11967f64bc",
+                            "title": "Sysinternals SDelete File Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "71d65515-c436-43c0-841b-236b1f32c21e",
+                        "lookup_data": {
+                            "description": "See what files are being deleted from flash file systems",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: See what files are being deleted from flash file systems\ndetection:\n  condition: keywords\n  keywords:\n  - erase\n  - delete\n  - format\nfalsepositives:\n- Will be used sometimes by admins to clean up local flash space\nfields:\n- CmdSet\nid: 71d65515-c436-43c0-841b-236b1f32c21e\nlevel: medium\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.impact\n- attack.t1070.004\n- attack.t1561.001\n- attack.t1561.002\ntitle: Cisco File Deletion\n",
+                            "sigma:id": "71d65515-c436-43c0-841b-236b1f32c21e",
+                            "title": "Cisco File Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54786ddc-5b8a-11ed-9b6a-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects a method often used by ransomware. Which combines the \"ping\" to wait a couple of seconds and then \"del\" to delete the file in question. Its used to hide the file responsible for the initial infection for example",
+                            "raw": "author: Ilya Krestinichev\ndate: 2022/11/03\ndescription: Detects a method often used by ransomware. Which combines the \"ping\"\n  to wait a couple of seconds and then \"del\" to delete the file in question. Its used\n  to hide the file responsible for the initial infection for example\ndetection:\n  condition: all of selection_*\n  selection_all:\n    CommandLine|contains|all:\n    - ping\n    - 'del '\n  selection_count:\n    CommandLine|contains:\n    - ' -n '\n    - ' /n '\n  selection_del_param:\n  - ' /f '\n  - ' -f '\n  - ' /q '\n  - ' -q '\n  selection_nul:\n    CommandLine|contains: Nul\nfalsepositives:\n- False positive could occur in admin scripts that execute inline\nid: 54786ddc-5b8a-11ed-9b6a-0242ac120002\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://blog.sygnia.co/kaseya-ransomware-supply-chain-attack\n- https://media.kasperskycontenthub.com/wp-content/uploads/sites/43/2022/06/23093553/Common-TTPs-of-the-modern-ransomware_low-res.pdf\n- https://www.acronis.com/en-us/blog/posts/lockbit-ransomware/\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/blackbyte-exbyte-ransomware\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Suspicious Ping And Del Combination\n",
+                            "sigma:id": "54786ddc-5b8a-11ed-9b6a-0242ac120002",
+                            "title": "Suspicious Ping And Del Combination",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                        "lookup_data": {
+                            "description": "Turla: A Galaxy of Opportunity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/54dd4ef7-f7b2-418e-a191-5def4fbb0033.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1673286950",
+                            "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0a1f9d29-6465-4776-b091-7f43b26e4c89",
+                        "lookup_data": {
+                            "description": "Detects the deletion of a prefetch file (AntiForensic)",
+                            "raw": "author: Cedric MAURUGEON\ndate: 2021/09/29\ndescription: Detects the deletion of a prefetch file (AntiForensic)\ndetection:\n  condition: selection and not exception\n  exception:\n    Image: C:\\windows\\system32\\svchost.exe\n    User|contains:\n    - AUTHORI\n    - AUTORI\n  selection:\n    TargetFilename|endswith: .pf\n    TargetFilename|startswith: C:\\Windows\\Prefetch\\\nfalsepositives:\n- Unknown\nid: 0a1f9d29-6465-4776-b091-7f43b26e4c89\nlevel: high\nlogsource:\n  category: file_delete\n  product: windows\nmodified: 2022/05/27\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Prefetch File Deletion\n",
+                            "sigma:id": "0a1f9d29-6465-4776-b091-7f43b26e4c89",
+                            "title": "Prefetch File Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "204b17ae-4007-471b-917b-b917b315c5db",
+                        "lookup_data": {
+                            "description": "Detects suspicious command line to remove and 'exe' or 'dll'",
+                            "raw": "author: frack113\ndate: 2021/12/02\ndescription: Detects suspicious command line to remove and 'exe' or 'dll'\ndetection:\n  condition: susp_del_exe or susp_del_dll\n  susp_del_dll:\n    CommandLine|contains|all:\n    - 'del '\n    - \\*.dll\n    - C:\\ProgramData\\\n  susp_del_exe:\n    CommandLine|contains|all:\n    - 'del '\n    - \\*.exe\n    - '/f '\n    - '/q '\nfalsepositives:\n- Unknown\nid: 204b17ae-4007-471b-917b-b917b315c5db\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/24\nreferences:\n- https://www.joesandbox.com/analysis/509330/0/html#1044F3BDBE3BB6F734E357235F4D5898582D\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Suspicious Del in CommandLine\n",
+                            "sigma:id": "204b17ae-4007-471b-917b-b917b315c5db",
+                            "title": "Suspicious Del in CommandLine",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b8af5f36-1361-4ebe-9e76-e36128d947bf",
+                        "lookup_data": {
+                            "description": "Powershell Remove-Item  with -Path to delete a file or a folder with \"-Recurse\"",
+                            "raw": "author: frack113\ndate: 2022/01/15\ndescription: Powershell Remove-Item  with -Path to delete a file or a folder with\n  \"-Recurse\"\ndetection:\n  condition: selection and not filter_reg\n  filter_reg:\n    ScriptBlockText|contains:\n    - HKCU:\\\n    - HKLM:\\\n  selection:\n    ScriptBlockText|contains|all:\n    - Remove-Item\n    - '-Path '\nfalsepositives:\n- Legitimate PowerShell scripts\nid: b8af5f36-1361-4ebe-9e76-e36128d947bf\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/03/17\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\n- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/Remove-Item?view=powershell-5.1&viewFallbackFrom=powershell-7\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Use Remove-Item to Delete File\n",
+                            "sigma:id": "b8af5f36-1361-4ebe-9e76-e36128d947bf",
+                            "title": "Use Remove-Item to Delete File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "379fa130-190e-4c3f-b7bc-6c8e834485f3",
+                        "lookup_data": {
+                            "description": "Adversaries may delete files left behind by the actions of their intrusion activity.\nMalware, tools, or other non-native files dropped or created on a system by an adversary may leave traces to indicate to what was done within a network and how.\nRemoval of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\n",
+                            "raw": "author: frack113\ndate: 2022/01/15\ndescription: 'Adversaries may delete files left behind by the actions of their intrusion\n  activity.\n\n  Malware, tools, or other non-native files dropped or created on a system by an adversary\n  may leave traces to indicate to what was done within a network and how.\n\n  Removal of these files can occur during an intrusion, or as part of a post-intrusion\n  process to minimize the adversary''s footprint.\n\n  '\ndetection:\n  condition: selection\n  selection:\n  - CommandLine|contains|all:\n    - ' del '\n    - /f\n  - CommandLine|contains|all:\n    - rmdir\n    - /s\n    - /q\nfalsepositives:\n- Legitimate scripts\nid: 379fa130-190e-4c3f-b7bc-6c8e834485f3\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/20\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Windows Cmd Delete File\n",
+                            "sigma:id": "379fa130-190e-4c3f-b7bc-6c8e834485f3",
+                            "title": "Windows Cmd Delete File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9841b233-8df8-4ad7-9133-b0b4402a9014",
+                        "lookup_data": {
+                            "description": "A General detection to trigger for the creation or modification of .*\\Software\\Sysinternals\\SDelete registry keys. Indicators of the use of Sysinternals SDelete tool.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection to trigger for the creation or modification of .*\\Software\\Sysinternals\\SDelete\n  registry keys. Indicators of the use of Sysinternals SDelete tool.\ndetection:\n  condition: selection\n  selection:\n    EventType: CreateKey\n    TargetObject|contains: \\Software\\Sysinternals\\SDelete\nfalsepositives:\n- Unknown\nid: 9841b233-8df8-4ad7-9133-b0b4402a9014\nlevel: medium\nlogsource:\n  category: registry_add\n  product: windows\nmodified: 2022/06/26\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/9\n- https://threathunterplaybook.com/evals/apt29/detections/4.B.2_59A9AC92-124D-4C4B-A6BF-3121C98677C3.html\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Sysinternals SDelete Registry Keys\n",
+                            "sigma:id": "9841b233-8df8-4ad7-9133-b0b4402a9014",
+                            "title": "Sysinternals SDelete Registry Keys",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                        "lookup_data": {
+                            "description": "Operation â€˜Harvestâ€™: A Deep Dive into a Long-term Campaign",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c1bd5026-520b-45bd-9a79-82d38cf96c7b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633469315",
+                            "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d63a3fb8-9452-4e9d-a60a-54be68d5998c",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1070.004",
+                            "mitre-cti:description": "Adversaries may delete files left behind by the actions of their intrusion activity. Malware, tools, or other non-native files dropped or created on a system by an adversary (ex: [Ingress Tool Transfer](https://attack.mitre.org/techniques/T1105)) may leave traces to indicate to what was done within a network and how. Removal of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\n\nThere are tools available from the host operating system to perform cleanup, but adversaries may use other tools as well.(Citation: Microsoft SDelete July 2016) Examples of built-in [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059) functions include <code>del</code> on Windows and <code>rm</code> or <code>unlink</code> on Linux and macOS.",
+                            "mitre-cti:name": "File Deletion",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Walker Johnson'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--d63a3fb8-9452-4e9d-a60a-54be68d5998c', 'created': '2020-01-31T12:35:36.479Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1070.004', 'url': 'https://attack.mitre.org/techniques/T1070/004'}, {'source_name': 'Microsoft SDelete July 2016', 'url': 'https://docs.microsoft.com/en-us/sysinternals/downloads/sdelete', 'description': 'Russinovich, M. (2016, July 4). SDelete v2.0. Retrieved February 8, 2018.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"Adversaries may delete files left behind by the actions of their intrusion activity. Malware, tools, or other non-native files dropped or created on a system by an adversary (ex: [Ingress Tool Transfer](https://attack.mitre.org/techniques/T1105)) may leave traces to indicate to what was done within a network and how. Removal of these files can occur during an intrusion, or as part of a post-intrusion process to minimize the adversary's footprint.\\n\\nThere are tools available from the host operating system to perform cleanup, but adversaries may use other tools as well.(Citation: Microsoft SDelete July 2016) Examples of built-in [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059) functions include <code>del</code> on Windows and <code>rm</code> or <code>unlink</code> on Linux and macOS.\", 'modified': '2022-04-16T18:25:43.231Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'File Deletion', 'x_mitre_detection': 'It may be uncommon for events related to benign command-line functions such as DEL or third-party utilities or tools to be found in an environment, depending on the user base and how systems are typically used. Monitoring for command-line deletion functions to correlate with binaries or other files that an adversary may drop and remove may lead to detection of malicious activity. Another good practice is monitoring for known deletion and secure deletion tools that are not already on systems within an enterprise network that an adversary could introduce. Some monitoring tools may collect command-line arguments, but may not capture DEL commands since DEL is a native function within cmd.exe.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Command: Command Execution', 'File: File Deletion'], 'x_mitre_defense_bypassed': ['Host forensic analysis'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b1decb61-ed83-4339-8e95-53ea51901720",
+                        "lookup_data": {
+                            "description": "Deletion of log files is a known anti-forensic technique",
+                            "raw": "author: frack113\ndate: 2022/01/16\ndescription: Deletion of log files is a known anti-forensic technique\ndetection:\n  condition: selection_teamviewer and not filter\n  filter:\n    Image: C:\\Windows\\system32\\svchost.exe\n  selection_teamviewer:\n    TargetFilename|contains: \\TeamViewer_\n    TargetFilename|endswith: .log\nfalsepositives:\n- Unknown\nid: b1decb61-ed83-4339-8e95-53ea51901720\nlevel: low\nlogsource:\n  category: file_delete\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: Delete Log from Application\n",
+                            "sigma:id": "b1decb61-ed83-4339-8e95-53ea51901720",
+                            "title": "Delete Log from Application",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                        "lookup_data": {
+                            "description": "Malware analysis report on SparrowDoor malware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/827e941e-4a99-4e2c-a578-bfcec2d40552.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1650959349",
+                            "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "30aed7b6-d2c1-4eaf-9382-b6bc43e50c57",
+                        "lookup_data": {
+                            "description": "Detects file deletion using \"rm\", \"shred\" or \"unlink\" commands which are used often by adversaries to delete files left behind by the actions of their intrusion activity",
+                            "raw": "author: \"\\xD6mer G\\xFCnal, oscd.community\"\ndate: 2020/10/07\ndescription: Detects file deletion using \"rm\", \"shred\" or \"unlink\" commands which\n  are used often by adversaries to delete files left behind by the actions of their\n  intrusion activity\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - /rm\n    - /shred\n    - /unlink\nfalsepositives:\n- Legitimate administration activities\nid: 30aed7b6-d2c1-4eaf-9382-b6bc43e50c57\nlevel: informational\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/09/15\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.004/T1070.004.md\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1070.004\ntitle: File Deletion\n",
+                            "sigma:id": "30aed7b6-d2c1-4eaf-9382-b6bc43e50c57",
+                            "title": "File Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1070.004",
+                "display_name": "Indicator Removal on Host: File Deletion",
+                "atomic_tests": [
+                    {
+                        "name": "Delete a single file - FreeBSD/Linux/macOS",
+                        "auto_generated_guid": "562d737f-2fc6-4b09-8c2a-7f8ff0828480",
+                        "description": "Delete a single file from the temporary directory\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "parent_folder": {
+                                "description": "Path of parent folder",
+                                "type": "path",
+                                "default": "/tmp/victim-files/"
+                            },
+                            "file_to_delete": {
+                                "description": "Path of file to delete",
+                                "type": "path",
+                                "default": "/tmp/victim-files/T1070.004-test.txt"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "The file must exist in order to be deleted\n",
+                                "prereq_command": "test -e #{file_to_delete} && exit 0 || exit 1\n",
+                                "get_prereq_command": "mkdir -p #{parent_folder} && touch #{file_to_delete}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rm -f #{file_to_delete}\n",
+                            "cleanup_command": "rm -rf #{parent_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Delete an entire folder - FreeBSD/Linux/macOS",
+                        "auto_generated_guid": "a415f17e-ce8d-4ce2-a8b4-83b674e7017e",
+                        "description": "Recursively delete the temporary directory and all files contained within it\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "folder_to_delete": {
+                                "description": "Path of folder to delete",
+                                "type": "path",
+                                "default": "/tmp/victim-folder"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "The folder must exist in order to be deleted\n",
+                                "prereq_command": "test -e #{folder_to_delete} && exit 0 || exit 1\n",
+                                "get_prereq_command": "mkdir -p #{folder_to_delete}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rm -rf #{folder_to_delete}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Overwrite and delete a file with shred",
+                        "auto_generated_guid": "039b4b10-2900-404b-b67f-4b6d49aa6499",
+                        "description": "Use the `shred` command to overwrite the temporary file and then delete it\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "file_to_shred": {
+                                "description": "Path of file to shred",
+                                "type": "path",
+                                "default": "/tmp/victim-shred.txt"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Check if file already exists\n",
+                                "prereq_command": "if [ -f \"#{file_to_shred}\" ]; then echo \"File already exists\"; else echo \"File does NOT exist yet\"; exit 1; fi\n",
+                                "get_prereq_command": "touch #{file_to_shred}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "shred -u #{file_to_shred}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Delete a single file - Windows cmd",
+                        "auto_generated_guid": "861ea0b4-708a-4d17-848d-186c9c7f17e3",
+                        "description": "Delete a single file from the temporary directory using cmd.exe.\nUpon execution, no output will be displayed. Use File Explorer to verify the file was deleted.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_to_delete": {
+                                "description": "File to delete. Run the prereq command to create it if it does not exist.",
+                                "type": "string",
+                                "default": "%temp%\\deleteme_T1551.004"
+                            }
+                        },
+                        "dependency_executor_name": "command_prompt",
+                        "dependencies": [
+                            {
+                                "description": "The file to delete must exist on disk at specified location (#{file_to_delete})\n",
+                                "prereq_command": "IF EXIST \"#{file_to_delete}\" ( EXIT 0 ) ELSE ( EXIT 1 )\n",
+                                "get_prereq_command": "echo deleteme_T1551.004 >> #{file_to_delete}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "del /f #{file_to_delete}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Delete an entire folder - Windows cmd",
+                        "auto_generated_guid": "ded937c4-2add-42f7-9c2c-c742b7a98698",
+                        "description": "Recursively delete a folder in the temporary directory using cmd.exe.\nUpon execution, no output will be displayed. Use File Explorer to verify the folder was deleted.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "folder_to_delete": {
+                                "description": "Folder to delete. Run the prereq command to create it if it does not exist.",
+                                "type": "string",
+                                "default": "%temp%\\deleteme_T1551.004"
+                            }
+                        },
+                        "dependency_executor_name": "command_prompt",
+                        "dependencies": [
+                            {
+                                "description": "The file to delete must exist on disk at specified location (#{folder_to_delete})\n",
+                                "prereq_command": "IF EXIST \"#{folder_to_delete}\" ( EXIT 0 ) ELSE ( EXIT 1 )\n",
+                                "get_prereq_command": "mkdir #{folder_to_delete}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rmdir /s /q #{folder_to_delete}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Delete a single file - Windows PowerShell",
+                        "auto_generated_guid": "9dee89bd-9a98-4c4f-9e2d-4256690b0e72",
+                        "description": "Delete a single file from the temporary directory using Powershell. Upon execution, no output will be displayed. Use File Explorer to verify the file was deleted.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_to_delete": {
+                                "description": "File to delete. Run the prereq command to create it if it does not exist.",
+                                "type": "string",
+                                "default": "$env:TEMP\\deleteme_T1551.004"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The file to delete must exist on disk at specified location (#{file_to_delete})\n",
+                                "prereq_command": "if (Test-Path #{file_to_delete}) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Path #{file_to_delete} | Out-Null\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Remove-Item -path #{file_to_delete}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Delete an entire folder - Windows PowerShell",
+                        "auto_generated_guid": "edd779e4-a509-4cba-8dfa-a112543dbfb1",
+                        "description": "Recursively delete a folder in the temporary directory using Powershell. Upon execution, no output will be displayed. Use File Explorer to verify the folder was deleted.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "folder_to_delete": {
+                                "description": "Folder to delete. Run the prereq command to create it if it does not exist.",
+                                "type": "string",
+                                "default": "$env:TEMP\\deleteme_folder_T1551.004"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The folder to delete must exist on disk at specified location (#{folder_to_delete})\n",
+                                "prereq_command": "if (Test-Path #{folder_to_delete}) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Path #{folder_to_delete} -Type Directory | Out-Null\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Remove-Item -Path #{folder_to_delete} -Recurse\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Delete Filesystem - Linux",
+                        "auto_generated_guid": "f3aa95fe-4f10-4485-ad26-abf22a764c52",
+                        "description": "This test deletes the entire root filesystem of a Linux system. This technique was used by Amnesia IoT malware to avoid analysis. This test is dangerous and destructive, do NOT use on production equipment.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "[ \"$(uname)\" = 'Linux' ] && rm -rf / --no-preserve-root > /dev/null 2> /dev/null || chflags -R 0 / && rm -rf / > /dev/null 2> /dev/null\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Delete Prefetch File",
+                        "auto_generated_guid": "36f96049-0ad7-4a5f-8418-460acaeb92fb",
+                        "description": "Delete a single prefetch file.  Deletion of prefetch files is a known anti-forensic technique. To verify execution, Run `(Get-ChildItem -Path \"$Env:SystemRoot\\prefetch\\*.pf\" | Measure-Object).Count`\nbefore and after the test to verify that the number of prefetch files decreases by 1.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Remove-Item -Path (Join-Path \"$Env:SystemRoot\\prefetch\\\" (Get-ChildItem -Path \"$Env:SystemRoot\\prefetch\\*.pf\" -Name)[0])\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete TeamViewer Log Files",
+                        "auto_generated_guid": "69f50a5f-967c-4327-a5bb-e1a9a9983785",
+                        "description": "Adversaries may delete TeamViewer log files to hide activity. This should provide a high true-positive alert ration.\nThis test just places the files in a non-TeamViewer folder, a detection would just check for a deletion event matching the TeamViewer\nlog file format of TeamViewer_##.log. Upon execution, no output will be displayed. Use File Explorer to verify the folder was deleted.\n\nhttps://twitter.com/SBousseaden/status/1197524463304290305?s=20\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "teamviewer_log_file": {
+                                "description": "Teamviewer log file to create and delete.",
+                                "type": "string",
+                                "default": "$env:TEMP\\TeamViewer_54.log"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item -Path #{teamviewer_log_file} -Force | Out-Null\nRemove-Item #{teamviewer_log_file} -Force -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Clears Recycle bin via rd",
+                        "auto_generated_guid": "f723d13d-48dc-4317-9990-cf43a9ac0bf2",
+                        "description": "An adversary clears the recycle bin in the system partition using rd to remove traces of deleted files.\n[Reference](https://thedfirreport.com/2024/08/12/threat-actors-toolkit-leveraging-sliver-poshc2-batch-scripts/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "rd /s /q %systemdrive%\\$RECYCLE.BIN\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:19:24"
+}

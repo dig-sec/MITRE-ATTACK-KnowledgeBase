@@ -1,0 +1,190 @@
+{
+    "id": "T1129",
+    "name": "Shared Modules",
+    "description": "Adversaries may execute malicious payloads via loading shared modules. The Windows module loader can be instructed to load DLLs from arbitrary local paths and arbitrary Universal Naming Convention (UNC) network paths. This functionality resides in NTDLL.dll and is part of the Windows [Native API](T1106) which is called from functions like `CreateProcess`, `LoadLibrary`, etc. of the Win32 API. (Citation: Wikipedia Windows Library Files)\nThe module loader can load DLLs:\n* via specification of the (fully-qualified or relative) DLL pathname in the IMPORT directory;\n* via EXPORT forwarded to another DLL, specified with (fully-qualified or relative) pathname (but without extension);\n* via an NTFS junction or symlink program.exe.local with the fully-qualified or relative pathname of a directory containing the DLLs specified in the IMPORT directory or forwarded EXPORTs;\n* via `&#x3c;file name=\"filename.extension\" loadFrom=\"fully-qualified or relative pathname\"&#x3e;` in an embedded or external \"application manifest\". The file name refers to an entry in the IMPORT directory or a forwarded EXPORT.\nAdversaries may use this functionality as a way to execute arbitrary payloads on a victim system. For example, malware may execute share modules to load additional components or features.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Execution",
+    "data_sources": "Process: OS API Execution, Module: Module Load",
+    "detection": "Monitoring DLL module loads may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances, since benign use of Windows modules load functions are common and may be difficult to distinguish from malicious behavior. Legitimate software will likely only need to load routine, bundled DLL modules or Windows system DLLs such that deviation from known module loads may be suspicious. Limiting DLL module loads to `%SystemRoot%` and `%ProgramFiles%` directories will protect against module loads from unsafe paths.\nCorrelation of other events with behavior surrounding module loads using API monitoring and suspicious DLLs written to disk will provide additional context to an event that may assist in determining if it is due to malicious behavior.",
+    "url": "https://attack.mitre.org/techniques/T1129",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1129",
+                "atomic_attack_guid": "7f843046-abf2-443f-b880-07a83cf968ec",
+                "atomic_attack_name": "ESXi - Install a custom VIB on an ESXi host",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Tunneling Tool Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_susp_exfil_and_tunneling_tool_execution.yml",
+                        "remote_content": "title: Tunneling Tool Execution\nid: c75309a3-59f8-4a8d-9c2c-4c927ad50555\nstatus: test\ndescription: Detects the execution of well known tools that can be abused for data exfiltration and tunneling.\nauthor: Daniil Yugoslavskiy, oscd.community\nreferences:\n    - https://www.microsoft.com/en-us/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\ndate: 2019-10-24\nmodified: 2024-01-18\ntags:\n    - attack.exfiltration\n    - attack.command-and-control\n    - attack.t1041\n    - attack.t1572\n    - attack.t1071.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\httptunnel.exe'\n            - '\\plink.exe'\n            - '\\socat.exe'\n            - '\\stunnel.exe'\n    condition: selection\nfalsepositives:\n    - Legitimate administrators using one of these tools\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Protocol Tunneling with Plink",
+                        "rule_link": "https://research.splunk.com/endpoint/8aac5e1e-0fab-4437-af0b-c6e60af23eed/"
+                    },
+                    {
+                        "rule_name": "Windows Command and Scripting Interpreter Hunting Path Traversal",
+                        "rule_link": "https://research.splunk.com/endpoint/d0026380-b3c4-4da0-ac8e-02790063ff6b/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                    "5da1e411-c430-4fd6-bb05-9c81c0a8ab16",
+                    "cfd2cd3b-93e7-4b3e-ab46-f8bcafdbdfcf",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "0a5231ec-41af-4a35-83d0-6bdf11f28c65"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                        "lookup_data": {
+                            "description": "Operation Ghost - White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5d9b516c-e5f0-4e7c-a958-5d8c0a019371.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1571855044",
+                            "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5da1e411-c430-4fd6-bb05-9c81c0a8ab16",
+                        "lookup_data": {
+                            "description": "Mahalo FIN7: Responding to the Criminal Operatorsâ€™ New Tools and Techniques",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5da1e411-c430-4fd6-bb05-9c81c0a8ab16.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1570891290",
+                            "uuid": "5da1e411-c430-4fd6-bb05-9c81c0a8ab16",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cfd2cd3b-93e7-4b3e-ab46-f8bcafdbdfcf",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1129",
+                            "mitre-cti:description": "Directly mitigating module loads and API calls related to module loads will likely have unintended side effects, such as preventing legitimate software from operating properly. Efforts should be focused on preventing adversary tools from running earlier in the chain of activity and on identifying and correlated subsequent behavior to determine if it is the result of malicious activity.",
+                            "mitre-cti:name": "Execution through Module Load Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--cfd2cd3b-93e7-4b3e-ab46-f8bcafdbdfcf', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/mitigations/T1129', 'external_id': 'T1129'}], 'modified': '2019-07-24T19:18:25.859Z', 'name': 'Execution through Module Load Mitigation', 'description': 'Directly mitigating module loads and API calls related to module loads will likely have unintended side effects, such as preventing legitimate software from operating properly. Efforts should be focused on preventing adversary tools from running earlier in the chain of activity and on identifying and correlated subsequent behavior to determine if it is the result of malicious activity.', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0a5231ec-41af-4a35-83d0-6bdf11f28c65",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1129",
+                            "mitre-cti:description": "Adversaries may execute malicious payloads via loading shared modules. The Windows module loader can be instructed to load DLLs from arbitrary local paths and arbitrary Universal Naming Convention (UNC) network paths. This functionality resides in NTDLL.dll and is part of the Windows [Native API](https://attack.mitre.org/techniques/T1106) which is called from functions like <code>CreateProcess</code>, <code>LoadLibrary</code>, etc. of the Win32 API.(Citation: Wikipedia Windows Library Files)\n\nThe module loader can load DLLs:\n\n* via specification of the (fully-qualified or relative) DLL pathname in the IMPORT directory;\n    \n* via EXPORT forwarded to another DLL, specified with (fully-qualified or relative) pathname (but without extension);\n    \n* via an NTFS junction or symlink program.exe.local with the fully-qualified or relative pathname of a directory containing the DLLs specified in the IMPORT directory or forwarded EXPORTs;\n    \n* via <code>&#x3c;file name=\"filename.extension\" loadFrom=\"fully-qualified or relative pathname\"&#x3e;</code> in an embedded or external \"application manifest\". The file name refers to an entry in the IMPORT directory or a forwarded EXPORT.\n\nAdversaries may use this functionality as a way to execute arbitrary payloads on a victim system. For example, malware may execute share modules to load additional components or features.",
+                            "mitre-cti:name": "Shared Modules",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Stefan Kanthak'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--0a5231ec-41af-4a35-83d0-6bdf11f28c65', 'created': '2017-05-31T21:31:40.542Z', 'x_mitre_version': '2.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1129', 'url': 'https://attack.mitre.org/techniques/T1129'}, {'source_name': 'Wikipedia Windows Library Files', 'url': 'https://en.wikipedia.org/wiki/Microsoft_Windows_library_files', 'description': 'Wikipedia. (2017, January 31). Microsoft Windows library files. Retrieved February 13, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may execute malicious payloads via loading shared modules. The Windows module loader can be instructed to load DLLs from arbitrary local paths and arbitrary Universal Naming Convention (UNC) network paths. This functionality resides in NTDLL.dll and is part of the Windows [Native API](https://attack.mitre.org/techniques/T1106) which is called from functions like <code>CreateProcess</code>, <code>LoadLibrary</code>, etc. of the Win32 API.(Citation: Wikipedia Windows Library Files)\\n\\nThe module loader can load DLLs:\\n\\n* via specification of the (fully-qualified or relative) DLL pathname in the IMPORT directory;\\n    \\n* via EXPORT forwarded to another DLL, specified with (fully-qualified or relative) pathname (but without extension);\\n    \\n* via an NTFS junction or symlink program.exe.local with the fully-qualified or relative pathname of a directory containing the DLLs specified in the IMPORT directory or forwarded EXPORTs;\\n    \\n* via <code>&#x3c;file name=\"filename.extension\" loadFrom=\"fully-qualified or relative pathname\"&#x3e;</code> in an embedded or external \"application manifest\". The file name refers to an entry in the IMPORT directory or a forwarded EXPORT.\\n\\nAdversaries may use this functionality as a way to execute arbitrary payloads on a victim system. For example, malware may execute share modules to load additional components or features.', 'modified': '2022-04-19T20:31:10.657Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Shared Modules', 'x_mitre_detection': 'Monitoring DLL module loads may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances, since benign use of Windows modules load functions are common and may be difficult to distinguish from malicious behavior. Legitimate software will likely only need to load routine, bundled DLL modules or Windows system DLLs such that deviation from known module loads may be suspicious. Limiting DLL module loads to <code>%SystemRoot%</code> and <code>%ProgramFiles%</code> directories will protect against module loads from unsafe paths. \\n\\nCorrelation of other events with behavior surrounding module loads using API monitoring and suspicious DLLs written to disk will provide additional context to an event that may assist in determining if it is due to malicious behavior.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Module: Module Load', 'Process: OS API Execution'], 'x_mitre_remote_support': False, 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1129",
+                "display_name": "Server Software Component",
+                "atomic_tests": [
+                    {
+                        "name": "ESXi - Install a custom VIB on an ESXi host",
+                        "auto_generated_guid": "7f843046-abf2-443f-b880-07a83cf968ec",
+                        "description": "An adversary can maintain persistence within an ESXi host by installing malicious vSphere Installation Bundles (VIBs).\n[Reference](https://www.mandiant.com/resources/blog/esxi-hypervisors-malware-persistence)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vm_host": {
+                                "description": "Specify the host name of the ESXi Server",
+                                "type": "string",
+                                "default": "atomic.local"
+                            },
+                            "vm_user": {
+                                "description": "Specify the privilege user account on ESXi Server",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "vm_pass": {
+                                "description": "Specify the privilege user password on ESXi Server",
+                                "type": "string",
+                                "default": "pass"
+                            },
+                            "plink_file": {
+                                "description": "Path to plink",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe"
+                            },
+                            "pscp_file": {
+                                "description": "Path to Pscp",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\pscp.exe"
+                            },
+                            "vib_install": {
+                                "description": "Path to script with commands to install the vib",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\atomics\\T1129\\src\\esxi_vibinstall.txt"
+                            },
+                            "vib_remove": {
+                                "description": "Path to script with commands to remove the vib",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\atomics\\T1129\\src\\esxi_vibremove.txt"
+                            },
+                            "vib_file": {
+                                "description": "Path to the dummy vib",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\atomics\\T1129\\src\\atomicvibes.vib"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if plink and pscp are available.\n",
+                                "prereq_command": "if (Test-Path \"#{plink_file}\") {exit 0} else {exit 1}\nif (Test-Path \"#{pscp_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe\"\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/pscp.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\pscp.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{pscp_file} -pw #{vm_pass} #{vib_file} #{vm_user}@#{vm_host}:/tmp\necho \"\" | \"#{plink_file}\" \"#{vm_host}\" -ssh  -l \"#{vm_user}\" -pw \"#{vm_pass}\" -m \"#{vib_install}\"\n",
+                            "cleanup_command": "echo \"\" | \"#{plink_file}\" \"#{vm_host}\" -ssh  -l \"#{vm_user}\" -pw \"#{vm_pass}\" -m \"#{vib_remove}\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:19:05"
+}

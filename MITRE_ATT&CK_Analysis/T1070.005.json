@@ -1,0 +1,197 @@
+{
+    "id": "T1070.005",
+    "name": "Network Share Connection Removal",
+    "description": "Adversaries may remove share connections that are no longer useful in order to clean up traces of their operation. Windows shared drive and [SMB/Windows Admin Shares](T1021.002) connections can be removed when no longer needed. [Net](S0039) is an example utility that can be used to remove network share connections with the `net use \\systemshare /delete` command. (Citation: Technet Net Use)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Network Traffic: Network Traffic Content, User Account: User Account Authentication",
+    "detection": "Network share connections may be common depending on how an network environment is used. Monitor command-line invocation of `net use` commands associated with establishing and removing remote shares over SMB, including following best practices for detection of [Windows Admin Shares](T1077). SMB traffic between systems may also be captured and decoded to look for related network share session and file transfer activity. Windows authentication logs are also useful in determining when authenticated network shares are established and by which account, and can be used to correlate network share activity to other events to investigate potentially malicious activity.",
+    "url": "https://attack.mitre.org/techniques/T1070/005",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1070.005",
+                "atomic_attack_guid": "09210ad5-1ef2-4077-9ad3-7351e13e9222",
+                "atomic_attack_name": "Remove Network Share",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Windows Share Mount Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_use_mount_share.yml",
+                        "remote_content": "title: Windows Share Mount Via Net.EXE\nid: f117933c-980c-4f78-b384-e3d838111165\nrelated:\n    - id: 3abd6094-7027-475f-9630-8ab9be7b9725\n      type: similar\nstatus: test\ndescription: Detects when a share is mounted using the \"net.exe\" utility\nreferences:\n    - https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-02\nmodified: 2023-02-21\ntags:\n    - attack.lateral-movement\n    - attack.t1021.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' use '\n            - ' \\\\\\\\'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate activity by administrators and scripts\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Unmount Share Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_share_unmount.yml",
+                        "remote_content": "title: Unmount Share Via Net.EXE\nid: cb7c4a03-2871-43c0-9bbb-18bbdb079896\nstatus: test\ndescription: Detects when when a mounted share is removed. Adversaries may remove share connections that are no longer useful in order to clean up traces of their operation\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.005/T1070.005.md\nauthor: oscd.community, @redcanary, Zach Stanford @svch0st\ndate: 2020-10-08\nmodified: 2023-02-21\ntags:\n    - attack.defense-evasion\n    - attack.t1070.005\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'share'\n            - '/delete'\n    condition: all of selection*\nfalsepositives:\n    - Administrators or Power users may remove their shares via cmd line\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.005",
+                "atomic_attack_guid": "14c38f32-6509-46d8-ab43-d53e32d2b131",
+                "atomic_attack_name": "Add Network Share",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "a750a9f6-0bde-4bb3-9aae-1e2786e9780c",
+                    "66a4d409-451b-4151-94f4-a55d559c49b0",
+                    "c7dcacd0-cc59-4004-b0a4-1d6cdebe6f3e",
+                    "cb7c4a03-2871-43c0-9bbb-18bbdb079896"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "a750a9f6-0bde-4bb3-9aae-1e2786e9780c",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1070.005",
+                            "mitre-cti:description": "Adversaries may remove share connections that are no longer useful in order to clean up traces of their operation. Windows shared drive and [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002) connections can be removed when no longer needed. [Net](https://attack.mitre.org/software/S0039) is an example utility that can be used to remove network share connections with the <code>net use \\\\system\\share /delete</code> command. (Citation: Technet Net Use)",
+                            "mitre-cti:name": "Network Share Connection Removal",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--a750a9f6-0bde-4bb3-9aae-1e2786e9780c', 'type': 'attack-pattern', 'created': '2020-01-31T12:39:18.816Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1070.005', 'url': 'https://attack.mitre.org/techniques/T1070/005'}, {'url': 'https://technet.microsoft.com/bb490717.aspx', 'description': 'Microsoft. (n.d.). Net Use. Retrieved November 25, 2016.', 'source_name': 'Technet Net Use'}], 'modified': '2021-02-09T13:31:01.970Z', 'name': 'Network Share Connection Removal', 'description': 'Adversaries may remove share connections that are no longer useful in order to clean up traces of their operation. Windows shared drive and [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002) connections can be removed when no longer needed. [Net](https://attack.mitre.org/software/S0039) is an example utility that can be used to remove network share connections with the <code>net use \\\\\\\\system\\\\share /delete</code> command. (Citation: Technet Net Use)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Network share connections may be common depending on how an network environment is used. Monitor command-line invocation of <code>net use</code> commands associated with establishing and removing remote shares over SMB, including following best practices for detection of [Windows Admin Shares](https://attack.mitre.org/techniques/T1077). SMB traffic between systems may also be captured and decoded to look for related network share session and file transfer activity. Windows authentication logs are also useful in determining when authenticated network shares are established and by which account, and can be used to correlate network share activity to other events to investigate potentially malicious activity.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution', 'Network Traffic: Network Traffic Content', 'User Account: User Account Authentication'], 'x_mitre_defense_bypassed': ['Host forensic analysis'], 'x_mitre_permissions_required': ['Administrator', 'User'], 'x_mitre_system_requirements': ['Established network share connection to a remote system. Level of access depends on permissions of the account used.']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "66a4d409-451b-4151-94f4-a55d559c49b0",
+                        "lookup_data": {
+                            "description": "Detects when when a mounted share is removed. Adversaries may remove share connections that are no longer useful in order to clean up traces of their operation",
+                            "raw": "author: oscd.community, @redcanary, Zach Stanford @svch0st\ndate: 2020/10/08\ndescription: Detects when when a mounted share is removed. Adversaries may remove\n  share connections that are no longer useful in order to clean up traces of their\n  operation\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - Remove-SmbShare\n    - Remove-FileShare\nfalsepositives:\n- Administrators or Power users may remove their shares via cmd line\nid: 66a4d409-451b-4151-94f4-a55d559c49b0\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.005/T1070.005.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.005\ntitle: PowerShell Deleted Mounted Share\n",
+                            "sigma:id": "66a4d409-451b-4151-94f4-a55d559c49b0",
+                            "title": "PowerShell Deleted Mounted Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c7dcacd0-cc59-4004-b0a4-1d6cdebe6f3e",
+                        "lookup_data": {
+                            "description": "Administrative shares are hidden network shares created by Microsoft Windows NT operating systems that grant system administrators remote access to every disk volume on a network-connected system",
+                            "raw": "author: frack113\ndate: 2022/01/16\ndescription: Administrative shares are hidden network shares created by Microsoft\n  Windows NT operating systems that grant system administrators remote access to every\n  disk volume on a network-connected system\ndetection:\n  condition: selection\n  selection:\n    Details: DWORD (0x00000000)\n    EventType: SetValue\n    TargetObject|endswith:\n    - AutoShareWks\n    - AutoShareServer\n    TargetObject|startswith: HKLM\\System\\CurrentControlSet\\Services\\LanmanServer\\Parameters\\\nfalsepositives:\n- Unknown\nid: c7dcacd0-cc59-4004-b0a4-1d6cdebe6f3e\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.005/T1070.005.md#atomic-test-4---disable-administrative-share-creation-at-startup\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.005\ntitle: Disable Administrative Share Creation at Startup\n",
+                            "sigma:id": "c7dcacd0-cc59-4004-b0a4-1d6cdebe6f3e",
+                            "title": "Disable Administrative Share Creation at Startup",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cb7c4a03-2871-43c0-9bbb-18bbdb079896",
+                        "lookup_data": {
+                            "description": "Detects when when a mounted share is removed. Adversaries may remove share connections that are no longer useful in order to clean up traces of their operation",
+                            "raw": "author: oscd.community, @redcanary, Zach Stanford @svch0st\ndate: 2020/10/08\ndescription: Detects when when a mounted share is removed. Adversaries may remove\n  share connections that are no longer useful in order to clean up traces of their\n  operation\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - share\n    - /delete\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Administrators or Power users may remove their shares via cmd line\nid: cb7c4a03-2871-43c0-9bbb-18bbdb079896\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.005/T1070.005.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.005\ntitle: Mounted Share Deleted\n",
+                            "sigma:id": "cb7c4a03-2871-43c0-9bbb-18bbdb079896",
+                            "title": "Mounted Share Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1070.005",
+                "display_name": "Indicator Removal on Host: Network Share Connection Removal",
+                "atomic_tests": [
+                    {
+                        "name": "Add Network Share",
+                        "auto_generated_guid": "14c38f32-6509-46d8-ab43-d53e32d2b131",
+                        "description": "Add a Network Share utilizing the command_prompt\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "share_name": {
+                                "description": "Share to add.",
+                                "type": "string",
+                                "default": "\\\\test\\share"
+                            }
+                        },
+                        "executor": {
+                            "command": "net use c: #{share_name}\nnet share test=#{share_name} /REMARK:\"test share\" /CACHE:No\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remove Network Share",
+                        "auto_generated_guid": "09210ad5-1ef2-4077-9ad3-7351e13e9222",
+                        "description": "Removes a Network Share utilizing the command_prompt\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "share_name": {
+                                "description": "Share to remove.",
+                                "type": "string",
+                                "default": "\\\\test\\share"
+                            }
+                        },
+                        "executor": {
+                            "command": "net share #{share_name} /delete\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remove Network Share PowerShell",
+                        "auto_generated_guid": "0512d214-9512-4d22-bde7-f37e058259b3",
+                        "description": "Removes a Network Share utilizing PowerShell\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "share_name": {
+                                "description": "Share to remove.",
+                                "type": "string",
+                                "default": "\\\\test\\share"
+                            }
+                        },
+                        "executor": {
+                            "command": "Remove-SmbShare -Name #{share_name}\nRemove-FileShare -Name #{share_name}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Disable Administrative Share Creation at Startup",
+                        "auto_generated_guid": "99c657aa-ebeb-4179-a665-69288fdd12b8",
+                        "description": "Administrative shares are hidden network shares created by Microsoft’s Windows NT operating systems that grant system administrators \nremote access to every disk volume on a network-connected system. These shares are automatically created at started unless they have been\npurposefully disabled as is done in this Atomic test. As Microsoft puts it, \"Missing administrative shares typically \nindicate that the computer in question has been compromised by malicious software.\"\nhttps://threatpost.com/conti-ransomware-gang-has-full-log4shell-attack-chain/177173/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareServer /t REG_DWORD /d 0 /f\nreg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareWks /t REG_DWORD /d 0 /f\n",
+                            "cleanup_command": "reg delete \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareServer /f\nreg delete \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareWks /f\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Remove Administrative Shares",
+                        "auto_generated_guid": "4299eff5-90f1-4446-b2f3-7f4f5cfd5d62",
+                        "description": "Administrative shares are hidden network shares created by Microsoft’s Windows NT operating systems that grant system administrators \nremote access to every disk volume on a network-connected system. As Microsoft puts it, “Missing administrative shares typically \nindicate that the computer in question has been compromised by malicious software.\nhttps://threatpost.com/conti-ransomware-gang-has-full-log4shell-attack-chain/177173/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "for %i in (C$ IPC$ ADMIN$) do net share %i /delete",
+                            "cleanup_command": "net share ADMIN$ /UNLIMITED >nul 2>&1\nnet share C$=C:\\ >nul 2>&1\nnet share IPC$ >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:20:15"
+}

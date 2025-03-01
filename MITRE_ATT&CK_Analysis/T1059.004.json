@@ -1,0 +1,553 @@
+{
+    "id": "T1059.004",
+    "name": "Unix Shell",
+    "description": "Adversaries may abuse Unix shell commands and scripts for execution. Unix shells are the primary command prompt on Linux and macOS systems, though many variations of the Unix shell exist (e.g. sh, bash, zsh, etc.) depending on the specific OS or distribution.(Citation: DieNet Bash)(Citation: Apple ZShell) Unix shells can control every aspect of a system, with certain commands requiring elevated privileges.\nUnix shells also support scripts that enable sequential execution of commands as well as other typical programming operations such as conditionals and loops. Common uses of shell scripts include long or repetitive tasks, or the need to run the same set of commands on multiple systems.\nAdversaries may abuse Unix shells to execute various commands or payloads. Interactive shells may be accessed through command and control channels or during lateral movement such as with [SSH](T1021.004). Adversaries may also leverage shell scripts to deliver and execute multiple commands on victims or as part of payloads used for persistence.",
+    "platforms": "macOS, Linux",
+    "kill_chain_phases": "Execution",
+    "data_sources": "Command: Command Execution, Process: Process Creation",
+    "detection": "Unix shell usage may be common on administrator, developer, or power user systems, depending on job function. If scripting is restricted for normal users, then any attempt to enable scripts running on a system would be considered suspicious. If scripts are not commonly used on a system, but enabled, scripts running out of cycle from patching or other administrator functions are suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.\nScripts are likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for script execution and subsequent behavior. Actions may be related to network and system information discovery, collection, or other scriptable post-compromise behaviors and could be used as indicators of detection leading back to the source script.",
+    "url": "https://attack.mitre.org/techniques/T1059/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1059.004",
+                "atomic_attack_guid": "e0742e38-6efe-4dd4-ba5c-2078095b6156",
+                "atomic_attack_name": "emacs spawning an interactive system shell",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Sudo OR Su Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/4b00f134-6d6a-11ec-a90c-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.004",
+                "atomic_attack_guid": "fca246a8-a585-4f28-a2df-6495973976a1",
+                "atomic_attack_name": "Detecting pipe-to-shell",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Curl Usage on Linux",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_curl_usage.yml",
+                        "remote_content": "title: Curl Usage on Linux\nid: ea34fb97-e2c4-4afb-810f-785e4459b194\nstatus: test\ndescription: Detects a curl process start on linux, which indicates a file download from a remote location or a simple web request to a remote server\nreferences:\n    - https://www.trendmicro.com/en_us/research/22/i/how-malicious-actors-abuse-native-linux-tools-in-their-attacks.html\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-15\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: linux\ndetection:\n    selection:\n        Image|endswith: '/curl'\n    condition: selection\nfalsepositives:\n    - Scripts created by developers and admins\n    - Administrative activity\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Ingress Tool Transfer Hunting",
+                        "rule_link": "https://research.splunk.com/endpoint/52fd468b-cb6d-48f5-b16a-92f1c9bb10cf/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.004",
+                "atomic_attack_guid": "a2b35a63-9df1-4806-9a4d-5fe0500845f2",
+                "atomic_attack_name": "LinEnum tool execution",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.004",
+                "atomic_attack_guid": "46274fc6-08a7-4956-861b-24cbbaa0503c",
+                "atomic_attack_name": "Harvest SUID executable files",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.004",
+                "atomic_attack_guid": "d0c88567-803d-4dca-99b4-7ce65e7b257c",
+                "atomic_attack_name": "Command-Line Interface",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Linux Shell Pipe to Shell",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_pipe_shell.yml",
+                        "remote_content": "title: Linux Shell Pipe to Shell\nid: 880973f3-9708-491c-a77b-2a35a1921158\nstatus: test\ndescription: Detects suspicious process command line that starts with a shell that executes something and finally gets piped into another shell\nreferences:\n    - Internal Research\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-14\nmodified: 2022-07-26\ntags:\n    - attack.defense-evasion\n    - attack.t1140\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|startswith:\n            - 'sh -c '\n            - 'bash -c '\n    selection_exec:\n        - CommandLine|contains:\n              - '| bash '\n              - '| sh '\n              - '|bash '\n              - '|sh '\n        - CommandLine|endswith:\n              - '| bash'\n              - '| sh'\n              - '|bash'\n              - ' |sh'\n    condition: all of selection*\nfalsepositives:\n    - Legitimate software that uses these patterns\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Ingress Tool Transfer Hunting",
+                        "rule_link": "https://research.splunk.com/endpoint/52fd468b-cb6d-48f5-b16a-92f1c9bb10cf/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.004",
+                "atomic_attack_guid": "7e7ac3ed-f795-4fa5-b711-09d6fbe9b873",
+                "atomic_attack_name": "Create and Execute Bash Shell Script",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1059.004",
+                "atomic_attack_guid": "ee72b37d-b8f5-46a5-a9e7-0ff50035ffd5",
+                "atomic_attack_name": "Shell Creation using awk command",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Invocation of Shell via AWK - Linux",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_awk_shell_spawn.yml",
+                        "remote_content": "title: Suspicious Invocation of Shell via AWK - Linux\nid: 8c1a5675-cb85-452f-a298-b01b22a51856\nstatus: experimental\ndescription: |\n    Detects the execution of \"awk\" or it's sibling commands, to invoke a shell using the system() function.\n    This behavior is commonly associated with attempts to execute arbitrary commands or escalate privileges, potentially leading to unauthorized access or further exploitation.\nreferences:\n    - https://gtfobins.github.io/gtfobins/awk/#shell\n    - https://gtfobins.github.io/gtfobins/gawk/#shell\n    - https://gtfobins.github.io/gtfobins/nawk/#shell\n    - https://gtfobins.github.io/gtfobins/mawk/#shell\nauthor: Li Ling, Andy Parkidomo, Robert Rakowski, Blake Hartstein (Bloomberg L.P.)\ndate: 2024-09-02\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: linux\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/awk'\n            - '/gawk'\n            - '/mawk'\n            - '/nawk'\n        CommandLine|contains: 'BEGIN {system'\n    selection_cli:\n        CommandLine|contains:\n            - '/bin/bash'\n            - '/bin/dash'\n            - '/bin/fish'\n            - '/bin/sh'\n            - '/bin/zsh'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "1543ae20-cbdf-4ec1-8d12-7664d667a825",
+                    "1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df",
+                    "a9d4b653-6915-42af-98b2-5758c4ceee56",
+                    "2aa1440c-9ae9-4d92-84a7-a9e5f5e31695",
+                    "f8341cb2-ee25-43fa-a975-d8a5a9714b39",
+                    "738d9bcf-6999-4fdb-b4ac-3033037db8ab",
+                    "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                    "444ade84-c362-4260-b1f3-e45e20e1a905",
+                    "41e5c73d-9983-4b69-bd03-e13b67e9623c",
+                    "8ec2c8b4-557a-4121-b87c-5dfb3a602fae"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "1543ae20-cbdf-4ec1-8d12-7664d667a825",
+                        "lookup_data": {
+                            "description": "Detects relevant commands often related to malware or hacking activity",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/12/12\ndescription: Detects relevant commands often related to malware or hacking activity\ndetection:\n  cmd1:\n    a0: chmod\n    a1: 777\n    type: EXECVE\n  cmd2:\n    a0: chmod\n    a1: u+s\n    type: EXECVE\n  cmd3:\n    a0: cp\n    a1: /bin/ksh\n    type: EXECVE\n  cmd4:\n    a0: cp\n    a1: /bin/sh\n    type: EXECVE\n  condition: 1 of cmd*\nfalsepositives:\n- Admin activity\nid: 1543ae20-cbdf-4ec1-8d12-7664d667a825\nlevel: medium\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/10/05\nreferences:\n- Internal Research - mostly derived from exploit code including code in MSF\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.004\ntitle: Suspicious Commands Linux\n",
+                            "sigma:id": "1543ae20-cbdf-4ec1-8d12-7664d667a825",
+                            "title": "Suspicious Commands Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df",
+                        "lookup_data": {
+                            "description": "Detects changes to the EC2 instance startup script. The shell script will be executed as root/SYSTEM every time the specific instances are booted up.",
+                            "raw": "author: faloker\ndate: 2020/02/12\ndescription: Detects changes to the EC2 instance startup script. The shell script\n  will be executed as root/SYSTEM every time the specific instances are booted up.\ndetection:\n  condition: selection_source\n  selection_source:\n    eventName: ModifyInstanceAttribute\n    eventSource: ec2.amazonaws.com\n    requestParameters.attribute: userData\nfalsepositives:\n- Valid changes to the startup script\nid: 1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df\nlevel: high\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/06/07\nreferences:\n- https://github.com/RhinoSecurityLabs/pacu/blob/866376cd711666c775bbfcde0524c817f2c5b181/pacu/modules/ec2__startup_shell_script/main.py#L9\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.004\ntitle: AWS EC2 Startup Shell Script Change\n",
+                            "sigma:id": "1ab3c5ed-5baf-417b-bb6b-78ca33f6c3df",
+                            "title": "AWS EC2 Startup Shell Script Change",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a9d4b653-6915-42af-98b2-5758c4ceee56",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1059.004",
+                            "mitre-cti:description": "Adversaries may abuse Unix shell commands and scripts for execution. Unix shells are the primary command prompt on Linux and macOS systems, though many variations of the Unix shell exist (e.g. sh, bash, zsh, etc.) depending on the specific OS or distribution.(Citation: DieNet Bash)(Citation: Apple ZShell) Unix shells can control every aspect of a system, with certain commands requiring elevated privileges.\n\nUnix shells also support scripts that enable sequential execution of commands as well as other typical programming operations such as conditionals and loops. Common uses of shell scripts include long or repetitive tasks, or the need to run the same set of commands on multiple systems.\n\nAdversaries may abuse Unix shells to execute various commands or payloads. Interactive shells may be accessed through command and control channels or during lateral movement such as with [SSH](https://attack.mitre.org/techniques/T1021/004). Adversaries may also leverage shell scripts to deliver and execute multiple commands on victims or as part of payloads used for persistence.",
+                            "mitre-cti:name": "Unix Shell",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--a9d4b653-6915-42af-98b2-5758c4ceee56', 'type': 'attack-pattern', 'created': '2020-03-09T14:15:05.330Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1059.004', 'url': 'https://attack.mitre.org/techniques/T1059/004'}, {'source_name': 'DieNet Bash', 'url': 'https://linux.die.net/man/1/bash', 'description': 'die.net. (n.d.). bash(1) - Linux man page. Retrieved June 12, 2020.'}, {'source_name': 'Apple ZShell', 'url': 'https://support.apple.com/HT208050', 'description': 'Apple. (2020, January 28). Use zsh as the default shell on your Mac. Retrieved June 12, 2020.'}], 'modified': '2021-07-26T22:34:43.261Z', 'name': 'Unix Shell', 'description': 'Adversaries may abuse Unix shell commands and scripts for execution. Unix shells are the primary command prompt on Linux and macOS systems, though many variations of the Unix shell exist (e.g. sh, bash, zsh, etc.) depending on the specific OS or distribution.(Citation: DieNet Bash)(Citation: Apple ZShell) Unix shells can control every aspect of a system, with certain commands requiring elevated privileges.\\n\\nUnix shells also support scripts that enable sequential execution of commands as well as other typical programming operations such as conditionals and loops. Common uses of shell scripts include long or repetitive tasks, or the need to run the same set of commands on multiple systems.\\n\\nAdversaries may abuse Unix shells to execute various commands or payloads. Interactive shells may be accessed through command and control channels or during lateral movement such as with [SSH](https://attack.mitre.org/techniques/T1021/004). Adversaries may also leverage shell scripts to deliver and execute multiple commands on victims or as part of payloads used for persistence.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}], 'x_mitre_detection': 'Unix shell usage may be common on administrator, developer, or power user systems, depending on job function. If scripting is restricted for normal users, then any attempt to enable scripts running on a system would be considered suspicious. If scripts are not commonly used on a system, but enabled, scripts running out of cycle from patching or other administrator functions are suspicious. Scripts should be captured from the file system when possible to determine their actions and intent.\\n\\nScripts are likely to perform actions with various effects on a system that may generate events, depending on the types of monitoring used. Monitor processes and command-line arguments for script execution and subsequent behavior. Actions may be related to network and system information discovery, collection, or other scriptable post-compromise behaviors and could be used as indicators of detection leading back to the source script. ', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution'], 'x_mitre_permissions_required': ['User', 'root'], 'x_mitre_remote_support': True}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2aa1440c-9ae9-4d92-84a7-a9e5f5e31695",
+                        "lookup_data": {
+                            "description": "Detects suspicious shell commands used in various exploit codes (see references)",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/08/21\ndescription: Detects suspicious shell commands used in various exploit codes (see\n  references)\ndetection:\n  condition: keywords\n  keywords:\n  - wget * - http* | perl\n  - wget * - http* | sh\n  - wget * - http* | bash\n  - python -m SimpleHTTPServer\n  - -m http.server\n  - import pty; pty.spawn*\n  - socat exec:*\n  - socat -O /tmp/*\n  - socat tcp-connect*\n  - '*echo binary >>*'\n  - '*wget *; chmod +x*'\n  - '*wget *; chmod 777 *'\n  - '*cd /tmp || cd /var/run || cd /mnt*'\n  - '*stop;service iptables stop;*'\n  - '*stop;SuSEfirewall2 stop;*'\n  - chmod 777 2020*\n  - '*>>/etc/rc.local'\n  - '*base64 -d /tmp/*'\n  - '* | base64 -d *'\n  - '*/chmod u+s *'\n  - '*chmod +s /tmp/*'\n  - '*chmod u+s /tmp/*'\n  - '* /tmp/haxhax*'\n  - '* /tmp/ns_sploit*'\n  - nc -l -p *\n  - cp /bin/ksh *\n  - cp /bin/sh *\n  - '* /tmp/*.b64 *'\n  - '*/tmp/ysocereal.jar*'\n  - '*/tmp/x *'\n  - '*; chmod +x /tmp/*'\n  - '*;chmod +x /tmp/*'\nfalsepositives:\n- Unknown\nid: 2aa1440c-9ae9-4d92-84a7-a9e5f5e31695\nlevel: high\nlogsource:\n  product: linux\nmodified: 2021/11/27\nreferences:\n- http://www.threatgeek.com/2017/03/widespread-exploitation-attempts-using-cve-2017-5638.html\n- https://github.com/rapid7/metasploit-framework/blob/eb6535009f5fdafa954525687f09294918b5398d/modules/exploits/multi/http/struts_code_exec_exception_delegator.rb\n- http://pastebin.com/FtygZ1cg\n- https://artkond.com/2017/03/23/pivoting-guide/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.004\ntitle: Suspicious Activity in Shell Commands\n",
+                            "sigma:id": "2aa1440c-9ae9-4d92-84a7-a9e5f5e31695",
+                            "title": "Suspicious Activity in Shell Commands",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f8341cb2-ee25-43fa-a975-d8a5a9714b39",
+                        "lookup_data": {
+                            "description": "Detects the usage of the unsafe bpftrace option",
+                            "raw": "author: Andreas Hunkeler (@Karneades)\ndate: 2022/02/11\ndescription: Detects the usage of the unsafe bpftrace option\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: --unsafe\n    Image|endswith: bpftrace\nfalsepositives:\n- Legitimate usage of the unsafe option\nid: f8341cb2-ee25-43fa-a975-d8a5a9714b39\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://embracethered.com/blog/posts/2021/offensive-bpf-bpftrace/\n- https://bpftrace.org/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.004\ntitle: BPFtrace Unsafe Option Usage\n",
+                            "sigma:id": "f8341cb2-ee25-43fa-a975-d8a5a9714b39",
+                            "title": "BPFtrace Unsafe Option Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "738d9bcf-6999-4fdb-b4ac-3033037db8ab",
+                        "lookup_data": {
+                            "description": "Detects suspicious shell commands or program code that may be executed or used in command line to establish a reverse shell",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/04/02\ndescription: Detects suspicious shell commands or program code that may be executed\n  or used in command line to establish a reverse shell\ndetection:\n  condition: keywords\n  keywords:\n  - BEGIN {s = \"/inet/tcp/0/\n  - bash -i >& /dev/tcp/\n  - bash -i >& /dev/udp/\n  - sh -i >$ /dev/udp/\n  - sh -i >$ /dev/tcp/\n  - '&& while read line 0<&5; do'\n  - /bin/bash -c exec 5<>/dev/tcp/\n  - /bin/bash -c exec 5<>/dev/udp/\n  - 'nc -e /bin/sh '\n  - /bin/sh | nc\n  - 'rm -f backpipe; mknod /tmp/backpipe p && nc '\n  - ;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i))))\n  - ;STDIN->fdopen($c,r);$~->fdopen($c,w);system$_ while<>;\n  - /bin/sh -i <&3 >&3 2>&3\n  - uname -a; w; id; /bin/bash -i\n  - $sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2); $stream.Write($sendbyte,0,$sendbyte.Length);\n    $stream.Flush()};\n  - ;os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);os.putenv('HISTFILE','/dev/null');\n  - .to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)\n  - ;while(cmd=c.gets);IO.popen(cmd,\"r\"){|io|c.print\n  - 'socat exec:''bash -li'',pty,stderr,setsid,sigint,sane tcp:'\n  - rm -f /tmp/p; mknod /tmp/p p &&\n  - ' | /bin/bash | telnet '\n  - ',echo=0,raw tcp-listen:'\n  - 'nc -lvvp '\n  - xterm -display 1\nfalsepositives:\n- Unknown\nid: 738d9bcf-6999-4fdb-b4ac-3033037db8ab\nlevel: high\nlogsource:\n  product: linux\nmodified: 2021/11/27\nreferences:\n- https://alamot.github.io/reverse_shells/\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.004\ntitle: Suspicious Reverse Shell Command Line\n",
+                            "sigma:id": "738d9bcf-6999-4fdb-b4ac-3033037db8ab",
+                            "title": "Suspicious Reverse Shell Command Line",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                        "lookup_data": {
+                            "description": "FontOnLake: Previously unknown malware family targeting Linux",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633682506",
+                            "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "444ade84-c362-4260-b1f3-e45e20e1a905",
+                        "lookup_data": {
+                            "description": "Detects suspicious shell commands indicating the information gathering phase as preparation for the Privilege Escalation.",
+                            "raw": "author: Patrick Bareiss\ndate: 2019/04/05\ndescription: Detects suspicious shell commands indicating the information gathering\n  phase as preparation for the Privilege Escalation.\ndetection:\n  condition: keywords | count() by host > 6\n  keywords:\n  - cat /etc/issue\n  - cat /etc/*-release\n  - cat /proc/version\n  - uname -a\n  - uname -mrs\n  - rpm -q kernel\n  - dmesg | grep Linux\n  - ls /boot | grep vmlinuz-\n  - cat /etc/profile\n  - cat /etc/bashrc\n  - cat ~/.bash_profile\n  - cat ~/.bashrc\n  - cat ~/.bash_logout\n  - ps -aux | grep root\n  - ps -ef | grep root\n  - crontab -l\n  - cat /etc/cron*\n  - cat /etc/cron.allow\n  - cat /etc/cron.deny\n  - cat /etc/crontab\n  - grep -i user *\n  - grep -i pass *\n  - ifconfig\n  - cat /etc/network/interfaces\n  - cat /etc/sysconfig/network\n  - cat /etc/resolv.conf\n  - cat /etc/networks\n  - iptables -L\n  - ip6tables -L\n  - lsof -i\n  - netstat -antup\n  - netstat -antpx\n  - netstat -tulpn\n  - arp -e\n  - route\n  - cat /etc/passwd\n  - cat /etc/group\n  - cat /etc/shadow\n  - find / -perm -u=s\n  - find / -perm -g=s\n  - find / -perm -4000\n  - find / -perm -2000\n  - find / -perm -o+w\n  timeframe: 30m\nfalsepositives:\n- Troubleshooting on Linux Machines\nid: 444ade84-c362-4260-b1f3-e45e20e1a905\nlevel: medium\nlogsource:\n  product: linux\nmodified: 2022/11/01\nreferences:\n- https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/\n- https://patrick-bareiss.com/detect-privilege-escalation-preparation-in-linux-with-sigma/\n- https://github.com/uber-common/metta/blob/master/MITRE/Privilege_Escalation/privesc_linux_filesystemweakness.yml\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.004\ntitle: Privilege Escalation Preparation\n",
+                            "sigma:id": "444ade84-c362-4260-b1f3-e45e20e1a905",
+                            "title": "Privilege Escalation Preparation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "41e5c73d-9983-4b69-bd03-e13b67e9623c",
+                        "lookup_data": {
+                            "description": "Detects suspicious shell commands used in various Equation Group scripts and tools",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/04/09\ndescription: Detects suspicious shell commands used in various Equation Group scripts\n  and tools\ndetection:\n  condition: keywords\n  keywords:\n  - 'chown root*chmod 4777 '\n  - cp /bin/sh .;chown\n  - chmod 4777 /tmp/.scsi/dev/bin/gsh\n  - chown root:root /tmp/.scsi/dev/bin/\n  - chown root:root x;\n  - /bin/telnet locip locport < /dev/console | /bin/sh\n  - /tmp/ratload\n  - 'ewok -t '\n  - 'xspy -display '\n  - cat > /dev/tcp/127.0.0.1/80 <<END\n  - rm -f /current/tmp/ftshell.latest\n  - 'ghost_* -v '\n  - ' --wipe > /dev/null'\n  - ping -c 2 *; grep * /proc/net/arp >/tmp/gx\n  - iptables * OUTPUT -p tcp -d 127.0.0.1 --tcp-flags RST RST -j DROP;\n  - '> /var/log/audit/audit.log; rm -f .'\n  - cp /var/log/audit/audit.log .tmp\n  - sh >/dev/tcp/* <&1 2>&1\n  - ncat -vv -l -p * <\n  - nc -vv -l -p * <\n  - < /dev/console | uudecode && uncompress\n  - sendmail -osendmail;chmod +x sendmail\n  - /usr/bin/wget -O /tmp/a http* && chmod 755 /tmp/cron\n  - chmod 666 /var/run/utmp~\n  - chmod 700 nscd crond\n  - cp /etc/shadow /tmp/.\n  - </dev/console |uudecode > /dev/null 2>&1 && uncompress\n  - chmod 700 jp&&netstat -an|grep\n  - uudecode > /dev/null 2>&1 && uncompress -f * && chmod 755\n  - chmod 700 crond\n  - wget http*; chmod +x /tmp/sendmail\n  - chmod 700 fp sendmail pt\n  - chmod 755 /usr/vmsys/bin/pipe\n  - chmod -R 755 /usr/vmsys\n  - chmod 755 $opbin/*tunnel\n  - chmod 700 sendmail\n  - chmod 0700 sendmail\n  - /usr/bin/wget http*sendmail;chmod +x sendmail;\n  - '&& telnet * 2>&1 </dev/console'\nfalsepositives:\n- Unknown\nid: 41e5c73d-9983-4b69-bd03-e13b67e9623c\nlevel: high\nlogsource:\n  product: linux\nmodified: 2021/11/27\nreferences:\n- https://medium.com/@shadowbrokerss/dont-forget-your-base-867d304a94b1\nstatus: test\ntags:\n- attack.execution\n- attack.g0020\n- attack.t1059.004\ntitle: Equation Group Indicators\n",
+                            "sigma:id": "41e5c73d-9983-4b69-bd03-e13b67e9623c",
+                            "title": "Equation Group Indicators",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8ec2c8b4-557a-4121-b87c-5dfb3a602fae",
+                        "lookup_data": {
+                            "description": "Detects suspicious command sequence that JexBoss",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/08/24\ndescription: Detects suspicious command sequence that JexBoss\ndetection:\n  condition: all of selection*\n  selection1:\n  - bash -c /bin/bash\n  selection2:\n  - '&/dev/tcp/'\nfalsepositives:\n- Unknown\nid: 8ec2c8b4-557a-4121-b87c-5dfb3a602fae\nlevel: high\nlogsource:\n  product: linux\nmodified: 2022/07/07\nreferences:\n- https://www.us-cert.gov/ncas/analysis-reports/AR18-312A\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.004\ntitle: JexBoss Command Sequence\n",
+                            "sigma:id": "8ec2c8b4-557a-4121-b87c-5dfb3a602fae",
+                            "title": "JexBoss Command Sequence",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1059.004",
+                "display_name": "Command and Scripting Interpreter: Bash",
+                "atomic_tests": [
+                    {
+                        "name": "Create and Execute Bash Shell Script",
+                        "auto_generated_guid": "7e7ac3ed-f795-4fa5-b711-09d6fbe9b873",
+                        "description": "Creates and executes a simple sh script.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "script_path": {
+                                "description": "Script path",
+                                "type": "path",
+                                "default": "/tmp/art.sh"
+                            },
+                            "host": {
+                                "description": "Host to ping",
+                                "type": "string",
+                                "default": "8.8.8.8"
+                            }
+                        },
+                        "executor": {
+                            "command": "sh -c \"echo 'echo Hello from the Atomic Red Team' > #{script_path}\"\nsh -c \"echo 'ping -c 4 #{host}' >> #{script_path}\"\nchmod +x #{script_path}\nsh #{script_path}\n",
+                            "cleanup_command": "rm #{script_path}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Command-Line Interface",
+                        "auto_generated_guid": "d0c88567-803d-4dca-99b4-7ce65e7b257c",
+                        "description": "Using Curl to download and pipe a payload to Bash. NOTE: Curl-ing to Bash is generally a bad idea if you don't control the server.\n\nUpon successful execution, sh will download via curl and wget the specified payload (echo-art-fish.sh) and set a marker file in `/tmp/art-fish.txt`.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "curl -sS https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.004/src/echo-art-fish.sh | bash\nwget --quiet -O - https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.004/src/echo-art-fish.sh | bash\n",
+                            "cleanup_command": "rm /tmp/art-fish.txt\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Harvest SUID executable files",
+                        "auto_generated_guid": "46274fc6-08a7-4956-861b-24cbbaa0503c",
+                        "description": "AutoSUID application is the Open-Source project, the main idea of which is to automate harvesting the SUID executable files and to find a way for further escalating the privileges. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "autosuid": {
+                                "description": "Path to the autosuid shell script",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1059.004/src/AutoSUID.sh"
+                            },
+                            "autosuid_url": {
+                                "description": "Path to download autosuid shell script",
+                                "type": "url",
+                                "default": "https://raw.githubusercontent.com/IvanGlinkin/AutoSUID/main/AutoSUID.sh"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "AutoSUID must exist on disk at specified location (#{autosuid})\n",
+                                "prereq_command": "if [ -f #{autosuid} ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "curl --create-dirs #{autosuid_url} --output #{autosuid}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "chmod +x #{autosuid}\nbash #{autosuid}\n",
+                            "cleanup_command": "rm -rf #{autosuid}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "LinEnum tool execution",
+                        "auto_generated_guid": "a2b35a63-9df1-4806-9a4d-5fe0500845f2",
+                        "description": "LinEnum is a bash script that performs discovery commands for accounts,processes, kernel version, applications, services, and uses the information from these commands to present operator with ways of escalating privileges or further exploitation of targeted host.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "linenum": {
+                                "description": "Path to the LinEnum shell script",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1059.004/src/LinEnum.sh"
+                            },
+                            "linenum_url": {
+                                "description": "Path to download LinEnum shell script",
+                                "type": "url",
+                                "default": "https://raw.githubusercontent.com/rebootuser/LinEnum/c47f9b226d3ce2848629f25fe142c1b2986bc427/LinEnum.sh"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "LinnEnum must exist on disk at specified location (#{linenum})\n",
+                                "prereq_command": "if [ -f #{linenum} ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "curl --create-dirs #{linenum_url} --output #{linenum}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "chmod +x #{linenum}\nbash #{linenum}\n",
+                            "cleanup_command": "rm -rf #{linenum}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "New script file in the tmp directory",
+                        "auto_generated_guid": "8cd1947b-4a54-41fb-b5ea-07d0ace04f81",
+                        "description": "An attacker may create script files in the /tmp directory using the mktemp utility and execute them. The following commands creates a temp file and places a pointer to it in the variable $TMPFILE, echos the string id into it, and then executes the file using bash, which results in the id command being executed.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "TMPFILE=$(mktemp)\necho \"id\" > $TMPFILE\nbash $TMPFILE\n",
+                            "cleanup_command": "rm $TMPFILE\nunset TMPFILE\n"
+                        }
+                    },
+                    {
+                        "name": "What shell is running",
+                        "auto_generated_guid": "7b38e5cc-47be-44f0-a425-390305c76c17",
+                        "description": "An adversary will want to discover what shell is running so that they can tailor their attacks accordingly. The following commands will discover what shell is running.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "echo $0\nif $(env |grep \"SHELL\" >/dev/null); then env |grep \"SHELL\"; fi\nif $(printenv SHELL >/dev/null); then printenv SHELL; fi\n"
+                        }
+                    },
+                    {
+                        "name": "What shells are available",
+                        "auto_generated_guid": "bf23c7dc-1004-4949-8262-4c1d1ef87702",
+                        "description": "An adversary may want to discover which shell's are available so that they might switch to that shell to tailor their attacks to suit that shell. The following commands will discover what shells are available on the host.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "cat /etc/shells \n"
+                        }
+                    },
+                    {
+                        "name": "Command line scripts",
+                        "auto_generated_guid": "b04ed73c-7d43-4dc8-b563-a2fc595cba1a",
+                        "description": "An adversary may type in elaborate multi-line shell commands into a terminal session because they can't or don't wish to create script files on the host. The following command is a simple loop, echoing out Atomic Red Team was here!\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "command": "for i in $(seq 1 5); do echo \"$i, Atomic Red Team was here!\"; sleep 1; done\n"
+                        }
+                    },
+                    {
+                        "name": "Obfuscated command line scripts",
+                        "auto_generated_guid": "5bec4cc8-f41e-437b-b417-33ff60acf9af",
+                        "description": "An adversary may pre-compute the base64 representations of the terminal commands that they wish to execute in an attempt to avoid or frustrate detection. The following commands base64 encodes the text string id, then base64 decodes the string, then pipes it as a command to bash, which results in the id command being executed.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "[ \"$(uname)\" = 'FreeBSD' ] && encodecmd=\"b64encode -r -\" && decodecmd=\"b64decode -r\" || encodecmd=\"base64 -w 0\" && decodecmd=\"base64 -d\"\nART=$(echo -n \"id\" | $encodecmd)\necho \"\\$ART=$ART\"\necho -n \"$ART\" | $decodecmd |/bin/bash\nunset ART\n"
+                        }
+                    },
+                    {
+                        "name": "Change login shell",
+                        "auto_generated_guid": "c7ac59cb-13cc-4622-81dc-6d2fee9bfac7",
+                        "description": "An adversary may want to use a different login shell. The chsh command changes the user login shell. The following test, creates an art user with a /bin/bash shell, changes the users shell to sh, then deletes the art user. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "chsh - change login shell, must be installed\n",
+                                "prereq_command": "if [ -f /usr/bin/chsh ]; then echo \"exit 0\"; else echo \"exit 1\"; exit 1; fi\n",
+                                "get_prereq_command": "echo \"Automated installer not implemented yet, please install chsh manually\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "bash",
+                            "elevation_required": true,
+                            "command": "[ \"$(uname)\" = 'FreeBSD' ] && pw useradd art -g wheel -s /bin/csh || useradd -s /bin/bash art\ncat /etc/passwd |grep ^art\nchsh -s /bin/sh art\ncat /etc/passwd |grep ^art\n",
+                            "cleanup_command": "[ \"$(uname)\" = 'FreeBSD' ] && rmuser -y art || userdel art\n"
+                        }
+                    },
+                    {
+                        "name": "Environment variable scripts",
+                        "auto_generated_guid": "bdaebd56-368b-4970-a523-f905ff4a8a51",
+                        "description": "An adversary may place scripts in an environment variable because they can't or don't wish to create script files on the host. The following test, in a bash shell, exports the ART variable containing an echo command, then pipes the variable to /bin/bash\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "export ART='echo \"Atomic Red Team was here... T1059.004\"'\necho $ART |/bin/sh\n",
+                            "cleanup_command": "unset ART\n"
+                        }
+                    },
+                    {
+                        "name": "Detecting pipe-to-shell",
+                        "auto_generated_guid": "fca246a8-a585-4f28-a2df-6495973976a1",
+                        "description": "An adversary may develop a useful utility or subvert the CI/CD pipe line of a legitimate utility developer, who requires or suggests installing their utility by piping a curl download directly into bash. Of-course this is a very bad idea. The adversary may also take advantage of this BLIND install method and selectively running extra commands in the install script for those who DO pipe to bash and not for those who DO NOT. This test uses curl to download the pipe-to-shell.sh script, the first time without piping it to bash and the second piping it into bash which executes the echo command.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "remote_url": {
+                                "description": "url of remote payload",
+                                "type": "url",
+                                "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.004/src/pipe-to-shell.sh"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Check if curl is installed on the machine.\n",
+                                "prereq_command": "if [ -x \"$(command -v curl)\" ]; then echo \"curl is installed\"; else echo \"curl is NOT installed\"; exit 1; fi\n",
+                                "get_prereq_command": "which apt && apt update && apt install -y curl || which pkg && pkg update && pkg install -y curl\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "cd /tmp\ncurl -s #{remote_url} |bash\nls -la /tmp/art.txt      \n",
+                            "cleanup_command": "rm /tmp/art.txt\n"
+                        }
+                    },
+                    {
+                        "name": "Current kernel information enumeration",
+                        "auto_generated_guid": "3a53734a-9e26-4f4b-ad15-059e767f5f14",
+                        "description": "An adversary may want to enumerate the kernel information to tailor their attacks for that particular kernel. The following command will enumerate the kernel information.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "uname -srm\n"
+                        }
+                    },
+                    {
+                        "name": "Shell Creation using awk command",
+                        "auto_generated_guid": "ee72b37d-b8f5-46a5-a9e7-0ff50035ffd5",
+                        "description": "In awk the begin rule runs the first record without reading or interpreting it. This way a shell can be created and used to break out from restricted environments with the awk command.\nReference - https://gtfobins.github.io/gtfobins/awk/#shell",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "awk 'BEGIN {system(\"/bin/sh &\")}'",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Creating shell using cpan command",
+                        "auto_generated_guid": "bcd4c2bc-490b-4f91-bd31-3709fe75bbdf",
+                        "description": "cpan lets you execute perl commands with the ! command. It can be used to break out from restricted environments by spawning an interactive system shell.\nReference - https://gtfobins.github.io/gtfobins/cpan/",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "echo '! exec \"/bin/sh &\"' | PERL_MM_USE_DEFAULT=1  cpan",
+                            "name": "sh",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Shell Creation using busybox command",
+                        "auto_generated_guid": "ab4d04af-68dc-4fee-9c16-6545265b3276",
+                        "description": "BusyBox is a multi-call binary. A multi-call binary is an executable program that performs the same job as more than one utility program. It can be used to break out from restricted environments by spawning an interactive system shell. \nReference - https://gtfobins.github.io/gtfobins/busybox/",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "busybox sh &",
+                            "cleanup_command": null,
+                            "name": "sh",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "emacs spawning an interactive system shell",
+                        "auto_generated_guid": "e0742e38-6efe-4dd4-ba5c-2078095b6156",
+                        "description": "emacs can be used to break out from restricted environments by spawning an interactive system shell. Ref: https://gtfobins.github.io/gtfobins/emacs/  \n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Check if emacs is installed on the machine.\n",
+                                "prereq_command": "if [ -x \"$(command -v emacs)\" ]; then echo \"emacs is installed\"; else echo \"emacs is NOT installed\"; exit 1; fi\n",
+                                "get_prereq_command": "which apt && apt update && apt install -y emacs || which pkg && pkg update && pkg install -y emacs || which brew && brew update && brew install --quiet emacs\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo emacs -Q -nw --eval '(term \"/bin/sh &\")'",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:06:06"
+}

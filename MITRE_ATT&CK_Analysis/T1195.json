@@ -1,0 +1,172 @@
+{
+    "id": "T1195",
+    "name": "Supply Chain Compromise",
+    "description": "Adversaries may manipulate products or product delivery mechanisms prior to receipt by a final consumer for the purpose of data or system compromise.\nSupply chain compromise can take place at any stage of the supply chain including:\n* Manipulation of development tools\n* Manipulation of a development environment\n* Manipulation of source code repositories (public or private)\n* Manipulation of source code in open-source dependencies\n* Manipulation of software update/distribution mechanisms\n* Compromised/infected system images (multiple cases of removable media infected at the factory) (Citation: IBM Storwize) (Citation: Schneider Electric USB Malware)\n* Replacement of legitimate software with modified versions\n* Sales of modified/counterfeit products to legitimate distributors\n* Shipment interdiction\nWhile supply chain compromise can impact any component of hardware or software, attackers looking to gain execution have often focused on malicious additions to legitimate software in software distribution or update channels. (Citation: Avast CCleaner3 2018) (Citation: Microsoft Dofoil 2018) (Citation: Command Five SK 2011) Targeting may be specific to a desired victim set (Citation: Symantec Elderwood Sept 2012) or malicious software may be distributed to a broad set of consumers but only move on to additional tactics on specific victims. (Citation: Avast CCleaner3 2018) (Citation: Command Five SK 2011) Popular open source projects that are used as dependencies in many applications may also be targeted as a means to add malicious code to users of the dependency. (Citation: Trendmicro NPM Compromise)",
+    "platforms": "Linux, Windows, macOS",
+    "kill_chain_phases": "Initial Access",
+    "data_sources": "",
+    "detection": "Use verification of distributed binaries through hash checking or other integrity checking mechanisms. Scan downloads for malicious signatures and attempt to test software and updates prior to deployment while taking note of potential suspicious activity. Perform physical inspection of hardware to look for potential tampering.",
+    "url": "https://attack.mitre.org/techniques/T1195",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1195",
+                "atomic_attack_guid": "82a9f001-94c5-495e-9ed5-f530dbded5e2",
+                "atomic_attack_name": "Octopus Scanner Malware Open Source Supply Chain",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Schedule Task Creation From Env Variable Or Potentially Suspicious Path Via Schtasks.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_env_folder.yml",
+                        "remote_content": "title: Schedule Task Creation From Env Variable Or Potentially Suspicious Path Via Schtasks.EXE\nid: 81325ce1-be01-4250-944f-b4789644556f\nrelated:\n    - id: 43f487f0-755f-4c2a-bce7-d6d2eec2fcf8 # TODO: Recreate after baseline\n      type: derived\nstatus: test\ndescription: Detects Schtask creations that point to a suspicious folder or an environment variable often used by malware\nreferences:\n    - https://www.welivesecurity.com/2022/01/18/donot-go-do-not-respawn/\n    - https://www.joesandbox.com/analysis/514608/0/html#324415FF7D8324231381BAD48A052F85DF04\n    - https://blog.talosintelligence.com/gophish-powerrat-dcrat/\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-21\nmodified: 2024-10-28\ntags:\n    - attack.execution\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_1_create:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: ' /create '\n    selection_1_all_folders:\n        CommandLine|contains:\n            - ':\\Perflogs'\n            - ':\\Users\\All Users\\'\n            - ':\\Users\\Default\\'\n            - ':\\Users\\Public'\n            - ':\\Windows\\Temp'\n            - '\\AppData\\Local\\'\n            - '\\AppData\\Roaming\\'\n            - '%AppData%'\n            - '%Public%'\n    selection_2_parent:\n        ParentCommandLine|endswith: '\\svchost.exe -k netsvcs -p -s Schedule'\n    selection_2_some_folders:\n        CommandLine|contains:\n            - ':\\Perflogs'\n            - ':\\Windows\\Temp'\n            - '\\Users\\Public'\n            - '%Public%'\n    filter_optional_other:\n        - ParentCommandLine|contains: 'unattended.ini'\n        - CommandLine|contains: 'update_task.xml'\n    filter_optional_team_viewer:\n        CommandLine|contains: '/Create /TN TVInstallRestore /TR'\n    filter_optional_avira_install:\n        # Comment out this filter if you dont use AVIRA\n        CommandLine|contains|all:\n            - '/Create /Xml \"C:\\Users\\'\n            - '\\AppData\\Local\\Temp\\.CR.'\n            - 'Avira_Security_Installation.xml'\n    filter_optional_avira_other:\n        # Comment out this filter if you dont use AVIRA\n        CommandLine|contains|all:\n            - '/Create /F /TN'\n            - '/Xml '\n            - '\\AppData\\Local\\Temp\\is-'\n            - 'Avira_'\n        CommandLine|contains:\n            - '.tmp\\UpdateFallbackTask.xml'\n            - '.tmp\\WatchdogServiceControlManagerTimeout.xml'\n            - '.tmp\\SystrayAutostart.xml'\n            - '.tmp\\MaintenanceTask.xml'\n    filter_optional_klite_codec:\n        CommandLine|contains|all:\n            - '\\AppData\\Local\\Temp\\'\n            - '/Create /TN \"klcp_update\" /XML '\n            - '\\klcp_update_task.xml'\n    condition: ( all of selection_1_* or all of selection_2_* ) and not 1 of filter_optional_*\nfalsepositives:\n    - Benign scheduled tasks creations or executions that happen often during software installations\n    - Software that uses the AppData folder and scheduled tasks to update the software in the AppData folders\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Scheduled Task Creation Via Schtasks.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+                        "remote_content": "title: Scheduled Task Creation Via Schtasks.EXE\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nstatus: test\ndescription: Detects the creation of scheduled tasks by user accounts via the \"schtasks\" utility.\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-01-16\nmodified: 2024-01-18\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1053.005\n    - attack.s0111\n    - car.2013-08-001\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: ' /create '\n    filter_main_system_user:\n        User|contains: # covers many language settings\n            - 'AUTHORI'\n            - 'AUTORI'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrative activity\n    - Software installation\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Command and Scripting Interpreter Hunting Path Traversal",
+                        "rule_link": "https://research.splunk.com/endpoint/d0026380-b3c4-4da0-ac8e-02790063ff6b/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5dd6477f-5d64-4026-bb9f-4cff950d210f",
+                    "5de7883b-22bc-4264-995c-4d1f950d210f",
+                    "5c7c0198-81b0-41d8-9839-4c4d02de0b81",
+                    "805c55d9-31e6-4846-9878-c34c75054fe9",
+                    "3f18edba-28f4-4bb9-82c3-8aa60dcac5f7",
+                    "97d8eadb-0459-4c1d-bf1a-e053bd75df61",
+                    "5d5bfb96-ff34-4470-9107-cfdc950d210f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5dd6477f-5d64-4026-bb9f-4cff950d210f",
+                        "lookup_data": {
+                            "description": "OSINT -  Wrong hashes (from getmonero.org) #6151 - malicious binaries",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5dd6477f-5d64-4026-bb9f-4cff950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1574325174",
+                            "uuid": "5dd6477f-5d64-4026-bb9f-4cff950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5de7883b-22bc-4264-995c-4d1f950d210f",
+                        "lookup_data": {
+                            "description": "Malicious PyPI packages",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5de7883b-22bc-4264-995c-4d1f950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1575466984",
+                            "uuid": "5de7883b-22bc-4264-995c-4d1f950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c7c0198-81b0-41d8-9839-4c4d02de0b81",
+                        "lookup_data": {
+                            "description": "OSINT - The Supreme Backdoor Factory",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c7c0198-81b0-41d8-9839-4c4d02de0b81.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1551631434",
+                            "uuid": "5c7c0198-81b0-41d8-9839-4c4d02de0b81",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "805c55d9-31e6-4846-9878-c34c75054fe9",
+                        "lookup_data": {
+                            "description": "Detects Octopus Scanner Malware.",
+                            "raw": "author: NVISO\ndate: 2020/06/09\ndescription: Detects Octopus Scanner Malware.\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith:\n    - \\AppData\\Local\\Microsoft\\Cache134.dat\n    - \\AppData\\Local\\Microsoft\\ExplorerSync.db\nfalsepositives:\n- Unknown\nid: 805c55d9-31e6-4846-9878-c34c75054fe9\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://securitylab.github.com/research/octopus-scanner-malware-open-source-supply-chain\nstatus: test\ntags:\n- attack.t1195\n- attack.t1195.001\ntitle: Octopus Scanner Malware\n",
+                            "sigma:id": "805c55d9-31e6-4846-9878-c34c75054fe9",
+                            "title": "Octopus Scanner Malware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3f18edba-28f4-4bb9-82c3-8aa60dcac5f7",
+                        "lookup_data": {
+                            "capec": "CAPEC-439",
+                            "mitre-attack-id": "T1195",
+                            "mitre-cti:description": "Adversaries may manipulate products or product delivery mechanisms prior to receipt by a final consumer for the purpose of data or system compromise.\n\nSupply chain compromise can take place at any stage of the supply chain including:\n\n* Manipulation of development tools\n* Manipulation of a development environment\n* Manipulation of source code repositories (public or private)\n* Manipulation of source code in open-source dependencies\n* Manipulation of software update/distribution mechanisms\n* Compromised/infected system images (multiple cases of removable media infected at the factory)(Citation: IBM Storwize)(Citation: Schneider Electric USB Malware) \n* Replacement of legitimate software with modified versions\n* Sales of modified/counterfeit products to legitimate distributors\n* Shipment interdiction\n\nWhile supply chain compromise can impact any component of hardware or software, adversaries looking to gain execution have often focused on malicious additions to legitimate software in software distribution or update channels.(Citation: Avast CCleaner3 2018)(Citation: Microsoft Dofoil 2018)(Citation: Command Five SK 2011) Targeting may be specific to a desired victim set or malicious software may be distributed to a broad set of consumers but only move on to additional tactics on specific victims.(Citation: Symantec Elderwood Sept 2012)(Citation: Avast CCleaner3 2018)(Citation: Command Five SK 2011) Popular open source projects that are used as dependencies in many applications may also be targeted as a means to add malicious code to users of the dependency.(Citation: Trendmicro NPM Compromise)",
+                            "mitre-cti:name": "Supply Chain Compromise",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'Windows', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Veeral Patel'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--3f18edba-28f4-4bb9-82c3-8aa60dcac5f7', 'created': '2018-04-18T17:59:24.739Z', 'x_mitre_version': '1.5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1195', 'url': 'https://attack.mitre.org/techniques/T1195'}, {'source_name': 'Avast CCleaner3 2018', 'url': 'https://blog.avast.com/new-investigations-in-ccleaner-incident-point-to-a-possible-third-stage-that-had-keylogger-capacities', 'description': 'Avast Threat Intelligence Team. (2018, March 8). New investigations into the CCleaner incident point to a possible third stage that had keylogger capacities. Retrieved March 15, 2018.'}, {'source_name': 'Command Five SK 2011', 'url': 'https://www.commandfive.com/papers/C5_APT_SKHack.pdf', 'description': 'Command Five Pty Ltd. (2011, September). SK Hack by an Advanced Persistent Threat. Retrieved April 6, 2018.'}, {'source_name': 'IBM Storwize', 'url': 'https://www-01.ibm.com/support/docview.wss?uid=ssg1S1010146&myns=s028&mynp=OCSTHGUJ&mynp=OCSTLM5A&mynp=OCSTLM6B&mynp=OCHW206&mync=E&cm_sp=s028-_-OCSTHGUJ-OCSTLM5A-OCSTLM6B-OCHW206-_-E', 'description': 'IBM Support. (2017, April 26). Storwize USB Initialization Tool may contain malicious code. Retrieved May 28, 2019.'}, {'source_name': 'Symantec Elderwood Sept 2012', 'url': 'https://web.archive.org/web/20190717233006/http://www.symantec.com/content/en/us/enterprise/media/security_response/whitepapers/the-elderwood-project.pdf', 'description': \"O'Gorman, G., and McDonald, G.. (2012, September 6). The Elderwood Project. Retrieved February 15, 2018.\"}, {'source_name': 'Schneider Electric USB Malware', 'url': 'https://www.se.com/ww/en/download/document/SESN-2018-236-01/', 'description': 'Schneider Electric. (2018, August 24). Security Notification – USB Removable Media Provided With Conext Combox and Conext Battery Monitor. Retrieved May 28, 2019.'}, {'source_name': 'Trendmicro NPM Compromise', 'url': 'https://www.trendmicro.com/vinfo/dk/security/news/cybercrime-and-digital-threats/hacker-infects-node-js-package-to-steal-from-bitcoin-wallets', 'description': 'Trendmicro. (2018, November 29). Hacker Infects Node.js Package to Steal from Bitcoin Wallets. Retrieved April 10, 2019.'}, {'source_name': 'Microsoft Dofoil 2018', 'url': 'https://cloudblogs.microsoft.com/microsoftsecure/2018/03/07/behavior-monitoring-combined-with-machine-learning-spoils-a-massive-dofoil-coin-mining-campaign/', 'description': 'Windows Defender Research. (2018, March 7). Behavior monitoring combined with machine learning spoils a massive Dofoil coin mining campaign. Retrieved March 20, 2018.'}, {'url': 'https://capec.mitre.org/data/definitions/437.html', 'source_name': 'capec', 'external_id': 'CAPEC-437'}, {'url': 'https://capec.mitre.org/data/definitions/438.html', 'source_name': 'capec', 'external_id': 'CAPEC-438'}, {'url': 'https://capec.mitre.org/data/definitions/439.html', 'source_name': 'capec', 'external_id': 'CAPEC-439'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may manipulate products or product delivery mechanisms prior to receipt by a final consumer for the purpose of data or system compromise.\\n\\nSupply chain compromise can take place at any stage of the supply chain including:\\n\\n* Manipulation of development tools\\n* Manipulation of a development environment\\n* Manipulation of source code repositories (public or private)\\n* Manipulation of source code in open-source dependencies\\n* Manipulation of software update/distribution mechanisms\\n* Compromised/infected system images (multiple cases of removable media infected at the factory)(Citation: IBM Storwize)(Citation: Schneider Electric USB Malware) \\n* Replacement of legitimate software with modified versions\\n* Sales of modified/counterfeit products to legitimate distributors\\n* Shipment interdiction\\n\\nWhile supply chain compromise can impact any component of hardware or software, adversaries looking to gain execution have often focused on malicious additions to legitimate software in software distribution or update channels.(Citation: Avast CCleaner3 2018)(Citation: Microsoft Dofoil 2018)(Citation: Command Five SK 2011) Targeting may be specific to a desired victim set or malicious software may be distributed to a broad set of consumers but only move on to additional tactics on specific victims.(Citation: Symantec Elderwood Sept 2012)(Citation: Avast CCleaner3 2018)(Citation: Command Five SK 2011) Popular open source projects that are used as dependencies in many applications may also be targeted as a means to add malicious code to users of the dependency.(Citation: Trendmicro NPM Compromise)', 'modified': '2022-04-28T16:03:22.870Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Supply Chain Compromise', 'x_mitre_detection': 'Use verification of distributed binaries through hash checking or other integrity checking mechanisms. Scan downloads for malicious signatures and attempt to test software and updates prior to deployment while taking note of potential suspicious activity. Perform physical inspection of hardware to look for potential tampering.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'initial-access'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['File: File Metadata', 'Sensor Health: Host Status'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "97d8eadb-0459-4c1d-bf1a-e053bd75df61",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1195",
+                            "mitre-cti:description": "Apply supply chain risk management (SCRM) practices and procedures (Citation: MITRE SE Guide 2014), such as supply chain analysis and appropriate risk management, throughout the life-cycle of a system.\n\nLeverage established software development lifecycle (SDLC) practices (Citation: NIST Supply Chain 2012): \n\n* Uniquely Identify Supply Chain Elements, Processes, and Actors\n* Limit Access and Exposure within the Supply Chain\n* Establish and Maintain the Provenance of Elements, Processes, Tools, and Data\n* Share Information within Strict Limits\n* Perform SCRM Awareness and Training\n* Use Defensive Design for Systems, Elements, and Processes\n* Perform Continuous Integrator Review\n* Strengthen Delivery Mechanisms\n* Assure Sustainment Activities and Processes\n* Manage Disposal and Final Disposition Activities throughout the System or Element Life Cycle\n\nA patch management process should be implemented to check unused dependencies, unmaintained and/or previously vulnerable dependencies, unnecessary features, components, files, and documentation. Continuous monitoring of vulnerability sources and the use of automatic and manual code review tools should also be implemented as well. (Citation: OWASP Top 10 2017)",
+                            "mitre-cti:name": "Supply Chain Compromise Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--97d8eadb-0459-4c1d-bf1a-e053bd75df61', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/mitigations/T1195', 'external_id': 'T1195'}, {'source_name': 'MITRE SE Guide 2014', 'description': 'The MITRE Corporation. (2014). MITRE Systems Engineering Guide. Retrieved April 6, 2018.', 'url': 'https://www.mitre.org/sites/default/files/publications/se-guide-book-interactive.pdf'}, {'source_name': 'NIST Supply Chain 2012', 'description': 'Boyens, J,. Et al.. (2002, October). Notional Supply Chain Risk Management Practices for Federal Information Systems. Retrieved April 6, 2018.', 'url': 'http://dx.doi.org/10.6028/NIST.IR.7622'}, {'description': 'OWASP. (2017, April 16). OWASP Top 10 2017 - The Ten Most Critical Web Application Security Risks. Retrieved February 12, 2019.', 'url': 'https://owasp.org/www-project-top-ten/OWASP_Top_Ten_2017/', 'source_name': 'OWASP Top 10 2017'}], 'modified': '2020-07-14T22:23:56.006Z', 'name': 'Supply Chain Compromise Mitigation', 'description': 'Apply supply chain risk management (SCRM) practices and procedures (Citation: MITRE SE Guide 2014), such as supply chain analysis and appropriate risk management, throughout the life-cycle of a system.\\n\\nLeverage established software development lifecycle (SDLC) practices (Citation: NIST Supply Chain 2012): \\n\\n* Uniquely Identify Supply Chain Elements, Processes, and Actors\\n* Limit Access and Exposure within the Supply Chain\\n* Establish and Maintain the Provenance of Elements, Processes, Tools, and Data\\n* Share Information within Strict Limits\\n* Perform SCRM Awareness and Training\\n* Use Defensive Design for Systems, Elements, and Processes\\n* Perform Continuous Integrator Review\\n* Strengthen Delivery Mechanisms\\n* Assure Sustainment Activities and Processes\\n* Manage Disposal and Final Disposition Activities throughout the System or Element Life Cycle\\n\\nA patch management process should be implemented to check unused dependencies, unmaintained and/or previously vulnerable dependencies, unnecessary features, components, files, and documentation. Continuous monitoring of vulnerability sources and the use of automatic and manual code review tools should also be implemented as well. (Citation: OWASP Top 10 2017)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d5bfb96-ff34-4470-9107-cfdc950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Ruby/Gem Warning! is rest-client 1.6.13 hijacked? #713",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d5bfb96-ff34-4470-9107-cfdc950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566309784",
+                            "uuid": "5d5bfb96-ff34-4470-9107-cfdc950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1195",
+                "display_name": "Supply Chain Compromise",
+                "atomic_tests": [
+                    {
+                        "name": "Octopus Scanner Malware Open Source Supply Chain",
+                        "auto_generated_guid": "82a9f001-94c5-495e-9ed5-f530dbded5e2",
+                        "description": "This test simulates an adversary Octopus drop the RAT dropper ExplorerSync.db\n[octopus-scanner-malware-open-source-supply-chain](https://securitylab.github.com/research/octopus-scanner-malware-open-source-supply-chain/)\n[the-supreme-backdoor-factory](https://www.dfir.it/blog/2019/02/26/the-supreme-backdoor-factory/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "rat_payload": {
+                                "description": "RAT dropper ExplorerSync.db",
+                                "type": "path",
+                                "default": "$env:TEMP\\ExplorerSync.db"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "ExplorerSync.db must exist on disk at specified location (#{rat_payload})\n",
+                                "prereq_command": "if (Test-Path #{rat_payload}) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Out-File -FilePath \"#{rat_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "copy %temp%\\ExplorerSync.db %temp%\\..\\Microsoft\\ExplorerSync.db\nschtasks /create /tn ExplorerSync /tr \"javaw -jar %temp%\\..\\Microsoft\\ExplorerSync.db\" /sc MINUTE /f\n",
+                            "cleanup_command": "schtasks /delete /tn ExplorerSync /F 2>null\ndel %temp%\\..\\Microsoft\\ExplorerSync.db 2>null\ndel %temp%\\ExplorerSync.db 2>null\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:45:38"
+}

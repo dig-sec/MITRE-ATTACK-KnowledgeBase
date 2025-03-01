@@ -1,0 +1,433 @@
+{
+    "id": "T1087.001",
+    "name": "Local Account",
+    "description": "Adversaries may attempt to get a listing of local system accounts. This information can help adversaries determine which local accounts exist on a system to aid in follow-on behavior.\nCommands such as `net user` and `net localgroup` of the [Net](S0039) utility and `id` and `groups`on macOS and Linux can list local users and groups. On Linux, local users can also be enumerated through the use of the `/etc/passwd` file. On macOS the `dscl . list /Users` command can be used to enumerate local accounts.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution, File: File Access",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).\nMonitor for processes that can be used to enumerate user accounts, such as `net.exe` and `net1.exe`, especially when executed in quick succession.(Citation: Elastic - Koadiac Detection with EQL)",
+    "url": "https://attack.mitre.org/techniques/T1087/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1087.001",
+                "atomic_attack_guid": "9762ac6e-aa60-4449-a2f0-cbbd0e1fd22c",
+                "atomic_attack_name": "ESXi - Local Account Discovery via ESXCLI",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Tunneling Tool Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_susp_exfil_and_tunneling_tool_execution.yml",
+                        "remote_content": "title: Tunneling Tool Execution\nid: c75309a3-59f8-4a8d-9c2c-4c927ad50555\nstatus: test\ndescription: Detects the execution of well known tools that can be abused for data exfiltration and tunneling.\nauthor: Daniil Yugoslavskiy, oscd.community\nreferences:\n    - https://www.microsoft.com/en-us/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\ndate: 2019-10-24\nmodified: 2024-01-18\ntags:\n    - attack.exfiltration\n    - attack.command-and-control\n    - attack.t1041\n    - attack.t1572\n    - attack.t1071.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\httptunnel.exe'\n            - '\\plink.exe'\n            - '\\socat.exe'\n            - '\\stunnel.exe'\n    condition: selection\nfalsepositives:\n    - Legitimate administrators using one of these tools\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Protocol Tunneling with Plink",
+                        "rule_link": "https://research.splunk.com/endpoint/8aac5e1e-0fab-4437-af0b-c6e60af23eed/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1087.001",
+                "atomic_attack_guid": "a138085e-bfe5-46ba-a242-74a6fb884af3",
+                "atomic_attack_name": "Enumerate logged on users via CMD (Local)",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "System User Discovery With Query",
+                        "rule_link": "https://research.splunk.com/endpoint/ad03bfcf-8a91-4bc2-a500-112993deba87/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "02030f2f-6199-49ec-b258-ea71b07e03dc",
+                    "02773bed-83bf-469f-b7ff-e676e7d78bab",
+                    "502b42de-4306-40b4-9596-6f590c81f073",
+                    "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                    "7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c",
+                    "c8a180d6-47a3-4345-a609-53f9c3d834fc",
+                    "cd072b25-a418-4f98-8ebc-5093fb38fe1a",
+                    "89819aa4-bbd6-46bc-88ec-c7f7fe30efa6",
+                    "aae1243f-d8af-40d8-ab20-33fc6d0c55bc",
+                    "b45e3d6f-42c6-47d8-a478-df6bd6cf534c",
+                    "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+                    "f376c8a7-a2d0-4ddc-aa0c-16c17236d962",
+                    "ddf36b67-e872-4507-ab2e-46bda21b842c",
+                    "25659dd6-ea12-45c4-97e6-381e3e4b593e"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "02030f2f-6199-49ec-b258-ea71b07e03dc",
+                        "lookup_data": {
+                            "description": "Detects Commandlet names from well-known PowerShell exploitation frameworks",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/02\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - Add-Exfiltration\n    - Add-Persistence\n    - Add-RegBackdoor\n    - Add-RemoteRegBackdoor\n    - Add-ScrnSaveBackdoor\n    - Check-VM\n    - ConvertTo-Rc4ByteStream\n    - Decrypt-Hash\n    - Do-Exfiltration\n    - Enabled-DuplicateToken\n    - Exploit-Jboss\n    - Find-Fruit\n    - Find-GPOLocation\n    - Find-TrustedDocuments\n    - Get-ApplicationHost\n    - Get-ChromeDump\n    - Get-ClipboardContents\n    - Get-FoxDump\n    - Get-GPPPassword\n    - Get-IndexedItem\n    - Get-Keystrokes\n    - Get-LSASecret\n    - Get-PassHashes\n    - Get-RegAlwaysInstallElevated\n    - Get-RegAutoLogon\n    - Get-RemoteBootKey\n    - Get-RemoteCachedCredential\n    - Get-RemoteLocalAccountHash\n    - Get-RemoteLSAKey\n    - Get-RemoteMachineAccountHash\n    - Get-RemoteNLKMKey\n    - Get-RickAstley\n    - Get-Screenshot\n    - Get-SecurityPackages\n    - Get-ServiceFilePermission\n    - Get-ServicePermission\n    - Get-ServiceUnquoted\n    - Get-SiteListPassword\n    - Get-System\n    - Get-TimedScreenshot\n    - Get-UnattendedInstallFile\n    - Get-Unconstrained\n    - Get-USBKeystrokes\n    - Get-VaultCredential\n    - Get-VulnAutoRun\n    - Get-VulnSchTask\n    - Gupt-Backdoor\n    - HTTP-Login\n    - Install-ServiceBinary\n    - Install-SSP\n    - Invoke-ACLScanner\n    - Invoke-ADSBackdoor\n    - Invoke-AllChecks\n    - Invoke-ARPScan\n    - Invoke-AzureHound\n    - Invoke-BackdoorLNK\n    - Invoke-BadPotato\n    - Invoke-BetterSafetyKatz\n    - Invoke-BypassUAC\n    - Invoke-Carbuncle\n    - Invoke-Certify\n    - Invoke-ConPtyShell\n    - Invoke-CredentialInjection\n    - Invoke-DAFT\n    - Invoke-DCSync\n    - Invoke-DinvokeKatz\n    - Invoke-DllInjection\n    - Invoke-DomainPasswordSpray\n    - Invoke-DowngradeAccount\n    - Invoke-EgressCheck\n    - Invoke-Eyewitness\n    - Invoke-FakeLogonScreen\n    - Invoke-Farmer\n    - Invoke-Get-RBCD-Threaded\n    - Invoke-Gopher\n    - Invoke-Grouper\n    - Invoke-HandleKatz\n    - Invoke-ImpersonatedProcess\n    - Invoke-ImpersonateSystem\n    - Invoke-InteractiveSystemPowerShell\n    - Invoke-Internalmonologue\n    - Invoke-Inveigh\n    - Invoke-InveighRelay\n    - Invoke-KrbRelay\n    - Invoke-LdapSignCheck\n    - Invoke-Lockless\n    - Invoke-MalSCCM\n    - Invoke-Mimikatz\n    - Invoke-Mimikittenz\n    - Invoke-MITM6\n    - Invoke-NanoDump\n    - Invoke-NetRipper\n    - Invoke-Nightmare\n    - Invoke-NinjaCopy\n    - Invoke-OfficeScrape\n    - Invoke-OxidResolver\n    - Invoke-P0wnedshell\n    - Invoke-Paranoia\n    - Invoke-PortScan\n    - Invoke-PoshRatHttp\n    - Invoke-PostExfil\n    - Invoke-PowerDump\n    - Invoke-PowerShellTCP\n    - Invoke-PowerShellWMI\n    - Invoke-PPLDump\n    - Invoke-PsExec\n    - Invoke-PSInject\n    - Invoke-PsUaCme\n    - Invoke-ReflectivePEInjection\n    - Invoke-ReverseDNSLookup\n    - Invoke-Rubeus\n    - Invoke-RunAs\n    - Invoke-SafetyKatz\n    - Invoke-SauronEye\n    - Invoke-SCShell\n    - Invoke-Seatbelt\n    - Invoke-ServiceAbuse\n    - Invoke-ShadowSpray\n    - Invoke-Sharp\n    - Invoke-Shellcode\n    - Invoke-SMBScanner\n    - Invoke-Snaffler\n    - Invoke-Spoolsample\n    - Invoke-SpraySinglePassword\n    - Invoke-SSHCommand\n    - Invoke-StandIn\n    - Invoke-StickyNotesExtract\n    - Invoke-SystemCommand\n    - Invoke-Tasksbackdoor\n    - Invoke-Tater\n    - Invoke-Thunderfox\n    - Invoke-ThunderStruck\n    - Invoke-TokenManipulation\n    - Invoke-Tokenvator\n    - Invoke-TotalExec\n    - Invoke-UrbanBishop\n    - Invoke-UserHunter\n    - Invoke-VoiceTroll\n    - Invoke-Whisker\n    - Invoke-WinEnum\n    - Invoke-winPEAS\n    - Invoke-WireTap\n    - Invoke-WmiCommand\n    - Invoke-WScriptBypassUAC\n    - Invoke-Zerologon\n    - MailRaider\n    - New-HoneyHash\n    - New-InMemoryModule\n    - Out-Minidump\n    - Port-Scan\n    - PowerBreach\n    - 'powercat '\n    - PowerUp\n    - PowerView\n    - Remove-Update\n    - Set-MacAttribute\n    - Set-Wallpaper\n    - Show-TargetScreen\n    - Start-CaptureServer\n    - Start-WebcamRecorder\n    - VolumeShadowCopyTools\nfalsepositives:\n- Unknown\nid: 02030f2f-6199-49ec-b258-ea71b07e03dc\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/23\nreferences:\n- https://adsecurity.org/?p=2921\n- https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n- https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n- https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n- https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n- https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n- https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/\n- https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/\n- https://github.com/calebstewart/CVE-2021-1675\n- https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n- https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n- https://github.com/HarmJ0y/DAMP\n- https://github.com/samratashok/nishang\n- https://github.com/DarkCoderSc/PowerRunAsSystem/\n- https://github.com/besimorhino/powercat\nrelated:\n- id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n  type: derived\n- id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.discovery\n- attack.t1482\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1069\n- attack.t1059.001\ntitle: Malicious PowerShell Commandlets - ProcessCreation\n",
+                            "sigma:id": "02030f2f-6199-49ec-b258-ea71b07e03dc",
+                            "title": "Malicious PowerShell Commandlets - ProcessCreation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02773bed-83bf-469f-b7ff-e676e7d78bab",
+                        "lookup_data": {
+                            "description": "Detects default file names outputted by the BloodHound collection tool SharpHound",
+                            "raw": "author: C.J. May\ndate: 2022/08/09\ndescription: Detects default file names outputted by the BloodHound collection tool\n  SharpHound\ndetection:\n  condition: 1 of selection*\n  selection1:\n    TargetFilename|endswith:\n    - _BloodHound.zip\n    - _computers.json\n    - _containers.json\n    - _domains.json\n    - _gpos.json\n    - _groups.json\n    - _ous.json\n    - _users.json\n  selection2:\n    TargetFilename|contains|all:\n    - BloodHound\n    - .zip\nfalsepositives:\n- Unknown\nid: 02773bed-83bf-469f-b7ff-e676e7d78bab\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/08/09\nreferences:\n- https://academy.hackthebox.com/course/preview/active-directory-bloodhound/bloodhound--data-collection\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.001\n- attack.t1069.002\n- attack.execution\n- attack.t1059.001\ntitle: BloodHound Collection Files\n",
+                            "sigma:id": "02773bed-83bf-469f-b7ff-e676e7d78bab",
+                            "title": "BloodHound Collection Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "502b42de-4306-40b4-9596-6f590c81f073",
+                        "lookup_data": {
+                            "description": "Local accounts, System Owner/User discovery using operating systems utilities",
+                            "raw": "author: Timur Zinniatullin, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/21\ndescription: Local accounts, System Owner/User discovery using operating systems utilities\ndetection:\n  condition: (selection_cmd and not filter_cmd) or (selection_net and not filter_net)\n    or 1 of selection_other_*\n  filter_cmd:\n    CommandLine|contains: ' rmdir '\n  filter_net:\n    CommandLine|contains:\n    - /domain\n    - /add\n    - /delete\n    - /active\n    - /expires\n    - /passwordreq\n    - /scriptpath\n    - /times\n    - /workstations\n  selection_cmd:\n    CommandLine|contains|all:\n    - ' /c'\n    - 'dir '\n    - \\Users\\\n    Image|endswith: \\cmd.exe\n  selection_net:\n    CommandLine|contains: user\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  selection_other_cmdkey:\n    CommandLine|contains: ' /l'\n    Image|endswith: \\cmdkey.exe\n  selection_other_img:\n    Image|endswith:\n    - \\whoami.exe\n    - \\quser.exe\n    - \\qwinsta.exe\n  selection_other_wmi:\n    CommandLine|contains|all:\n    - useraccount\n    - get\n    Image|endswith: \\wmic.exe\nfalsepositives:\n- Legitimate administrator or user enumerates local users for legitimate reason\nid: 502b42de-4306-40b4-9596-6f590c81f073\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/03\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1033/T1033.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1033\n- attack.t1087.001\ntitle: Local Accounts Discovery\n",
+                            "sigma:id": "502b42de-4306-40b4-9596-6f590c81f073",
+                            "title": "Local Accounts Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                        "lookup_data": {
+                            "description": "Detects execution of Net.exe, whether suspicious or benign.",
+                            "raw": "author: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community\n  (improvements)\ndate: 2019/01/16\ndescription: Detects execution of Net.exe, whether suspicious or benign.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' group'\n    - ' localgroup'\n    - ' user'\n    - ' view'\n    - ' share'\n    - ' accounts'\n    - ' stop '\n    - ' start'\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Will need to be tuned. If using Splunk, I recommend | stats count by Computer,CommandLine\n  following the search for easy hunting by computer/CommandLine.\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n- https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n- https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n- https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1007\n- attack.t1049\n- attack.t1018\n- attack.t1135\n- attack.t1201\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1087.001\n- attack.t1087.002\n- attack.lateral_movement\n- attack.t1021.002\n- attack.s0039\ntitle: Net.exe Execution\n",
+                            "sigma:id": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                            "title": "Net.exe Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c",
+                        "lookup_data": {
+                            "description": "Detects Commandlet names from well-known PowerShell exploitation frameworks",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/20\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\ndetection:\n  condition: selection\n  selection:\n    Payload|contains:\n    - Add-Exfiltration\n    - Add-Persistence\n    - Add-RegBackdoor\n    - Add-RemoteRegBackdoor\n    - Add-ScrnSaveBackdoor\n    - Check-VM\n    - ConvertTo-Rc4ByteStream\n    - Decrypt-Hash\n    - Do-Exfiltration\n    - Enabled-DuplicateToken\n    - Exploit-Jboss\n    - Find-Fruit\n    - Find-GPOLocation\n    - Find-TrustedDocuments\n    - Get-ApplicationHost\n    - Get-ChromeDump\n    - Get-ClipboardContents\n    - Get-FoxDump\n    - Get-GPPPassword\n    - Get-IndexedItem\n    - Get-Keystrokes\n    - Get-LSASecret\n    - Get-PassHashes\n    - Get-RegAlwaysInstallElevated\n    - Get-RegAutoLogon\n    - Get-RemoteBootKey\n    - Get-RemoteCachedCredential\n    - Get-RemoteLocalAccountHash\n    - Get-RemoteLSAKey\n    - Get-RemoteMachineAccountHash\n    - Get-RemoteNLKMKey\n    - Get-RickAstley\n    - Get-Screenshot\n    - Get-SecurityPackages\n    - Get-ServiceFilePermission\n    - Get-ServicePermission\n    - Get-ServiceUnquoted\n    - Get-SiteListPassword\n    - Get-System\n    - Get-TimedScreenshot\n    - Get-UnattendedInstallFile\n    - Get-Unconstrained\n    - Get-USBKeystrokes\n    - Get-VaultCredential\n    - Get-VulnAutoRun\n    - Get-VulnSchTask\n    - Gupt-Backdoor\n    - HTTP-Login\n    - Install-ServiceBinary\n    - Install-SSP\n    - Invoke-ACLScanner\n    - Invoke-ADSBackdoor\n    - Invoke-AllChecks\n    - Invoke-ARPScan\n    - Invoke-AzureHound\n    - Invoke-BackdoorLNK\n    - Invoke-BadPotato\n    - Invoke-BetterSafetyKatz\n    - Invoke-BypassUAC\n    - Invoke-Carbuncle\n    - Invoke-Certify\n    - Invoke-ConPtyShell\n    - Invoke-CredentialInjection\n    - Invoke-DAFT\n    - Invoke-DCSync\n    - Invoke-DinvokeKatz\n    - Invoke-DllInjection\n    - Invoke-DomainPasswordSpray\n    - Invoke-DowngradeAccount\n    - Invoke-EgressCheck\n    - Invoke-Eyewitness\n    - Invoke-FakeLogonScreen\n    - Invoke-Farmer\n    - Invoke-Get-RBCD-Threaded\n    - Invoke-Gopher\n    - Invoke-Grouper\n    - Invoke-HandleKatz\n    - Invoke-ImpersonatedProcess\n    - Invoke-ImpersonateSystem\n    - Invoke-InteractiveSystemPowerShell\n    - Invoke-Internalmonologue\n    - Invoke-Inveigh\n    - Invoke-InveighRelay\n    - Invoke-KrbRelay\n    - Invoke-LdapSignCheck\n    - Invoke-Lockless\n    - Invoke-MalSCCM\n    - Invoke-Mimikatz\n    - Invoke-Mimikittenz\n    - Invoke-MITM6\n    - Invoke-NanoDump\n    - Invoke-NetRipper\n    - Invoke-Nightmare\n    - Invoke-NinjaCopy\n    - Invoke-OfficeScrape\n    - Invoke-OxidResolver\n    - Invoke-P0wnedshell\n    - Invoke-Paranoia\n    - Invoke-PortScan\n    - Invoke-PoshRatHttp\n    - Invoke-PostExfil\n    - Invoke-PowerDump\n    - Invoke-PowerShellTCP\n    - Invoke-PowerShellWMI\n    - Invoke-PPLDump\n    - Invoke-PsExec\n    - Invoke-PSInject\n    - Invoke-PsUaCme\n    - Invoke-ReflectivePEInjection\n    - Invoke-ReverseDNSLookup\n    - Invoke-Rubeus\n    - Invoke-RunAs\n    - Invoke-SafetyKatz\n    - Invoke-SauronEye\n    - Invoke-SCShell\n    - Invoke-Seatbelt\n    - Invoke-ServiceAbuse\n    - Invoke-ShadowSpray\n    - Invoke-Sharp\n    - Invoke-Shellcode\n    - Invoke-SMBScanner\n    - Invoke-Snaffler\n    - Invoke-Spoolsample\n    - Invoke-SpraySinglePassword\n    - Invoke-SSHCommand\n    - Invoke-StandIn\n    - Invoke-StickyNotesExtract\n    - Invoke-SystemCommand\n    - Invoke-Tasksbackdoor\n    - Invoke-Tater\n    - Invoke-Thunderfox\n    - Invoke-ThunderStruck\n    - Invoke-TokenManipulation\n    - Invoke-Tokenvator\n    - Invoke-TotalExec\n    - Invoke-UrbanBishop\n    - Invoke-UserHunter\n    - Invoke-VoiceTroll\n    - Invoke-Whisker\n    - Invoke-WinEnum\n    - Invoke-winPEAS\n    - Invoke-WireTap\n    - Invoke-WmiCommand\n    - Invoke-WScriptBypassUAC\n    - Invoke-Zerologon\n    - MailRaider\n    - New-HoneyHash\n    - New-InMemoryModule\n    - Out-Minidump\n    - Port-Scan\n    - PowerBreach\n    - 'powercat '\n    - PowerUp\n    - PowerView\n    - Remove-Update\n    - Set-MacAttribute\n    - Set-Wallpaper\n    - Show-TargetScreen\n    - Start-CaptureServer\n    - Start-WebcamRecorder\n    - VolumeShadowCopyTools\nfalsepositives:\n- Unknown\nid: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2023/01/23\nreferences:\n- https://adsecurity.org/?p=2921\n- https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n- https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n- https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n- https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n- https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n- https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/\n- https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/\n- https://github.com/calebstewart/CVE-2021-1675\n- https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n- https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n- https://github.com/HarmJ0y/DAMP\n- https://github.com/samratashok/nishang\n- https://github.com/DarkCoderSc/PowerRunAsSystem/\n- https://github.com/besimorhino/powercat\nrelated:\n- id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n  type: similar\n- id: 02030f2f-6199-49ec-b258-ea71b07e03dc\n  type: similar\nstatus: test\ntags:\n- attack.execution\n- attack.discovery\n- attack.t1482\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1069\n- attack.t1059.001\ntitle: Malicious PowerShell Commandlets - PoshModule\n",
+                            "sigma:id": "7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c",
+                            "title": "Malicious PowerShell Commandlets - PoshModule",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c8a180d6-47a3-4345-a609-53f9c3d834fc",
+                        "lookup_data": {
+                            "description": "Detects suspicious reconnaissance command line activity on Windows systems using the PowerShell Get-LocalGroupMember Cmdlet",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/10\ndescription: Detects suspicious reconnaissance command line activity on Windows systems\n  using the PowerShell Get-LocalGroupMember Cmdlet\ndetection:\n  condition: all of selection_*\n  selection_cmdlet:\n    CommandLine|contains: 'Get-LocalGroupMember '\n  selection_group:\n    CommandLine|contains:\n    - domain admins\n    - ' administrator'\n    - ' administrateur'\n    - enterprise admins\n    - Exchange Trusted Subsystem\n    - Remote Desktop Users\n    - \"Utilisateurs du Bureau \\xE0 distance\"\n    - Usuarios de escritorio remoto\nfalsepositives:\n- Administrative activity\nfields:\n- CommandLine\n- ParentCommandLine\nid: c8a180d6-47a3-4345-a609-53f9c3d834fc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.absolomb.com/2018-01-26-Windows-Privilege-Escalation-Guide/\nrelated:\n- id: cef24b90-dddc-4ae1-a09a-8764872f69fc\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.001\ntitle: Suspicious Reconnaissance Activity Using Get-LocalGroupMember Cmdlet\n",
+                            "sigma:id": "c8a180d6-47a3-4345-a609-53f9c3d834fc",
+                            "title": "Suspicious Reconnaissance Activity Using Get-LocalGroupMember Cmdlet",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cd072b25-a418-4f98-8ebc-5093fb38fe1a",
+                        "lookup_data": {
+                            "description": "Collect pertinent data from the configuration files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/11\ndescription: Collect pertinent data from the configuration files\ndetection:\n  condition: keywords\n  keywords:\n  - show running-config\n  - show startup-config\n  - show archive config\n  - more\nfalsepositives:\n- Commonly run by administrators\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: cd072b25-a418-4f98-8ebc-5093fb38fe1a\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.credential_access\n- attack.collection\n- attack.t1087.001\n- attack.t1552.001\n- attack.t1005\ntitle: Cisco Collect Data\n",
+                            "sigma:id": "cd072b25-a418-4f98-8ebc-5093fb38fe1a",
+                            "title": "Cisco Collect Data",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "89819aa4-bbd6-46bc-88ec-c7f7fe30efa6",
+                        "lookup_data": {
+                            "description": "Detects Commandlet names from well-known PowerShell exploitation frameworks",
+                            "raw": "author: Sean Metcalf, Florian Roth, Bartlomiej Czyz @bczyz1, oscd.community, Nasreddine\n  Bencherchali, Tim Shelton, Mustafa Kaan Demir, Georg Lauenstein, Max Altgelt, Tobias\n  Michalski, Austin Songer\ndate: 2017/03/05\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_1:\n    ScriptBlockText|contains:\n    - Get-SystemDriveInfo\n    - C:\\ProgramData\\Amazon\\EC2-Windows\\Launch\\Module\\\n  filter_2:\n    ScriptBlockText|startswith: '# Copyright 2016 Amazon.com, Inc. or its affiliates.\n      All Rights Reserved'\n  selection:\n    ScriptBlockText|contains:\n    - Add-Exfiltration\n    - Add-Persistence\n    - Add-RegBackdoor\n    - Add-RemoteRegBackdoor\n    - Add-ScrnSaveBackdoor\n    - Check-VM\n    - ConvertTo-Rc4ByteStream\n    - Decrypt-Hash\n    - Do-Exfiltration\n    - Enabled-DuplicateToken\n    - Exploit-Jboss\n    - Find-Fruit\n    - Find-GPOLocation\n    - Find-TrustedDocuments\n    - Get-ApplicationHost\n    - Get-ChromeDump\n    - Get-ClipboardContents\n    - Get-FoxDump\n    - Get-GPPPassword\n    - Get-IndexedItem\n    - Get-Keystrokes\n    - Get-LSASecret\n    - Get-PassHashes\n    - Get-RegAlwaysInstallElevated\n    - Get-RegAutoLogon\n    - Get-RemoteBootKey\n    - Get-RemoteCachedCredential\n    - Get-RemoteLocalAccountHash\n    - Get-RemoteLSAKey\n    - Get-RemoteMachineAccountHash\n    - Get-RemoteNLKMKey\n    - Get-RickAstley\n    - Get-Screenshot\n    - Get-SecurityPackages\n    - Get-ServiceFilePermission\n    - Get-ServicePermission\n    - Get-ServiceUnquoted\n    - Get-SiteListPassword\n    - Get-System\n    - Get-TimedScreenshot\n    - Get-UnattendedInstallFile\n    - Get-Unconstrained\n    - Get-USBKeystrokes\n    - Get-VaultCredential\n    - Get-VulnAutoRun\n    - Get-VulnSchTask\n    - Gupt-Backdoor\n    - HTTP-Login\n    - Install-ServiceBinary\n    - Install-SSP\n    - Invoke-ACLScanner\n    - Invoke-ADSBackdoor\n    - Invoke-AllChecks\n    - Invoke-ARPScan\n    - Invoke-AzureHound\n    - Invoke-BackdoorLNK\n    - Invoke-BadPotato\n    - Invoke-BetterSafetyKatz\n    - Invoke-BypassUAC\n    - Invoke-Carbuncle\n    - Invoke-Certify\n    - Invoke-ConPtyShell\n    - Invoke-CredentialInjection\n    - Invoke-DAFT\n    - Invoke-DCSync\n    - Invoke-DinvokeKatz\n    - Invoke-DllInjection\n    - Invoke-DomainPasswordSpray\n    - Invoke-DowngradeAccount\n    - Invoke-EgressCheck\n    - Invoke-Eyewitness\n    - Invoke-FakeLogonScreen\n    - Invoke-Farmer\n    - Invoke-Get-RBCD-Threaded\n    - Invoke-Gopher\n    - Invoke-Grouper\n    - Invoke-HandleKatz\n    - Invoke-ImpersonatedProcess\n    - Invoke-ImpersonateSystem\n    - Invoke-InteractiveSystemPowerShell\n    - Invoke-Internalmonologue\n    - Invoke-Inveigh\n    - Invoke-InveighRelay\n    - Invoke-KrbRelay\n    - Invoke-LdapSignCheck\n    - Invoke-Lockless\n    - Invoke-MalSCCM\n    - Invoke-Mimikatz\n    - Invoke-Mimikittenz\n    - Invoke-MITM6\n    - Invoke-NanoDump\n    - Invoke-NetRipper\n    - Invoke-Nightmare\n    - Invoke-NinjaCopy\n    - Invoke-OfficeScrape\n    - Invoke-OxidResolver\n    - Invoke-P0wnedshell\n    - Invoke-Paranoia\n    - Invoke-PortScan\n    - Invoke-PoshRatHttp\n    - Invoke-PostExfil\n    - Invoke-PowerDump\n    - Invoke-PowerShellTCP\n    - Invoke-PowerShellWMI\n    - Invoke-PPLDump\n    - Invoke-PsExec\n    - Invoke-PSInject\n    - Invoke-PsUaCme\n    - Invoke-ReflectivePEInjection\n    - Invoke-ReverseDNSLookup\n    - Invoke-Rubeus\n    - Invoke-RunAs\n    - Invoke-SafetyKatz\n    - Invoke-SauronEye\n    - Invoke-SCShell\n    - Invoke-Seatbelt\n    - Invoke-ServiceAbuse\n    - Invoke-ShadowSpray\n    - Invoke-Sharp\n    - Invoke-Shellcode\n    - Invoke-SMBScanner\n    - Invoke-Snaffler\n    - Invoke-Spoolsample\n    - Invoke-SpraySinglePassword\n    - Invoke-SSHCommand\n    - Invoke-StandIn\n    - Invoke-StickyNotesExtract\n    - Invoke-SystemCommand\n    - Invoke-Tasksbackdoor\n    - Invoke-Tater\n    - Invoke-Thunderfox\n    - Invoke-ThunderStruck\n    - Invoke-TokenManipulation\n    - Invoke-Tokenvator\n    - Invoke-TotalExec\n    - Invoke-UrbanBishop\n    - Invoke-UserHunter\n    - Invoke-VoiceTroll\n    - Invoke-Whisker\n    - Invoke-WinEnum\n    - Invoke-winPEAS\n    - Invoke-WireTap\n    - Invoke-WmiCommand\n    - Invoke-WScriptBypassUAC\n    - Invoke-Zerologon\n    - MailRaider\n    - New-HoneyHash\n    - New-InMemoryModule\n    - Out-Minidump\n    - Port-Scan\n    - PowerBreach\n    - 'powercat '\n    - PowerUp\n    - PowerView\n    - Remove-Update\n    - Set-MacAttribute\n    - Set-Wallpaper\n    - Show-TargetScreen\n    - Start-CaptureServer\n    - Start-WebcamRecorder\n    - VolumeShadowCopyTools\nfalsepositives:\n- Unknown\nid: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2023/01/23\nreferences:\n- https://adsecurity.org/?p=2921\n- https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n- https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n- https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n- https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n- https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n- https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/\n- https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/\n- https://github.com/calebstewart/CVE-2021-1675\n- https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n- https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n- https://github.com/HarmJ0y/DAMP\n- https://github.com/samratashok/nishang\n- https://github.com/DarkCoderSc/PowerRunAsSystem/\n- https://github.com/besimorhino/powercat\nrelated:\n- id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n  type: similar\n- id: 02030f2f-6199-49ec-b258-ea71b07e03dc\n  type: similar\n- id: 6d3f1399-a81c-4409-aff3-1ecfe9330baf\n  type: obsoletes\n- id: 83083ac6-1816-4e76-97d7-59af9a9ae46e\n  type: obsoletes\nstatus: test\ntags:\n- attack.execution\n- attack.discovery\n- attack.t1482\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1069\n- attack.t1059.001\ntitle: Malicious PowerShell Commandlets - ScriptBlock\n",
+                            "sigma:id": "89819aa4-bbd6-46bc-88ec-c7f7fe30efa6",
+                            "title": "Malicious PowerShell Commandlets - ScriptBlock",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aae1243f-d8af-40d8-ab20-33fc6d0c55bc",
+                        "lookup_data": {
+                            "description": "Detects usage of the PsLogList utility to dump event log in order to extract admin accounts and perform account discovery or delete events logs",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2021/12/18\ndescription: Detects usage of the PsLogList utility to dump event log in order to\n  extract admin accounts and perform account discovery or delete events logs\ndetection:\n  condition: all of selection_*\n  selection_cli_eventlog:\n    CommandLine|contains:\n    - ' security'\n    - ' application'\n    - ' system'\n  selection_cli_flags:\n    CommandLine|contains:\n    - ' -d'\n    - ' /d'\n    - ' -x'\n    - ' /x'\n    - ' -s'\n    - ' /s'\n    - ' -c'\n    - ' /c'\n    - ' -g'\n    - ' /g'\n  selection_img:\n  - OriginalFileName: psloglist.exe\n  - Image|endswith:\n    - \\psloglist.exe\n    - \\psloglist64.exe\nfalsepositives:\n- Another tool that uses the command line switches of PsLogList\n- Legitimate use of PsLogList by an administrator\nid: aae1243f-d8af-40d8-ab20-33fc6d0c55bc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/16\nreferences:\n- https://research.nccgroup.com/2021/01/12/abusing-cloud-services-to-fly-under-the-radar/\n- https://www.cybereason.com/blog/deadringer-exposing-chinese-threat-actors-targeting-major-telcos\n- https://github.com/3CORESec/MAL-CL/tree/master/Descriptors/Sysinternals/PsLogList\n- https://twitter.com/EricaZelic/status/1614075109827874817\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087\n- attack.t1087.001\n- attack.t1087.002\ntitle: Suspicious Use of PsLogList\n",
+                            "sigma:id": "aae1243f-d8af-40d8-ab20-33fc6d0c55bc",
+                            "title": "Suspicious Use of PsLogList",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b45e3d6f-42c6-47d8-a478-df6bd6cf534c",
+                        "lookup_data": {
+                            "description": "Detects enumeration of local systeam accounts. This information can help adversaries determine which local accounts exist on a system to aid in follow-on behavior.",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/08\ndescription: Detects enumeration of local systeam accounts. This information can help\n  adversaries determine which local accounts exist on a system to aid in follow-on\n  behavior.\ndetection:\n  condition: 1 of selection*\n  selection_1:\n    Image|endswith: /lastlog\n  selection_2:\n    CommandLine|contains: '''x:0:'''\n  selection_3:\n    CommandLine|contains:\n    - /etc/passwd\n    - /etc/shadow\n    - /etc/sudoers\n    Image|endswith:\n    - /cat\n    - /head\n    - /tail\n    - /more\n  selection_4:\n    Image|endswith: /id\n  selection_5:\n    CommandLine|contains: -u\n    Image|endswith: /lsof\nfalsepositives:\n- Legitimate administration activities\nid: b45e3d6f-42c6-47d8-a478-df6bd6cf534c\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1087.001/T1087.001.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1087.001\ntitle: Local System Accounts Discovery - Linux\n",
+                            "sigma:id": "b45e3d6f-42c6-47d8-a478-df6bd6cf534c",
+                            "title": "Local System Accounts Discovery - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+                        "lookup_data": {
+                            "description": "Detects suspicious reconnaissance command line activity on Windows systems using Net.EXE",
+                            "raw": "analysis:\n  recommendation: Check if the user that executed the commands is suspicious (e.g.\n    service accounts, LOCAL_SYSTEM)\nauthor: Florian Roth (Nextron Systems), omkar72, @svch0st, Nasreddine Bencherchali\n  (Nextron Systems)\ndate: 2019/01/16\ndescription: Detects suspicious reconnaissance command line activity on Windows systems\n  using Net.EXE\ndetection:\n  condition: selection_img and (all of selection_group_* or all of selection_accounts_*)\n  selection_accounts_flags:\n    CommandLine|contains: ' /do'\n  selection_accounts_root:\n    CommandLine|contains: ' accounts '\n  selection_group_flags:\n    CommandLine|contains:\n    - domain admins\n    - ' administrator'\n    - ' administrateur'\n    - enterprise admins\n    - Exchange Trusted Subsystem\n    - Remote Desktop Users\n    - \"Utilisateurs du Bureau \\xE0 distance\"\n    - Usuarios de escritorio remoto\n    - ' /do'\n  selection_group_root:\n    CommandLine|contains:\n    - ' group '\n    - ' localgroup '\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Inventory tool runs\n- Administrative activity\nfields:\n- CommandLine\n- ParentCommandLine\nid: d95de845-b83c-4a9a-8a6a-4fc802ebf6c0\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/01\nreferences:\n- https://redcanary.com/blog/how-one-hospital-thwarted-a-ryuk-ransomware-outbreak/\n- https://thedfirreport.com/2020/10/18/ryuk-in-5-hours/\n- https://research.nccgroup.com/2022/08/19/back-in-black-unlocking-a-lockbit-3-0-ransomware-attack/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1087.001\n- attack.t1087.002\ntitle: Suspicious Group And Account Reconnaissance Activity Using Net.EXE\n",
+                            "sigma:id": "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+                            "title": "Suspicious Group And Account Reconnaissance Activity Using Net.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f376c8a7-a2d0-4ddc-aa0c-16c17236d962",
+                        "lookup_data": {
+                            "description": "Detects command line parameters used by Bloodhound and Sharphound hack tools",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/12/20\ndescription: Detects command line parameters used by Bloodhound and Sharphound hack\n  tools\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image|contains:\n    - \\Bloodhound.exe\n    - \\SharpHound.exe\n  selection2:\n    CommandLine|contains:\n    - ' -CollectionMethod All '\n    - ' --CollectionMethods Session '\n    - ' --Loop --Loopduration '\n    - ' --PortScanTimeout '\n    - '.exe -c All -d '\n    - Invoke-Bloodhound\n    - Get-BloodHoundData\n  selection3:\n    CommandLine|contains|all:\n    - ' -JsonFolder '\n    - ' -ZipFileName '\n  selection4:\n    CommandLine|contains|all:\n    - ' DCOnly '\n    - ' --NoSaveCache '\n  selection5:\n  - Product|contains: SharpHound\n  - Description|contains: SharpHound\n  - Company|contains:\n    - SpecterOps\n    - evil corp\nfalsepositives:\n- Other programs that use these command line option and accepts an 'All' parameter\nid: f376c8a7-a2d0-4ddc-aa0c-16c17236d962\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/12\nreferences:\n- https://github.com/BloodHoundAD/BloodHound\n- https://github.com/BloodHoundAD/SharpHound\nstatus: test\ntags:\n- attack.discovery\n- attack.t1087.001\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.001\n- attack.t1069.002\n- attack.execution\n- attack.t1059.001\ntitle: Bloodhound and Sharphound Hack Tool\n",
+                            "sigma:id": "f376c8a7-a2d0-4ddc-aa0c-16c17236d962",
+                            "title": "Bloodhound and Sharphound Hack Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ddf36b67-e872-4507-ab2e-46bda21b842c",
+                        "lookup_data": {
+                            "description": "Detects enumeration of local systeam accounts on MacOS",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/08\ndescription: Detects enumeration of local systeam accounts on MacOS\ndetection:\n  condition: 1 of selection*\n  selection_1:\n    CommandLine|contains|all:\n    - list\n    - /users\n    Image|endswith: /dscl\n  selection_2:\n    CommandLine|contains|all:\n    - -q\n    - user\n    Image|endswith: /dscacheutil\n  selection_3:\n    CommandLine|contains: '''x:0:'''\n  selection_4:\n    CommandLine|contains:\n    - /etc/passwd\n    - /etc/sudoers\n    Image|endswith: /cat\n  selection_5:\n    Image|endswith: /id\n  selection_6:\n    CommandLine|contains: -u\n    Image|endswith: /lsof\nfalsepositives:\n- Legitimate administration activities\nid: ddf36b67-e872-4507-ab2e-46bda21b842c\nlevel: low\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1087.001/T1087.001.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1087.001\ntitle: Local System Accounts Discovery - MacOs\n",
+                            "sigma:id": "ddf36b67-e872-4507-ab2e-46bda21b842c",
+                            "title": "Local System Accounts Discovery - MacOs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25659dd6-ea12-45c4-97e6-381e3e4b593e",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1087.001",
+                            "mitre-cti:description": "Adversaries may attempt to get a listing of local system accounts. This information can help adversaries determine which local accounts exist on a system to aid in follow-on behavior.\n\nCommands such as <code>net user</code> and <code>net localgroup</code> of the [Net](https://attack.mitre.org/software/S0039) utility and <code>id</code> and <code>groups</code>on macOS and Linux can list local users and groups. On Linux, local users can also be enumerated through the use of the <code>/etc/passwd</code> file. On macOS the <code>dscl . list /Users</code> command can be used to enumerate local accounts.",
+                            "mitre-cti:name": "Local Account",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Daniel Stepanic, Elastic', 'Miriam Wiesner, @miriamxyra, Microsoft Security'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--25659dd6-ea12-45c4-97e6-381e3e4b593e', 'created': '2020-02-21T21:07:55.393Z', 'x_mitre_version': '1.3', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1087.001', 'url': 'https://attack.mitre.org/techniques/T1087/001'}, {'source_name': 'Elastic - Koadiac Detection with EQL', 'url': 'https://www.elastic.co/blog/embracing-offensive-tooling-building-detections-against-koadic-using-eql', 'description': 'Stepanic, D.. (2020, January 13). Embracing offensive tooling: Building detections against Koadic using EQL. Retrieved November 30, 2020.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may attempt to get a listing of local system accounts. This information can help adversaries determine which local accounts exist on a system to aid in follow-on behavior.\\n\\nCommands such as <code>net user</code> and <code>net localgroup</code> of the [Net](https://attack.mitre.org/software/S0039) utility and <code>id</code> and <code>groups</code>on macOS and Linux can list local users and groups. On Linux, local users can also be enumerated through the use of the <code>/etc/passwd</code> file. On macOS the <code>dscl . list /Users</code> command can be used to enumerate local accounts.', 'modified': '2022-08-25T13:04:39.404Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Local Account', 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).\\n\\nMonitor for processes that can be used to enumerate user accounts, such as <code>net.exe</code> and <code>net1.exe</code>, especially when executed in quick succession.(Citation: Elastic - Koadiac Detection with EQL)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: Process Creation', 'Process: OS API Execution', 'File: File Access', 'Command: Command Execution', 'Group: Group Enumeration'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1087.001",
+                "display_name": "Account Discovery: Local Account",
+                "atomic_tests": [
+                    {
+                        "name": "Enumerate all accounts (Local)",
+                        "auto_generated_guid": "f8aab3dd-5990-4bf8-b8ab-2226c951696f",
+                        "description": "Enumerate all accounts by copying /etc/passwd to another file\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Path where captured results will be placed",
+                                "type": "path",
+                                "default": "/tmp/T1087.001.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "cat /etc/passwd > #{output_file}\ncat #{output_file}\n",
+                            "cleanup_command": "rm -f #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "View sudoers access",
+                        "auto_generated_guid": "fed9be70-0186-4bde-9f8a-20945f9370c2",
+                        "description": "(requires root)\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Path where captured results will be placed",
+                                "type": "path",
+                                "default": "/tmp/T1087.001.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "if [ -f /etc/sudoers ]; then sudo cat /etc/sudoers > #{output_file}; fi;\nif [ -f /usr/local/etc/sudoers ]; then sudo cat /usr/local/etc/sudoers > #{output_file}; fi;\ncat #{output_file}\n",
+                            "cleanup_command": "rm -f #{output_file}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "View accounts with UID 0",
+                        "auto_generated_guid": "c955a599-3653-4fe5-b631-f11c00eb0397",
+                        "description": "View accounts with UID 0\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Path where captured results will be placed",
+                                "type": "path",
+                                "default": "/tmp/T1087.001.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "grep 'x:0:' /etc/passwd > #{output_file}\ngrep '*:0:' /etc/passwd >> #{output_file}\ncat #{output_file} 2>/dev/null\n",
+                            "cleanup_command": "rm -f #{output_file} 2>/dev/null\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "List opened files by user",
+                        "auto_generated_guid": "7e46c7a5-0142-45be-a858-1a3ecb4fd3cb",
+                        "description": "List opened files by user\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "username=$(id -u -n) && lsof -u $username\n",
+                            "name": "sh"
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "check if lsof exists\n",
+                                "prereq_command": "which lsof\n",
+                                "get_prereq_command": "(which pkg && pkg install -y lsof)||(which yum && yum -y install lsof)||(which apt-get && DEBIAN_FRONTEND=noninteractive apt-get install -y lsof)\n"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Show if a user account has ever logged in remotely",
+                        "auto_generated_guid": "0f0b6a29-08c3-44ad-a30b-47fd996b2110",
+                        "description": "Show if a user account has ever logged in remotely\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Path where captured results will be placed",
+                                "type": "path",
+                                "default": "/tmp/T1087.001.txt"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if lastlog command exists on the machine\n",
+                                "prereq_command": "if [ -x \"$(command -v lastlog)\" ]; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "sudo apt-get install login; exit 1;\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "[ \"$(uname)\" = 'FreeBSD' ] && cmd=\"lastlogin\" || cmd=\"lastlog\" \n$cmd > #{output_file}\ncat #{output_file}\n",
+                            "cleanup_command": "rm -f #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Enumerate users and groups",
+                        "auto_generated_guid": "e6f36545-dc1e-47f0-9f48-7f730f54a02e",
+                        "description": "Utilize groups and id to enumerate users and groups\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "groups\nid\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Enumerate users and groups",
+                        "auto_generated_guid": "319e9f6c-7a9e-432e-8c62-9385c803b6f2",
+                        "description": "Utilize local utilities to enumerate users and groups\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "dscl . list /Groups\ndscl . list /Users\ndscl . list /Users | grep -v '_'\ndscacheutil -q group\ndscacheutil -q user\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Enumerate all accounts on Windows (Local)",
+                        "auto_generated_guid": "80887bec-5a9b-4efc-a81d-f83eb2eb32ab",
+                        "description": "Enumerate all accounts\nUpon execution, multiple enumeration commands will be run and their output displayed in the PowerShell session\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net user\ndir c:\\Users\\\ncmdkey.exe /list\nnet localgroup \"Users\"\nnet localgroup\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Enumerate all accounts via PowerShell (Local)",
+                        "auto_generated_guid": "ae4b6361-b5f8-46cb-a3f9-9cf108ccfe7b",
+                        "description": "Enumerate all accounts via PowerShell. Upon execution, lots of user account and group information will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net user\nget-localuser\nget-localgroupmember -group Users\ncmdkey.exe /list\nls C:/Users\nget-childitem C:\\Users\\\ndir C:\\Users\\\nget-localgroup\nnet localgroup\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Enumerate logged on users via CMD (Local)",
+                        "auto_generated_guid": "a138085e-bfe5-46ba-a242-74a6fb884af3",
+                        "description": "Enumerate logged on users. Upon execution, logged on users will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "query user\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "ESXi - Local Account Discovery via ESXCLI",
+                        "auto_generated_guid": "9762ac6e-aa60-4449-a2f0-cbbd0e1fd22c",
+                        "description": "An adversary can use ESXCLI to enumerate a list of all local accounts on an ESXi host.\n[Reference](https://lolesxi-project.github.io/LOLESXi/lolesxi/Binaries/esxcli/#account%20enumeration)\"\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vm_host": {
+                                "description": "Specify the host name or IP of the ESXi server.",
+                                "type": "string",
+                                "default": "atomic.local"
+                            },
+                            "vm_user": {
+                                "description": "Specify the privilege user account on the ESXi server.",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "vm_pass": {
+                                "description": "Specify the privileged user's password.",
+                                "type": "string",
+                                "default": "password"
+                            },
+                            "plink_file": {
+                                "description": "Path to Plink",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if we have plink\n",
+                                "prereq_command": "if (Test-Path \"#{plink_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe\" -OutFile \"#{plink_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "echo \"\" | \"#{plink_file}\" -batch \"#{vm_host}\" -ssh -l #{vm_user} -pw \"#{vm_pass}\" \"esxcli system account list\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:38:53"
+}

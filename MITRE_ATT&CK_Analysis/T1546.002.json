@@ -1,0 +1,126 @@
+{
+    "id": "T1546.002",
+    "name": "Screensaver",
+    "description": "Adversaries may establish persistence by executing malicious content triggered by user inactivity. Screensavers are programs that execute after a configurable time of user inactivity and consist of Portable Executable (PE) files with a .scr file extension.(Citation: Wikipedia Screensaver) The Windows screensaver application scrnsave.scr is located in `C:WindowsSystem32`, and `C:WindowssysWOW64`  on 64-bit Windows systems, along with screensavers included with base Windows installations.\nThe following screensaver settings are stored in the Registry (`HKCUControl PanelDesktop`) and could be manipulated to achieve persistence:\n* `SCRNSAVE.exe` - set to malicious PE path\n* `ScreenSaveActive` - set to '1' to enable the screensaver\n* `ScreenSaverIsSecure` - set to '0' to not require a password to unlock\n* `ScreenSaveTimeout` - sets user inactivity timeout before screensaver is executed\nAdversaries can use screensaver settings to maintain persistence by setting the screensaver to run malware after a certain timeframe of user inactivity. (Citation: ESET Gazer Aug 2017)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution, File: File Creation, File: File Modification",
+    "detection": "Monitor process execution and command-line parameters of .scr files. Monitor changes to screensaver configuration changes in the Registry that may not correlate with typical user behavior.\nTools such as Sysinternals Autoruns can be used to detect changes to the screensaver binary path in the Registry. Suspicious paths and PE files may indicate outliers among legitimate screensavers in a network and should be investigated.",
+    "url": "https://attack.mitre.org/techniques/T1546/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1546.002",
+                "atomic_attack_guid": "281201e7-de41-4dc9-b73d-f288938cbb64",
+                "atomic_attack_name": "Set Arbitrary Binary as Screensaver",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0fc35fc3-efe6-4898-8a37-0b233339524f",
+                    "4aafb0fa-bff5-4b9d-b99e-8093e659c65f",
+                    "ce4b7013-640e-48a9-b501-d0025a95f4bf",
+                    "97aa2e88-555c-450d-85a6-229bcd87efb8",
+                    "67a6c006-3fbe-46a7-9074-2ba3b82c3000"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0fc35fc3-efe6-4898-8a37-0b233339524f",
+                        "lookup_data": {
+                            "description": "Adversaries may establish persistence by executing malicious content triggered by user inactivity.\nScreensavers are programs that execute after a configurable time of user inactivity and consist of Portable Executable (PE) files with a .scr file extension\n",
+                            "raw": "author: frack113\ndate: 2021/08/19\ndescription: 'Adversaries may establish persistence by executing malicious content\n  triggered by user inactivity.\n\n  Screensavers are programs that execute after a configurable time of user inactivity\n  and consist of Portable Executable (PE) files with a .scr file extension\n\n  '\ndetection:\n  condition: selection_reg and 1 of selection_option_*\n  selection_option_1:\n    CommandLine|contains|all:\n    - /v ScreenSaveActive\n    - /t REG_SZ\n    - /d 1\n    - /f\n  selection_option_2:\n    CommandLine|contains|all:\n    - /v ScreenSaveTimeout\n    - /t REG_SZ\n    - '/d '\n    - /f\n  selection_option_3:\n    CommandLine|contains|all:\n    - /v ScreenSaverIsSecure\n    - /t REG_SZ\n    - /d 0\n    - /f\n  selection_option_4:\n    CommandLine|contains|all:\n    - /v SCRNSAVE.EXE\n    - /t REG_SZ\n    - '/d '\n    - .scr\n    - /f\n  selection_reg:\n    CommandLine|contains:\n    - HKEY_CURRENT_USER\\Control Panel\\Desktop\n    - HKCU\\Control Panel\\Desktop\n    Image|endswith: \\reg.exe\nfalsepositives:\n- GPO\nid: 0fc35fc3-efe6-4898-8a37-0b233339524f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.002/T1546.002.md\n- https://www.welivesecurity.com/wp-content/uploads/2017/08/eset-gazer.pdf\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.t1546.002\ntitle: Suspicious ScreenSave Change by Reg.exe\n",
+                            "sigma:id": "0fc35fc3-efe6-4898-8a37-0b233339524f",
+                            "title": "Suspicious ScreenSave Change by Reg.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4aafb0fa-bff5-4b9d-b99e-8093e659c65f",
+                        "lookup_data": {
+                            "description": "Aversaries may use to interact with a remote network share using Server Message Block (SMB).\nThis technique is used by post-exploitation frameworks.\n",
+                            "raw": "author: frack113\ndate: 2022/01/01\ndescription: 'Aversaries may use to interact with a remote network share using Server\n  Message Block (SMB).\n\n  This technique is used by post-exploitation frameworks.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|contains|all:\n    - \\\\\\\\127.0.0\n    - \\ADMIN$\\\nfalsepositives:\n- Unknown\nid: 4aafb0fa-bff5-4b9d-b99e-8093e659c65f\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/08/13\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1021.002/T1021.002.md#atomic-test-4---execute-command-writing-output-to-local-admin-share\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1546.002\ntitle: Writing Local Admin Share\n",
+                            "sigma:id": "4aafb0fa-bff5-4b9d-b99e-8093e659c65f",
+                            "title": "Writing Local Admin Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ce4b7013-640e-48a9-b501-d0025a95f4bf",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546.002",
+                            "mitre-cti:description": "Adversaries may establish persistence by executing malicious content triggered by user inactivity. Screensavers are programs that execute after a configurable time of user inactivity and consist of Portable Executable (PE) files with a .scr file extension.(Citation: Wikipedia Screensaver) The Windows screensaver application scrnsave.scr is located in <code>C:\\Windows\\System32\\</code>, and <code>C:\\Windows\\sysWOW64\\</code>  on 64-bit Windows systems, along with screensavers included with base Windows installations.\n\nThe following screensaver settings are stored in the Registry (<code>HKCU\\Control Panel\\Desktop\\</code>) and could be manipulated to achieve persistence:\n\n* <code>SCRNSAVE.exe</code> - set to malicious PE path\n* <code>ScreenSaveActive</code> - set to '1' to enable the screensaver\n* <code>ScreenSaverIsSecure</code> - set to '0' to not require a password to unlock\n* <code>ScreenSaveTimeout</code> - sets user inactivity timeout before screensaver is executed\n\nAdversaries can use screensaver settings to maintain persistence by setting the screensaver to run malware after a certain timeframe of user inactivity.(Citation: ESET Gazer Aug 2017)",
+                            "mitre-cti:name": "Screensaver",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Bartosz Jerzman'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--ce4b7013-640e-48a9-b501-d0025a95f4bf', 'created': '2020-01-24T13:51:01.210Z', 'x_mitre_version': '1.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.002', 'url': 'https://attack.mitre.org/techniques/T1546/002'}, {'source_name': 'ESET Gazer Aug 2017', 'url': 'https://www.welivesecurity.com/wp-content/uploads/2017/08/eset-gazer.pdf', 'description': 'ESET. (2017, August). Gazing at Gazer: Turla’s new second stage backdoor. Retrieved September 14, 2017.'}, {'source_name': 'Wikipedia Screensaver', 'url': 'https://en.wikipedia.org/wiki/Screensaver', 'description': 'Wikipedia. (2017, November 22). Screensaver. Retrieved December 5, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"Adversaries may establish persistence by executing malicious content triggered by user inactivity. Screensavers are programs that execute after a configurable time of user inactivity and consist of Portable Executable (PE) files with a .scr file extension.(Citation: Wikipedia Screensaver) The Windows screensaver application scrnsave.scr is located in <code>C:\\\\Windows\\\\System32\\\\</code>, and <code>C:\\\\Windows\\\\sysWOW64\\\\</code>  on 64-bit Windows systems, along with screensavers included with base Windows installations.\\n\\nThe following screensaver settings are stored in the Registry (<code>HKCU\\\\Control Panel\\\\Desktop\\\\</code>) and could be manipulated to achieve persistence:\\n\\n* <code>SCRNSAVE.exe</code> - set to malicious PE path\\n* <code>ScreenSaveActive</code> - set to '1' to enable the screensaver\\n* <code>ScreenSaverIsSecure</code> - set to '0' to not require a password to unlock\\n* <code>ScreenSaveTimeout</code> - sets user inactivity timeout before screensaver is executed\\n\\nAdversaries can use screensaver settings to maintain persistence by setting the screensaver to run malware after a certain timeframe of user inactivity.(Citation: ESET Gazer Aug 2017)\", 'modified': '2022-04-20T16:58:48.140Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Screensaver', 'x_mitre_detection': 'Monitor process execution and command-line parameters of .scr files. Monitor changes to screensaver configuration changes in the Registry that may not correlate with typical user behavior.\\n\\nTools such as Sysinternals Autoruns can be used to detect changes to the screensaver binary path in the Registry. Suspicious paths and PE files may indicate outliers among legitimate screensavers in a network and should be investigated.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Modification', 'File: File Modification', 'File: File Creation', 'Command: Command Execution', 'Process: Process Creation'], 'x_mitre_permissions_required': ['User'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "97aa2e88-555c-450d-85a6-229bcd87efb8",
+                        "lookup_data": {
+                            "description": "Adversaries may establish persistence by executing malicious content triggered by user inactivity.\nScreensavers are programs that execute after a configurable time of user inactivity and consist of Portable Executable (PE) files with a .scr file extension\n",
+                            "raw": "author: frack113\ndate: 2021/12/29\ndescription: 'Adversaries may establish persistence by executing malicious content\n  triggered by user inactivity.\n\n  Screensavers are programs that execute after a configurable time of user inactivity\n  and consist of Portable Executable (PE) files with a .scr file extension\n\n  '\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_generic:\n    Image|endswith:\n    - \\Kindle.exe\n    - \\Bin\\ccSvcHst.exe\n  filter_tiworker:\n    Image|endswith: \\TiWorker.exe\n    TargetFilename|endswith: \\uwfservicingscr.scr\n  selection:\n    TargetFilename|endswith: .scr\nfalsepositives:\n- Unknown\nid: 97aa2e88-555c-450d-85a6-229bcd87efb8\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/11/08\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.002/T1546.002.md\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.002\ntitle: Suspicious Screensaver Binary File Creation\n",
+                            "sigma:id": "97aa2e88-555c-450d-85a6-229bcd87efb8",
+                            "title": "Suspicious Screensaver Binary File Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "67a6c006-3fbe-46a7-9074-2ba3b82c3000",
+                        "lookup_data": {
+                            "description": "Detects value modification of registry key containing path to binary used as screensaver.",
+                            "raw": "author: Bartlomiej Czyz @bczyz1, oscd.community\ndate: 2020/10/11\ndescription: Detects value modification of registry key containing path to binary\n  used as screensaver.\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|endswith:\n    - \\rundll32.exe\n    - \\explorer.exe\n  selection:\n    TargetObject|endswith: \\Control Panel\\Desktop\\SCRNSAVE.EXE\nfalsepositives:\n- Legitimate modification of screensaver\nid: 67a6c006-3fbe-46a7-9074-2ba3b82c3000\nlevel: medium\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.002/T1546.002.md\n- https://www.welivesecurity.com/wp-content/uploads/2017/08/eset-gazer.pdf\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.002\ntitle: Path To Screensaver Binary Modified\n",
+                            "sigma:id": "67a6c006-3fbe-46a7-9074-2ba3b82c3000",
+                            "title": "Path To Screensaver Binary Modified",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.002",
+                "display_name": "Event Triggered Execution: Screensaver",
+                "atomic_tests": [
+                    {
+                        "name": "Set Arbitrary Binary as Screensaver",
+                        "auto_generated_guid": "281201e7-de41-4dc9-b73d-f288938cbb64",
+                        "description": "This test copies a binary into the Windows System32 folder and sets it as the screensaver so it will execute for persistence. Requires a reboot and logon.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_binary": {
+                                "description": "Executable binary to use in place of screensaver for persistence",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            },
+                            "reboot": {
+                                "description": "Set to non-zero value if you want the test to reboot the system so that changes take effect",
+                                "type": "integer",
+                                "default": 0
+                            }
+                        },
+                        "executor": {
+                            "command": "reg export \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" %userprofile%\\backup.reg\ncopy #{input_binary} \"%SystemRoot%\\System32\\evilscreensaver.scr\"\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v ScreenSaveActive /t REG_SZ /d 1 /f\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v ScreenSaveTimeout /t REG_SZ /d 60 /f\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v ScreenSaverIsSecure /t REG_SZ /d 0 /f\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v SCRNSAVE.EXE /t REG_SZ /d \"%SystemRoot%\\System32\\evilscreensaver.scr\" /f\nif #{reboot} NEQ 0 shutdown /r /t 0\n",
+                            "cleanup_command": "reg import %userprofile%\\backup.reg\ndel %userprofile%\\backup.reg\ndel %SystemRoot%\\System32\\evilscreensaver.scr\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:22:32"
+}

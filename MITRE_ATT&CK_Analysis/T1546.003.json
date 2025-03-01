@@ -1,0 +1,272 @@
+{
+    "id": "T1546.003",
+    "name": "Windows Management Instrumentation Event Subscription",
+    "description": "Adversaries may establish persistence and elevate privileges by executing malicious content triggered by a Windows Management Instrumentation (WMI) event subscription. WMI can be used to install event filters, providers, consumers, and bindings that execute code when a defined event occurs. Examples of events that may be subscribed to are the wall clock time, user loging, or the computer's uptime. (Citation: Mandiant M-Trends 2015)\nAdversaries may use the capabilities of WMI to subscribe to an event and execute arbitrary code when that event occurs, providing persistence on a system. (Citation: FireEye WMI SANS 2015) (Citation: FireEye WMI 2015) Adversaries may also compile WMI scripts into Windows Management Object (MOF) files (.mof extension) that can be used to create a malicious subscription. (Citation: Dell WMI Persistence) (Citation: Microsoft MOF May 2018)\nWMI subscription execution is proxied by the WMI Provider Host process (WmiPrvSe.exe) and thus may result in elevated SYSTEM privileges.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Command: Command Execution, Process: Process Creation, WMI: WMI Creation",
+    "detection": "Monitor WMI event subscription entries, comparing current WMI event subscriptions to known good subscriptions for each host. Tools such as Sysinternals Autoruns may also be used to detect WMI changes that could be attempts at persistence. (Citation: TechNet Autoruns) (Citation: Medium Detecting WMI Persistence) Monitor for the creation of new WMI `EventFilter`, `EventConsumer`, and `FilterToConsumerBinding` events. Event ID 5861 is logged on Windows 10 systems when new `EventFilterToConsumerBinding` events are created.(Citation: Elastic - Hunting for Persistence Part 1)\nMonitor processes and command-line arguments that can be used to register WMI persistence, such as the ` Register-WmiEvent` [PowerShell](T1059.001) cmdlet (Citation: Microsoft Register-WmiEvent), as well as those that result from the execution of subscriptions (i.e. spawning from the WmiPrvSe.exe WMI Provider Host process).",
+    "url": "https://attack.mitre.org/techniques/T1546/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1546.003",
+                "atomic_attack_guid": "29786d7e-8916-4de6-9c55-be7b093b2706",
+                "atomic_attack_name": "Windows MOFComp.exe Load MOF File",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Suspicious Mofcomp Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_mofcomp_execution.yml",
+                        "remote_content": "title: Potential Suspicious Mofcomp Execution\nid: 1dd05363-104e-4b4a-b963-196a534b03a1\nstatus: test\ndescription: |\n    Detects execution of the \"mofcomp\" utility as a child of a suspicious shell or script running utility or by having a suspicious path in the commandline.\n    The \"mofcomp\" utility parses a file containing MOF statements and adds the classes and class instances defined in the file to the WMI repository.\n    Attackers abuse this utility to install malicious MOF scripts\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\n    - https://github.com/The-DFIR-Report/Sigma-Rules/blob/75260568a7ffe61b2458ca05f6f25914efb44337/win_mofcomp_execution.yml\n    - https://learn.microsoft.com/en-us/windows/win32/wmisdk/mofcomp\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2023-04-11\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\mofcomp.exe'\n        - OriginalFileName: 'mofcomp.exe'\n    selection_case:\n        - ParentImage|endswith:\n              - '\\cmd.exe'\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n              - '\\wsl.exe'\n              - '\\wscript.exe'\n              - '\\cscript.exe'\n        - CommandLine|contains:\n              - '\\AppData\\Local\\Temp'\n              - '\\Users\\Public\\'\n              - '\\WINDOWS\\Temp\\'\n              - '%temp%'\n              - '%tmp%'\n              - '%appdata%'\n    filter_main_wmiprvse:\n        ParentImage: 'C:\\Windows\\System32\\wbem\\WmiPrvSE.exe'\n        CommandLine|contains: 'C:\\Windows\\TEMP\\'\n        CommandLine|endswith: '.mof'\n    filter_optional_null_parent:\n        # Sometimes the parent information isn't available from the Microsoft-Windows-Security-Auditing provider.\n        CommandLine|contains: 'C:\\Windows\\TEMP\\'\n        CommandLine|endswith: '.mof'\n    condition: all of selection_* and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows MOF Event Triggered Execution via WMI",
+                        "rule_link": "https://research.splunk.com/endpoint/e59b5a73-32bf-4467-a585-452c36ae10c1/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "9e07f6e7-83aa-45c6-998e-0af26efd0a85",
+                    "910906dd-8c0a-475a-9cc1-5e029e2fad58",
+                    "b439f47d-ef52-4b29-9a2f-57d8a96cb6b8",
+                    "ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e",
+                    "05936ce2-ee05-4dae-9d03-9a391cf2d2c6",
+                    "9599c180-e3a8-4743-8f92-7fb96d3be648",
+                    "ebef4391-1a81-4761-a40a-1db446c0e625",
+                    "0f06a3a5-6a09-413f-8743-e6cf35561297",
+                    "33f41cdd-35ac-4ba8-814b-c6a4244a1ad4",
+                    "f033f3f3-fd24-4995-97d8-a3bb17550a88",
+                    "0b7889b4-5577-4521-a60a-3376ee7f9f7b",
+                    "797011dc-44f4-4e6f-9f10-a8ceefbe566b",
+                    "83844185-1c5b-45bc-bcf3-b5bf3084ca5b",
+                    "c1bd5026-520b-45bd-9a79-82d38cf96c7b"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "9e07f6e7-83aa-45c6-998e-0af26efd0a85",
+                        "lookup_data": {
+                            "description": "Adversaries may establish persistence and elevate privileges by executing malicious content triggered by a Windows Management Instrumentation (WMI) event subscription.",
+                            "raw": "author: frack113\ndate: 2021/08/19\ndescription: Adversaries may establish persistence and elevate privileges by executing\n  malicious content triggered by a Windows Management Instrumentation (WMI) event\n  subscription.\ndetection:\n  condition: selection_ioc\n  selection_ioc:\n  - ScriptBlockText|contains|all:\n    - 'New-CimInstance '\n    - '-Namespace root/subscription '\n    - '-ClassName __EventFilter '\n    - '-Property '\n  - ScriptBlockText|contains|all:\n    - 'New-CimInstance '\n    - '-Namespace root/subscription '\n    - '-ClassName CommandLineEventConsumer '\n    - '-Property '\nfalsepositives:\n- Unknown\nid: 9e07f6e7-83aa-45c6-998e-0af26efd0a85\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1546.003/T1546.003.md\n- https://github.com/EmpireProject/Empire/blob/08cbd274bef78243d7a8ed6443b8364acd1fc48b/data/module_source/persistence/Persistence.psm1#L545\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1546.003\ntitle: Powershell WMI Persistence\n",
+                            "sigma:id": "9e07f6e7-83aa-45c6-998e-0af26efd0a85",
+                            "title": "Powershell WMI Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "910906dd-8c0a-475a-9cc1-5e029e2fad58",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546.003",
+                            "mitre-cti:description": "Adversaries may establish persistence and elevate privileges by executing malicious content triggered by a Windows Management Instrumentation (WMI) event subscription. WMI can be used to install event filters, providers, consumers, and bindings that execute code when a defined event occurs. Examples of events that may be subscribed to are the wall clock time, user loging, or the computer's uptime.(Citation: Mandiant M-Trends 2015)\n\nAdversaries may use the capabilities of WMI to subscribe to an event and execute arbitrary code when that event occurs, providing persistence on a system.(Citation: FireEye WMI SANS 2015)(Citation: FireEye WMI 2015) Adversaries may also compile WMI scripts into Windows Management Object (MOF) files (.mof extension) that can be used to create a malicious subscription.(Citation: Dell WMI Persistence)(Citation: Microsoft MOF May 2018)\n\nWMI subscription execution is proxied by the WMI Provider Host process (WmiPrvSe.exe) and thus may result in elevated SYSTEM privileges.",
+                            "mitre-cti:name": "Windows Management Instrumentation Event Subscription",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Brent Murphy, Elastic', 'David French, Elastic'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--910906dd-8c0a-475a-9cc1-5e029e2fad58', 'created': '2020-01-24T14:07:56.276Z', 'x_mitre_version': '1.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.003', 'url': 'https://attack.mitre.org/techniques/T1546/003'}, {'source_name': 'FireEye WMI 2015', 'url': 'https://www.fireeye.com/content/dam/fireeye-www/global/en/current-threats/pdfs/wp-windows-management-instrumentation.pdf', 'description': 'Ballenthin, W., et al. (2015). Windows Management Instrumentation (WMI) Offense, Defense, and Forensics. Retrieved March 30, 2016.'}, {'source_name': 'Dell WMI Persistence', 'url': 'https://www.secureworks.com/blog/wmi-persistence', 'description': 'Dell SecureWorks Counter Threat Unit™ (CTU) Research Team. (2016, March 28). A Novel WMI Persistence Implementation. Retrieved March 30, 2016.'}, {'source_name': 'FireEye WMI SANS 2015', 'url': 'https://www.fireeye.com/content/dam/fireeye-www/services/pdfs/sans-dfir-2015.pdf', 'description': \"Devon Kerr. (2015). There's Something About WMI. Retrieved May 4, 2020.\"}, {'source_name': 'Medium Detecting WMI Persistence', 'url': 'https://medium.com/threatpunter/detecting-removing-wmi-persistence-60ccbb7dff96', 'description': 'French, D. (2018, October 9). Detecting & Removing an Attacker’s WMI Persistence. Retrieved October 11, 2019.'}, {'source_name': 'Elastic - Hunting for Persistence Part 1', 'url': 'https://www.elastic.co/blog/hunting-for-persistence-using-elastic-security-part-1', 'description': 'French, D., Murphy, B. (2020, March 24). Adversary tradecraft 101: Hunting for persistence using Elastic Security (Part 1). Retrieved December 21, 2020.'}, {'source_name': 'Mandiant M-Trends 2015', 'url': 'https://www2.fireeye.com/rs/fireye/images/rpt-m-trends-2015.pdf', 'description': 'Mandiant. (2015, February 24). M-Trends 2015: A View from the Front Lines. Retrieved May 18, 2016.'}, {'source_name': 'Microsoft Register-WmiEvent', 'url': 'https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/register-wmievent?view=powershell-5.1', 'description': 'Microsoft. (n.d.). Retrieved January 24, 2020.'}, {'source_name': 'TechNet Autoruns', 'url': 'https://technet.microsoft.com/en-us/sysinternals/bb963902', 'description': 'Russinovich, M. (2016, January 4). Autoruns for Windows v13.51. Retrieved June 6, 2016.'}, {'source_name': 'Microsoft MOF May 2018', 'url': 'https://docs.microsoft.com/en-us/windows/win32/wmisdk/managed-object-format--mof-', 'description': 'Satran, M. (2018, May 30). Managed Object Format (MOF). Retrieved January 24, 2020.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"Adversaries may establish persistence and elevate privileges by executing malicious content triggered by a Windows Management Instrumentation (WMI) event subscription. WMI can be used to install event filters, providers, consumers, and bindings that execute code when a defined event occurs. Examples of events that may be subscribed to are the wall clock time, user loging, or the computer's uptime.(Citation: Mandiant M-Trends 2015)\\n\\nAdversaries may use the capabilities of WMI to subscribe to an event and execute arbitrary code when that event occurs, providing persistence on a system.(Citation: FireEye WMI SANS 2015)(Citation: FireEye WMI 2015) Adversaries may also compile WMI scripts into Windows Management Object (MOF) files (.mof extension) that can be used to create a malicious subscription.(Citation: Dell WMI Persistence)(Citation: Microsoft MOF May 2018)\\n\\nWMI subscription execution is proxied by the WMI Provider Host process (WmiPrvSe.exe) and thus may result in elevated SYSTEM privileges.\", 'modified': '2022-04-20T17:01:37.760Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Windows Management Instrumentation Event Subscription', 'x_mitre_detection': 'Monitor WMI event subscription entries, comparing current WMI event subscriptions to known good subscriptions for each host. Tools such as Sysinternals Autoruns may also be used to detect WMI changes that could be attempts at persistence.(Citation: TechNet Autoruns)(Citation: Medium Detecting WMI Persistence) Monitor for the creation of new WMI <code>EventFilter</code>, <code>EventConsumer</code>, and <code>FilterToConsumerBinding</code> events. Event ID 5861 is logged on Windows 10 systems when new <code>EventFilterToConsumerBinding</code> events are created.(Citation: Elastic - Hunting for Persistence Part 1)\\n\\nMonitor processes and command-line arguments that can be used to register WMI persistence, such as the <code> Register-WmiEvent</code> [PowerShell](https://attack.mitre.org/techniques/T1059/001) cmdlet, as well as those that result from the execution of subscriptions (i.e. spawning from the WmiPrvSe.exe WMI Provider Host process).(Citation: Microsoft Register-WmiEvent)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: Process Creation', 'WMI: WMI Creation', 'Command: Command Execution'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b439f47d-ef52-4b29-9a2f-57d8a96cb6b8",
+                        "lookup_data": {
+                            "description": "Detects signs of the WMI script host process %SystemRoot%\\system32\\wbem\\scrcons.exe functionality being used via images being loaded by a process.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/09/02\ndescription: Detects signs of the WMI script host process %SystemRoot%\\system32\\wbem\\scrcons.exe\n  functionality being used via images being loaded by a process.\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith:\n    - \\vbscript.dll\n    - \\wbemdisp.dll\n    - \\wshom.ocx\n    - \\scrrun.dll\n    Image|endswith: \\scrcons.exe\nfalsepositives:\n- Legitimate event consumers\n- Dell computers on some versions register an event consumer that is known to cause\n  false positives when brightness is changed by the corresponding keyboard button\nid: b439f47d-ef52-4b29-9a2f-57d8a96cb6b8\nlevel: medium\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/11\nreferences:\n- https://twitter.com/HunterPlaybook/status/1301207718355759107\n- https://www.mdsec.co.uk/2020/09/i-like-to-move-it-windows-lateral-movement-part-1-wmi-event-subscription/\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-200902020333.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1546.003\ntitle: WMI Script Host Process Image Loaded\n",
+                            "sigma:id": "b439f47d-ef52-4b29-9a2f-57d8a96cb6b8",
+                            "title": "WMI Script Host Process Image Loaded",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e",
+                        "lookup_data": {
+                            "description": "Detects WMI script event consumers",
+                            "raw": "author: Thomas Patzke\ndate: 2018/03/07\ndescription: Detects WMI script event consumers\ndetection:\n  condition: selection\n  selection:\n    Image: C:\\WINDOWS\\system32\\wbem\\scrcons.exe\n    ParentImage: C:\\Windows\\System32\\svchost.exe\nfalsepositives:\n- Legitimate event consumers\n- Dell computers on some versions register an event consumer that is known to cause\n  false positives when brightness is changed by the corresponding keyboard button\nid: ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/11\nreferences:\n- https://www.eideon.com/2018-03-02-THL03-WMIBackdoors/\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.003\ntitle: WMI Persistence - Script Event Consumer\n",
+                            "sigma:id": "ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e",
+                            "title": "WMI Persistence - Script Event Consumer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "05936ce2-ee05-4dae-9d03-9a391cf2d2c6",
+                        "lookup_data": {
+                            "description": "Detects WMI command line event consumers",
+                            "raw": "author: Thomas Patzke\ndate: 2018/03/07\ndescription: Detects WMI command line event consumers\ndetection:\n  condition: selection\n  selection:\n    Image: C:\\Windows\\System32\\wbem\\WmiPrvSE.exe\n    ImageLoaded|endswith: \\wbemcons.dll\nfalsepositives:\n- Unknown (data set is too small; further testing needed)\nid: 05936ce2-ee05-4dae-9d03-9a391cf2d2c6\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.eideon.com/2018-03-02-THL03-WMIBackdoors/\nstatus: test\ntags:\n- attack.t1546.003\n- attack.persistence\ntitle: WMI Persistence - Command Line Event Consumer\n",
+                            "sigma:id": "05936ce2-ee05-4dae-9d03-9a391cf2d2c6",
+                            "title": "WMI Persistence - Command Line Event Consumer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9599c180-e3a8-4743-8f92-7fb96d3be648",
+                        "lookup_data": {
+                            "description": "Detect potential adversaries leveraging WMI ActiveScriptEventConsumers remotely to move laterally in a network",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/09/02\ndescription: Detect potential adversaries leveraging WMI ActiveScriptEventConsumers\n  remotely to move laterally in a network\ndetection:\n  condition: selection and not filter\n  filter:\n    TargetLogonId: '0x3e7'\n  selection:\n    EventID: 4624\n    LogonType: 3\n    ProcessName|endswith: scrcons.exe\nfalsepositives:\n- SCCM\nid: 9599c180-e3a8-4743-8f92-7fb96d3be648\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-200902020333.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1546.003\ntitle: Remote WMI ActiveScriptEventConsumers\n",
+                            "sigma:id": "9599c180-e3a8-4743-8f92-7fb96d3be648",
+                            "title": "Remote WMI ActiveScriptEventConsumers",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ebef4391-1a81-4761-a40a-1db446c0e625",
+                        "lookup_data": {
+                            "description": "Detects WMIC executions in which a event consumer gets created in order to establish persistence",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/06/25\ndescription: Detects WMIC executions in which a event consumer gets created in order\n  to establish persistence\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - ActiveScriptEventConsumer\n    - ' CREATE '\nfalsepositives:\n- Legitimate software creating script event consumers\nfields:\n- CommandLine\n- ParentCommandLine\nid: ebef4391-1a81-4761-a40a-1db446c0e625\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/johnlatwc/status/1408062131321270282?s=12\n- https://www.fireeye.com/content/dam/fireeye-www/global/en/current-threats/pdfs/wp-windows-management-instrumentation.pdf\nstatus: test\ntags:\n- attack.persistence\n- attack.t1546.003\ntitle: Suspicious WMIC ActiveScriptEventConsumer Creation\n",
+                            "sigma:id": "ebef4391-1a81-4761-a40a-1db446c0e625",
+                            "title": "Suspicious WMIC ActiveScriptEventConsumer Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0f06a3a5-6a09-413f-8743-e6cf35561297",
+                        "lookup_data": {
+                            "description": "Detects creation of WMI event subscription persistence method",
+                            "raw": "author: Tom Ueltschi (@c_APT_ure)\ndate: 2019/01/12\ndescription: Detects creation of WMI event subscription persistence method\ndetection:\n  condition: selection\n  selection:\n    EventID:\n    - 19\n    - 20\n    - 21\nfalsepositives:\n- Exclude legitimate (vetted) use of WMI event subscription in your network\nid: 0f06a3a5-6a09-413f-8743-e6cf35561297\nlevel: medium\nlogsource:\n  category: wmi_event\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.persistence\n- attack.t1546.003\ntitle: WMI Event Subscription\n",
+                            "sigma:id": "0f06a3a5-6a09-413f-8743-e6cf35561297",
+                            "title": "WMI Event Subscription",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "33f41cdd-35ac-4ba8-814b-c6a4244a1ad4",
+                        "lookup_data": {
+                            "description": "Detects file writes of WMI script event consumer",
+                            "raw": "author: Thomas Patzke\ndate: 2018/03/07\ndescription: Detects file writes of WMI script event consumer\ndetection:\n  condition: selection\n  selection:\n    Image: C:\\WINDOWS\\system32\\wbem\\scrcons.exe\nfalsepositives:\n- Dell Power Manager (C:\\Program Files\\Dell\\PowerManager\\DpmPowerPlanSetup.exe)\nid: 33f41cdd-35ac-4ba8-814b-c6a4244a1ad4\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.eideon.com/2018-03-02-THL03-WMIBackdoors/\nstatus: test\ntags:\n- attack.t1546.003\n- attack.persistence\ntitle: WMI Persistence - Script Event Consumer File Write\n",
+                            "sigma:id": "33f41cdd-35ac-4ba8-814b-c6a4244a1ad4",
+                            "title": "WMI Persistence - Script Event Consumer File Write",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f033f3f3-fd24-4995-97d8-a3bb17550a88",
+                        "lookup_data": {
+                            "description": "Detects suspicious WMI event filter and command line event consumer based on WMI and Security Logs.",
+                            "raw": "author: Florian Roth (Nextron Systems), Gleb Sukhodolskiy, Timur Zinniatullin oscd.community\ndate: 2017/08/22\ndescription: Detects suspicious WMI event filter and command line event consumer based\n  on WMI and Security Logs.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4662\n    ObjectName|contains: subscription\n    ObjectType: WMI Namespace\nfalsepositives:\n- Unknown (data set is too small; further testing needed)\nid: f033f3f3-fd24-4995-97d8-a3bb17550a88\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://twitter.com/mattifestation/status/899646620148539397\n- https://www.eideon.com/2018-03-02-THL03-WMIBackdoors/\nrelated:\n- id: 0b7889b4-5577-4521-a60a-3376ee7f9f7b\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.003\ntitle: WMI Persistence - Security\n",
+                            "sigma:id": "f033f3f3-fd24-4995-97d8-a3bb17550a88",
+                            "title": "WMI Persistence - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0b7889b4-5577-4521-a60a-3376ee7f9f7b",
+                        "lookup_data": {
+                            "description": "Detects suspicious WMI event filter and command line event consumer based on WMI and Security Logs.",
+                            "raw": "author: Florian Roth (Nextron Systems), Gleb Sukhodolskiy, Timur Zinniatullin oscd.community\ndate: 2017/08/22\ndescription: Detects suspicious WMI event filter and command line event consumer based\n  on WMI and Security Logs.\ndetection:\n  condition: ( (wmi_filter_to_consumer_binding and consumer_keywords) or (wmi_filter_registration)\n    ) and not filter_scmevent\n  consumer_keywords:\n  - ActiveScriptEventConsumer\n  - CommandLineEventConsumer\n  - CommandLineTemplate\n  filter_scmevent:\n    PossibleCause: Permanent\n    Provider: SCM Event Provider\n    Query: select * from MSFT_SCMEventLogEvent\n    User: S-1-5-32-544\n  wmi_filter_registration:\n    EventID: 5859\n  wmi_filter_to_consumer_binding:\n    EventID: 5861\nfalsepositives:\n- Unknown (data set is too small; further testing needed)\nid: 0b7889b4-5577-4521-a60a-3376ee7f9f7b\nlevel: medium\nlogsource:\n  definition: WMI Namespaces Auditing and SACL should be configured, EventID 5861\n    and 5859 detection requires Windows 10, 2012 and higher\n  product: windows\n  service: wmi\nmodified: 2022/02/10\nreferences:\n- https://twitter.com/mattifestation/status/899646620148539397\n- https://www.eideon.com/2018-03-02-THL03-WMIBackdoors/\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.003\ntitle: WMI Persistence\n",
+                            "sigma:id": "0b7889b4-5577-4521-a60a-3376ee7f9f7b",
+                            "title": "WMI Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "797011dc-44f4-4e6f-9f10-a8ceefbe566b",
+                        "lookup_data": {
+                            "description": "Detects a WMI backdoor in Exchange Transport Agents via WMI event filters",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/10/11\ndescription: Detects a WMI backdoor in Exchange Transport Agents via WMI event filters\ndetection:\n  condition: selection and not filter\n  filter:\n    Image: C:\\Windows\\System32\\conhost.exe\n  selection:\n    ParentImage|endswith: \\EdgeTransport.exe\nfalsepositives:\n- Unknown\nid: 797011dc-44f4-4e6f-9f10-a8ceefbe566b\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/03/18\nreferences:\n- https://twitter.com/cglyer/status/1182389676876980224\n- https://twitter.com/cglyer/status/1182391019633029120\nstatus: test\ntags:\n- attack.persistence\n- attack.t1546.003\ntitle: WMI Backdoor Exchange Transport Agent\n",
+                            "sigma:id": "797011dc-44f4-4e6f-9f10-a8ceefbe566b",
+                            "title": "WMI Backdoor Exchange Transport Agent",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83844185-1c5b-45bc-bcf3-b5bf3084ca5b",
+                        "lookup_data": {
+                            "description": "Detects suspicious encoded payloads in WMI Event Consumers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/09/01\ndescription: Detects suspicious encoded payloads in WMI Event Consumers\ndetection:\n  condition: selection_destination\n  selection_destination:\n    Destination|base64offset|contains:\n    - WriteProcessMemory\n    - This program cannot be run in DOS mode\n    - This program must be run under Win32\nfalsepositives:\n- Unknown\nfields:\n- User\n- Operation\nid: 83844185-1c5b-45bc-bcf3-b5bf3084ca5b\nlevel: high\nlogsource:\n  category: wmi_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/RiccardoAncarani/LiquidSnake\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.persistence\n- attack.t1546.003\ntitle: Suspicious Encoded Scripts in a WMI Consumer\n",
+                            "sigma:id": "83844185-1c5b-45bc-bcf3-b5bf3084ca5b",
+                            "title": "Suspicious Encoded Scripts in a WMI Consumer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                        "lookup_data": {
+                            "description": "Operation â€˜Harvestâ€™: A Deep Dive into a Long-term Campaign",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c1bd5026-520b-45bd-9a79-82d38cf96c7b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633469315",
+                            "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.003",
+                "display_name": "Event Triggered Execution: Windows Management Instrumentation Event Subscription",
+                "atomic_tests": [
+                    {
+                        "name": "Persistence via WMI Event Subscription - CommandLineEventConsumer",
+                        "auto_generated_guid": "3c64f177-28e2-49eb-a799-d767b24dd1e0",
+                        "description": "Run from an administrator powershell window. After running, reboot the victim machine.\nAfter it has been online for 4 minutes you should see notepad.exe running as SYSTEM.\n\nCode references\n\nhttps://gist.github.com/mattifestation/7fe1df7ca2f08cbfa3d067def00c01af\n\nhttps://github.com/EmpireProject/Empire/blob/master/data/module_source/persistence/Persistence.psm1#L545\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$FilterArgs = @{name='AtomicRedTeam-WMIPersistence-CommandLineEventConsumer-Example';\n                EventNameSpace='root\\CimV2';\n                QueryLanguage=\"WQL\";\n                Query=\"SELECT * FROM __InstanceModificationEvent WITHIN 60 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System' AND TargetInstance.SystemUpTime >= 240 AND TargetInstance.SystemUpTime < 325\"};\n$Filter=New-CimInstance -Namespace root/subscription -ClassName __EventFilter -Property $FilterArgs\n\n$ConsumerArgs = @{name='AtomicRedTeam-WMIPersistence-CommandLineEventConsumer-Example';\n                CommandLineTemplate=\"$($Env:SystemRoot)\\System32\\notepad.exe\";}\n$Consumer=New-CimInstance -Namespace root/subscription -ClassName CommandLineEventConsumer -Property $ConsumerArgs\n\n$FilterToConsumerArgs = @{\nFilter = [Ref] $Filter;\nConsumer = [Ref] $Consumer;\n}\n$FilterToConsumerBinding = New-CimInstance -Namespace root/subscription -ClassName __FilterToConsumerBinding -Property $FilterToConsumerArgs\n",
+                            "cleanup_command": "$EventConsumerToCleanup = Get-WmiObject -Namespace root/subscription -Class CommandLineEventConsumer -Filter \"Name = 'AtomicRedTeam-WMIPersistence-CommandLineEventConsumer-Example'\"\n$EventFilterToCleanup = Get-WmiObject -Namespace root/subscription -Class __EventFilter -Filter \"Name = 'AtomicRedTeam-WMIPersistence-CommandLineEventConsumer-Example'\"\n$FilterConsumerBindingToCleanup = Get-WmiObject -Namespace root/subscription -Query \"REFERENCES OF {$($EventConsumerToCleanup.__RELPATH)} WHERE ResultClass = __FilterToConsumerBinding\" -ErrorAction SilentlyContinue\n$FilterConsumerBindingToCleanup | Remove-WmiObject\n$EventConsumerToCleanup | Remove-WmiObject\n$EventFilterToCleanup | Remove-WmiObject\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Persistence via WMI Event Subscription - ActiveScriptEventConsumer",
+                        "auto_generated_guid": "fecd0dfd-fb55-45fa-a10b-6250272d0832",
+                        "description": "Run from an administrator powershell window. After running, reboot the victim machine.\nAfter it has been online for 4 minutes you should see notepad.exe running as SYSTEM.\n\nCode references\n\nhttps://gist.github.com/mgreen27/ef726db0baac5623dc7f76bfa0fc494c\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$FilterArgs = @{name='AtomicRedTeam-WMIPersistence-ActiveScriptEventConsumer-Example';\n                EventNameSpace='root\\CimV2';\n                QueryLanguage=\"WQL\";\n                Query=\"SELECT * FROM __InstanceModificationEvent WITHIN 60 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System' AND TargetInstance.SystemUpTime >= 240 AND TargetInstance.SystemUpTime < 325\"};\n$Filter=Set-WmiInstance -Class __EventFilter -Namespace \"root\\subscription\" -Arguments $FilterArgs\n\n$ConsumerArgs = @{name='AtomicRedTeam-WMIPersistence-ActiveScriptEventConsumer-Example';\n                ScriptingEngine='VBScript';\n                ScriptText='\n                Set objws = CreateObject(\"Wscript.Shell\")\n                objws.Run \"notepad.exe\", 0, True\n                '}\n$Consumer=Set-WmiInstance -Namespace \"root\\subscription\" -Class ActiveScriptEventConsumer -Arguments $ConsumerArgs\n\n$FilterToConsumerArgs = @{\nFilter = $Filter;\nConsumer = $Consumer;\n}\n$FilterToConsumerBinding = Set-WmiInstance -Namespace 'root/subscription' -Class '__FilterToConsumerBinding' -Arguments $FilterToConsumerArgs\n",
+                            "cleanup_command": "$EventConsumerToCleanup = Get-WmiObject -Namespace root/subscription -Class ActiveScriptEventConsumer -Filter \"Name = 'AtomicRedTeam-WMIPersistence-ActiveScriptEventConsumer-Example'\"\n$EventFilterToCleanup = Get-WmiObject -Namespace root/subscription -Class __EventFilter -Filter \"Name = 'AtomicRedTeam-WMIPersistence-ActiveScriptEventConsumer-Example'\"\n$FilterConsumerBindingToCleanup = Get-WmiObject -Namespace root/subscription -Query \"REFERENCES OF {$($EventConsumerToCleanup.__RELPATH)} WHERE ResultClass = __FilterToConsumerBinding\" -ErrorAction SilentlyContinue\n$FilterConsumerBindingToCleanup | Remove-WmiObject\n$EventConsumerToCleanup | Remove-WmiObject\n$EventFilterToCleanup | Remove-WmiObject\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Windows MOFComp.exe Load MOF File",
+                        "auto_generated_guid": "29786d7e-8916-4de6-9c55-be7b093b2706",
+                        "description": "The following Atomic will utilize MOFComp.exe to load a local MOF file.\nThe Managed Object Format (MOF) compiler parses a file containing MOF statements and adds the classes and class instances defined in the file to the WMI repository. \nTo query for the class:  gwmi __eventfilter -namespace root\\subscription\nA successful execution will add the class to WMI root namespace.\nReference: https://pentestlab.blog/2020/01/21/persistence-wmi-event-subscription/ and https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "mofcomp_path": {
+                                "description": "Location of mofcomp.exe",
+                                "type": "string",
+                                "default": "c:\\windows\\system32\\wbem\\mofcomp.exe"
+                            },
+                            "mof_file": {
+                                "description": "Local location MOF file",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1546.003\\src\\T1546.003.mof"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "MofComp.exe must exist on disk at specified location (#{mofcomp_path})\n",
+                                "prereq_command": "if (Test-Path \"#{mofcomp_path}\") { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "Validate MOFComp.exe is on disk somewhere and update input argument.\n"
+                            },
+                            {
+                                "description": "MofComp.exe must exist on disk at specified location (#{mof_file})\n",
+                                "prereq_command": "if (Test-Path \"#{mof_file}\") { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{mof_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.003/src/T1546.003.mof\" -OutFile \"#{mof_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{mofcomp_path} \"#{mof_file}\"\n",
+                            "cleanup_command": "$EventConsumerToCleanup = Get-WmiObject -Namespace root/subscription -Class CommandLineEventConsumer -Filter \"Name = 'AtomicRedTeam_consumer'\"\n$EventFilterToCleanup = Get-WmiObject -Namespace root/subscription -Class __EventFilter -Filter \"Name = 'AtomicRedTeam_filter'\"\n$FilterConsumerBindingToCleanup = Get-WmiObject -Namespace root/subscription -Query \"REFERENCES OF {$($EventConsumerToCleanup.__RELPATH)} WHERE ResultClass = __FilterToConsumerBinding\" -ErrorAction SilentlyContinue\n$FilterConsumerBindingToCleanup | Remove-WmiObject\n$EventConsumerToCleanup | Remove-WmiObject\n$EventFilterToCleanup | Remove-WmiObject\n",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:23:27"
+}

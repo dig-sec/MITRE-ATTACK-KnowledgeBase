@@ -1,0 +1,287 @@
+{
+    "id": "T1119",
+    "name": "Automated Collection",
+    "description": "Once established within a system or network, an adversary may use automated techniques for collecting internal data. Methods for performing this technique could include use of a [Command and Scripting Interpreter](T1059) to search for and copy information fitting set criteria such as file type, location, or name at specific time intervals. This functionality could also be built into remote access tools.\nThis technique may incorporate use of other techniques such as [File and Directory Discovery](T1083) and [Lateral Tool Transfer](T1570) to identify and move files.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Collection",
+    "data_sources": "File: File Access, Command: Command Execution, Script: Script Execution",
+    "detection": "Depending on the method used, actions could include common file system commands and parameters on the command-line interface within batch files or scripts. A sequence of actions like this may be unusual, depending on the system and network environment. Automated collection may occur along with other techniques such as [Data Staged](T1074). As such, file access monitoring that shows an unusual process performing sequential file opens and potentially copy actions to another location on the file system for many files at once may indicate automated collection behavior. Remote access tools with built-in features may interact directly with the Windows API to gather data. Data may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1119",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1119",
+                "atomic_attack_guid": "aa1180e2-f329-4e1e-8625-2472ec0bfaf3",
+                "atomic_attack_name": "Recon information for export with Command Prompt",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1119",
+                "atomic_attack_guid": "cb379146-53f1-43e0-b884-7ce2c635ff5b",
+                "atomic_attack_name": "Automated Collection Command Prompt",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Automated Collection Command Prompt",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_automated_collection.yml",
+                        "remote_content": "title: Automated Collection Command Prompt\nid: f576a613-2392-4067-9d1a-9345fb58d8d1\nstatus: test\ndescription: Once established within a system or network, an adversary may use automated techniques for collecting internal data.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1119/T1119.md\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md\nauthor: frack113\ndate: 2021-07-28\nmodified: 2022-11-11\ntags:\n    - attack.collection\n    - attack.t1119\n    - attack.credential-access\n    - attack.t1552.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_ext:\n        CommandLine|contains:\n            - '.doc'\n            - '.docx'\n            - '.xls'\n            - '.xlsx'\n            - '.ppt'\n            - '.pptx'\n            - '.rtf'\n            - '.pdf'\n            - '.txt'\n    selection_other_dir:\n        CommandLine|contains|all:\n            - 'dir '\n            - ' /b '\n            - ' /s '\n    selection_other_findstr:\n        OriginalFileName: 'FINDSTR.EXE'\n        CommandLine|contains:\n            - ' /e '\n            - ' /si '\n    condition: selection_ext and 1 of selection_other_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "File And SubFolder Enumeration Via Dir Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_dir_execution.yml",
+                        "remote_content": "title: File And SubFolder Enumeration Via Dir Command\nid: 7c9340a9-e2ee-4e43-94c5-c54ebbea1006\nstatus: test\ndescription: |\n    Detects usage of the \"dir\" command part of Widows CMD with the \"/S\" command line flag in order to enumerate files in a specified directory and all subdirectories.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1217/T1217.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2024-04-14\ntags:\n    - attack.discovery\n    - attack.t1217\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: Cmd.Exe\n    selection_cli:\n        CommandLine|contains|windash: 'dir*-s'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "f576a613-2392-4067-9d1a-9345fb58d8d1",
+                    "30208d3e-0d6b-43c8-883e-44462a514619",
+                    "e06ac91d-b9e6-443d-8e5b-af749e7aa6b6",
+                    "a9723fcc-881c-424c-8709-fd61442ab3c3",
+                    "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                    "c1dda054-d638-4c16-afc8-53e007f3fbc5",
+                    "5cccb246-0da0-4c93-a463-61fe0a016219",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "5e5709a4-8850-453e-9f11-275a0a0a020f",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                    "8bd1ae32-a686-48f4-a6f8-470287f76152",
+                    "aa2efee7-34dd-446e-8a37-40790a66efd7",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f576a613-2392-4067-9d1a-9345fb58d8d1",
+                        "lookup_data": {
+                            "description": "Once established within a system or network, an adversary may use automated techniques for collecting internal data.",
+                            "raw": "author: frack113\ndate: 2021/07/28\ndescription: Once established within a system or network, an adversary may use automated\n  techniques for collecting internal data.\ndetection:\n  condition: selection_ext and 1 of selection_other_*\n  selection_ext:\n    CommandLine|contains:\n    - .doc\n    - .docx\n    - .xls\n    - .xlsx\n    - .ppt\n    - .pptx\n    - .rtf\n    - .pdf\n    - .txt\n  selection_other_dir:\n    CommandLine|contains|all:\n    - 'dir '\n    - ' /b '\n    - ' /s '\n  selection_other_findstr:\n    CommandLine|contains:\n    - ' /e '\n    - ' /si '\n    OriginalFileName: FINDSTR.EXE\nfalsepositives:\n- Unknown\nid: f576a613-2392-4067-9d1a-9345fb58d8d1\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1119/T1119.md\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.001/T1552.001.md\nstatus: test\ntags:\n- attack.collection\n- attack.t1119\n- attack.credential_access\n- attack.t1552.001\ntitle: Automated Collection Command Prompt\n",
+                            "sigma:id": "f576a613-2392-4067-9d1a-9345fb58d8d1",
+                            "title": "Automated Collection Command Prompt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "30208d3e-0d6b-43c8-883e-44462a514619",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1119",
+                            "mitre-cti:description": "Once established within a system or network, an adversary may use automated techniques for collecting internal data. Methods for performing this technique could include use of a [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059) to search for and copy information fitting set criteria such as file type, location, or name at specific time intervals. In cloud-based environments, adversaries may also use cloud APIs, command line interfaces, or extract, transform, and load (ETL) services to automatically collect data. This functionality could also be built into remote access tools. \n\nThis technique may incorporate use of other techniques such as [File and Directory Discovery](https://attack.mitre.org/techniques/T1083) and [Lateral Tool Transfer](https://attack.mitre.org/techniques/T1570) to identify and move files, as well as [Cloud Service Dashboard](https://attack.mitre.org/techniques/T1538) and [Cloud Storage Object Discovery](https://attack.mitre.org/techniques/T1619) to identify resources in cloud environments.",
+                            "mitre-cti:name": "Automated Collection",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'IaaS', 'SaaS'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Praetorian'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--30208d3e-0d6b-43c8-883e-44462a514619', 'created': '2017-05-31T21:31:27.985Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1119', 'url': 'https://attack.mitre.org/techniques/T1119'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Once established within a system or network, an adversary may use automated techniques for collecting internal data. Methods for performing this technique could include use of a [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059) to search for and copy information fitting set criteria such as file type, location, or name at specific time intervals. In cloud-based environments, adversaries may also use cloud APIs, command line interfaces, or extract, transform, and load (ETL) services to automatically collect data. This functionality could also be built into remote access tools. \\n\\nThis technique may incorporate use of other techniques such as [File and Directory Discovery](https://attack.mitre.org/techniques/T1083) and [Lateral Tool Transfer](https://attack.mitre.org/techniques/T1570) to identify and move files, as well as [Cloud Service Dashboard](https://attack.mitre.org/techniques/T1538) and [Cloud Storage Object Discovery](https://attack.mitre.org/techniques/T1619) to identify resources in cloud environments.', 'modified': '2022-04-11T18:40:24.795Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Automated Collection', 'x_mitre_detection': 'Depending on the method used, actions could include common file system commands and parameters on the command-line interface within batch files or scripts. A sequence of actions like this may be unusual, depending on the system and network environment. Automated collection may occur along with other techniques such as [Data Staged](https://attack.mitre.org/techniques/T1074). As such, file access monitoring that shows an unusual process performing sequential file opens and potentially copy actions to another location on the file system for many files at once may indicate automated collection behavior. Remote access tools with built-in features may interact directly with the Windows API to gather data. Data may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001), as well as through cloud APIs and command line interfaces.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Script: Script Execution', 'Command: Command Execution', 'File: File Access'], 'x_mitre_system_requirements': ['Permissions to access directories, files, and API endpoints that store information of interest.'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e06ac91d-b9e6-443d-8e5b-af749e7aa6b6",
+                        "lookup_data": {
+                            "description": "Detects URL pattern used by iOS Implant",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/08/30\ndescription: Detects URL pattern used by iOS Implant\ndetection:\n  condition: selection\n  selection:\n    c-uri|contains: /list/suc\\?name=\nfalsepositives:\n- Unknown\nfields:\n- ClientIP\n- c-uri\n- c-useragent\nid: e06ac91d-b9e6-443d-8e5b-af749e7aa6b6\nlevel: critical\nlogsource:\n  category: proxy\nmodified: 2022/08/15\nreferences:\n- https://googleprojectzero.blogspot.com/2019/08/implant-teardown.html\n- https://twitter.com/craiu/status/1167358457344925696\nstatus: test\ntags:\n- attack.execution\n- attack.t1203\n- attack.collection\n- attack.t1005\n- attack.t1119\n- attack.credential_access\n- attack.t1528\n- attack.t1552.001\ntitle: iOS Implant URL Pattern\n",
+                            "sigma:id": "e06ac91d-b9e6-443d-8e5b-af749e7aa6b6",
+                            "title": "iOS Implant URL Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a9723fcc-881c-424c-8709-fd61442ab3c3",
+                        "lookup_data": {
+                            "description": "Once established within a system or network, an adversary may use automated techniques for collecting internal data",
+                            "raw": "author: frack113\ndate: 2021/07/30\ndescription: Once established within a system or network, an adversary may use automated\n  techniques for collecting internal data\ndetection:\n  condition: all of selection*\n  selection_action:\n    ScriptBlockText|contains:\n    - 'Get-Service '\n    - 'Get-ChildItem '\n    - 'Get-Process '\n  selection_redirect:\n    ScriptBlockText|contains: '> $env:TEMP\\'\nfalsepositives:\n- Unknown\nid: a9723fcc-881c-424c-8709-fd61442ab3c3\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1119/T1119.md\nstatus: test\ntags:\n- attack.collection\n- attack.t1119\ntitle: Recon Information for Export with PowerShell\n",
+                            "sigma:id": "a9723fcc-881c-424c-8709-fd61442ab3c3",
+                            "title": "Recon Information for Export with PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                        "lookup_data": {
+                            "description": "OSINT - Analyzing Operation GhostSecret: Attack Seeks to Steal Data Worldwide",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ae2129e-15b4-41e9-9428-4f1e02de0b81.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1524766410",
+                            "uuid": "5ae2129e-15b4-41e9-9428-4f1e02de0b81",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1dda054-d638-4c16-afc8-53e007f3fbc5",
+                        "lookup_data": {
+                            "description": "Once established within a system or network, an adversary may use automated techniques for collecting internal data.",
+                            "raw": "author: frack113\ndate: 2021/07/28\ndescription: Once established within a system or network, an adversary may use automated\n  techniques for collecting internal data.\ndetection:\n  condition: all of selection*\n  selection_cmd:\n    ScriptBlockText|contains|all:\n    - Get-ChildItem\n    - ' -Recurse '\n    - ' -Include '\n  selection_ext:\n    ScriptBlockText|contains:\n    - .doc\n    - .docx\n    - .xls\n    - .xlsx\n    - .ppt\n    - .pptx\n    - .rtf\n    - .pdf\n    - .txt\nfalsepositives:\n- Unknown\nid: c1dda054-d638-4c16-afc8-53e007f3fbc5\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1119/T1119.md\nstatus: test\ntags:\n- attack.collection\n- attack.t1119\ntitle: Automated Collection Command PowerShell\n",
+                            "sigma:id": "c1dda054-d638-4c16-afc8-53e007f3fbc5",
+                            "title": "Automated Collection Command PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cccb246-0da0-4c93-a463-61fe0a016219",
+                        "lookup_data": {
+                            "description": "ESET Turla LightNeuron Research",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5cccb246-0da0-4c93-a463-61fe0a016219.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1607525139",
+                            "uuid": "5cccb246-0da0-4c93-a463-61fe0a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e5709a4-8850-453e-9f11-275a0a0a020f",
+                        "lookup_data": {
+                            "description": "Racoon Stealer",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e5709a4-8850-453e-9f11-275a0a0a020f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1621850670",
+                            "uuid": "5e5709a4-8850-453e-9f11-275a0a0a020f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8bd1ae32-a686-48f4-a6f8-470287f76152",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1119",
+                            "mitre-cti:description": "Encryption and off-system storage of sensitive information may be one way to mitigate collection of files, but may not stop an adversary from acquiring the information if an intrusion persists over a long period of time and the adversary is able to discover and access the data through other means. A keylogger installed on a system may be able to intercept passwords through [Input Capture](https://attack.mitre.org/techniques/T1056) and be used to decrypt protected documents that an adversary may have collected. Strong passwords should be used to prevent offline cracking of encrypted documents through [Brute Force](https://attack.mitre.org/techniques/T1110) techniques.\n\nIdentify unnecessary system utilities, third-party tools, or potentially malicious software that may be used to collect files and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Automated Collection Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--8bd1ae32-a686-48f4-a6f8-470287f76152', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1119', 'url': 'https://attack.mitre.org/mitigations/T1119', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2021-08-23T20:25:18.154Z', 'name': 'Automated Collection Mitigation', 'description': 'Encryption and off-system storage of sensitive information may be one way to mitigate collection of files, but may not stop an adversary from acquiring the information if an intrusion persists over a long period of time and the adversary is able to discover and access the data through other means. A keylogger installed on a system may be able to intercept passwords through [Input Capture](https://attack.mitre.org/techniques/T1056) and be used to decrypt protected documents that an adversary may have collected. Strong passwords should be used to prevent offline cracking of encrypted documents through [Brute Force](https://attack.mitre.org/techniques/T1110) techniques.\\n\\nIdentify unnecessary system utilities, third-party tools, or potentially malicious software that may be used to collect files and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aa2efee7-34dd-446e-8a37-40790a66efd7",
+                        "lookup_data": {
+                            "description": "Once established within a system or network, an adversary may use automated techniques for collecting internal data.",
+                            "raw": "author: frack113\ndate: 2021/07/30\ndescription: Once established within a system or network, an adversary may use automated\n  techniques for collecting internal data.\ndetection:\n  condition: all of selection*\n  selection_image:\n  - Image|endswith:\n    - \\tree.com\n    - \\WMIC.exe\n    - \\doskey.exe\n    - \\sc.exe\n  - OriginalFileName:\n    - wmic.exe\n    - DOSKEY.EXE\n    - sc.exe\n  selection_redirect:\n    ParentCommandLine|contains:\n    - ' > %TEMP%\\'\n    - ' > %TMP%\\'\nfalsepositives:\n- Unknown\nid: aa2efee7-34dd-446e-8a37-40790a66efd7\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/13\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1119/T1119.md\nrelated:\n- id: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\n  type: similar\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1119\ntitle: Recon Information for Export with Command Prompt\n",
+                            "sigma:id": "aa2efee7-34dd-446e-8a37-40790a66efd7",
+                            "title": "Recon Information for Export with Command Prompt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1119",
+                "display_name": "Automated Collection",
+                "atomic_tests": [
+                    {
+                        "name": "Automated Collection Command Prompt",
+                        "auto_generated_guid": "cb379146-53f1-43e0-b884-7ce2c635ff5b",
+                        "description": "Automated Collection. Upon execution, check the users temp directory (%temp%) for the folder T1119_command_prompt_collection\nto see what was collected.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "mkdir %temp%\\T1119_command_prompt_collection >nul 2>&1\ndir c: /b /s .docx | findstr /e .docx\nfor /R c:\\ %f in (*.docx) do copy /Y %f %temp%\\T1119_command_prompt_collection\n",
+                            "cleanup_command": "del %temp%\\T1119_command_prompt_collection /F /Q >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Automated Collection PowerShell",
+                        "auto_generated_guid": "634bd9b9-dc83-4229-b19f-7f83ba9ad313",
+                        "description": "Automated Collection. Upon execution, check the users temp directory (%temp%) for the folder T1119_powershell_collection\nto see what was collected.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "New-Item -Path $env:TEMP\\T1119_powershell_collection -ItemType Directory -Force | Out-Null\nGet-ChildItem -Recurse -Include *.doc | % {Copy-Item $_.FullName -destination $env:TEMP\\T1119_powershell_collection}\n",
+                            "cleanup_command": "Remove-Item $env:TEMP\\T1119_powershell_collection -Force -ErrorAction Ignore | Out-Null\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Recon information for export with PowerShell",
+                        "auto_generated_guid": "c3f6d794-50dd-482f-b640-0384fbb7db26",
+                        "description": "collect information for exfiltration. Upon execution, check the users temp directory (%temp%) for files T1119_*.txt\nto see what was collected.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Get-Service > $env:TEMP\\T1119_1.txt\nGet-ChildItem Env: > $env:TEMP\\T1119_2.txt\nGet-Process > $env:TEMP\\T1119_3.txt\n",
+                            "cleanup_command": "Remove-Item $env:TEMP\\T1119_1.txt -ErrorAction Ignore\nRemove-Item $env:TEMP\\T1119_2.txt -ErrorAction Ignore\nRemove-Item $env:TEMP\\T1119_3.txt -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Recon information for export with Command Prompt",
+                        "auto_generated_guid": "aa1180e2-f329-4e1e-8625-2472ec0bfaf3",
+                        "description": "collect information for exfiltration. Upon execution, check the users temp directory (%temp%) for files T1119_*.txt\nto see what was collected.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "sc query type=service > %TEMP%\\T1119_1.txt\ndoskey /history > %TEMP%\\T1119_2.txt\nwmic process list > %TEMP%\\T1119_3.txt\ntree C:\\AtomicRedTeam\\atomics > %TEMP%\\T1119_4.txt\n",
+                            "cleanup_command": "del %TEMP%\\T1119_1.txt >nul 2>&1\ndel %TEMP%\\T1119_2.txt >nul 2>&1\ndel %TEMP%\\T1119_3.txt >nul 2>&1\ndel %TEMP%\\T1119_4.txt >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:12:45"
+}

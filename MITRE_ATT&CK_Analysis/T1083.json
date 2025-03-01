@@ -1,0 +1,677 @@
+{
+    "id": "T1083",
+    "name": "File and Directory Discovery",
+    "description": "Adversaries may enumerate files and directories or may search in specific locations of a host or network share for certain information within a file system. Adversaries may use the information from [File and Directory Discovery](T1083) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\nMany command shell utilities can be used to obtain this information. Examples include `dir`, `tree`, `ls`, `find`, and `locate`.(Citation: Windows Commands JPCERT) Custom tools may also be used to gather file and directory information and interact with the [Native API](T1106).",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Process: OS API Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Collection and Exfiltration, based on the information obtained.\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1083",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1083",
+                "atomic_attack_guid": "4a233a40-caf7-4cf1-890a-c6331bbc72cf",
+                "atomic_attack_name": "ESXi - Enumerate VMDKs available on an ESXi Host",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Tunneling Tool Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_susp_exfil_and_tunneling_tool_execution.yml",
+                        "remote_content": "title: Tunneling Tool Execution\nid: c75309a3-59f8-4a8d-9c2c-4c927ad50555\nstatus: test\ndescription: Detects the execution of well known tools that can be abused for data exfiltration and tunneling.\nauthor: Daniil Yugoslavskiy, oscd.community\nreferences:\n    - https://www.microsoft.com/en-us/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\ndate: 2019-10-24\nmodified: 2024-01-18\ntags:\n    - attack.exfiltration\n    - attack.command-and-control\n    - attack.t1041\n    - attack.t1572\n    - attack.t1071.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\httptunnel.exe'\n            - '\\plink.exe'\n            - '\\socat.exe'\n            - '\\stunnel.exe'\n    condition: selection\nfalsepositives:\n    - Legitimate administrators using one of these tools\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Protocol Tunneling with Plink",
+                        "rule_link": "https://research.splunk.com/endpoint/8aac5e1e-0fab-4437-af0b-c6e60af23eed/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1083",
+                "atomic_attack_guid": "0e36303b-6762-4500-b003-127743b80ba6",
+                "atomic_attack_name": "File and Directory Discovery (cmd.exe)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "File And SubFolder Enumeration Via Dir Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_dir_execution.yml",
+                        "remote_content": "title: File And SubFolder Enumeration Via Dir Command\nid: 7c9340a9-e2ee-4e43-94c5-c54ebbea1006\nstatus: test\ndescription: |\n    Detects usage of the \"dir\" command part of Widows CMD with the \"/S\" command line flag in order to enumerate files in a specified directory and all subdirectories.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1217/T1217.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2024-04-14\ntags:\n    - attack.discovery\n    - attack.t1217\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: Cmd.Exe\n    selection_cli:\n        CommandLine|contains|windash: 'dir*-s'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                    "162e69a7-7981-4344-84a9-0f1c9a217a52",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "75925535-ca97-4e0a-a850-00b5c00779dc",
+                    "c9aed93d-4023-40c3-92a4-7e8607cd6cb6",
+                    "7bc57495-ea59-4380-be31-a64af124ef18",
+                    "953d460b-f810-420a-97a2-cfca4c98e602",
+                    "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                    "5d498330-f574-4889-bcc9-c53c950d210f",
+                    "7d416556-6502-45b2-9bad-9d2f05f38997",
+                    "eb4ee171-8930-4c15-8917-9af8775417fb",
+                    "85de3a19-b675-4a51-bfc6-b11a5186c971",
+                    "bb382fd5-b454-47ea-a264-1828e4c766d6",
+                    "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                    "3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5",
+                    "8344c0e5-5783-47cc-9cf9-a0f7fd03e6cf",
+                    "d3feb4ee-ff1d-4d3d-bd10-5b28a238cc72",
+                    "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                    "2ace01f8-67c8-43eb-b7b1-a7b9f1fe67e1",
+                    "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                    "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                    "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "41d40bff-377a-43e2-8e1b-2e543069e079",
+                    "38646daa-e78f-4ace-9de0-55547b2d30da",
+                    "b4dc61f5-6cce-468e-a608-b48b469feaa2",
+                    "5ee3822c-6828-418c-b619-62de950d210f",
+                    "60118dab-1ab8-40b2-b02b-b6f80aba047c",
+                    "7ab8f73a-fcff-428b-84aa-6a5ff7877dea",
+                    "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                    "d23f2ba5-9da0-4463-8908-8ee47f614bb9",
+                    "089dbdf6-b960-4bcc-90e3-ffc3480c20f6",
+                    "5e55be1a-3a30-48ae-9934-4199950d210f",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                    "d8d97d51-122d-4cdd-9e2f-01b4b4933530"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                        "lookup_data": {
+                            "description": "Operation Ghost - White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5d9b516c-e5f0-4e7c-a958-5d8c0a019371.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1571855044",
+                            "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "162e69a7-7981-4344-84a9-0f1c9a217a52",
+                        "lookup_data": {
+                            "description": "Detects technique used by MAZE ransomware to enumerate directories using Powershell",
+                            "raw": "author: frack113\ndate: 2022/03/17\ndescription: Detects technique used by MAZE ransomware to enumerate directories using\n  Powershell\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - foreach\n    - Get-ChildItem\n    - '-Path '\n    - '-ErrorAction '\n    - SilentlyContinue\n    - 'Out-File '\n    - -append\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 162e69a7-7981-4344-84a9-0f1c9a217a52\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1083/T1083.md\n- https://www.mandiant.com/resources/tactics-techniques-procedures-associated-with-maze-ransomware-incidents\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Powershell Directory Enumeration\n",
+                            "sigma:id": "162e69a7-7981-4344-84a9-0f1c9a217a52",
+                            "title": "Powershell Directory Enumeration",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - â€˜Operation Sharpshooterâ€™ Targets Global Defense, Critical Infrastructure",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c125ad1-a1a8-495e-ae07-48bd950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1544734085",
+                            "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "75925535-ca97-4e0a-a850-00b5c00779dc",
+                        "lookup_data": {
+                            "description": "Detects automated lateral movement by Turla group",
+                            "raw": "author: Markus Neis\ndate: 2017/11/07\ndescription: Detects automated lateral movement by Turla group\ndetection:\n  condition: netCommand1 | near netCommand2 and netCommand3\n  netCommand1:\n    CommandLine: net view /DOMAIN\n  netCommand2:\n    CommandLine: net session\n  netCommand3:\n    CommandLine: net share\n  timeframe: 1m\nfalsepositives:\n- Unknown\nid: 75925535-ca97-4e0a-a850-00b5c00779dc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://securelist.com/the-epic-turla-operation/65545/\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059\n- attack.lateral_movement\n- attack.t1021.002\n- attack.discovery\n- attack.t1083\n- attack.t1135\ntitle: Automated Turla Group Lateral Movement\n",
+                            "sigma:id": "75925535-ca97-4e0a-a850-00b5c00779dc",
+                            "title": "Automated Turla Group Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c9aed93d-4023-40c3-92a4-7e8607cd6cb6",
+                        "lookup_data": {
+                            "description": "Scraper: Talos Website",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c9aed93d-4023-40c3-92a4-7e8607cd6cb6.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1663009124",
+                            "uuid": "c9aed93d-4023-40c3-92a4-7e8607cd6cb6",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7bc57495-ea59-4380-be31-a64af124ef18",
+                        "lookup_data": {
+                            "capec": "CAPEC-497",
+                            "mitre-attack-id": "T1083",
+                            "mitre-cti:description": "Adversaries may enumerate files and directories or may search in specific locations of a host or network share for certain information within a file system. Adversaries may use the information from [File and Directory Discovery](https://attack.mitre.org/techniques/T1083) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\n\nMany command shell utilities can be used to obtain this information. Examples include <code>dir</code>, <code>tree</code>, <code>ls</code>, <code>find</code>, and <code>locate</code>.(Citation: Windows Commands JPCERT) Custom tools may also be used to gather file and directory information and interact with the [Native API](https://attack.mitre.org/techniques/T1106). Adversaries may also leverage a [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) on network devices to gather file and directory information (e.g. <code>dir</code>, <code>show flash</code>, and/or <code>nvram</code>).(Citation: US-CERT-TA18-106A)",
+                            "mitre-cti:name": "File and Directory Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-09-06T21:55:41.262Z', 'name': 'File and Directory Discovery', 'description': 'Adversaries may enumerate files and directories or may search in specific locations of a host or network share for certain information within a file system. Adversaries may use the information from [File and Directory Discovery](https://attack.mitre.org/techniques/T1083) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\\n\\nMany command shell utilities can be used to obtain this information. Examples include <code>dir</code>, <code>tree</code>, <code>ls</code>, <code>find</code>, and <code>locate</code>.(Citation: Windows Commands JPCERT) Custom tools may also be used to gather file and directory information and interact with the [Native API](https://attack.mitre.org/techniques/T1106). Adversaries may also leverage a [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) on network devices to gather file and directory information (e.g. <code>dir</code>, <code>show flash</code>, and/or <code>nvram</code>).(Citation: US-CERT-TA18-106A)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Collection and Exfiltration, based on the information obtained.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001). Further, [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) commands may also be used to gather file and directory information with built-in features native to the network device platform.  Monitor CLI activity for unexpected or unauthorized use of commands being run by non-standard users from non-standard locations.  ', 'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'Network'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.5', 'x_mitre_contributors': ['Austin Clark, @c2defense'], 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Process: OS API Execution'], 'x_mitre_system_requirements': ['Some folders may require Administrator, SYSTEM or specific user depending on permission levels and access controls'], 'type': 'attack-pattern', 'id': 'attack-pattern--7bc57495-ea59-4380-be31-a64af124ef18', 'created': '2017-05-31T21:31:04.710Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1083', 'external_id': 'T1083'}, {'source_name': 'Windows Commands JPCERT', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html'}, {'source_name': 'US-CERT-TA18-106A', 'description': 'US-CERT. (2018, April 20). Alert (TA18-106A) Russian State-Sponsored Cyber Actors Targeting Network Infrastructure Devices. Retrieved October 19, 2020.', 'url': 'https://www.us-cert.gov/ncas/alerts/TA18-106A'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/127.html', 'external_id': 'CAPEC-127'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/497.html', 'external_id': 'CAPEC-497'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "953d460b-f810-420a-97a2-cfca4c98e602",
+                        "lookup_data": {
+                            "description": "Detects source code enumeration that use GET requests by keyword searches in URL strings",
+                            "raw": "author: James Ahearn\ndate: 2019/06/08\ndescription: Detects source code enumeration that use GET requests by keyword searches\n  in URL strings\ndetection:\n  condition: keywords\n  keywords:\n  - .git/\nfalsepositives:\n- Unknown\nfields:\n- client_ip\n- vhost\n- url\n- response\nid: 953d460b-f810-420a-97a2-cfca4c98e602\nlevel: medium\nlogsource:\n  category: webserver\nmodified: 2022/10/05\nreferences:\n- https://pentester.land/tutorials/2018/10/25/source-code-disclosure-via-exposed-git-folder.html\n- https://medium.com/@logicbomb_1/bugbounty-how-i-was-able-to-download-the-source-code-of-indias-largest-telecom-service-52cf5c5640a1\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Source Code Enumeration Detection by Keyword\n",
+                            "sigma:id": "953d460b-f810-420a-97a2-cfca4c98e602",
+                            "title": "Source Code Enumeration Detection by Keyword",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                        "lookup_data": {
+                            "description": "Operation â€˜Harvestâ€™: A Deep Dive into a Long-term Campaign",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c1bd5026-520b-45bd-9a79-82d38cf96c7b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633469315",
+                            "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Sharpening the Machete",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d498330-f574-4889-bcc9-c53c950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566552908",
+                            "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7d416556-6502-45b2-9bad-9d2f05f38997",
+                        "lookup_data": {
+                            "description": "Detect adversaries enumerate sensitive files",
+                            "raw": "author: frack113\ndate: 2022/09/16\ndescription: Detect adversaries enumerate sensitive files\ndetection:\n  condition: all of selection_*\n  selection_action:\n    ScriptBlockText|contains:\n    - ls\n    - get-childitem\n    - gci\n  selection_file:\n    ScriptBlockText|contains:\n    - .pass\n    - .kdbx\n    - .kdb\n  selection_recurse:\n    ScriptBlockText|contains: -recurse\nfalsepositives:\n- Unknown\nid: 7d416556-6502-45b2-9bad-9d2f05f38997\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://twitter.com/malmoeb/status/1570814999370801158\nrelated:\n- id: d23f2ba5-9da0-4463-8908-8ee47f614bb9\n  type: derived\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Powershell Sensitive File Discovery\n",
+                            "sigma:id": "7d416556-6502-45b2-9bad-9d2f05f38997",
+                            "title": "Powershell Sensitive File Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eb4ee171-8930-4c15-8917-9af8775417fb",
+                        "lookup_data": {
+                            "description": "CERT-FR report extended - sandworm intrusion set campaign targeting Centreon systems",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/eb4ee171-8930-4c15-8917-9af8775417fb.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1613463604",
+                            "uuid": "eb4ee171-8930-4c15-8917-9af8775417fb",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "85de3a19-b675-4a51-bfc6-b11a5186c971",
+                        "lookup_data": {
+                            "description": "Detects usage of \"find\" binary in a suspicious manner to perform discovery",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/28\ndescription: Detects usage of \"find\" binary in a suspicious manner to perform discovery\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - -perm -4000\n    - -perm -2000\n    - -perm 0777\n    - -perm -222\n    - -perm -o w\n    - -perm -o x\n    - -perm -u=s\n    - -perm -g=s\n    Image|endswith: /find\nfalsepositives:\n- Unknown\nid: 85de3a19-b675-4a51-bfc6-b11a5186c971\nlevel: medium\nlogsource:\n  category: process_creation\n  product: macos\nreferences:\n- https://github.com/SaiSathvik1/Linux-Privilege-Escalation-Notes\nrelated:\n- id: 8344c0e5-5783-47cc-9cf9-a0f7fd03e6cf\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Potential Discovery Activity Using Find - MacOS\n",
+                            "sigma:id": "85de3a19-b675-4a51-bfc6-b11a5186c971",
+                            "title": "Potential Discovery Activity Using Find - MacOS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bb382fd5-b454-47ea-a264-1828e4c766d6",
+                        "lookup_data": {
+                            "description": "Detects usage of \"apt\" and \"apt-get\" as a GTFOBin to execute and proxy command and binary execution",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/28\ndescription: Detects usage of \"apt\" and \"apt-get\" as a GTFOBin to execute and proxy\n  command and binary execution\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: APT::Update::Pre-Invoke::=\n    Image|endswith:\n    - /apt\n    - /apt-get\nfalsepositives:\n- Unknown\nid: bb382fd5-b454-47ea-a264-1828e4c766d6\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://gtfobins.github.io/gtfobins/apt/\n- https://gtfobins.github.io/gtfobins/apt-get/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Apt GTFOBin Abuse - Linux\n",
+                            "sigma:id": "bb382fd5-b454-47ea-a264-1828e4c766d6",
+                            "title": "Apt GTFOBin Abuse - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                        "lookup_data": {
+                            "description": "Detects automated lateral movement by Turla group",
+                            "raw": "author: Markus Neis\ndate: 2017/11/07\ndescription: Detects automated lateral movement by Turla group\ndetection:\n  condition: selection\n  selection:\n    CommandLine:\n    - net use \\\\\\\\%DomainController%\\C$ \"P@ssw0rd\" *\n    - dir c:\\\\*.doc* /s\n    - dir %TEMP%\\\\*.exe\nfalsepositives:\n- Unknown\nid: c601f20d-570a-4cde-a7d6-e17f99cb8e7f\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://securelist.com/the-epic-turla-operation/65545/\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059\n- attack.lateral_movement\n- attack.t1021.002\n- attack.discovery\n- attack.t1083\n- attack.t1135\ntitle: Turla Group Lateral Movement\n",
+                            "sigma:id": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                            "title": "Turla Group Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5",
+                        "lookup_data": {
+                            "description": "\"Lebanese Cedar\" APT Global Lebanese Espionage Campaign Leveraging Web Servers",
+                            "link": "http://www.botvrij.eu/data/feed-osint/3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1612198942",
+                            "uuid": "3ada8ae4-a7bd-4732-ad66-0ff8fc0f80f5",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8344c0e5-5783-47cc-9cf9-a0f7fd03e6cf",
+                        "lookup_data": {
+                            "description": "Detects usage of \"find\" binary in a suspicious manner to perform discovery",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/28\ndescription: Detects usage of \"find\" binary in a suspicious manner to perform discovery\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - -perm -4000\n    - -perm -2000\n    - -perm 0777\n    - -perm -222\n    - -perm -o w\n    - -perm -o x\n    - -perm -u=s\n    - -perm -g=s\n    Image|endswith: /find\nfalsepositives:\n- Unknown\nid: 8344c0e5-5783-47cc-9cf9-a0f7fd03e6cf\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://github.com/SaiSathvik1/Linux-Privilege-Escalation-Notes\nrelated:\n- id: 85de3a19-b675-4a51-bfc6-b11a5186c971\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Potential Discovery Activity Using Find - Linux\n",
+                            "sigma:id": "8344c0e5-5783-47cc-9cf9-a0f7fd03e6cf",
+                            "title": "Potential Discovery Activity Using Find - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d3feb4ee-ff1d-4d3d-bd10-5b28a238cc72",
+                        "lookup_data": {
+                            "description": "Detects usage of system utilities to discover files and directories",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2020/10/19\ndescription: Detects usage of system utilities to discover files and directories\ndetection:\n  condition: 1 of select*\n  select_file_with_asterisk:\n    CommandLine|re: (.){200,}\n    Image|endswith: /file\n  select_find_execution:\n    Image|endswith: /find\n  select_recursive_ls:\n    CommandLine|contains: -R\n    Image|endswith: /ls\n  select_tree_execution:\n    Image|endswith: /tree\nfalsepositives:\n- Legitimate activities\nid: d3feb4ee-ff1d-4d3d-bd10-5b28a238cc72\nlevel: informational\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/11/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1083/T1083.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\ntitle: File and Directory Discovery - Linux\n",
+                            "sigma:id": "d3feb4ee-ff1d-4d3d-bd10-5b28a238cc72",
+                            "title": "File and Directory Discovery - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - A journey to Zebrocy land",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ce6aa86-9cd8-4302-9dc9-4a59950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1563528054",
+                            "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2ace01f8-67c8-43eb-b7b1-a7b9f1fe67e1",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1083",
+                            "mitre-cti:description": "File system activity is a common part of an operating system, so it is unlikely that mitigation would be appropriate for this technique. It may still be beneficial to identify and block unnecessary system utilities or potentially malicious software by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "File and Directory Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--2ace01f8-67c8-43eb-b7b1-a7b9f1fe67e1', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1083', 'url': 'https://attack.mitre.org/mitigations/T1083', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.120Z', 'name': 'File and Directory Discovery Mitigation', 'description': 'File system activity is a common part of an operating system, so it is unlikely that mitigation would be appropriate for this technique. It may still be beneficial to identify and block unnecessary system utilities or potentially malicious software by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                        "lookup_data": {
+                            "description": "FontOnLake: Previously unknown malware family targeting Linux",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633682506",
+                            "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                        "lookup_data": {
+                            "description": "Turla: A Galaxy of Opportunity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/54dd4ef7-f7b2-418e-a191-5def4fbb0033.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1673286950",
+                            "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                        "lookup_data": {
+                            "description": "Find information about network devices that is not stored in config files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Find information about network devices that is not stored in config files\ndetection:\n  condition: keywords\n  keywords:\n  - dir\n  - show processes\n  - show arp\n  - show cdp\n  - show version\n  - show ip route\n  - show ip interface\n  - show ip sockets\n  - show users\n  - show ssh\n  - show clock\nfalsepositives:\n- Commonly used by administrators for troubleshooting\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 9705a6a1-6db6-4a16-a987-15b7151e299b\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\n- attack.t1201\n- attack.t1057\n- attack.t1018\n- attack.t1082\n- attack.t1016\n- attack.t1049\n- attack.t1033\n- attack.t1124\ntitle: Cisco Discovery\n",
+                            "sigma:id": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                            "title": "Cisco Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "41d40bff-377a-43e2-8e1b-2e543069e079",
+                        "lookup_data": {
+                            "description": "Detects WannaCry ransomware activity",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom U. @c_APT_ure (collection), oscd.community,\n  Jonhnathan Ribeiro\ndate: 2019/01/16\ndescription: Detects WannaCry ransomware activity\ndetection:\n  condition: 1 of selection*\n  selection1:\n  - Image|endswith:\n    - \\tasksche.exe\n    - \\mssecsvc.exe\n    - \\taskdl.exe\n    - \\taskhsvc.exe\n    - \\taskse.exe\n    - \\111.exe\n    - \\lhdfrgui.exe\n    - \\linuxnew.exe\n    - \\wannacry.exe\n  - Image|contains: WanaDecryptor\n  selection2:\n  - CommandLine|contains|all:\n    - icacls\n    - /grant\n    - Everyone:F\n    - /T\n    - /C\n    - /Q\n  - CommandLine|contains|all:\n    - bcdedit\n    - /set\n    - '{default}'\n    - recoveryenabled\n    - 'no'\n  - CommandLine|contains|all:\n    - wbadmin\n    - delete\n    - catalog\n    - -quiet\n  - CommandLine|contains: '@Please_Read_Me@.txt'\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 41d40bff-377a-43e2-8e1b-2e543069e079\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/02/24\nreferences:\n- https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1210\n- attack.discovery\n- attack.t1083\n- attack.defense_evasion\n- attack.t1222.001\n- attack.impact\n- attack.t1486\n- attack.t1490\ntitle: WannaCry Ransomware\n",
+                            "sigma:id": "41d40bff-377a-43e2-8e1b-2e543069e079",
+                            "title": "WannaCry Ransomware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "38646daa-e78f-4ace-9de0-55547b2d30da",
+                        "lookup_data": {
+                            "description": "Detects the execution of the PUA/Recon tool Seatbelt via PE information of command line parameters",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/18\ndescription: Detects the execution of the PUA/Recon tool Seatbelt via PE information\n  of command line parameters\ndetection:\n  condition: selection or all of group_*\n  group_list:\n    CommandLine|contains:\n    - ' -group=misc'\n    - ' -group=remote'\n    - ' -group=chromium'\n    - ' -group=slack'\n    - ' -group=system'\n    - ' -group=user'\n    - ' -group=all'\n  group_output:\n    CommandLine|contains: ' -outputfile='\n  selection:\n  - Image|endswith: \\Seatbelt.exe\n  - OriginalFileName: Seatbelt.exe\n  - Description: Seatbelt\n  - CommandLine|contains:\n    - ' DpapiMasterKeys'\n    - ' InterestingProcesses'\n    - ' InterestingFiles'\n    - ' CertificateThumbprints'\n    - ' ChromiumBookmarks'\n    - ' ChromiumHistory'\n    - ' ChromiumPresence'\n    - ' CloudCredentials'\n    - ' CredEnum'\n    - ' CredGuard'\n    - ' FirefoxHistory'\n    - ' ProcessCreationEvents'\nfalsepositives:\n- Unlikely\nid: 38646daa-e78f-4ace-9de0-55547b2d30da\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/GhostPack/Seatbelt\n- https://www.bluetangle.dev/2022/08/fastening-seatbelt-on-threat-hunting.html\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1526\n- attack.t1087\n- attack.t1083\ntitle: Seatbelt PUA Tool\n",
+                            "sigma:id": "38646daa-e78f-4ace-9de0-55547b2d30da",
+                            "title": "Seatbelt PUA Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b4dc61f5-6cce-468e-a608-b48b469feaa2",
+                        "lookup_data": {
+                            "description": "Detect use of DirLister.exe",
+                            "raw": "author: frack113\ndate: 2022/08/20\ndescription: Detect use of DirLister.exe\ndetection:\n  condition: selection\n  selection:\n  - OriginalFileName: DirLister.exe\n  - Image|endswith: \\dirlister.exe\nfalsepositives:\n- Legitimate use\nid: b4dc61f5-6cce-468e-a608-b48b469feaa2\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1083/T1083.md\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Launch DirLister Executable\n",
+                            "sigma:id": "b4dc61f5-6cce-468e-a608-b48b469feaa2",
+                            "title": "Launch DirLister Executable",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ee3822c-6828-418c-b619-62de950d210f",
+                        "lookup_data": {
+                            "description": "Dharma Ransomware Event",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ee3822c-6828-418c-b619-62de950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1592742357",
+                            "uuid": "5ee3822c-6828-418c-b619-62de950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "60118dab-1ab8-40b2-b02b-b6f80aba047c",
+                        "lookup_data": {
+                            "description": "[CERT-FR] Sandworm intrusion set campaign targeting Centreon systems",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/60118dab-1ab8-40b2-b02b-b6f80aba047c.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1622552977",
+                            "uuid": "60118dab-1ab8-40b2-b02b-b6f80aba047c",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7ab8f73a-fcff-428b-84aa-6a5ff7877dea",
+                        "lookup_data": {
+                            "description": "Detects usage of \"vim\" and it's sibilings as a GTFOBin to execute and proxy command and binary execution",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/28\ndescription: Detects usage of \"vim\" and it's sibilings as a GTFOBin to execute and\n  proxy command and binary execution\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - :!/\n    - ':py '\n    - ':lua '\n    - /bin/sh\n    - /bin/bash\n    - /bin/dash\n    - /bin/zsh\n    - /bin/fish\n  selection_img:\n    CommandLine|contains:\n    - ' -c '\n    - ' --cmd'\n    Image|endswith:\n    - /vim\n    - /rvim\n    - /vimdiff\nfalsepositives:\n- Unknown\nid: 7ab8f73a-fcff-428b-84aa-6a5ff7877dea\nlevel: high\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://gtfobins.github.io/gtfobins/vim/\n- https://gtfobins.github.io/gtfobins/rvim/\n- https://gtfobins.github.io/gtfobins/vimdiff/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Vim GTFOBin Abuse - Linux\n",
+                            "sigma:id": "7ab8f73a-fcff-428b-84aa-6a5ff7877dea",
+                            "title": "Vim GTFOBin Abuse - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                        "lookup_data": {
+                            "description": "Turla PowerShell blogpost",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5ced8da1-0960-40bc-b5dc-2fed0a016219.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1559232101",
+                            "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d23f2ba5-9da0-4463-8908-8ee47f614bb9",
+                        "lookup_data": {
+                            "description": "Adversaries may enumerate files and directories or may search in specific locations of a host or network share for certain information within a file system.\nAdversaries may use the information from [File and Directory Discovery](https://attack.mitre.org/techniques/T1083) during automated discovery to shape follow-on behaviors,\nincluding whether or not the adversary fully infects the target and/or attempts specific actions.\n",
+                            "raw": "author: frack113\ndate: 2021/12/15\ndescription: 'Adversaries may enumerate files and directories or may search in specific\n  locations of a host or network share for certain information within a file system.\n\n  Adversaries may use the information from [File and Directory Discovery](https://attack.mitre.org/techniques/T1083)\n  during automated discovery to shape follow-on behaviors,\n\n  including whether or not the adversary fully infects the target and/or attempts\n  specific actions.\n\n  '\ndetection:\n  condition: selection and recurse\n  recurse:\n    ScriptBlockText|contains: -recurse\n  selection:\n    ScriptBlockText|contains:\n    - ls\n    - get-childitem\n    - gci\nfalsepositives:\n- Unknown\nid: d23f2ba5-9da0-4463-8908-8ee47f614bb9\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1083/T1083.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Powershell File and Directory Discovery\n",
+                            "sigma:id": "d23f2ba5-9da0-4463-8908-8ee47f614bb9",
+                            "title": "Powershell File and Directory Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "089dbdf6-b960-4bcc-90e3-ffc3480c20f6",
+                        "lookup_data": {
+                            "description": "Detects usage of system utilities to discover files and directories",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2020/10/19\ndescription: Detects usage of system utilities to discover files and directories\ndetection:\n  condition: 1 of select*\n  select_file_with_asterisk:\n    CommandLine|re: (.){200,}\n    Image: /usr/bin/file\n  select_find_execution:\n    Image: /usr/bin/find\n  select_mdfind_execution:\n    Image: /usr/bin/mdfind\n  select_recursive_ls:\n    CommandLine|contains: -R\n    Image: /bin/ls\n  select_tree_execution|endswith:\n    Image: /tree\nfalsepositives:\n- Legitimate activities\nid: 089dbdf6-b960-4bcc-90e3-ffc3480c20f6\nlevel: informational\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/11/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1083/T1083.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\ntitle: File and Directory Discovery - MacOS\n",
+                            "sigma:id": "089dbdf6-b960-4bcc-90e3-ffc3480c20f6",
+                            "title": "File and Directory Discovery - MacOS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                        "lookup_data": {
+                            "description": "Interesting Recon Script",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e55be1a-3a30-48ae-9934-4199950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1582912038",
+                            "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d8d97d51-122d-4cdd-9e2f-01b4b4933530",
+                        "lookup_data": {
+                            "description": "Detects usage of \"getcap\" binary. This is often used during recon activity to determine potential binaries that can be abused as GTFOBins or other.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/28\ndescription: Detects usage of \"getcap\" binary. This is often used during recon activity\n  to determine potential binaries that can be abused as GTFOBins or other.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ' /r '\n    - ' -r '\n    Image|endswith: /getcap\nfalsepositives:\n- Unknown\nid: d8d97d51-122d-4cdd-9e2f-01b4b4933530\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://github.com/SaiSathvik1/Linux-Privilege-Escalation-Notes\n- https://github.com/carlospolop/PEASS-ng\n- https://github.com/diego-treitos/linux-smart-enumeration\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1083\ntitle: Capabilities Discovery - Linux\n",
+                            "sigma:id": "d8d97d51-122d-4cdd-9e2f-01b4b4933530",
+                            "title": "Capabilities Discovery - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1083",
+                "display_name": "File and Directory Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "File and Directory Discovery (cmd.exe)",
+                        "auto_generated_guid": "0e36303b-6762-4500-b003-127743b80ba6",
+                        "description": "Find or discover files on the file system.  Upon successful execution, this test will output the results of all the data discovery commands to a specified file.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "File to output results to",
+                                "type": "string",
+                                "default": "%temp%\\T1083Test1.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "dir /s c:\\ >> #{output_file}\ndir /s \"c:\\Documents and Settings\" >> #{output_file}\ndir /s \"c:\\Program Files\\\" >> #{output_file}\ndir \"%systemdrive%\\Users\\*.*\" >> #{output_file}\ndir \"%userprofile%\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\*.*\" >> #{output_file}\ndir \"%userprofile%\\Desktop\\*.*\" >> #{output_file}\ntree /F >> #{output_file}\n",
+                            "cleanup_command": "del #{output_file}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "File and Directory Discovery (PowerShell)",
+                        "auto_generated_guid": "2158908e-b7ef-4c21-8a83-3ce4dd05a924",
+                        "description": "Find or discover files on the file system. Upon execution, file and folder information will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "ls -recurse\nget-childitem -recurse\ngci -recurse\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Nix File and Directory Discovery",
+                        "auto_generated_guid": "ffc8b249-372a-4b74-adcd-e4c0430842de",
+                        "description": "Find or discover files on the file system\n\nReferences:\n\nhttp://osxdaily.com/2013/01/29/list-all-files-subdirectory-contents-recursively/\n\nhttps://perishablepress.com/list-files-folders-recursively-terminal/\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file used to store the results.",
+                                "type": "path",
+                                "default": "/tmp/T1083.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "ls -a >> #{output_file}\nif [ -d /Library/Preferences/ ]; then ls -la /Library/Preferences/ > #{output_file}; fi;\nfile */* *>> #{output_file}\ncat #{output_file} 2>/dev/null\nfind . -type f\nls -R | grep \":$\" | sed -e 's/:$//' -e 's/[^-][^\\/]*\\//--/g' -e 's/^/ /' -e 's/-/|/'\nlocate *\nwhich sh\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Nix File and Directory Discovery 2",
+                        "auto_generated_guid": "13c5e1ae-605b-46c4-a79f-db28c77ff24e",
+                        "description": "Find or discover files on the file system\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file used to store the results.",
+                                "type": "path",
+                                "default": "/tmp/T1083.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "cd $HOME && find . -print | sed -e 's;[^/]*/;|__;g;s;__|; |;g' > #{output_file}\nif [ -f /etc/mtab ]; then cat /etc/mtab >> #{output_file}; fi;\nfind . -type f -iname *.pdf >> #{output_file}\ncat #{output_file}\nfind . -type f -name \".*\"\n",
+                            "cleanup_command": "rm #{output_file}",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Simulating MAZE Directory Enumeration",
+                        "auto_generated_guid": "c6c34f61-1c3e-40fb-8a58-d017d88286d8",
+                        "description": "This test emulates MAZE ransomware's ability to enumerate directories using Powershell. \nUpon successful execution, this test will output the directory enumeration results to a specified file, as well as display them in the active window. \nSee https://www.mandiant.com/resources/tactics-techniques-procedures-associated-with-maze-ransomware-incidents\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "File_to_output": {
+                                "description": "File to output results to",
+                                "type": "string",
+                                "default": "$env:temp\\T1083Test5.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "$folderarray = @(\"Desktop\", \"Downloads\", \"Documents\", \"AppData/Local\", \"AppData/Roaming\")\nGet-ChildItem -Path $env:homedrive -ErrorAction SilentlyContinue | Out-File -append #{File_to_output}\nGet-ChildItem -Path $env:programfiles -erroraction silentlycontinue | Out-File -append #{File_to_output}\nGet-ChildItem -Path \"${env:ProgramFiles(x86)}\" -erroraction silentlycontinue | Out-File -append #{File_to_output}\n$UsersFolder = \"$env:homedrive\\Users\\\"\nforeach ($directory in Get-ChildItem -Path $UsersFolder -ErrorAction SilentlyContinue) \n{\nforeach ($secondarydirectory in $folderarray)\n {Get-ChildItem -Path \"$UsersFolder/$directory/$secondarydirectory\" -ErrorAction SilentlyContinue | Out-File -append #{File_to_output}}\n}\ncat #{File_to_output}\n",
+                            "cleanup_command": "remove-item #{File_to_output} -ErrorAction SilentlyContinue\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Launch DirLister Executable",
+                        "auto_generated_guid": "c5bec457-43c9-4a18-9a24-fe151d8971b7",
+                        "description": "Launches the DirLister executable for a short period of time and then exits.\n\nRecently seen used by [BlackCat ransomware](https://news.sophos.com/en-us/2022/07/14/blackcat-ransomware-attacks-not-merely-a-byproduct-of-bad-luck/) to create a list of accessible directories and files.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dirlister_path": {
+                                "description": "Path to the DirLister executable ",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\DirLister.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DirLister.exe must exist in the specified path #{dirlister_path}\n",
+                                "prereq_command": "if (Test-Path \"#{dirlister_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "$parentpath = Split-Path \"#{dirlister_path}\"\nNew-Item -ItemType Directory -Force -Path $parentpath | Out-Null\nInvoke-WebRequest https://github.com/SanderSade/DirLister/releases/download/v2.beta4/DirLister.v2.beta4.zip -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4.zip\"\nExpand-Archive -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4.zip\" -DestinationPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4\" -Force\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4\\*\" \"$parentpath\" -Recurse\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4.zip\",\"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4\" -Recurse -ErrorAction Ignore\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process \"#{dirlister_path}\"\nStart-Sleep -Second 4\nStop-Process -Name \"DirLister\"\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "ESXi - Enumerate VMDKs available on an ESXi Host",
+                        "auto_generated_guid": "4a233a40-caf7-4cf1-890a-c6331bbc72cf",
+                        "description": "An adversary uses the find command to enumerate vmdks on an ESXi host.\n[Reference](https://www.crowdstrike.com/blog/hypervisor-jackpotting-ecrime-actors-increase-targeting-of-esxi-servers/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vm_host": {
+                                "description": "Specify the host name of the ESXi Server",
+                                "type": "string",
+                                "default": "atomic.local"
+                            },
+                            "vm_user": {
+                                "description": "Specify the privilege user account on ESXi Server",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "vm_pass": {
+                                "description": "Specify the privilege user password on ESXi Server",
+                                "type": "string",
+                                "default": "pass"
+                            },
+                            "plink_file": {
+                                "description": "Path to Plink",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe"
+                            },
+                            "cli_script": {
+                                "description": "Path to script with file discovery commands",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1083\\src\\esxi_file_discovery.txt"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if plink is available.\n",
+                                "prereq_command": "if (Test-Path \"#{plink_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe\" -OutFile \"#{plink_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "echo \"\" | \"#{plink_file}\" \"#{vm_host}\" -ssh  -l \"#{vm_user}\" -pw \"#{vm_pass}\" -m \"#{cli_script}\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:36:54"
+}

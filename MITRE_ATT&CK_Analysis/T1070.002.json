@@ -1,0 +1,562 @@
+{
+    "id": "T1070.002",
+    "name": "Clear Linux or Mac System Logs",
+    "description": "Adversaries may clear system logs to hide evidence of an intrusion. macOS and Linux both keep track of system or user-initiated actions via system logs. The majority of native system logging is stored under the `/var/log/` directory. Subfolders in this directory categorize logs by their related functions, such as:(Citation: Linux Logs)\n* `/var/log/messages:`: General and system-related messages\n* `/var/log/secure` or `/var/log/auth.log`: Authentication logs\n* `/var/log/utmp` or `/var/log/wtmp`: Login records\n* `/var/log/kern.log`: Kernel logs\n* `/var/log/cron.log`: Crond logs\n* `/var/log/maillog`: Mail server logs\n* `/var/log/httpd/`: Web server access and error logs",
+    "platforms": "Linux, macOS",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "File: File Deletion, File: File Modification, Command: Command Execution",
+    "detection": "File system monitoring may be used to detect improper deletion or modification of indicator files. Also monitor for suspicious processes interacting with log files.",
+    "url": "https://attack.mitre.org/techniques/T1070/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1070.002",
+                "atomic_attack_guid": "bd8ccc45-d632-481e-b7cf-c467627d68f9",
+                "atomic_attack_name": "rm -rf",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Deleting Critical Directory Using RM Command",
+                        "rule_link": "https://research.splunk.com/endpoint/33f89303-cc6f-49ad-921d-2eaea38a6f7a/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1070.002",
+                "atomic_attack_guid": "45ad4abd-19bd-4c5f-a687-41f3eee8d8c2",
+                "atomic_attack_name": "Delete system log files via unlink utility (freebsd)",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Clear Linux Logs",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_clear_logs.yml",
+                        "remote_content": "title: Clear Linux Logs\nid: 80915f59-9b56-4616-9de0-fd0dea6c12fe\nstatus: stable\ndescription: Detects attempts to clear logs on the system. Adversaries may clear system logs to hide evidence of an intrusion\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.002/T1070.002.md\nauthor: Ömer Günal, oscd.community\ndate: 2020-10-07\nmodified: 2022-09-15\ntags:\n    - attack.defense-evasion\n    - attack.t1070.002\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        Image|endswith:\n            - '/rm'    # covers /rmdir as well\n            - '/shred'\n            - '/unlink'\n        CommandLine|contains:\n            - '/var/log'\n            - '/var/spool/mail'\n    condition: selection\nfalsepositives:\n    - Legitimate administration activities\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "acf61bd8-d814-4272-81f0-a7a269aa69aa",
+                    "3fcc9b35-39e4-44c0-a2ad-9e82b6902b31",
+                    "80915f59-9b56-4616-9de0-fd0dea6c12fe",
+                    "2bce5b30-7014-4a5d-ade7-12913fe6ac36"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "acf61bd8-d814-4272-81f0-a7a269aa69aa",
+                        "lookup_data": {
+                            "description": "Detects deletion of local audit logs",
+                            "raw": "author: remotephone, oscd.community\ndate: 2020/10/11\ndescription: Detects deletion of local audit logs\ndetection:\n  condition: selection1 and 1 of selection_cli*\n  selection1:\n    Image|endswith:\n    - /rm\n    - /unlink\n    - /shred\n  selection_cli_1:\n    CommandLine|contains: /var/log\n  selection_cli_2:\n    CommandLine|contains|all:\n    - /Users/\n    - /Library/Logs/\nfalsepositives:\n- Legitimate administration activities\nid: acf61bd8-d814-4272-81f0-a7a269aa69aa\nlevel: medium\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/09/16\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.002/T1070.002.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.002\ntitle: Indicator Removal on Host - Clear Mac System Logs\n",
+                            "sigma:id": "acf61bd8-d814-4272-81f0-a7a269aa69aa",
+                            "title": "Indicator Removal on Host - Clear Mac System Logs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3fcc9b35-39e4-44c0-a2ad-9e82b6902b31",
+                        "lookup_data": {
+                            "description": "Detects specific commands commonly used to remove or empty the syslog. Which is often used by attacker as a method to hide their tracks",
+                            "raw": "author: Max Altgelt (Nextron Systems), Roberto Rodriguez (Cyb3rWard0g), OTR (Open\n  Threat Research), MSTIC\ndate: 2021/10/15\ndescription: Detects specific commands commonly used to remove or empty the syslog.\n  Which is often used by attacker as a method to hide their tracks\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - rm /var/log/syslog\n    - rm -r /var/log/syslog\n    - rm -f /var/log/syslog\n    - rm -rf /var/log/syslog\n    - unlink /var/log/syslog\n    - unlink -r /var/log/syslog\n    - unlink -f /var/log/syslog\n    - unlink -rf /var/log/syslog\n    - mv /var/log/syslog\n    - ' >/var/log/syslog'\n    - ' > /var/log/syslog'\nfalsepositives:\n- Log rotation.\nid: 3fcc9b35-39e4-44c0-a2ad-9e82b6902b31\nlevel: high\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/09/15\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.002/T1070.002.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070.002\ntitle: Commands to Clear or Remove the Syslog\n",
+                            "sigma:id": "3fcc9b35-39e4-44c0-a2ad-9e82b6902b31",
+                            "title": "Commands to Clear or Remove the Syslog",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "80915f59-9b56-4616-9de0-fd0dea6c12fe",
+                        "lookup_data": {
+                            "description": "Detects attempts to clear logs on the system. Adversaries may clear system logs to hide evidence of an intrusion",
+                            "raw": "author: \"\\xD6mer G\\xFCnal, oscd.community\"\ndate: 2020/10/07\ndescription: Detects attempts to clear logs on the system. Adversaries may clear system\n  logs to hide evidence of an intrusion\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - /var/log\n    - /var/spool/mail\n    Image|endswith:\n    - /rm\n    - /shred\n    - /unlink\nfalsepositives:\n- Legitimate administration activities\nid: 80915f59-9b56-4616-9de0-fd0dea6c12fe\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/09/15\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.002/T1070.002.md\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1070.002\ntitle: Clear Linux Logs\n",
+                            "sigma:id": "80915f59-9b56-4616-9de0-fd0dea6c12fe",
+                            "title": "Clear Linux Logs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2bce5b30-7014-4a5d-ade7-12913fe6ac36",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1070.002",
+                            "mitre-cti:description": "Adversaries may clear system logs to hide evidence of an intrusion. macOS and Linux both keep track of system or user-initiated actions via system logs. The majority of native system logging is stored under the <code>/var/log/</code> directory. Subfolders in this directory categorize logs by their related functions, such as:(Citation: Linux Logs)\n\n* <code>/var/log/messages:</code>: General and system-related messages\n* <code>/var/log/secure</code> or <code>/var/log/auth.log</code>: Authentication logs\n* <code>/var/log/utmp</code> or <code>/var/log/wtmp</code>: Login records\n* <code>/var/log/kern.log</code>: Kernel logs\n* <code>/var/log/cron.log</code>: Crond logs\n* <code>/var/log/maillog</code>: Mail server logs\n* <code>/var/log/httpd/</code>: Web server access and error logs\n",
+                            "mitre-cti:name": "Clear Linux or Mac System Logs",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--2bce5b30-7014-4a5d-ade7-12913fe6ac36', 'type': 'attack-pattern', 'created': '2020-01-28T17:11:54.034Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1070.002', 'url': 'https://attack.mitre.org/techniques/T1070/002'}, {'source_name': 'Linux Logs', 'url': 'https://www.eurovps.com/blog/important-linux-log-files-you-must-be-monitoring/', 'description': 'Marcel. (2018, April 19). 12 Critical Linux Log Files You Must be Monitoring. Retrieved March 29, 2020.'}], 'modified': '2020-03-29T21:23:51.886Z', 'name': 'Clear Linux or Mac System Logs', 'description': 'Adversaries may clear system logs to hide evidence of an intrusion. macOS and Linux both keep track of system or user-initiated actions via system logs. The majority of native system logging is stored under the <code>/var/log/</code> directory. Subfolders in this directory categorize logs by their related functions, such as:(Citation: Linux Logs)\\n\\n* <code>/var/log/messages:</code>: General and system-related messages\\n* <code>/var/log/secure</code> or <code>/var/log/auth.log</code>: Authentication logs\\n* <code>/var/log/utmp</code> or <code>/var/log/wtmp</code>: Login records\\n* <code>/var/log/kern.log</code>: Kernel logs\\n* <code>/var/log/cron.log</code>: Crond logs\\n* <code>/var/log/maillog</code>: Mail server logs\\n* <code>/var/log/httpd/</code>: Web server access and error logs\\n', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'File system monitoring may be used to detect improper deletion or modification of indicator files. Also monitor for suspicious processes interacting with log files.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Deletion', 'Command: Command Execution', 'File: File Modification']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1070.002",
+                "display_name": "Indicator Removal on Host: Clear FreeBSD, Linux or Mac System Logs",
+                "atomic_tests": [
+                    {
+                        "name": "rm -rf",
+                        "auto_generated_guid": "989cc1b1-3642-4260-a809-54f9dd559683",
+                        "description": "Delete system and audit logs\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "syslog_path": {
+                                "description": "path of syslog file to delete. On macos it's /var/log/system.log*, on linux, it's /var/log/syslog*. Also note for File events, that on macos, /var/ is a link to /private/var/.",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            },
+                            "macos_audit_path": {
+                                "description": "path of audit file to delete",
+                                "type": "string",
+                                "default": "/var/audit/20220725213300.202208110700021"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "if [ -d /var/audit ] ; then stat #{macos_audit_path} ; fi && stat #{syslog_path}\n",
+                                "get_prereq_command": "touch #{syslog_path}\nif [ -d /var/audit ] ; then touch #{macos_audit_path} ; fi\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo rm -rf #{syslog_path}\nif [ -d /var/audit ] ; then sudo rm -rf #{macos_audit_path} ; fi\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "rm -rf",
+                        "auto_generated_guid": "bd8ccc45-d632-481e-b7cf-c467627d68f9",
+                        "description": "Delete messages and security logs\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "rm -rf /var/log/messages\nrm -rf /var/log/security\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete log files using built-in log utility",
+                        "auto_generated_guid": "653d39cd-bae7-499a-898c-9fb96b8b5cd1",
+                        "description": "This test deletes main log datastore, inflight log data, time-to-live data(TTL), fault and error content\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "sudo log erase --all\nsudo log erase --ttl #Deletes only time-to-live log content\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Truncate system log files via truncate utility",
+                        "auto_generated_guid": "6290f8a8-8ee9-4661-b9cf-390031bf6973",
+                        "description": "This test truncates the system log files using the truncate utility with (-s 0) parameter which sets file size to zero, thus emptying the file content\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path of system log to delete.",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{system_log_path}\n",
+                                "get_prereq_command": "touch #{system_log_path}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo truncate -s 0 #{system_log_path} #size parameter shorthand\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Truncate system log files via truncate utility (freebsd)",
+                        "auto_generated_guid": "14033063-ee04-4eaf-8f5d-ba07ca7a097c",
+                        "description": "This test truncates the system log files using the truncate utility with (-s 0 or --size=0) parameter which sets file size to zero, thus emptying the file content\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "truncate -s 0 /var/log/messages #size parameter shorthand\ntruncate --size=0 /var/log/security #size parameter \n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete log files via cat utility by appending /dev/null or /dev/zero",
+                        "auto_generated_guid": "c23bdb88-928d-493e-b46d-df2906a50941",
+                        "description": "The first sub-test truncates the log file to zero bytes via /dev/null and the second sub-test fills the log file with null bytes(zeroes) via /dev/zero, using cat utility\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path of system log to delete.",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{system_log_path}\n",
+                                "get_prereq_command": "touch #{system_log_path}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo cat /dev/null > #{system_log_path} #truncating the file to zero bytes\nsudo dd if=/dev/zero bs=1000 count=5 of=#{system_log_path} #log file filled with null bytes(zeros)\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete log files via cat utility by appending /dev/null or /dev/zero (freebsd)",
+                        "auto_generated_guid": "369878c6-fb04-48d6-8fc2-da9d97b3e054",
+                        "description": "The first sub-test truncates the log file to zero bytes via /dev/null and the second sub-test fills the log file with null bytes(zeroes) via /dev/zero, using cat utility\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "cat /dev/null > /var/log/messages #truncating the file to zero bytes\ncat /dev/zero > /var/lol/messages #log file filled with null bytes(zeros)\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "System log file deletion via find utility",
+                        "auto_generated_guid": "bc8eeb4a-cc3e-45ec-aa6e-41e973da2558",
+                        "description": "This test finds and deletes the system log files within /var/log/ directory using various executions(rm, shred, unlink)\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_name1": {
+                                "description": "name or prefix of system log to delete.",
+                                "type": "string",
+                                "default": "system.log"
+                            },
+                            "system_log_name2": {
+                                "description": "name or prefix of system log to delete.",
+                                "type": "string",
+                                "default": "system.log.97.gz"
+                            },
+                            "system_log_name3": {
+                                "description": "name or prefix of system log to delete.",
+                                "type": "string",
+                                "default": "system.log.98.gz"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat /var/log/#{system_log_name1} /var/log/#{system_log_name2} /var/log/#{system_log_name3}\n",
+                                "get_prereq_command": "touch /var/log/#{system_log_name1} /var/log/#{system_log_name2} /var/log/#{system_log_name3}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo find /var/log -name '#{system_log_name1}*' -exec rm {} \\; #using \"rm\" execution\nsudo find /var/log -name \"#{system_log_name2}*\" -exec shred -u -z -n 3 {} \\; #using \"shred\" execution\nsudo find /var/log -name \"#{system_log_name3}*\" -exec unlink {} \\; #using \"unlink\" execution\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Overwrite macOS system log via echo utility",
+                        "auto_generated_guid": "0208ea60-98f1-4e8c-8052-930dce8f742c",
+                        "description": "This test overwrites the contents of system log file with an empty string using echo utility\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path to system.log",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            }
+                        },
+                        "executor": {
+                            "command": "sudo echo '' > #{system_log_path}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Overwrite FreeBSD system log via echo utility",
+                        "auto_generated_guid": "11cb8ee1-97fb-4960-8587-69b8388ee9d9",
+                        "description": "This test overwrites the contents of system log file with an empty string using echo utility\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "echo '' > /var/log/messages\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Real-time system log clearance/deletion",
+                        "auto_generated_guid": "848e43b3-4c0a-4e4c-b4c9-d1e8cea9651c",
+                        "description": "This test reads real-time system log file and writes empty string to it, thus clearing the log file without tampering with the logging process\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "sudo log -f /var/log/system.log | : > /var/log/system.log\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete system log files via unlink utility",
+                        "auto_generated_guid": "03013b4b-01db-437d-909b-1fdaa5010ee8",
+                        "description": "This test deletes the system log file using unlink utility\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path to system.log",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{system_log_path}\n",
+                                "get_prereq_command": "touch #{system_log_path}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo unlink #{system_log_path}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete system log files via unlink utility (freebsd)",
+                        "auto_generated_guid": "45ad4abd-19bd-4c5f-a687-41f3eee8d8c2",
+                        "description": "This test deletes the messages log file using unlink utility\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "unlink /var/log/messages\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete system log files using shred utility",
+                        "auto_generated_guid": "86f0e4d5-3ca7-45fb-829d-4eda32b232bb",
+                        "description": "This test overwrites the contents of the log file with zero bytes(-z) using three passes(-n 3) of data, and then delete the file(-u) securely\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path to system.log",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{system_log_path}\n",
+                                "get_prereq_command": "touch #{system_log_path}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo shred -u -z -n 3 #{system_log_path}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete system log files using srm utility",
+                        "auto_generated_guid": "b0768a5e-0f32-4e75-ae5b-d036edcf96b6",
+                        "description": "This test securely deletes the system log files individually and recursively using the srm utility.\nInstall srm using Homebrew with the command: brew install khell/homebrew-srm/srm\nRefer: https://github.com/khell/homebrew-srm/issues/1 for installation\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path to system.log",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            },
+                            "system_log_folder": {
+                                "description": "path to log parent folder",
+                                "type": "string",
+                                "default": "/var/log/"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{system_log_path} #{system_log_folder}\n",
+                                "get_prereq_command": "mkdir -p #{system_log_folder} && touch #{system_log_path} #{system_log_folder}/system.log\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo srm #{system_log_path} #system log file deletion\nsudo srm -r #{system_log_folder} #recursive deletion of log files\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete system log files using OSAScript",
+                        "auto_generated_guid": "810a465f-cd4f-47bc-b43e-d2de3b033ecc",
+                        "description": "This test deletes the system log file using osascript via \"do shell script\"(sh/bash by default) which in-turn spawns rm utility, requires admin privileges\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path to system.log",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{system_log_path}\n",
+                                "get_prereq_command": "touch #{system_log_path}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "osascript -e 'do shell script \"rm #{system_log_path}\" with administrator privileges'\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete system log files using Applescript",
+                        "auto_generated_guid": "e62f8694-cbc7-468f-862c-b10cd07e1757",
+                        "description": "This test deletes the system log file using applescript using osascript via Finder application\nNote: The user may be prompted to grant access to the Finder application before the command can be executed successfully as part of TCC(Transparency, Consent, and Control) Framework.\nRefer: https://www.rainforestqa.com/blog/macos-tcc-db-deep-dive\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "system_log_path": {
+                                "description": "path to system.log",
+                                "type": "string",
+                                "default": "/var/log/system.log"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{system_log_path}\n",
+                                "get_prereq_command": "touch #{system_log_path}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "osascript -e 'tell application \"Finder\" to delete POSIX file \"#{system_log_path}\"'\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete system journal logs via rm and journalctl utilities",
+                        "auto_generated_guid": "ca50dd85-81ff-48ca-92e1-61f119cb1dcf",
+                        "description": "The first sub-test deletes the journal files using rm utility in the \"/var/log/journal/\" directory and the second sub-test clears the journal by modifiying time period of logs that should be retained to zero.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "journal_folder": {
+                                "description": "path to journal logs",
+                                "type": "string",
+                                "default": "/var/log/journal"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat #{journal_folder}\n",
+                                "get_prereq_command": "mkdir -p #{journal_folder} && touch #{journal_folder}/T1070_002.journal\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo rm #{journal_folder}/* #physically deletes the journal files, and not just their content\nsudo journalctl --vacuum-time=0 #clears the journal while still keeping the journal files in place\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Overwrite Linux Mail Spool",
+                        "auto_generated_guid": "1602ff76-ed7f-4c94-b550-2f727b4782d4",
+                        "description": "This test overwrites the Linux mail spool of a specified user. This technique was used by threat actor Rocke during the exploitation of Linux web servers.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Username of mail spool",
+                                "type": "string",
+                                "default": "root"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "target files must exist\n",
+                                "prereq_command": "stat /var/spool/mail/#{username}\n",
+                                "get_prereq_command": "touch /var/spool/mail/#{username}\n"
+                            }
+                        ],
+                        "executor": {
+                            "elevation_required": true,
+                            "command": "echo 0> /var/spool/mail/#{username}\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Overwrite Linux Log",
+                        "auto_generated_guid": "d304b2dc-90b4-4465-a650-16ddd503f7b5",
+                        "description": "This test overwrites the specified log. This technique was used by threat actor Rocke during the exploitation of Linux web servers.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "log_path": {
+                                "description": "Path of specified log",
+                                "type": "path",
+                                "default": "/var/log/secure"
+                            }
+                        },
+                        "executor": {
+                            "command": "echo 0> #{log_path}\n",
+                            "name": "bash",
+                            "elevation_required": true,
+                            "cleanup_command": "if [ \"/var/log/secure\" != \"#{log_path}\" ] ; then rm -f #{log_path} ; fi\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:17:27"
+}

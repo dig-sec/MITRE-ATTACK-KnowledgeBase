@@ -1,0 +1,208 @@
+{
+    "id": "T1007",
+    "name": "System Service Discovery",
+    "description": "Adversaries may try to get information about registered services. Commands that may obtain information about services using operating system utilities are \"sc,\" \"tasklist /svc\" using [Tasklist](S0057), and \"net start\" using [Net](S0039), but adversaries may also use other tools as well. Adversaries may use the information from [System Service Discovery](T1007) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.",
+    "platforms": "Windows, macOS",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\nMonitor processes and command-line arguments for actions that could be taken to gather system information related to services. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1007",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1007",
+                "atomic_attack_guid": "5f864a3f-8ce9-45c0-812c-bdf7d8aeacc3",
+                "atomic_attack_name": "System Service Discovery - net.exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1007",
+                "atomic_attack_guid": "89676ba1-b1f8-47ee-b940-2e1a113ebc71",
+                "atomic_attack_name": "System Service Discovery",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Tasklist Discovery Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_tasklist_basic_execution.yml",
+                        "remote_content": "title: Suspicious Tasklist Discovery Command\nid: 63332011-f057-496c-ad8d-d2b6afb27f96\nstatus: test\ndescription: Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1057/T1057.md#atomic-test-2---process-discovery---tasklist\nauthor: frack113\ndate: 2021-12-11\nmodified: 2022-12-25\ntags:\n    - attack.discovery\n    - attack.t1057\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains: 'tasklist'\n        - Image|endswith: '\\tasklist.exe'\n        - OriginalFileName: 'tasklist.exe'\n    condition: selection\nfalsepositives:\n    - Likely from users, administrator and different internal and third party applications.\nlevel: informational\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "970007b7-ce32-49d0-a4a4-fbef016950bd",
+                    "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                    "57712d7a-679c-4a41-a913-87e7175ae429",
+                    "322bad5a-1c49-4d23-ab79-76d641794afa",
+                    "d8787791-d22e-45bb-a9a8-251d8d0a1ff2",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                        "lookup_data": {
+                            "description": "Prynt Stealer Spotted In the Wild - A New Info Stealer Performing Clipper And Keylogger Activities",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/4b1c186d-8bf2-4297-9cbc-f8f00192770b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666601854",
+                            "uuid": "4b1c186d-8bf2-4297-9cbc-f8f00192770b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "970007b7-ce32-49d0-a4a4-fbef016950bd",
+                        "lookup_data": {
+                            "description": "Adversaries may interact with the Windows Registry to gather information about credentials, the system, configuration, and installed software.",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2019/10/21\ndescription: Adversaries may interact with the Windows Registry to gather information\n  about credentials, the system, configuration, and installed software.\ndetection:\n  condition: all of selection_*\n  selection_1:\n    CommandLine|contains:\n    - query\n    - save\n    - export\n    Image|endswith: \\reg.exe\n  selection_2:\n    CommandLine|contains:\n    - currentVersion\\windows\n    - winlogon\\\n    - currentVersion\\shellServiceObjectDelayLoad\n    - currentVersion\\run\n    - currentVersion\\policies\\explorer\\run\n    - currentcontrolset\\services\nfields:\n- Image\n- CommandLine\n- User\n- LogonGuid\n- Hashes\n- ParentProcessGuid\n- ParentCommandLine\nid: 970007b7-ce32-49d0-a4a4-fbef016950bd\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1012/T1012.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.t1007\ntitle: Query Registry\n",
+                            "sigma:id": "970007b7-ce32-49d0-a4a4-fbef016950bd",
+                            "title": "Query Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                        "lookup_data": {
+                            "description": "Detects execution of Net.exe, whether suspicious or benign.",
+                            "raw": "author: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community\n  (improvements)\ndate: 2019/01/16\ndescription: Detects execution of Net.exe, whether suspicious or benign.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' group'\n    - ' localgroup'\n    - ' user'\n    - ' view'\n    - ' share'\n    - ' accounts'\n    - ' stop '\n    - ' start'\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Will need to be tuned. If using Splunk, I recommend | stats count by Computer,CommandLine\n  following the search for easy hunting by computer/CommandLine.\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n- https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n- https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n- https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1007\n- attack.t1049\n- attack.t1018\n- attack.t1135\n- attack.t1201\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1087.001\n- attack.t1087.002\n- attack.lateral_movement\n- attack.t1021.002\n- attack.s0039\ntitle: Net.exe Execution\n",
+                            "sigma:id": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                            "title": "Net.exe Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "57712d7a-679c-4a41-a913-87e7175ae429",
+                        "lookup_data": {
+                            "description": "Detects execution of \"sc.exe\" to query information about registered services on the system",
+                            "raw": "author: frack113\ndate: 2021/12/06\ndescription: Detects execution of \"sc.exe\" to query information about registered services\n  on the system\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: ' query'\n  selection_img:\n    Image|endswith: \\sc.exe\n    OriginalFileName|endswith: sc.exe\nfalsepositives:\n- Legitimate query of a service by an administrator to get more information such as\n  the state or PID\nid: 57712d7a-679c-4a41-a913-87e7175ae429\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/10\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-1---system-service-discovery\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1007\ntitle: SC.EXE Query Execution\n",
+                            "sigma:id": "57712d7a-679c-4a41-a913-87e7175ae429",
+                            "title": "SC.EXE Query Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "322bad5a-1c49-4d23-ab79-76d641794afa",
+                        "lookup_data": {
+                            "capec": "CAPEC-574",
+                            "mitre-attack-id": "T1007",
+                            "mitre-cti:description": "Adversaries may try to gather information about registered local system services. Adversaries may obtain information about services using tools as well as OS utility commands such as <code>sc query</code>, <code>tasklist /svc</code>, <code>systemctl --type=service</code>, and <code>net start</code>.\n\nAdversaries may use the information from [System Service Discovery](https://attack.mitre.org/techniques/T1007) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.",
+                            "mitre-cti:name": "System Service Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Harshal Tupsamudre, Qualys'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--322bad5a-1c49-4d23-ab79-76d641794afa', 'created': '2017-05-31T21:30:21.315Z', 'x_mitre_version': '1.4', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1007', 'url': 'https://attack.mitre.org/techniques/T1007'}, {'url': 'https://capec.mitre.org/data/definitions/574.html', 'source_name': 'capec', 'external_id': 'CAPEC-574'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may try to gather information about registered local system services. Adversaries may obtain information about services using tools as well as OS utility commands such as <code>sc query</code>, <code>tasklist /svc</code>, <code>systemctl --type=service</code>, and <code>net start</code>.\\n\\nAdversaries may use the information from [System Service Discovery](https://attack.mitre.org/techniques/T1007) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.', 'modified': '2022-07-15T13:35:54.740Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'System Service Discovery', 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather system information related to services. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Command: Command Execution', 'Process: OS API Execution', 'Process: Process Creation'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d8787791-d22e-45bb-a9a8-251d8d0a1ff2",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1007",
+                            "mitre-cti:description": "Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about services, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "System Service Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--d8787791-d22e-45bb-a9a8-251d8d0a1ff2', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1007', 'url': 'https://attack.mitre.org/mitigations/T1007', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.699Z', 'name': 'System Service Discovery Mitigation', 'description': 'Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about services, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1007",
+                "display_name": "System Service Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "System Service Discovery",
+                        "auto_generated_guid": "89676ba1-b1f8-47ee-b940-2e1a113ebc71",
+                        "description": "Identify system services.\n\nUpon successful execution, cmd.exe will execute service commands with expected result to stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "tasklist.exe\nsc query\nsc query state= all\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "System Service Discovery - net.exe",
+                        "auto_generated_guid": "5f864a3f-8ce9-45c0-812c-bdf7d8aeacc3",
+                        "description": "Enumerates started system services using net.exe and writes them to a file. This technique has been used by multiple threat actors.\n\nUpon successful execution, net.exe will run from cmd.exe that queries services. Expected output is to a txt file in in the temp directory called service-list.txt.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Path of file to hold net.exe output",
+                                "type": "path",
+                                "default": "%temp%\\service-list.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "net.exe start >> #{output_file}\n",
+                            "cleanup_command": "del /f /q /s #{output_file} >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "System Service Discovery - systemctl/service",
+                        "auto_generated_guid": "f4b26bce-4c2c-46c0-bcc5-fce062d38bef",
+                        "description": "Enumerates system service using systemctl/service\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "if [ \"$(uname)\" = 'FreeBSD' ]; then service -e; else systemctl --type=service; fi;\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Get-Service Execution",
+                        "auto_generated_guid": "51f17016-d8fa-4360-888a-df4bf92c4a04",
+                        "description": "Executes the Get-Service cmdlet to gather objects representing all services on the local system.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "command": "powershell.exe Get-Service"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:46:32"
+}

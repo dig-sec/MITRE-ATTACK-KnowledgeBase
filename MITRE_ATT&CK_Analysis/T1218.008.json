@@ -1,0 +1,159 @@
+{
+    "id": "T1218.008",
+    "name": "Odbcconf",
+    "description": "Adversaries may abuse odbcconf.exe to proxy execution of malicious payloads. Odbcconf.exe is a Windows utility that allows you to configure Open Database Connectivity (ODBC) drivers and data source names.(Citation: Microsoft odbcconf.exe) Odbcconf.exe is digitally signed by Microsoft.\nAdversaries may abuse odbcconf.exe to bypass application control solutions that do not account for its potential abuse. Similar to [Regsvr32](T1218.010), odbcconf.exe has a `REGSVR` flag that can be misused to execute DLLs (ex: `odbcconf.exe /S /A &lbrace;REGSVR \"C:UsersPublicfile.dll\"&rbrace;`). (Citation: LOLBAS Odbcconf)(Citation: TrendMicro Squiblydoo Aug 2017)(Citation: TrendMicro Cobalt Group Nov 2017)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Module: Module Load, Command: Command Execution",
+    "detection": "Use process monitoring to monitor the execution and arguments of odbcconf.exe. Compare recent invocations of odbcconf.exe with prior history of known good arguments and loaded DLLs to determine anomalous and potentially adversarial activity. Command arguments used before and after the invocation of odbcconf.exe may also be useful in determining the origin and purpose of the DLL being loaded.",
+    "url": "https://attack.mitre.org/techniques/T1218/008",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1218.008",
+                "atomic_attack_guid": "331ce274-f9c9-440b-9f8c-a1006e1fce0b",
+                "atomic_attack_name": "Odbcconf.exe - Load Response File",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Response File Execution Via Odbcconf.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_odbcconf_response_file.yml",
+                        "remote_content": "title: Response File Execution Via Odbcconf.EXE\nid: 5f03babb-12db-4eec-8c82-7b4cb5580868\nrelated:\n    - id: 2d32dd6f-3196-4093-b9eb-1ad8ab088ca5\n      type: similar\n    - id: 65d2be45-8600-4042-b4c0-577a1ff8a60e\n      type: obsolete\nstatus: test\ndescription: Detects execution of \"odbcconf\" with the \"-f\" flag in order to load a response file which might contain a malicious action.\nreferences:\n    - https://learn.microsoft.com/en-us/sql/odbc/odbcconf-exe?view=sql-server-ver16\n    - https://lolbas-project.github.io/lolbas/Binaries/Odbcconf/\n    - https://www.cybereason.com/blog/threat-analysis-report-bumblebee-loader-the-high-road-to-enterprise-domain-control\n    - https://www.hexacorn.com/blog/2020/08/23/odbcconf-lolbin-trifecta/\nauthor: Kirill Kiryanov, Beyu Denis, Daniil Yugoslavskiy, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-22\nmodified: 2024-03-05\ntags:\n    - attack.defense-evasion\n    - attack.t1218.008\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\odbcconf.exe'\n        - OriginalFileName: 'odbcconf.exe'\n    selection_cli:\n        CommandLine|contains|windash: ' -f '\n    selection_rsp_ext:\n        CommandLine|contains: '.rsp'\n    condition: all of selection_*\nfalsepositives:\n    - The rule is looking for any usage of response file, which might generate false positive when this function is used legitimately. Investigate the contents of the \".rsp\" file to determine if it is malicious and apply additional filters if necessary.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Odbcconf Load Response File",
+                        "rule_link": "https://research.splunk.com/endpoint/1acafff9-1347-4b40-abae-f35aa4ba85c1/"
+                    },
+                    {
+                        "rule_name": "Windows Odbcconf Hunting",
+                        "rule_link": "https://research.splunk.com/endpoint/0562ad4b-fdaa-4882-b12f-7b8e0034cd72/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.008",
+                "atomic_attack_guid": "2430498b-06c0-4b92-a448-8ad263c388e2",
+                "atomic_attack_name": "Odbcconf.exe - Execute Arbitrary DLL",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "New DLL Registered Via Odbcconf.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_odbcconf_register_dll_regsvr.yml",
+                        "remote_content": "title: New DLL Registered Via Odbcconf.EXE\nid: 9f0a8bf3-a65b-440a-8c1e-5cb1547c8e70\nrelated:\n    - id: ba4cfc11-d0fa-4d94-bf20-7c332c412e76\n      type: similar\nstatus: test\ndescription: Detects execution of \"odbcconf\" with \"REGSVR\" in order to register a new DLL (equivalent to running regsvr32). Attackers abuse this to install and run malicious DLLs.\nreferences:\n    - https://learn.microsoft.com/en-us/sql/odbc/odbcconf-exe?view=sql-server-ver16\n    - https://lolbas-project.github.io/lolbas/Binaries/Odbcconf/\n    - https://redcanary.com/blog/raspberry-robin/\n    - https://web.archive.org/web/20191023232753/https://twitter.com/Hexacorn/status/1187143326673330176\n    - https://www.hexacorn.com/blog/2020/08/23/odbcconf-lolbin-trifecta/\n    - https://www.trendmicro.com/en_us/research/17/h/backdoor-carrying-emails-set-sights-on-russian-speaking-businesses.html\nauthor: Kirill Kiryanov, Beyu Denis, Daniil Yugoslavskiy, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-05-22\ntags:\n    - attack.defense-evasion\n    - attack.t1218.008\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\odbcconf.exe'\n        - OriginalFileName: 'odbcconf.exe'\n    selection_cli:\n        # Note: The \"/A\" flag is not required to call a specific action\n        CommandLine|contains|all:\n            - 'REGSVR '\n            - '.dll'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate DLLs being registered via \"odbcconf\" will generate false positives. Investigate the path of the DLL and its content to determine if the action is authorized.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Odbcconf Hunting",
+                        "rule_link": "https://research.splunk.com/endpoint/0562ad4b-fdaa-4882-b12f-7b8e0034cd72/"
+                    },
+                    {
+                        "rule_name": "Windows Odbcconf Load DLL",
+                        "rule_link": "https://research.splunk.com/endpoint/141e7fca-a9f0-40fd-a539-9aac8be41f1b/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "6e3bd510-6b33-41a4-af80-2d80f3ee0071",
+                    "65d2be45-8600-4042-b4c0-577a1ff8a60e"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "6e3bd510-6b33-41a4-af80-2d80f3ee0071",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1218.008",
+                            "mitre-cti:description": "Adversaries may abuse odbcconf.exe to proxy execution of malicious payloads. Odbcconf.exe is a Windows utility that allows you to configure Open Database Connectivity (ODBC) drivers and data source names.(Citation: Microsoft odbcconf.exe) The Odbcconf.exe binary may be digitally signed by Microsoft.\n\nAdversaries may abuse odbcconf.exe to bypass application control solutions that do not account for its potential abuse. Similar to [Regsvr32](https://attack.mitre.org/techniques/T1218/010), odbcconf.exe has a <code>REGSVR</code> flag that can be misused to execute DLLs (ex: <code>odbcconf.exe /S /A &lbrace;REGSVR \"C:\\Users\\Public\\file.dll\"&rbrace;</code>). (Citation: LOLBAS Odbcconf)(Citation: TrendMicro Squiblydoo Aug 2017)(Citation: TrendMicro Cobalt Group Nov 2017) \n",
+                            "mitre-cti:name": "Odbcconf",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--6e3bd510-6b33-41a4-af80-2d80f3ee0071', 'type': 'attack-pattern', 'created': '2020-01-24T15:01:32.917Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1218.008', 'url': 'https://attack.mitre.org/techniques/T1218/008'}, {'source_name': 'Microsoft odbcconf.exe', 'url': 'https://docs.microsoft.com/en-us/sql/odbc/odbcconf-exe?view=sql-server-2017', 'description': 'Microsoft. (2017, January 18). ODBCCONF.EXE. Retrieved March 7, 2019.'}, {'source_name': 'LOLBAS Odbcconf', 'url': 'https://lolbas-project.github.io/lolbas/Binaries/Odbcconf/', 'description': 'LOLBAS. (n.d.). Odbcconf.exe. Retrieved March 7, 2019.'}, {'source_name': 'TrendMicro Squiblydoo Aug 2017', 'url': 'https://blog.trendmicro.com/trendlabs-security-intelligence/backdoor-carrying-emails-set-sights-on-russian-speaking-businesses/', 'description': 'Bermejo, L., Giagone, R., Wu, R., and Yarochkin, F. (2017, August 7). Backdoor-carrying Emails Set Sights on Russian-speaking Businesses. Retrieved March 7, 2019.'}, {'source_name': 'TrendMicro Cobalt Group Nov 2017', 'url': 'https://blog.trendmicro.com/trendlabs-security-intelligence/cobalt-spam-runs-use-macros-cve-2017-8759-exploit/', 'description': 'Giagone, R., Bermejo, L., and Yarochkin, F. (2017, November 20). Cobalt Strikes Again: Spam Runs Use Macros and CVE-2017-8759 Exploit Against Russian Banks. Retrieved March 7, 2019.'}], 'modified': '2022-03-11T18:52:49.877Z', 'name': 'Odbcconf', 'description': 'Adversaries may abuse odbcconf.exe to proxy execution of malicious payloads. Odbcconf.exe is a Windows utility that allows you to configure Open Database Connectivity (ODBC) drivers and data source names.(Citation: Microsoft odbcconf.exe) The Odbcconf.exe binary may be digitally signed by Microsoft.\\n\\nAdversaries may abuse odbcconf.exe to bypass application control solutions that do not account for its potential abuse. Similar to [Regsvr32](https://attack.mitre.org/techniques/T1218/010), odbcconf.exe has a <code>REGSVR</code> flag that can be misused to execute DLLs (ex: <code>odbcconf.exe /S /A &lbrace;REGSVR \"C:\\\\Users\\\\Public\\\\file.dll\"&rbrace;</code>). (Citation: LOLBAS Odbcconf)(Citation: TrendMicro Squiblydoo Aug 2017)(Citation: TrendMicro Cobalt Group Nov 2017) \\n', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Use process monitoring to monitor the execution and arguments of odbcconf.exe. Compare recent invocations of odbcconf.exe with prior history of known good arguments and loaded DLLs to determine anomalous and potentially adversarial activity. Command arguments used before and after the invocation of odbcconf.exe may also be useful in determining the origin and purpose of the DLL being loaded.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '2.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Module: Module Load', 'Process: Process Creation'], 'x_mitre_defense_bypassed': ['Digital Certificate Validation', 'Application control'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "65d2be45-8600-4042-b4c0-577a1ff8a60e",
+                        "lookup_data": {
+                            "description": "Detects defence evasion attempt via odbcconf.exe execution to load DLL",
+                            "raw": "author: Kirill Kiryanov, Beyu Denis, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/25\ndescription: Detects defence evasion attempt via odbcconf.exe execution to load DLL\ndetection:\n  condition: all of selection_1_* or selection_2\n  selection_1_cli:\n    CommandLine|contains:\n    - -a\n    - -f\n    - /a\n    - /f\n    - regsvr\n  selection_1_name:\n  - Image|endswith: \\odbcconf.exe\n  - OriginalFileName: odbcconf.exe\n  selection_2:\n    Image|endswith: \\rundll32.exe\n    ParentImage|endswith: \\odbcconf.exe\nfalsepositives:\n- Legitimate use of odbcconf.exe by legitimate user\nid: 65d2be45-8600-4042-b4c0-577a1ff8a60e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Odbcconf/\n- https://twitter.com/Hexacorn/status/1187143326673330176\n- https://redcanary.com/blog/raspberry-robin/\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-94a1964b682707e4e3f77dd61a3bfface5401d08d8cf81145f388e09614aceca\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.008\ntitle: Application Whitelisting Bypass via DLL Loaded by odbcconf.exe\n",
+                            "sigma:id": "65d2be45-8600-4042-b4c0-577a1ff8a60e",
+                            "title": "Application Whitelisting Bypass via DLL Loaded by odbcconf.exe",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1218.008",
+                "display_name": "Signed Binary Proxy Execution: Odbcconf",
+                "atomic_tests": [
+                    {
+                        "name": "Odbcconf.exe - Execute Arbitrary DLL",
+                        "auto_generated_guid": "2430498b-06c0-4b92-a448-8ad263c388e2",
+                        "description": "Execute arbitrary DLL file stored locally.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_payload": {
+                                "description": "DLL to execute",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1218.008\\src\\Win32\\T1218-2.dll"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "T1218-2.dll must exist on disk at specified location (#{dll_payload})\n",
+                                "prereq_command": "if (Test-Path \"#{dll_payload}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.008/src/Win32/T1218-2.dll\" -OutFile \"#{dll_payload}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "odbcconf.exe /S /A {REGSVR \"#{dll_payload}\"}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Odbcconf.exe - Load Response File",
+                        "auto_generated_guid": "331ce274-f9c9-440b-9f8c-a1006e1fce0b",
+                        "description": "Execute arbitrary response file that will spawn PowerShell.exe.\nSource files: https://github.com/woanware/application-restriction-bypasses\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "rsp_file_name": {
+                                "description": "Response file name to load",
+                                "type": "string",
+                                "default": "T1218.008.rsp"
+                            },
+                            "rsp_file_path": {
+                                "description": "Response file path",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.008\\bin\\"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "T1218.008.rsp must exist on disk at specified location (#{rsp_file_path}#{rsp_file_name})\n",
+                                "prereq_command": "if (Test-Path \"#{rsp_file_path}#{rsp_file_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Invoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.008/bin/T1218.008.rsp\" -OutFile \"#{rsp_file_path}#{rsp_file_name}\"\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.008/bin/o.dll\" -OutFile \"#{rsp_file_path}\\o.dll\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cd \"#{rsp_file_path}\"\nodbcconf.exe -f \"#{rsp_file_name}\"\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:16:56"
+}

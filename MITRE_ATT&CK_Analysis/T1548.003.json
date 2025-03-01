@@ -1,0 +1,169 @@
+{
+    "id": "T1548.003",
+    "name": "Sudo and Sudo Caching",
+    "description": "Adversaries may perform sudo caching and/or use the suoders file to elevate privileges. Adversaries may do this to execute commands as other users or spawn processes with higher privileges.\nWithin Linux and MacOS systems, sudo (sometimes referred to as \"superuser do\") allows users to perform commands from terminals with elevated privileges and to control who can perform these commands on the system. The `sudo` command \"allows a system administrator to delegate authority to give certain users (or groups of users) the ability to run some (or all) commands as root or another user while providing an audit trail of the commands and their arguments.\"(Citation: sudo man page 2018) Since sudo was made for the system administrator, it has some useful configuration features such as a `timestamp_timeout`, which is the amount of time in minutes between instances of `sudo` before it will re-prompt for a password. This is because `sudo` has the ability to cache credentials for a period of time. Sudo creates (or touches) a file at `/var/db/sudo` with a timestamp of when sudo was last run to determine this timeout. Additionally, there is a `tty_tickets` variable that treats each new tty (terminal session) in isolation. This means that, for example, the sudo timeout of one tty will not affect another tty (you will have to type the password again).\nThe sudoers file, `/etc/sudoers`, describes which users can run which commands and from which terminals. This also describes which commands users can run as other users or groups. This provides the principle of least privilege such that users are running in their lowest possible permissions for most of the time and only elevate to other users or permissions as needed, typically by prompting for a password. However, the sudoers file can also specify when to not prompt users for passwords with a line like `user1 ALL=(ALL) NOPASSWD: ALL` (Citation: OSX.Dok Malware). Elevated privileges are required to edit this file though.\nAdversaries can also abuse poor configurations of these mechanisms to escalate privileges without needing the user's password. For example, `/var/db/sudo`'s timestamp can be monitored to see if it falls within the `timestamp_timeout` range. If it does, then malware can execute sudo commands without needing to supply the user's password. Additional, if `tty_tickets` is disabled, adversaries can do this from any tty for that user.\nIn the wild, malware has disabled `tty_tickets` to potentially make scripting easier by issuing `echo 'Defaults !tty_tickets' >> /etc/sudoers` (Citation: cybereason osx proton). In order for this change to be reflected, the malware also issued `killall Terminal`. As of macOS Sierra, the sudoers file has `tty_tickets` enabled by default.",
+    "platforms": "Linux, macOS",
+    "kill_chain_phases": "Privilege Escalation, Defense Evasion",
+    "data_sources": "Process: Process Metadata, Process: Process Creation, Command: Command Execution, File: File Modification",
+    "detection": "On Linux, auditd can alert every time a user's actual ID and effective ID are different (this is what happens when you sudo). This technique is abusing normal functionality in macOS and Linux systems, but sudo has the ability to log all input and output based on the `LOG_INPUT` and `LOG_OUTPUT` directives in the `/etc/sudoers` file.",
+    "url": "https://attack.mitre.org/techniques/T1548/003",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "f74107df-b6c6-4e80-bf00-4170b658162b",
+                    "1365fe3b-0f50-455d-b4da-266ce31c23b0",
+                    "7fcc54cb-f27d-4684-84b7-436af096f858"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "f74107df-b6c6-4e80-bf00-4170b658162b",
+                        "lookup_data": {
+                            "description": "Detects users trying to exploit sudo vulnerability reported in CVE-2019-14287",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/10/15\ndescription: Detects users trying to exploit sudo vulnerability reported in CVE-2019-14287\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' -u#'\nfalsepositives:\n- Unlikely\nid: f74107df-b6c6-4e80-bf00-4170b658162b\nlevel: high\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/10/05\nreferences:\n- https://www.openwall.com/lists/oss-security/2019/10/14/1\n- https://access.redhat.com/security/cve/cve-2019-14287\n- https://twitter.com/matthieugarin/status/1183970598210412546\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.t1068\n- attack.t1548.003\n- cve.2019.14287\ntitle: Sudo Privilege Escalation CVE-2019-14287\n",
+                            "sigma:id": "f74107df-b6c6-4e80-bf00-4170b658162b",
+                            "title": "Sudo Privilege Escalation CVE-2019-14287",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1365fe3b-0f50-455d-b4da-266ce31c23b0",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1548.003",
+                            "mitre-cti:description": "Adversaries may perform sudo caching and/or use the sudoers file to elevate privileges. Adversaries may do this to execute commands as other users or spawn processes with higher privileges.\n\nWithin Linux and MacOS systems, sudo (sometimes referred to as \"superuser do\") allows users to perform commands from terminals with elevated privileges and to control who can perform these commands on the system. The <code>sudo</code> command \"allows a system administrator to delegate authority to give certain users (or groups of users) the ability to run some (or all) commands as root or another user while providing an audit trail of the commands and their arguments.\"(Citation: sudo man page 2018) Since sudo was made for the system administrator, it has some useful configuration features such as a <code>timestamp_timeout</code>, which is the amount of time in minutes between instances of <code>sudo</code> before it will re-prompt for a password. This is because <code>sudo</code> has the ability to cache credentials for a period of time. Sudo creates (or touches) a file at <code>/var/db/sudo</code> with a timestamp of when sudo was last run to determine this timeout. Additionally, there is a <code>tty_tickets</code> variable that treats each new tty (terminal session) in isolation. This means that, for example, the sudo timeout of one tty will not affect another tty (you will have to type the password again).\n\nThe sudoers file, <code>/etc/sudoers</code>, describes which users can run which commands and from which terminals. This also describes which commands users can run as other users or groups. This provides the principle of least privilege such that users are running in their lowest possible permissions for most of the time and only elevate to other users or permissions as needed, typically by prompting for a password. However, the sudoers file can also specify when to not prompt users for passwords with a line like <code>user1 ALL=(ALL) NOPASSWD: ALL</code>.(Citation: OSX.Dok Malware) Elevated privileges are required to edit this file though.\n\nAdversaries can also abuse poor configurations of these mechanisms to escalate privileges without needing the user's password. For example, <code>/var/db/sudo</code>'s timestamp can be monitored to see if it falls within the <code>timestamp_timeout</code> range. If it does, then malware can execute sudo commands without needing to supply the user's password. Additional, if <code>tty_tickets</code> is disabled, adversaries can do this from any tty for that user.\n\nIn the wild, malware has disabled <code>tty_tickets</code> to potentially make scripting easier by issuing <code>echo \\'Defaults !tty_tickets\\' >> /etc/sudoers</code>.(Citation: cybereason osx proton) In order for this change to be reflected, the malware also issued <code>killall Terminal</code>. As of macOS Sierra, the sudoers file has <code>tty_tickets</code> enabled by default.",
+                            "mitre-cti:name": "Sudo and Sudo Caching",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--1365fe3b-0f50-455d-b4da-266ce31c23b0', 'type': 'attack-pattern', 'created': '2020-01-30T14:34:44.992Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1548.003', 'url': 'https://attack.mitre.org/techniques/T1548/003'}, {'url': 'https://www.sudo.ws/', 'description': 'Todd C. Miller. (2018). Sudo Man Page. Retrieved March 19, 2018.', 'source_name': 'sudo man page 2018'}, {'url': 'https://blog.malwarebytes.com/threat-analysis/2017/04/new-osx-dok-malware-intercepts-web-traffic/', 'description': 'Thomas Reed. (2017, July 7). New OSX.Dok malware intercepts web traffic. Retrieved July 10, 2017.', 'source_name': 'OSX.Dok Malware'}, {'url': 'https://www.cybereason.com/blog/labs-proton-b-what-this-mac-malware-actually-does', 'description': 'Amit Serper. (2018, May 10). ProtonB What this Mac Malware Actually Does. Retrieved March 19, 2018.', 'source_name': 'cybereason osx proton'}], 'modified': '2022-03-14T16:28:19.781Z', 'name': 'Sudo and Sudo Caching', 'description': 'Adversaries may perform sudo caching and/or use the sudoers file to elevate privileges. Adversaries may do this to execute commands as other users or spawn processes with higher privileges.\\n\\nWithin Linux and MacOS systems, sudo (sometimes referred to as \"superuser do\") allows users to perform commands from terminals with elevated privileges and to control who can perform these commands on the system. The <code>sudo</code> command \"allows a system administrator to delegate authority to give certain users (or groups of users) the ability to run some (or all) commands as root or another user while providing an audit trail of the commands and their arguments.\"(Citation: sudo man page 2018) Since sudo was made for the system administrator, it has some useful configuration features such as a <code>timestamp_timeout</code>, which is the amount of time in minutes between instances of <code>sudo</code> before it will re-prompt for a password. This is because <code>sudo</code> has the ability to cache credentials for a period of time. Sudo creates (or touches) a file at <code>/var/db/sudo</code> with a timestamp of when sudo was last run to determine this timeout. Additionally, there is a <code>tty_tickets</code> variable that treats each new tty (terminal session) in isolation. This means that, for example, the sudo timeout of one tty will not affect another tty (you will have to type the password again).\\n\\nThe sudoers file, <code>/etc/sudoers</code>, describes which users can run which commands and from which terminals. This also describes which commands users can run as other users or groups. This provides the principle of least privilege such that users are running in their lowest possible permissions for most of the time and only elevate to other users or permissions as needed, typically by prompting for a password. However, the sudoers file can also specify when to not prompt users for passwords with a line like <code>user1 ALL=(ALL) NOPASSWD: ALL</code>.(Citation: OSX.Dok Malware) Elevated privileges are required to edit this file though.\\n\\nAdversaries can also abuse poor configurations of these mechanisms to escalate privileges without needing the user\\'s password. For example, <code>/var/db/sudo</code>\\'s timestamp can be monitored to see if it falls within the <code>timestamp_timeout</code> range. If it does, then malware can execute sudo commands without needing to supply the user\\'s password. Additional, if <code>tty_tickets</code> is disabled, adversaries can do this from any tty for that user.\\n\\nIn the wild, malware has disabled <code>tty_tickets</code> to potentially make scripting easier by issuing <code>echo \\\\\\'Defaults !tty_tickets\\\\\\' >> /etc/sudoers</code>.(Citation: cybereason osx proton) In order for this change to be reflected, the malware also issued <code>killall Terminal</code>. As of macOS Sierra, the sudoers file has <code>tty_tickets</code> enabled by default.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': \"On Linux, auditd can alert every time a user's actual ID and effective ID are different (this is what happens when you sudo). This technique is abusing normal functionality in macOS and Linux systems, but sudo has the ability to log all input and output based on the <code>LOG_INPUT</code> and <code>LOG_OUTPUT</code> directives in the <code>/etc/sudoers</code> file.\", 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Process: Process Metadata', 'File: File Modification'], 'x_mitre_permissions_required': ['User'], 'x_mitre_effective_permissions': ['root']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7fcc54cb-f27d-4684-84b7-436af096f858",
+                        "lookup_data": {
+                            "description": "Detects users trying to exploit sudo vulnerability reported in CVE-2019-14287",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/10/15\ndescription: Detects users trying to exploit sudo vulnerability reported in CVE-2019-14287\ndetection:\n  condition: selection_user\n  selection_user:\n    USER:\n    - '#-*'\n    - '#*4294967295'\nfalsepositives:\n- Unlikely\nid: 7fcc54cb-f27d-4684-84b7-436af096f858\nlevel: critical\nlogsource:\n  product: linux\n  service: sudo\nmodified: 2022/11/26\nreferences:\n- https://www.openwall.com/lists/oss-security/2019/10/14/1\n- https://access.redhat.com/security/cve/cve-2019-14287\n- https://twitter.com/matthieugarin/status/1183970598210412546\nrelated:\n- id: f74107df-b6c6-4e80-bf00-4170b658162b\n  type: derived\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.t1068\n- attack.t1548.003\n- cve.2019.14287\ntitle: Sudo Privilege Escalation CVE-2019-14287 - Builtin\n",
+                            "sigma:id": "7fcc54cb-f27d-4684-84b7-436af096f858",
+                            "title": "Sudo Privilege Escalation CVE-2019-14287 - Builtin",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1548.003",
+                "display_name": "Abuse Elevation Control Mechanism: Sudo and Sudo Caching",
+                "atomic_tests": [
+                    {
+                        "name": "Sudo usage",
+                        "auto_generated_guid": "150c3a08-ee6e-48a6-aeaf-3659d24ceb4e",
+                        "description": "Common Sudo enumeration methods.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "sudo -l      \nsudo cat /etc/sudoers\nsudo vim /etc/sudoers\n"
+                        }
+                    },
+                    {
+                        "name": "Sudo usage (freebsd)",
+                        "auto_generated_guid": "2bf9a018-4664-438a-b435-cc6f8c6f71b1",
+                        "description": "Common Sudo enumeration methods.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if sudo is installed.\n",
+                                "prereq_command": "if [ ! -x \"$(command -v sudo)\" ]; then exit 1; else exit 0; fi;\n",
+                                "get_prereq_command": "(which pkg && pkg install -y sudo)\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "sudo -l      \nsudo cat /usr/local/etc/sudoers\nsudo ee /usr/local/etc/sudoers\n"
+                        }
+                    },
+                    {
+                        "name": "Unlimited sudo cache timeout",
+                        "auto_generated_guid": "a7b17659-dd5e-46f7-b7d1-e6792c91d0bc",
+                        "description": "Sets sudo caching timestamp_timeout to a value for unlimited. This is dangerous to modify without using 'visudo', do not do this on a production system.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "sudo sed -i 's/env_reset.*$/env_reset,timestamp_timeout=-1/' /etc/sudoers\nsudo visudo -c -f /etc/sudoers\n"
+                        }
+                    },
+                    {
+                        "name": "Unlimited sudo cache timeout (freebsd)",
+                        "auto_generated_guid": "a83ad6e8-6f24-4d7f-8f44-75f8ab742991",
+                        "description": "Sets sudo caching timestamp_timeout to a value for unlimited. This is dangerous to modify without using 'visudo', do not do this on a production system.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if sudo is installed.\n",
+                                "prereq_command": "if [ ! -x \"$(command -v sudo)\" ]; then exit 1; else exit 0; fi;\n",
+                                "get_prereq_command": "(which pkg && pkg install -y sudo)\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "sudo sed -i 's/env_reset.*$/env_reset,timestamp_timeout=-1/' /usr/local/etc/sudoers\nsudo visudo -c -f /usr/local/etc/sudoers\n"
+                        }
+                    },
+                    {
+                        "name": "Disable tty_tickets for sudo caching",
+                        "auto_generated_guid": "91a60b03-fb75-4d24-a42e-2eb8956e8de1",
+                        "description": "Sets sudo caching tty_tickets value to disabled. This is dangerous to modify without using 'visudo', do not do this on a production system.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "sudo sh -c \"echo Defaults \"'!'\"tty_tickets >> /etc/sudoers\"\nsudo visudo -c -f /etc/sudoers\n"
+                        }
+                    },
+                    {
+                        "name": "Disable tty_tickets for sudo caching (freebsd)",
+                        "auto_generated_guid": "4df6a0fe-2bdd-4be8-8618-a6a19654a57a",
+                        "description": "Sets sudo caching tty_tickets value to disabled. This is dangerous to modify without using 'visudo', do not do this on a production system.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if sudo is installed.\n",
+                                "prereq_command": "if [ ! -x \"$(command -v sudo)\" ]; then exit 1; else exit 0; fi;\n",
+                                "get_prereq_command": "(which pkg && pkg install -y sudo)\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "sudo sh -c \"echo Defaults \"'!'\"tty_tickets >> /usr/local/etc/sudoers\"\nsudo visudo -c -f /usr/local/etc/sudoers\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:52:38"
+}

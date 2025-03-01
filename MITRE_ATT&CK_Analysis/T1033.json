@@ -1,0 +1,556 @@
+{
+    "id": "T1033",
+    "name": "System Owner/User Discovery",
+    "description": "Adversaries may attempt to identify the primary user, currently logged in user, set of users that commonly uses a system, or whether a user is actively using the system. They may do this, for example, by retrieving account usernames or by using [OS Credential Dumping](T1003). The information may be collected in a number of different ways using other Discovery techniques, because user and username details are prevalent throughout a system and include running process ownership, file/directory ownership, session information, and system logs. Adversaries may use the information from [System Owner/User Discovery](T1033) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\nVarious utilities and commands may acquire this information, including `whoami`. In macOS and Linux, the currently logged in user can be identified with `w` and `who`. On macOS the `dscl . list /Users | grep -v '_'` command can also be used to enumerate user accounts. Environment variables, such as `%USERNAME%` and `$USER`, may also be used to access this information.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities based on the information obtained.\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1033",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1033",
+                "atomic_attack_guid": "1392bd0f-5d5a-429e-81d9-eb9d4d4d5b3b",
+                "atomic_attack_name": "GetCurrent User with PowerShell Script",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "GetCurrent User with PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/7eb9c3d5-c98c-4088-acc5-8240bad15379/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1033",
+                "atomic_attack_guid": "4c4959bf-addf-4b4a-be86-8d09cc1857aa",
+                "atomic_attack_name": "System Owner/User Discovery",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Recon Command Output Piped To Findstr.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_findstr_recon_pipe_output.yml",
+                        "remote_content": "title: Recon Command Output Piped To Findstr.EXE\nid: ccb5742c-c248-4982-8c5c-5571b9275ad3\nrelated:\n    - id: fe63010f-8823-4864-a96b-a7b4a0f7b929\n      type: derived\nstatus: experimental\ndescription: |\n    Detects the execution of a potential recon command where the results are piped to \"findstr\". This is meant to trigger on inline calls of \"cmd.exe\" via the \"/c\" or \"/k\" for example.\n    Attackers often time use this technique to extract specific information they require in their reconnaissance phase.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/02cb591f75064ffe1e0df9ac3ed5972a2e491c97/atomics/T1057/T1057.md#atomic-test-6---discover-specific-process---tasklist\n    - https://www.hhs.gov/sites/default/files/manage-engine-vulnerability-sector-alert-tlpclear.pdf\n    - https://www.trendmicro.com/en_us/research/22/d/spring4shell-exploited-to-deploy-cryptocurrency-miners.html\nauthor: Nasreddine Bencherchali (Nextron Systems), frack113\ndate: 2023-07-06\nmodified: 2024-06-27\ntags:\n    - attack.discovery\n    - attack.t1057\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            # Note: Add additional CLI to increase and enhance coverage\n            # Note: We use wildcards in this instance to avoid writing a lot of variations that can be avoided easily. You can switch to regex if its supported by your backend.\n            - 'ipconfig*|*find'\n            - 'net*|*find'\n            - 'netstat*|*find'\n            - 'ping*|*find'\n            - 'systeminfo*|*find'\n            - 'tasklist*|*find'\n            - 'whoami*|*find'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Whoami.EXE Execution With Output Option",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_whoami_output.yml",
+                        "remote_content": "title: Whoami.EXE Execution With Output Option\nid: c30fb093-1109-4dc8-88a8-b30d11c95a5d\nstatus: test\ndescription: Detects the execution of \"whoami.exe\" with the \"/FO\" flag to choose CSV as output format or with redirection options to export the results to a file for later use.\nreferences:\n    - https://brica.de/alerts/alert/public/1247926/agent-tesla-keylogger-delivered-inside-a-power-iso-daa-archive/\n    - https://app.any.run/tasks/7eaba74e-c1ea-400f-9c17-5e30eee89906/\n    - https://www.youtube.com/watch?v=DsJ9ByX84o4&t=6s\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-28\nmodified: 2023-12-04\ntags:\n    - attack.discovery\n    - attack.t1033\n    - car.2016-03-001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_main_img:\n        - Image|endswith: '\\whoami.exe'\n        - OriginalFileName: 'whoami.exe'\n    selection_main_cli:\n        CommandLine|contains:\n            - ' /FO CSV'\n            - ' -FO CSV'\n    selection_special:\n        CommandLine|contains: 'whoami*>'\n    condition: all of selection_main_* or selection_special\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "e28a5a99-da44-436d-b7a0-2afc20a5f413",
+                    "f1086bf7-a0c4-4a37-9102-01e573caf4a0",
+                    "96c982fe-3d08-4df4-bed2-eb14e02f21c8",
+                    "170901d1-de11-4de7-bccb-8fa13678d857",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                    "16f144e4-c780-4ed2-98b4-55d14e2dfa44",
+                    "56fda488-113e-4ce9-8076-afc2457922c3",
+                    "435e10e4-992a-4281-96f3-38b11106adde",
+                    "bed2a484-9348-4143-8a8a-b801c979301c",
+                    "c2993223-6da8-4b1a-88ee-668b8bf315e9",
+                    "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                    "9a0d8ca0-2385-4020-b6c6-cb6153ca56f3",
+                    "b2317cfa-4a47-4ead-b3ff-297438c0bc2d",
+                    "6d580420-ff3f-4e0e-b6b0-41b90c787e28",
+                    "d9367cbb-c2e0-47ce-bdc0-128cb6da898d",
+                    "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                    "79ce34ca-af29-4d0e-b832-fc1b377020db",
+                    "8de1cbe8-d6f5-496d-8237-5f44a721c7a0",
+                    "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                    "97a80ec7-0e2f-4d05-9ef4-65760e634f6b",
+                    "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                    "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                    "03d7999c-1f4c-42cc-8373-e7690d318104",
+                    "502b42de-4306-40b4-9596-6f590c81f073",
+                    "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                    "e9142d84-fbe0-401d-ac50-3e519fb00c89",
+                    "db885529-903f-4c5d-9864-28fe199e6370",
+                    "80167ada-7a12-41ed-b8e9-aa47195c66a1",
+                    "4096a49c-7de4-4da0-a230-c66ccd56ea5a",
+                    "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                    "1114e048-b69c-4f41-bc20-657245ae6e3f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e28a5a99-da44-436d-b7a0-2afc20a5f413",
+                        "lookup_data": {
+                            "description": "Detects the execution of whoami, which is often used by attackers after exploitation / privilege escalation but rarely used by administrators",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/08/13\ndescription: Detects the execution of whoami, which is often used by attackers after\n  exploitation / privilege escalation but rarely used by administrators\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\whoami.exe\n  - OriginalFileName: whoami.exe\nfalsepositives:\n- Admin activity\n- Scripts and administrative tools used in the monitored environment\n- Monitoring activity\nid: e28a5a99-da44-436d-b7a0-2afc20a5f413\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://brica.de/alerts/alert/public/1247926/agent-tesla-keylogger-delivered-inside-a-power-iso-daa-archive/\n- https://app.any.run/tasks/7eaba74e-c1ea-400f-9c17-5e30eee89906/\nstatus: test\ntags:\n- attack.discovery\n- attack.t1033\n- car.2016-03-001\ntitle: Whoami Execution\n",
+                            "sigma:id": "e28a5a99-da44-436d-b7a0-2afc20a5f413",
+                            "title": "Whoami Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f1086bf7-a0c4-4a37-9102-01e573caf4a0",
+                        "lookup_data": {
+                            "description": "Detects the execution of whoami that has been renamed to a different name to avoid detection",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/08/12\ndescription: Detects the execution of whoami that has been renamed to a different\n  name to avoid detection\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|endswith: \\whoami.exe\n  selection:\n    OriginalFileName: whoami.exe\nfalsepositives:\n- Unknown\nid: f1086bf7-a0c4-4a37-9102-01e573caf4a0\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://brica.de/alerts/alert/public/1247926/agent-tesla-keylogger-delivered-inside-a-power-iso-daa-archive/\n- https://app.any.run/tasks/7eaba74e-c1ea-400f-9c17-5e30eee89906/\nstatus: test\ntags:\n- attack.discovery\n- attack.t1033\n- car.2016-03-001\ntitle: Renamed Whoami Execution\n",
+                            "sigma:id": "f1086bf7-a0c4-4a37-9102-01e573caf4a0",
+                            "title": "Renamed Whoami Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "96c982fe-3d08-4df4-bed2-eb14e02f21c8",
+                        "lookup_data": {
+                            "description": "Detects AS-REP roasting is an attack that is often-overlooked. It is not very common as you have to explicitly set accounts that do not require pre-authentication.",
+                            "raw": "author: frack113\ndate: 2022/03/17\ndescription: Detects AS-REP roasting is an attack that is often-overlooked. It is\n  not very common as you have to explicitly set accounts that do not require pre-authentication.\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - Get-ADUser\n    - -Filter\n    - useraccountcontrol\n    - -band\n    - '4194304'\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 96c982fe-3d08-4df4-bed2-eb14e02f21c8\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1069.002/T1069.002.md#atomic-test-11---get-aduser-enumeration-using-useraccountcontrol-flags-as-rep-roasting\n- https://shellgeek.com/useraccountcontrol-flags-to-manipulate-properties/\nstatus: test\ntags:\n- attack.discovery\n- attack.t1033\ntitle: Get-ADUser Enumeration Using UserAccountControl Flags\n",
+                            "sigma:id": "96c982fe-3d08-4df4-bed2-eb14e02f21c8",
+                            "title": "Get-ADUser Enumeration Using UserAccountControl Flags",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "170901d1-de11-4de7-bccb-8fa13678d857",
+                        "lookup_data": {
+                            "description": "Detects Silence downloader. These commands are hardcoded into the binary.",
+                            "raw": "author: Alina Stepchenkova, Roman Rezvukhin, Group-IB, oscd.community\ndate: 2019/11/01\ndescription: Detects Silence downloader. These commands are hardcoded into the binary.\ndetection:\n  condition: selection_recon | near selection_persistence\n  selection_persistence:\n    CommandLine|contains: /C REG ADD \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"\n      /v \"WinNetworkSecurity\" /t REG_SZ /d\n  selection_recon:\n    CommandLine|contains: '>>'\n    CommandLine|endswith: temps.dat\n    Image|endswith:\n    - \\tasklist.exe\n    - \\qwinsta.exe\n    - \\ipconfig.exe\n    - \\hostname.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- Image\n- CommandLine\nid: 170901d1-de11-4de7-bccb-8fa13678d857\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\n- attack.discovery\n- attack.t1057\n- attack.t1082\n- attack.t1016\n- attack.t1033\n- attack.g0091\ntitle: Silence.Downloader V3\n",
+                            "sigma:id": "170901d1-de11-4de7-bccb-8fa13678d857",
+                            "title": "Silence.Downloader V3",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                        "lookup_data": {
+                            "description": "Emotet in Depth TTP 10-07-19",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d9b5933-964c-433c-b84f-4c680a2fe004.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1621850615",
+                            "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "16f144e4-c780-4ed2-98b4-55d14e2dfa44",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1033",
+                            "mitre-cti:description": "Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about system users, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "System Owner/User Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--16f144e4-c780-4ed2-98b4-55d14e2dfa44', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'url': 'https://attack.mitre.org/mitigations/T1033', 'source_name': 'mitre-attack', 'external_id': 'T1033'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2021-08-23T20:25:21.484Z', 'name': 'System Owner/User Discovery Mitigation', 'description': 'Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about system users, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "56fda488-113e-4ce9-8076-afc2457922c3",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls to MS-DRSR from non DC hosts, which could indicate DCSync / DCShadow attacks.",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls to MS-DRSR from non DC hosts, which could indicate\n  DCSync / DCShadow attacks.\ndetection:\n  condition: selection and not filter\n  filter:\n    OpNum:\n    - 0\n    - 1\n    - 12\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: e3514235-4b06-11d1-ab04-00c04fc2dcd2\nfalsepositives:\n- Unknown\nid: 56fda488-113e-4ce9-8076-afc2457922c3\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes,\n    enable DRSR UUID (e3514235-4b06-11d1-ab04-00c04fc2dcd2) for \"dangerous\" opcodes\n    (not 0,1 or 12) only from trusted IPs (DCs)'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-drsr/f977faaa-673e-4f66-b9bf-48c640241d47?redirectedfrom=MSDN\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-DRSR.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.t1033\n- attack.discovery\ntitle: Possible DCSync Attack\n",
+                            "sigma:id": "56fda488-113e-4ce9-8076-afc2457922c3",
+                            "title": "Possible DCSync Attack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "435e10e4-992a-4281-96f3-38b11106adde",
+                        "lookup_data": {
+                            "description": "Detects usage of the Get-ADComputer cmdlet to collect computer information and output it to a file",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/11/10\ndescription: Detects usage of the Get-ADComputer cmdlet to collect computer information\n  and output it to a file\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' > '\n    - ' | Select '\n    - Out-File\n    - Set-Content\n    - Add-Content\n    CommandLine|contains|all:\n    - 'Get-ADComputer '\n    - ' -Filter \\*'\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\nfalsepositives:\n- Legitimate admin scripts may use the same technique, it's better to exclude specific\n  computers or users who execute these commands or scripts often\nid: 435e10e4-992a-4281-96f3-38b11106adde\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/17\nreferences:\n- http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\n- https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\n- https://www.cisa.gov/uscert/sites/default/files/publications/aa22-320a_joint_csa_iranian_government-sponsored_apt_actors_compromise_federal%20network_deploy_crypto%20miner_credential_harvester.pdf\nrelated:\n- id: db885529-903f-4c5d-9864-28fe199e6370\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1033\ntitle: Computer Discovery And Export Via Get-ADComputer Cmdlet\n",
+                            "sigma:id": "435e10e4-992a-4281-96f3-38b11106adde",
+                            "title": "Computer Discovery And Export Via Get-ADComputer Cmdlet",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bed2a484-9348-4143-8a8a-b801c979301c",
+                        "lookup_data": {
+                            "description": "Detects certain command line parameters often used during reconnaissance activity via web shells",
+                            "raw": "author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, Anton Kutepov, oscd.community\ndate: 2017/01/01\ndescription: Detects certain command line parameters often used during reconnaissance\n  activity via web shells\ndetection:\n  condition: 1 of selection* and 1 of susp*\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    CommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_tomcatservice.exe\n  susp_change_dir:\n    CommandLine|contains:\n    - '&cd&echo'\n    - 'cd /d '\n  susp_misc_discovery_binaries:\n  - Image|endswith:\n    - \\whoami.exe\n    - \\systeminfo.exe\n    - \\quser.exe\n    - \\ipconfig.exe\n    - \\pathping.exe\n    - \\tracert.exe\n    - \\netstat.exe\n    - \\schtasks.exe\n    - \\vssadmin.exe\n    - \\wevtutil.exe\n    - \\tasklist.exe\n  - OriginalFileName:\n    - whoami.exe\n    - sysinfo.exe\n    - quser.exe\n    - ipconfig.exe\n    - pathping.exe\n    - tracert.exe\n    - netstat.exe\n    - schtasks.exe\n    - VSSADMIN.EXE\n    - wevtutil.exe\n    - tasklist.exe\n  susp_misc_discovery_commands:\n    CommandLine|contains:\n    - ' Test-NetConnection '\n    - dir \\\n  susp_net_utility:\n    CommandLine|contains:\n    - ' user '\n    - ' use '\n    - ' group '\n    OriginalFileName:\n    - net.exe\n    - net1.exe\n  susp_ping_utility:\n    CommandLine|contains: ' -n '\n    OriginalFileName: ping.exe\n  susp_wmic_utility:\n    CommandLine|contains: ' /node:'\n    OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: bed2a484-9348-4143-8a8a-b801c979301c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://www.fireeye.com/blog/threat-research/2013/08/breaking-down-the-china-chopper-web-shell-part-ii.html\n- https://unit42.paloaltonetworks.com/bumblebee-webshell-xhunt-campaign/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Webshell Detection With Command Line Keywords\n",
+                            "sigma:id": "bed2a484-9348-4143-8a8a-b801c979301c",
+                            "title": "Webshell Detection With Command Line Keywords",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c2993223-6da8-4b1a-88ee-668b8bf315e9",
+                        "lookup_data": {
+                            "description": "Detects usage of the Get-ADUser cmdlet to collect user information and output it to a file",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/11/17\ndescription: Detects usage of the Get-ADUser cmdlet to collect user information and\n  output it to a file\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - ' > '\n    - ' | Select '\n    - Out-File\n    - Set-Content\n    - Add-Content\n    ScriptBlockText|contains|all:\n    - 'Get-ADUser '\n    - ' -Filter \\*'\nfalsepositives:\n- Legitimate admin scripts may use the same technique, it's better to exclude specific\n  computers or users who execute these commands or scripts often\nid: c2993223-6da8-4b1a-88ee-668b8bf315e9\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\n- https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nrelated:\n- id: 1114e048-b69c-4f41-bc20-657245ae6e3f\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1033\ntitle: User Discovery And Export Via Get-ADUser Cmdlet - PowerShell\n",
+                            "sigma:id": "c2993223-6da8-4b1a-88ee-668b8bf315e9",
+                            "title": "User Discovery And Export Via Get-ADUser Cmdlet - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                        "lookup_data": {
+                            "description": "Detects typical Dridex process patterns",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community\ndate: 2019/01/10\ndescription: Detects typical Dridex process patterns\ndetection:\n  condition: selection1 or selection2 and (selection3 or selection4)\n  selection1:\n    CommandLine|contains|all:\n    - C:\\Users\\\n    - \\Desktop\\\n    Image|endswith: \\svchost.exe\n  selection2:\n    ParentImage|endswith: \\svchost.exe\n  selection3:\n    CommandLine|contains: all\n    Image|endswith: \\whoami.exe\n  selection4:\n    CommandLine|contains: view\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Unlikely\nid: e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://app.any.run/tasks/993daa5e-112a-4ff6-8b5a-edbcec7c7ba3\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055\n- attack.discovery\n- attack.t1135\n- attack.t1033\ntitle: Dridex Process Pattern\n",
+                            "sigma:id": "e6eb5a96-9e6f-4a18-9cdd-642cfda21c8e",
+                            "title": "Dridex Process Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9a0d8ca0-2385-4020-b6c6-cb6153ca56f3",
+                        "lookup_data": {
+                            "description": "Adversaries may use the information from System Owner/User Discovery during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2019/10/21\ndescription: Adversaries may use the information from System Owner/User Discovery\n  during automated discovery to shape follow-on behaviors, including whether or not\n  the adversary fully infects the target and/or attempts specific actions.\ndetection:\n  condition: selection\n  selection:\n    a0:\n    - users\n    - w\n    - who\n    type: EXECVE\nfalsepositives:\n- Admin activity\nid: 9a0d8ca0-2385-4020-b6c6-cb6153ca56f3\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1033/T1033.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1033\ntitle: System Owner or User Discovery\n",
+                            "sigma:id": "9a0d8ca0-2385-4020-b6c6-cb6153ca56f3",
+                            "title": "System Owner or User Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b2317cfa-4a47-4ead-b3ff-297438c0bc2d",
+                        "lookup_data": {
+                            "description": "Adversaries may look for details about the network configuration and settings of systems they access or through information discovery of remote systems",
+                            "raw": "author: frack113\ndate: 2021/12/10\ndescription: Adversaries may look for details about the network configuration and\n  settings of systems they access or through information discovery of remote systems\ndetection:\n  condition: selection\n  selection:\n  - OriginalFileName: SharpView.exe\n  - Image|endswith: \\SharpView.exe\n  - CommandLine|contains:\n    - Add-RemoteConnection\n    - Convert-ADName\n    - ConvertFrom-SID\n    - ConvertFrom-UACValue\n    - Convert-SidToName\n    - Export-PowerViewCSV\n    - Find-DomainObjectPropertyOutlier\n    - Find-DomainProcess\n    - Find-DomainShare\n    - Find-DomainUserEvent\n    - Find-DomainUserLocation\n    - Find-ForeignGroup\n    - Find-ForeignUser\n    - Find-GPOComputerAdmin\n    - Find-GPOLocation\n    - Find-Interesting\n    - Find-LocalAdminAccess\n    - Find-ManagedSecurityGroups\n    - Get-CachedRDPConnection\n    - Get-DFSshare\n    - Get-DomainComputer\n    - Get-DomainController\n    - Get-DomainDFSShare\n    - Get-DomainDNSRecord\n    - Get-DomainFileServer\n    - Get-DomainForeign\n    - Get-DomainGPO\n    - Get-DomainGroup\n    - Get-DomainGUIDMap\n    - Get-DomainManagedSecurityGroup\n    - Get-DomainObject\n    - Get-DomainOU\n    - Get-DomainPolicy\n    - Get-DomainSID\n    - Get-DomainSite\n    - Get-DomainSPNTicket\n    - Get-DomainSubnet\n    - Get-DomainTrust\n    - Get-DomainUserEvent\n    - Get-ForestDomain\n    - Get-ForestGlobalCatalog\n    - Get-ForestTrust\n    - Get-GptTmpl\n    - Get-GroupsXML\n    - Get-LastLoggedOn\n    - Get-LoggedOnLocal\n    - Get-NetComputer\n    - Get-NetDomain\n    - Get-NetFileServer\n    - Get-NetForest\n    - Get-NetGPO\n    - Get-NetGroupMember\n    - Get-NetLocalGroup\n    - Get-NetLoggedon\n    - Get-NetOU\n    - Get-NetProcess\n    - Get-NetRDPSession\n    - Get-NetSession\n    - Get-NetShare\n    - Get-NetSite\n    - Get-NetSubnet\n    - Get-NetUser\n    - Get-PathAcl\n    - Get-PrincipalContext\n    - Get-RegistryMountedDrive\n    - Get-RegLoggedOn\n    - Get-WMIRegCachedRDPConnection\n    - Get-WMIRegLastLoggedOn\n    - Get-WMIRegMountedDrive\n    - Get-WMIRegProxy\n    - Invoke-ACLScanner\n    - Invoke-CheckLocalAdminAccess\n    - Invoke-Kerberoast\n    - Invoke-MapDomainTrust\n    - Invoke-RevertToSelf\n    - Invoke-Sharefinder\n    - Invoke-UserImpersonation\n    - Remove-DomainObjectAcl\n    - Remove-RemoteConnection\n    - Request-SPNTicket\n    - Set-DomainObject\n    - Test-AdminAccess\nfalsepositives:\n- Unknown\nid: b2317cfa-4a47-4ead-b3ff-297438c0bc2d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://github.com/tevora-threat/SharpView/\n- https://github.com/PowerShellMafia/PowerSploit/blob/dev/Recon/PowerView.ps1\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1049/T1049.md#atomic-test-4---system-discovery-using-sharpview\nrelated:\n- id: dcd74b95-3f36-4ed9-9598-0490951643aa\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1049\n- attack.t1069.002\n- attack.t1482\n- attack.t1135\n- attack.t1033\ntitle: Suspicious Execution of SharpView\n",
+                            "sigma:id": "b2317cfa-4a47-4ead-b3ff-297438c0bc2d",
+                            "title": "Suspicious Execution of SharpView",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6d580420-ff3f-4e0e-b6b0-41b90c787e28",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls useb by SharpHound to map remote connections and local group membership.",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls useb by SharpHound to map remote connections\n  and local group membership.\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: 4b324fc8-1670-01d3-1278-5a47bf6ee188\n    OpNum: 12\nfalsepositives:\n- Unknown\nid: 6d580420-ff3f-4e0e-b6b0-41b90c787e28\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:4b324fc8-1670-01d3-1278-5a47bf6ee188 opnum:12'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-srvs/02b1f559-fda2-4ba3-94c2-806eb2777183\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-SRVS.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.t1033\ntitle: SharpHound Recon Sessions\n",
+                            "sigma:id": "6d580420-ff3f-4e0e-b6b0-41b90c787e28",
+                            "title": "SharpHound Recon Sessions",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d9367cbb-c2e0-47ce-bdc0-128cb6da898d",
+                        "lookup_data": {
+                            "description": "Detects SharpLdapWhoami, a whoami alternative by asking the LDAP service on a domain controller",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/08/29\ndescription: Detects SharpLdapWhoami, a whoami alternative by asking the LDAP service\n  on a domain controller\ndetection:\n  condition: 1 of selection*\n  selection_flags1:\n    CommandLine|endswith:\n    - ' /method:ntlm'\n    - ' /method:kerb'\n    - ' /method:nego'\n    - ' /m:nego'\n    - ' /m:ntlm'\n    - ' /m:kerb'\n  selection_name:\n    Image|endswith: \\SharpLdapWhoami.exe\n  selection_pe:\n  - OriginalFileName|contains: SharpLdapWhoami\n  - Product: SharpLdapWhoami\nfalsepositives:\n- Programs that use the same command line flags\nid: d9367cbb-c2e0-47ce-bdc0-128cb6da898d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/bugch3ck/SharpLdapWhoami\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1033\n- car.2016-03-001\ntitle: SharpLdapWhoami\n",
+                            "sigma:id": "d9367cbb-c2e0-47ce-bdc0-128cb6da898d",
+                            "title": "SharpLdapWhoami",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                        "lookup_data": {
+                            "description": "Aoqin Dragon | Newly-Discovered Chinese-linked APT Has Been Quietly Spying On Organizations For 10 Years",
+                            "link": "http://www.botvrij.eu/data/feed-osint/abfb5a93-e695-4ee9-bc10-541290bcd663.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1655839499",
+                            "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "79ce34ca-af29-4d0e-b832-fc1b377020db",
+                        "lookup_data": {
+                            "description": "Detects a whoami.exe executed by privileged accounts that are often misused by threat actors",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/01/28\ndescription: Detects a whoami.exe executed by privileged accounts that are often misused\n  by threat actors\ndetection:\n  condition: all of selection*\n  selection_img:\n  - OriginalFileName: whoami.exe\n  - Image|endswith: \\whoami.exe\n  selection_user:\n    User|contains: TrustedInstaller\nfalsepositives:\n- Unknown\nid: 79ce34ca-af29-4d0e-b832-fc1b377020db\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-privilege-escalation-in-windows-environment\n- https://nsudo.m2team.org/en-us/\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.discovery\n- attack.t1033\ntitle: Run Whoami as Privileged User\n",
+                            "sigma:id": "79ce34ca-af29-4d0e-b832-fc1b377020db",
+                            "title": "Run Whoami as Privileged User",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8de1cbe8-d6f5-496d-8237-5f44a721c7a0",
+                        "lookup_data": {
+                            "description": "Detects the execution of whoami with suspicious parents or parameters",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/08/12\ndescription: Detects the execution of whoami with suspicious parents or parameters\ndetection:\n  condition: ( selection and not 1 of filter* ) or selection_special\n  filter1:\n    ParentImage|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\powershell_ise.exe\n  filter2:\n    ParentImage:\n    - C:\\Program Files\\Microsoft Monitoring Agent\\Agent\\MonitoringHost.exe\n    - ''\n  filter3:\n    ParentImage: null\n  selection:\n  - Image|endswith: \\whoami.exe\n  - OriginalFileName: whoami.exe\n  selection_special:\n    CommandLine|contains:\n    - whoami -all\n    - whoami /all\n    - whoami.exe -all\n    - whoami.exe /all\n    - whoami.exe >\n    - whoami >\nfalsepositives:\n- Admin activity\n- Scripts and administrative tools used in the monitored environment\n- Monitoring activity\nid: 8de1cbe8-d6f5-496d-8237-5f44a721c7a0\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/04\nreferences:\n- https://brica.de/alerts/alert/public/1247926/agent-tesla-keylogger-delivered-inside-a-power-iso-daa-archive/\n- https://app.any.run/tasks/7eaba74e-c1ea-400f-9c17-5e30eee89906/\n- https://www.youtube.com/watch?v=DsJ9ByX84o4&t=6s\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1033\n- car.2016-03-001\ntitle: Whoami Execution Anomaly\n",
+                            "sigma:id": "8de1cbe8-d6f5-496d-8237-5f44a721c7a0",
+                            "title": "Whoami Execution Anomaly",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                        "lookup_data": {
+                            "description": "Turla: A Galaxy of Opportunity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/54dd4ef7-f7b2-418e-a191-5def4fbb0033.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1673286950",
+                            "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "97a80ec7-0e2f-4d05-9ef4-65760e634f6b",
+                        "lookup_data": {
+                            "description": "Detects a whoami.exe executed with the /priv command line flag instructing the tool to show all current user privieleges. This is often used after a privilege escalation attempt.",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/05/05\ndescription: Detects a whoami.exe executed with the /priv command line flag instructing\n  the tool to show all current user privieleges. This is often used after a privilege\n  escalation attempt.\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains: /priv\n  selection_img:\n  - Image|endswith: \\whoami.exe\n  - OriginalFileName: whoami.exe\nfalsepositives:\n- Administrative activity (rare lookups on current privileges)\nid: 97a80ec7-0e2f-4d05-9ef4-65760e634f6b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/whoami\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.discovery\n- attack.t1033\ntitle: Run Whoami Showing Privileges\n",
+                            "sigma:id": "97a80ec7-0e2f-4d05-9ef4-65760e634f6b",
+                            "title": "Run Whoami Showing Privileges",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                        "lookup_data": {
+                            "description": "Detects patterns found in process executions cause by China Chopper like tiny (ASPX) webshells",
+                            "raw": "author: Florian Roth (Nextron Systems), MSTI (query)\ndate: 2022/10/01\ndescription: Detects patterns found in process executions cause by China Chopper like\n  tiny (ASPX) webshells\ndetection:\n  condition: all of selection*\n  selection_cmdline:\n    CommandLine|contains:\n    - '&ipconfig&echo'\n    - '&quser&echo'\n    - '&whoami&echo'\n    - '&c:&echo'\n    - '&cd&echo'\n    - '&dir&echo'\n    - '&echo [E]'\n    - '&echo [S]'\n  selection_origin:\n  - Image|endswith: \\w3wp.exe\n  - ParentImage|endswith: \\w3wp.exe\nfalsepositives:\n- Unknown\nid: fa3c117a-bc0d-416e-a31b-0c0e80653efb\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2022/09/30/analyzing-attacks-using-the-exchange-vulnerabilities-cve-2022-41040-and-cve-2022-41082/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Chopper Webshell Process Pattern\n",
+                            "sigma:id": "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                            "title": "Chopper Webshell Process Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                        "lookup_data": {
+                            "description": "Find information about network devices that is not stored in config files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Find information about network devices that is not stored in config files\ndetection:\n  condition: keywords\n  keywords:\n  - dir\n  - show processes\n  - show arp\n  - show cdp\n  - show version\n  - show ip route\n  - show ip interface\n  - show ip sockets\n  - show users\n  - show ssh\n  - show clock\nfalsepositives:\n- Commonly used by administrators for troubleshooting\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 9705a6a1-6db6-4a16-a987-15b7151e299b\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\n- attack.t1201\n- attack.t1057\n- attack.t1018\n- attack.t1082\n- attack.t1016\n- attack.t1049\n- attack.t1033\n- attack.t1124\ntitle: Cisco Discovery\n",
+                            "sigma:id": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                            "title": "Cisco Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "03d7999c-1f4c-42cc-8373-e7690d318104",
+                        "lookup_data": {
+                            "capec": "CAPEC-577",
+                            "mitre-attack-id": "T1033",
+                            "mitre-cti:description": "Adversaries may attempt to identify the primary user, currently logged in user, set of users that commonly uses a system, or whether a user is actively using the system. They may do this, for example, by retrieving account usernames or by using [OS Credential Dumping](https://attack.mitre.org/techniques/T1003). The information may be collected in a number of different ways using other Discovery techniques, because user and username details are prevalent throughout a system and include running process ownership, file/directory ownership, session information, and system logs. Adversaries may use the information from [System Owner/User Discovery](https://attack.mitre.org/techniques/T1033) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\n\nVarious utilities and commands may acquire this information, including <code>whoami</code>. In macOS and Linux, the currently logged in user can be identified with <code>w</code> and <code>who</code>. On macOS the <code>dscl . list /Users | grep -v '_'</code> command can also be used to enumerate user accounts. Environment variables, such as <code>%USERNAME%</code> and <code>$USER</code>, may also be used to access this information.",
+                            "mitre-cti:name": "System Owner/User Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--03d7999c-1f4c-42cc-8373-e7690d318104', 'created': '2017-05-31T21:30:35.733Z', 'x_mitre_version': '1.3', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1033', 'url': 'https://attack.mitre.org/techniques/T1033'}, {'url': 'https://capec.mitre.org/data/definitions/577.html', 'source_name': 'capec', 'external_id': 'CAPEC-577'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"Adversaries may attempt to identify the primary user, currently logged in user, set of users that commonly uses a system, or whether a user is actively using the system. They may do this, for example, by retrieving account usernames or by using [OS Credential Dumping](https://attack.mitre.org/techniques/T1003). The information may be collected in a number of different ways using other Discovery techniques, because user and username details are prevalent throughout a system and include running process ownership, file/directory ownership, session information, and system logs. Adversaries may use the information from [System Owner/User Discovery](https://attack.mitre.org/techniques/T1033) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\\n\\nVarious utilities and commands may acquire this information, including <code>whoami</code>. In macOS and Linux, the currently logged in user can be identified with <code>w</code> and <code>who</code>. On macOS the <code>dscl . list /Users | grep -v '_'</code> command can also be used to enumerate user accounts. Environment variables, such as <code>%USERNAME%</code> and <code>$USER</code>, may also be used to access this information.\", 'modified': '2022-04-20T19:04:03.271Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'System Owner/User Discovery', 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities based on the information obtained.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Access', 'Process: Process Access', 'Process: Process Creation', 'Command: Command Execution', 'Network Traffic: Network Traffic Flow', 'File: File Access', 'Process: OS API Execution', 'Active Directory: Active Directory Object Access', 'Network Traffic: Network Traffic Content'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "502b42de-4306-40b4-9596-6f590c81f073",
+                        "lookup_data": {
+                            "description": "Local accounts, System Owner/User discovery using operating systems utilities",
+                            "raw": "author: Timur Zinniatullin, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/21\ndescription: Local accounts, System Owner/User discovery using operating systems utilities\ndetection:\n  condition: (selection_cmd and not filter_cmd) or (selection_net and not filter_net)\n    or 1 of selection_other_*\n  filter_cmd:\n    CommandLine|contains: ' rmdir '\n  filter_net:\n    CommandLine|contains:\n    - /domain\n    - /add\n    - /delete\n    - /active\n    - /expires\n    - /passwordreq\n    - /scriptpath\n    - /times\n    - /workstations\n  selection_cmd:\n    CommandLine|contains|all:\n    - ' /c'\n    - 'dir '\n    - \\Users\\\n    Image|endswith: \\cmd.exe\n  selection_net:\n    CommandLine|contains: user\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  selection_other_cmdkey:\n    CommandLine|contains: ' /l'\n    Image|endswith: \\cmdkey.exe\n  selection_other_img:\n    Image|endswith:\n    - \\whoami.exe\n    - \\quser.exe\n    - \\qwinsta.exe\n  selection_other_wmi:\n    CommandLine|contains|all:\n    - useraccount\n    - get\n    Image|endswith: \\wmic.exe\nfalsepositives:\n- Legitimate administrator or user enumerates local users for legitimate reason\nid: 502b42de-4306-40b4-9596-6f590c81f073\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/03\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1033/T1033.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1033\n- attack.t1087.001\ntitle: Local Accounts Discovery\n",
+                            "sigma:id": "502b42de-4306-40b4-9596-6f590c81f073",
+                            "title": "Local Accounts Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                        "lookup_data": {
+                            "description": "Detects certain parent child patterns found in cases in which a webshell is used to perform certain credential dumping or exfiltration activities on a compromised system",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/03/17\ndescription: Detects certain parent child patterns found in cases in which a webshell\n  is used to perform certain credential dumping or exfiltration activities on a compromised\n  system\ndetection:\n  condition: 1 of selection_webserver* and 1 of selection_child*\n  selection_child_1:\n    CommandLine|contains|all:\n    - rundll32\n    - comsvcs\n  selection_child_2:\n    CommandLine|contains|all:\n    - ' -hp'\n    - ' a '\n    - ' -m'\n  selection_child_3:\n    CommandLine|contains|all:\n    - net\n    - ' user '\n    - ' /add'\n  selection_child_4:\n    CommandLine|contains|all:\n    - net\n    - ' localgroup '\n    - ' administrators '\n    - /add\n  selection_child_5:\n    Image|endswith:\n    - \\ntdsutil.exe\n    - \\ldifde.exe\n    - \\adfind.exe\n    - \\procdump.exe\n    - \\Nanodump.exe\n    - \\vssadmin.exe\n    - \\fsutil.exe\n  selection_child_6:\n    CommandLine|contains:\n    - ' -NoP '\n    - ' -W Hidden '\n    - ' -decode '\n    - ' /decode '\n    - 'reg save '\n    - .downloadstring(\n    - .downloadfile(\n    - FromBase64String\n    - ' /ticket:'\n    - ' sekurlsa'\n    - .dmp full\n    - process call create\n    - whoami /priv\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    CommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_tomcatservice.exe\nfalsepositives:\n- Unlikely\nid: 4ebc877f-4612-45cb-b3a5-8e3834db36c9\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/04\nreferences:\n- https://youtu.be/7aemGhaE9ds?t=641\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Webshell Hacking Activity Patterns\n",
+                            "sigma:id": "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                            "title": "Webshell Hacking Activity Patterns",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e9142d84-fbe0-401d-ac50-3e519fb00c89",
+                        "lookup_data": {
+                            "description": "Detects a suspicious process command line that uses whoami as first parameter (as e.g. used by EfsPotato)",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/11/29\ndescription: Detects a suspicious process command line that uses whoami as first parameter\n  (as e.g. used by EfsPotato)\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: .exe whoami\nfalsepositives:\n- Unknown\nid: e9142d84-fbe0-401d-ac50-3e519fb00c89\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://twitter.com/blackarrowsec/status/1463805700602224645?s=12\nstatus: test\ntags:\n- attack.discovery\n- attack.t1033\n- car.2016-03-001\ntitle: WhoAmI as Parameter\n",
+                            "sigma:id": "e9142d84-fbe0-401d-ac50-3e519fb00c89",
+                            "title": "WhoAmI as Parameter",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "db885529-903f-4c5d-9864-28fe199e6370",
+                        "lookup_data": {
+                            "description": "Detects usage of the Get-ADComputer cmdlet to collect computer information and output it to a file",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/11/17\ndescription: Detects usage of the Get-ADComputer cmdlet to collect computer information\n  and output it to a file\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - ' | Select '\n    - Out-File\n    - Set-Content\n    - Add-Content\n    ScriptBlockText|contains|all:\n    - 'Get-ADComputer '\n    - ' -Filter \\*'\nfalsepositives:\n- Legitimate admin scripts may use the same technique, it's better to exclude specific\n  computers or users who execute these commands or scripts often\nid: db885529-903f-4c5d-9864-28fe199e6370\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\n- https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\n- https://www.cisa.gov/uscert/sites/default/files/publications/aa22-320a_joint_csa_iranian_government-sponsored_apt_actors_compromise_federal%20network_deploy_crypto%20miner_credential_harvester.pdf\nrelated:\n- id: 435e10e4-992a-4281-96f3-38b11106adde\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1033\ntitle: Computer Discovery And Export Via Get-ADComputer Cmdlet - PowerShell\n",
+                            "sigma:id": "db885529-903f-4c5d-9864-28fe199e6370",
+                            "title": "Computer Discovery And Export Via Get-ADComputer Cmdlet - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "80167ada-7a12-41ed-b8e9-aa47195c66a1",
+                        "lookup_data": {
+                            "description": "Detects a whoami.exe executed by LOCAL SYSTEM. This may be a sign of a successful local privilege escalation.",
+                            "raw": "author: Teymur Kheirkhabarov, Florian Roth\ndate: 2019/10/23\ndescription: Detects a whoami.exe executed by LOCAL SYSTEM. This may be a sign of\n  a successful local privilege escalation.\ndetection:\n  condition: all of selection*\n  selection_img:\n  - OriginalFileName: whoami.exe\n  - Image|endswith: \\whoami.exe\n  selection_user:\n    User|contains:\n    - AUTHORI\n    - AUTORI\nfalsepositives:\n- Possible name overlap with NT AUHTORITY substring to cover all languages\nid: 80167ada-7a12-41ed-b8e9-aa47195c66a1\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-privilege-escalation-in-windows-environment\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.discovery\n- attack.t1033\ntitle: Run Whoami as SYSTEM\n",
+                            "sigma:id": "80167ada-7a12-41ed-b8e9-aa47195c66a1",
+                            "title": "Run Whoami as SYSTEM",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4096a49c-7de4-4da0-a230-c66ccd56ea5a",
+                        "lookup_data": {
+                            "description": "Detects the use of PowerShell to identify the current logged user.",
+                            "raw": "author: frack113\ndate: 2022/04/04\ndescription: Detects the use of PowerShell to identify the current logged user.\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - '[System.Environment]::UserName'\n    - $env:UserName\n    - '[System.Security.Principal.WindowsIdentity]::GetCurrent()'\nfalsepositives:\n- Legitimate PowerShell scripts\nid: 4096a49c-7de4-4da0-a230-c66ccd56ea5a\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1033/T1033.md#atomic-test-4---user-discovery-with-env-vars-powershell-script\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1033/T1033.md#atomic-test-5---getcurrent-user-with-powershell-script\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1033\ntitle: Suspicious PowerShell Get Current User\n",
+                            "sigma:id": "4096a49c-7de4-4da0-a230-c66ccd56ea5a",
+                            "title": "Suspicious PowerShell Get Current User",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                        "lookup_data": {
+                            "description": "Ragnar Locker Ransomware Targeting the Energy Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/8dbeaaac-a671-4a02-8dab-5eec2a1c935b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1662991697",
+                            "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1114e048-b69c-4f41-bc20-657245ae6e3f",
+                        "lookup_data": {
+                            "description": "Detects usage of the Get-ADUser cmdlet to collect user information and output it to a file",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/09\ndescription: Detects usage of the Get-ADUser cmdlet to collect user information and\n  output it to a file\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' > '\n    - ' | Select '\n    - Out-File\n    - Set-Content\n    - Add-Content\n    CommandLine|contains|all:\n    - 'Get-ADUser '\n    - ' -Filter \\*'\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\nfalsepositives:\n- Legitimate admin scripts may use the same technique, it's better to exclude specific\n  computers or users who execute these commands or scripts often\nid: 1114e048-b69c-4f41-bc20-657245ae6e3f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/17\nreferences:\n- http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\n- https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nrelated:\n- id: c2993223-6da8-4b1a-88ee-668b8bf315e9\n  type: similar\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1033\ntitle: User Discovery And Export Via Get-ADUser Cmdlet\n",
+                            "sigma:id": "1114e048-b69c-4f41-bc20-657245ae6e3f",
+                            "title": "User Discovery And Export Via Get-ADUser Cmdlet",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1033",
+                "display_name": "System Owner/User Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "System Owner/User Discovery",
+                        "auto_generated_guid": "4c4959bf-addf-4b4a-be86-8d09cc1857aa",
+                        "description": "Identify System owner or users on an endpoint.\n\nUpon successful execution, cmd.exe will spawn multiple commands against a target host to identify usernames. Output will be via stdout. \nAdditionally, two files will be written to disk - computers.txt and usernames.txt.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "computer_name": {
+                                "description": "Name of remote computer",
+                                "type": "string",
+                                "default": "localhost"
+                            }
+                        },
+                        "executor": {
+                            "command": "cmd.exe /C whoami\nwmic useraccount get /ALL\nquser /SERVER:\"#{computer_name}\"\nquser\nqwinsta.exe /server:#{computer_name}\nqwinsta.exe\nfor /F \"tokens=1,2\" %i in ('qwinsta /server:#{computer_name} ^| findstr \"Active Disc\"') do @echo %i | find /v \"#\" | find /v \"console\" || echo %j > computers.txt\n@FOR /F %n in (computers.txt) DO @FOR /F \"tokens=1,2\" %i in ('qwinsta /server:%n ^| findstr \"Active Disc\"') do @echo %i | find /v \"#\" | find /v \"console\" || echo %j > usernames.txt\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "System Owner/User Discovery",
+                        "auto_generated_guid": "2a9b677d-a230-44f4-ad86-782df1ef108c",
+                        "description": "Identify System owner or users on an endpoint\n\nUpon successful execution, sh will stdout list of usernames.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "users\nw\nwho\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Find computers where user has session - Stealth mode (PowerView)",
+                        "auto_generated_guid": "29857f27-a36f-4f7e-8084-4557cd6207ca",
+                        "description": "Find existing user session on other computers. Upon execution, information about any sessions discovered will be displayed.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/f94a5d298a1b4c5dfb1f30a246d9c73d13b22888/Recon/PowerView.ps1' -UseBasicParsing); Invoke-UserHunter -Stealth -Verbose\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "User Discovery With Env Vars PowerShell Script",
+                        "auto_generated_guid": "dcb6cdee-1fb0-4087-8bf8-88cfd136ba51",
+                        "description": "Use the PowerShell environment variables to identify the current logged user.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "[System.Environment]::UserName | Out-File -FilePath .\\CurrentactiveUser.txt \n$env:UserName | Out-File -FilePath .\\CurrentactiveUser.txt -Append\n",
+                            "cleanup_command": "Remove-Item -Path .\\CurrentactiveUser.txt -Force\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "GetCurrent User with PowerShell Script",
+                        "auto_generated_guid": "1392bd0f-5d5a-429e-81d9-eb9d4d4d5b3b",
+                        "description": "Use the PowerShell \"GetCurrent\" method of the WindowsIdentity .NET class to identify the logged user.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "[System.Security.Principal.WindowsIdentity]::GetCurrent() | Out-File -FilePath .\\CurrentUserObject.txt\n",
+                            "cleanup_command": "Remove-Item -Path .\\CurrentUserObject.txt -Force\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "System Discovery - SocGholish whoami",
+                        "auto_generated_guid": "3d257a03-eb80-41c5-b744-bb37ac7f65c7",
+                        "description": "SocGholish performs whoami discovery commands and outputs the results to a tmp file. \nThe test will generate a filename similar to the random one generated during execution and write the file to AppData\\Temp.\n\nReference: https://redcanary.com/threat-detection-report/threats/socgholish/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_path": {
+                                "description": "Location of output file",
+                                "type": "string",
+                                "default": "$env:temp"
+                            }
+                        },
+                        "executor": {
+                            "command": "$TokenSet = @{\n  U = [Char[]]'ABCDEFGHIJKLMNOPQRSTUVWXYZ'\n  N = [Char[]]'0123456789'\n}\n$Upper = Get-Random -Count 5 -InputObject $TokenSet.U\n$Number = Get-Random -Count 5 -InputObject $TokenSet.N\n$StringSet = $Upper + $Number\n$rad = (Get-Random -Count 5 -InputObject $StringSet) -join ''\n$file = \"rad\" + $rad + \".tmp\"\n\nwhoami.exe /all >> #{output_path}\\$file\n",
+                            "cleanup_command": "Remove-Item -Path #{output_path}\\rad*.tmp -Force\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "System Owner/User Discovery Using Command Prompt",
+                        "auto_generated_guid": "ba38e193-37a6-4c41-b214-61b33277fe36",
+                        "description": "Identify the system owner or current user using native Windows command prompt utilities.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file_path": {
+                                "description": "Location of output file.",
+                                "type": "string",
+                                "default": "$env:temp"
+                            }
+                        },
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "set file=#{output_file_path}\\user_info_%random%.tmp\necho Username: %USERNAME% > %file%\necho User Domain: %USERDOMAIN% >> %file%\nnet users >> %file%\nquery user >> %file%\n",
+                            "cleanup_command": "del #{output_file_path}\\\\user_info_*.tmp\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:14:00"
+}

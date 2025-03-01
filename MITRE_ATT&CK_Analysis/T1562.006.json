@@ -1,0 +1,340 @@
+{
+    "id": "T1562.006",
+    "name": "Indicator Blocking",
+    "description": "An adversary may attempt to block indicators or events typically captured by sensors from being gathered and analyzed. This could include maliciously redirecting (Citation: Microsoft Lamin Sept 2017) or even disabling host-based sensors, such as Event Tracing for Windows (ETW),(Citation: Microsoft About Event Tracing 2018) by tampering settings that control the collection and flow of event telemetry. (Citation: Medium Event Tracing Tampering 2018) These settings may be stored on the system in configuration files and/or in the Registry as well as being accessible via administrative utilities such as [PowerShell](T1059.001) or [Windows Management Instrumentation](T1047).\nETW interruption can be achieved multiple ways, however most directly by defining conditions using the [PowerShell](T1059.001) `Set-EtwTraceProvider` cmdlet or by interfacing directly with the Registry to make alterations.\nIn the case of network-based reporting of indicators, an adversary may block traffic associated with reporting to prevent central analysis. This may be accomplished by many means, such as stopping a local process responsible for forwarding telemetry and/or creating a host-based firewall rule to block traffic to specific hosts responsible for aggregating events, such as security information and event management (SIEM) products.",
+    "platforms": "Windows, macOS, Linux",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Windows Registry: Windows Registry Key Modification, Sensor Health: Host Status, Command: Command Execution",
+    "detection": "Detect lack of reported activity from a host sensor. Different methods of blocking may cause different disruptions in reporting. Systems may suddenly stop reporting all data or only certain kinds of data.\nDepending on the types of host information collected, an analyst may be able to detect the event that triggered a process to stop or connection to be blocked. For example, Sysmon will log when its configuration state has changed (Event ID 16) and Windows Management Instrumentation (WMI) may be used to subscribe ETW providers that log any provider removal from a specific trace session. (Citation: Medium Event Tracing Tampering 2018) To detect changes in ETW you can also monitor the registry key which contains configurations for all ETW event providers: `HKLMSYSTEMCurrentControlSetControlWMIAutologgerAUTOLOGGER_NAME{PROVIDER_GUID}`",
+    "url": "https://attack.mitre.org/techniques/T1562/006",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "977ef627-4539-4875-adf4-ed8f780c4922",
+                    "115fdba9-f017-42e6-84cf-d5573bf2ddf8",
+                    "a238b5d0-ce2d-4414-a676-7a531b3d13d6",
+                    "74d2a63f-3c7b-4852-92da-02d8fbab16da",
+                    "c830f15d-6f6e-430f-8074-6f73d6807841"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "977ef627-4539-4875-adf4-ed8f780c4922",
+                        "lookup_data": {
+                            "description": "Detect changes in auditd configuration files",
+                            "raw": "author: Mikhail Larin, oscd.community\ndate: 2019/10/25\ndescription: Detect changes in auditd configuration files\ndetection:\n  condition: selection\n  selection:\n    name:\n    - /etc/audit/*\n    - /etc/libaudit.conf\n    - /etc/audisp/*\n    type: PATH\nfalsepositives:\n- Legitimate administrative activity\nfields:\n- exe\n- comm\n- key\nid: 977ef627-4539-4875-adf4-ed8f780c4922\nlevel: high\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2021/11/27\nreferences:\n- https://github.com/Neo23x0/auditd/blob/master/audit.rules\n- Self Experience\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1562.006\ntitle: Auditing Configuration Changes on Linux Host\n",
+                            "sigma:id": "977ef627-4539-4875-adf4-ed8f780c4922",
+                            "title": "Auditing Configuration Changes on Linux Host",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "115fdba9-f017-42e6-84cf-d5573bf2ddf8",
+                        "lookup_data": {
+                            "description": "Detects usage of powershell cmdlets to disable or remove ETW trace sessions",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/28\ndescription: Detects usage of powershell cmdlets to disable or remove ETW trace sessions\ndetection:\n  condition: 1 of selection*\n  selection_pwsh_remove:\n    ScriptBlockText|contains: 'Remove-EtwTraceProvider '\n  selection_pwsh_set:\n    ScriptBlockText|contains|all:\n    - 'Set-EtwTraceProvider '\n    - '0x11'\nfalsepositives:\n- Unknown\nid: 115fdba9-f017-42e6-84cf-d5573bf2ddf8\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/25\nreferences:\n- https://medium.com/palantir/tampering-with-windows-event-tracing-background-offense-and-defense-4be7ac62ac63\nrelated:\n- id: a238b5d0-ce2d-4414-a676-7a531b3d13d6\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1562.006\n- car.2016-04-002\ntitle: Disable of ETW Trace - Powershell\n",
+                            "sigma:id": "115fdba9-f017-42e6-84cf-d5573bf2ddf8",
+                            "title": "Disable of ETW Trace - Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a238b5d0-ce2d-4414-a676-7a531b3d13d6",
+                        "lookup_data": {
+                            "description": "Detects a command that clears or disables any ETW trace log which could indicate a logging evasion.",
+                            "raw": "author: '@neu5ron, Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community'\ndate: 2019/03/22\ndescription: Detects a command that clears or disables any ETW trace log which could\n  indicate a logging evasion.\ndetection:\n  condition: 1 of selection*\n  selection_clear_1:\n    CommandLine|contains|all:\n    - cl\n    - /Trace\n  selection_clear_2:\n    CommandLine|contains|all:\n    - clear-log\n    - /Trace\n  selection_disable_1:\n    CommandLine|contains|all:\n    - sl\n    - /e:false\n  selection_disable_2:\n    CommandLine|contains|all:\n    - set-log\n    - /e:false\n  selection_disable_3:\n    CommandLine|contains|all:\n    - logman\n    - update\n    - trace\n    - --p\n    - -ets\n  selection_pwsh_remove:\n    CommandLine|contains: Remove-EtwTraceProvider\n  selection_pwsh_set:\n    CommandLine|contains|all:\n    - Set-EtwTraceProvider\n    - '0x11'\nfalsepositives:\n- Unknown\nid: a238b5d0-ce2d-4414-a676-7a531b3d13d6\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/28\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/wevtutil\n- https://abuse.io/lockergoga.txt\n- https://medium.com/palantir/tampering-with-windows-event-tracing-background-offense-and-defense-4be7ac62ac63\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1562.006\n- car.2016-04-002\ntitle: Disable of ETW Trace\n",
+                            "sigma:id": "a238b5d0-ce2d-4414-a676-7a531b3d13d6",
+                            "title": "Disable of ETW Trace",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74d2a63f-3c7b-4852-92da-02d8fbab16da",
+                        "lookup_data": {
+                            "capec": "CAPEC-571",
+                            "mitre-attack-id": "T1562.006",
+                            "mitre-cti:description": "An adversary may attempt to block indicators or events typically captured by sensors from being gathered and analyzed. This could include maliciously redirecting (Citation: Microsoft Lamin Sept 2017) or even disabling host-based sensors, such as Event Tracing for Windows (ETW),(Citation: Microsoft About Event Tracing 2018) by tampering settings that control the collection and flow of event telemetry. (Citation: Medium Event Tracing Tampering 2018) These settings may be stored on the system in configuration files and/or in the Registry as well as being accessible via administrative utilities such as [PowerShell](https://attack.mitre.org/techniques/T1059/001) or [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047).\n\nETW interruption can be achieved multiple ways, however most directly by defining conditions using the [PowerShell](https://attack.mitre.org/techniques/T1059/001) <code>Set-EtwTraceProvider</code> cmdlet or by interfacing directly with the Registry to make alterations.\n\nIn the case of network-based reporting of indicators, an adversary may block traffic associated with reporting to prevent central analysis. This may be accomplished by many means, such as stopping a local process responsible for forwarding telemetry and/or creating a host-based firewall rule to block traffic to specific hosts responsible for aggregating events, such as security information and event management (SIEM) products.\n\nIn Linux environments, adversaries may disable or reconfigure log processing tools such as syslog or nxlog to inhibit detection and monitoring capabilities to facilitate follow on behaviors (Citation: LemonDuck).",
+                            "mitre-cti:name": "Indicator Blocking",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'macOS', 'Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Rob Smith'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--74d2a63f-3c7b-4852-92da-02d8fbab16da', 'created': '2020-03-19T19:09:30.329Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1562.006', 'url': 'https://attack.mitre.org/techniques/T1562/006'}, {'source_name': 'LemonDuck', 'url': 'https://www.crowdstrike.com/blog/lemonduck-botnet-targets-docker-for-cryptomining-operations/', 'description': 'Manoj Ahuje. (2022, April 21). LemonDuck Targets Docker for Cryptomining Operations. Retrieved June 30, 2022.'}, {'source_name': 'Microsoft Lamin Sept 2017', 'url': 'https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Backdoor:Win32/Lamin.A', 'description': 'Microsoft. (2009, May 17). Backdoor:Win32/Lamin.A. Retrieved September 6, 2018.'}, {'source_name': 'Microsoft About Event Tracing 2018', 'url': 'https://docs.microsoft.com/en-us/windows/desktop/etw/consuming-events', 'description': 'Microsoft. (2018, May 30). About Event Tracing. Retrieved June 7, 2019.'}, {'source_name': 'Medium Event Tracing Tampering 2018', 'url': 'https://medium.com/palantir/tampering-with-windows-event-tracing-background-offense-and-defense-4be7ac62ac63', 'description': 'Palantir. (2018, December 24). Tampering with Windows Event Tracing: Background, Offense, and Defense. Retrieved June 7, 2019.'}, {'url': 'https://capec.mitre.org/data/definitions/571.html', 'source_name': 'capec', 'external_id': 'CAPEC-571'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'An adversary may attempt to block indicators or events typically captured by sensors from being gathered and analyzed. This could include maliciously redirecting (Citation: Microsoft Lamin Sept 2017) or even disabling host-based sensors, such as Event Tracing for Windows (ETW),(Citation: Microsoft About Event Tracing 2018) by tampering settings that control the collection and flow of event telemetry. (Citation: Medium Event Tracing Tampering 2018) These settings may be stored on the system in configuration files and/or in the Registry as well as being accessible via administrative utilities such as [PowerShell](https://attack.mitre.org/techniques/T1059/001) or [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047).\\n\\nETW interruption can be achieved multiple ways, however most directly by defining conditions using the [PowerShell](https://attack.mitre.org/techniques/T1059/001) <code>Set-EtwTraceProvider</code> cmdlet or by interfacing directly with the Registry to make alterations.\\n\\nIn the case of network-based reporting of indicators, an adversary may block traffic associated with reporting to prevent central analysis. This may be accomplished by many means, such as stopping a local process responsible for forwarding telemetry and/or creating a host-based firewall rule to block traffic to specific hosts responsible for aggregating events, such as security information and event management (SIEM) products.\\n\\nIn Linux environments, adversaries may disable or reconfigure log processing tools such as syslog or nxlog to inhibit detection and monitoring capabilities to facilitate follow on behaviors (Citation: LemonDuck).', 'modified': '2022-06-30T16:44:16.962Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Indicator Blocking', 'x_mitre_detection': 'Detect lack of reported activity from a host sensor. Different methods of blocking may cause different disruptions in reporting. Systems may suddenly stop reporting all data or only certain kinds of data.\\n\\nDepending on the types of host information collected, an analyst may be able to detect the event that triggered a process to stop or connection to be blocked. For example, Sysmon will log when its configuration state has changed (Event ID 16) and Windows Management Instrumentation (WMI) may be used to subscribe ETW providers that log any provider removal from a specific trace session. (Citation: Medium Event Tracing Tampering 2018) To detect changes in ETW you can also monitor the registry key which contains configurations for all ETW event providers: <code>HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\WMI\\\\Autologger\\\\AUTOLOGGER_NAME\\\\{PROVIDER_GUID}</code>', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Modification', 'Command: Command Execution', 'Sensor Health: Host Status'], 'x_mitre_defense_bypassed': ['Anti-virus', 'Host intrusion prevention systems'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c830f15d-6f6e-430f-8074-6f73d6807841",
+                        "lookup_data": {
+                            "description": "Detect changes of syslog daemons configuration files",
+                            "raw": "author: Mikhail Larin, oscd.community\ndate: 2019/10/25\ndescription: Detect changes of syslog daemons configuration files\ndetection:\n  condition: selection\n  selection:\n    name:\n    - /etc/syslog.conf\n    - /etc/rsyslog.conf\n    - /etc/syslog-ng/syslog-ng.conf\n    type: PATH\nfalsepositives:\n- Legitimate administrative activity\nfields:\n- exe\n- comm\n- key\nid: c830f15d-6f6e-430f-8074-6f73d6807841\nlevel: high\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2021/11/27\nreferences:\n- self experience\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1562.006\ntitle: Logging Configuration Changes on Linux Host\n",
+                            "sigma:id": "c830f15d-6f6e-430f-8074-6f73d6807841",
+                            "title": "Logging Configuration Changes on Linux Host",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1562.006",
+                "display_name": "Impair Defenses: Indicator Blocking",
+                "atomic_tests": [
+                    {
+                        "name": "Auditing Configuration Changes on Linux Host",
+                        "auto_generated_guid": "212cfbcf-4770-4980-bc21-303e37abd0e3",
+                        "description": "Emulates modification of auditd configuration files\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "audisp_config_file_name": {
+                                "description": "The name of the audispd configuration file to be changed",
+                                "type": "string",
+                                "default": "audispd.conf"
+                            },
+                            "auditd_config_file_name": {
+                                "description": "The name of the auditd configuration file to be changed",
+                                "type": "string",
+                                "default": "auditd.conf"
+                            },
+                            "libaudit_config_file_name": {
+                                "description": "The name of the libaudit configuration file to be changed",
+                                "type": "string",
+                                "default": "libaudit.conf"
+                            }
+                        },
+                        "executor": {
+                            "command": "sed -i '$ a #art_test_1562_006_1' /etc/audisp/#{audisp_config_file_name}\nif [ -f \"/etc/#{auditd_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_1' /etc/#{auditd_config_file_name}\nelse sed -i '$ a #art_test_1562_006_1' /etc/audit/#{auditd_config_file_name}\nfi \nsed -i '$ a #art_test_1562_006_1' /etc/#{libaudit_config_file_name}\n",
+                            "cleanup_command": "sed -i '$ d' /etc/audisp/#{audisp_config_file_name}\nif [ -f \"/etc/#{auditd_config_file_name}\" ];\nthen sed -i '$ d' /etc/#{auditd_config_file_name}\nelse sed -i '$ d' /etc/audit/#{auditd_config_file_name}\nfi\nsed -i '$ d' /etc/#{libaudit_config_file_name}\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Auditing Configuration Changes on FreeBSD Host",
+                        "auto_generated_guid": "cedaf7e7-28ee-42ab-ba13-456abd35d1bd",
+                        "description": "Emulates modification of auditd configuration files\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "auditd_config_file_name": {
+                                "description": "The name of the auditd configuration file to be changed",
+                                "type": "string",
+                                "default": "audit_event"
+                            }
+                        },
+                        "executor": {
+                            "command": "echo '#art_test_1562_006_1' >> /etc/security/#{auditd_config_file_name}\n",
+                            "cleanup_command": "sed -i \"\" '/#art_test_1562_006_1/d' /etc/security/#{auditd_config_file_name}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Logging Configuration Changes on Linux Host",
+                        "auto_generated_guid": "7d40bc58-94c7-4fbb-88d9-ebce9fcdb60c",
+                        "description": "Emulates modification of syslog configuration.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "syslog_config_file_name": {
+                                "description": "The name of the syslog configuration file to be changed",
+                                "type": "string",
+                                "default": "syslog.conf"
+                            },
+                            "rsyslog_config_file_name": {
+                                "description": "The name of the rsyslog configuration file to be changed",
+                                "type": "string",
+                                "default": "rsyslog.conf"
+                            },
+                            "syslog_ng_config_file_name": {
+                                "description": "The name of the syslog-ng configuration file to be changed",
+                                "type": "string",
+                                "default": "syslog-ng.conf"
+                            }
+                        },
+                        "executor": {
+                            "command": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_2' /etc/#{syslog_config_file_name}\nfi\nif [ -f \"/etc/#{rsyslog_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_2' /etc/#{rsyslog_config_file_name}\nfi\nif [ -f \"/etc/syslog-ng/#{syslog_ng_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_2' /etc/syslog-ng/#{syslog_ng_config_file_name}\nfi\n",
+                            "cleanup_command": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen sed -i '$ d' /etc/#{syslog_config_file_name}\nfi\nif [ -f \"/etc/#{rsyslog_config_file_name}\" ];\nthen sed -i '$ d' /etc/#{rsyslog_config_file_name}\nfi\nif [ -f \"/etc/syslog-ng/#{syslog_ng_config_file_name}\" ];\nthen sed -i '$ d' /etc/syslog-ng/#{syslog_ng_config_file_name}\nfi\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Logging Configuration Changes on FreeBSD Host",
+                        "auto_generated_guid": "6b8ca3ab-5980-4321-80c3-bcd77c8daed8",
+                        "description": "Emulates modification of syslog configuration.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "syslog_config_file_name": {
+                                "description": "The name of the syslog configuration file to be changed",
+                                "type": "string",
+                                "default": "syslog.conf"
+                            }
+                        },
+                        "executor": {
+                            "command": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen echo '#art_test_1562_006_2' >> /etc/#{syslog_config_file_name}\nfi\n",
+                            "cleanup_command": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen sed -i \"\" '/#art_test_1562_006_2/d' /etc/#{syslog_config_file_name}\nfi\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable Powershell ETW Provider - Windows",
+                        "auto_generated_guid": "6f118276-121d-4c09-bb58-a8fb4a72ee84",
+                        "description": "This test was created to disable the Microsoft Powershell ETW provider by using the built-in Windows tool, logman.exe. This provider is used as a common source of telemetry in AV/EDR solutions.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ps_exec_location": {
+                                "description": "Location of PSExec.",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\pstools\\PsExec.exe"
+                            },
+                            "session": {
+                                "description": "The session to disable.",
+                                "type": "string",
+                                "default": "EventLog-Application"
+                            },
+                            "provider": {
+                                "description": "The provider to disable.",
+                                "type": "string",
+                                "default": "Microsoft-Windows-Powershell"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "PSExec must be installed on the machine.",
+                                "prereq_command": "if (Test-Path \"#{ps_exec_location}\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PStools.zip\"\nexpand-archive -literalpath \"PathToAtomicsFolder\\..\\ExternalPayloads\\PStools.zip\" -destinationpath \"PathToAtomicsFolder\\..\\ExternalPayloads\\pstools\" -force"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmd /c \"#{ps_exec_location}\" -accepteula -i -s cmd.exe /c logman update trace \"#{session}\" --p \"#{provider}\" -ets",
+                            "cleanup_command": "cmd /c \"#{ps_exec_location}\" -i -s cmd.exe /c logman update trace \"#{session}\" -p \"#{provider}\" -ets",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable .NET Event Tracing for Windows Via Registry (cmd)",
+                        "auto_generated_guid": "8a4c33be-a0d3-434a-bee6-315405edbd5b",
+                        "description": "Disables ETW for the .NET Framework using the reg.exe utility to update the Windows registry",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "REG ADD HKLM\\Software\\Microsoft\\.NETFramework /v ETWEnabled /t REG_DWORD /d 0",
+                            "cleanup_command": "REG DELETE HKLM\\Software\\Microsoft\\.NETFramework /v ETWEnabled /f > nul 2>&1",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable .NET Event Tracing for Windows Via Registry (powershell)",
+                        "auto_generated_guid": "19c07a45-452d-4620-90ed-4c34fffbe758",
+                        "description": "Disables ETW for the .NET Framework using PowerShell to update the Windows registry",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "New-ItemProperty -Path HKLM:\\Software\\Microsoft\\.NETFramework -Name ETWEnabled -Value 0 -PropertyType \"DWord\" -Force",
+                            "cleanup_command": "REG DELETE HKLM\\Software\\Microsoft\\.NETFramework /v ETWEnabled /f > $null 2>&1",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "LockBit Black - Disable the ETW Provider of Windows Defender -cmd",
+                        "auto_generated_guid": "f6df0b8e-2c83-44c7-ba5e-0fa4386bec41",
+                        "description": "An adversary can disable the ETW Provider of Windows Defender,\nso nothing would be logged to Microsoft-Windows-Windows-Defender/Operational anymore.\nhttps://www.cisa.gov/news-events/cybersecurity-advisories/aa23-075a\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" /v Enabled /t REG_DWORD /d 0 /f\n",
+                            "cleanup_command": "reg delete \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" /v Enabled /f >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "LockBit Black - Disable the ETW Provider of Windows Defender -Powershell",
+                        "auto_generated_guid": "69fc085b-5444-4879-8002-b24c8e1a3e02",
+                        "description": "An adversary can disable the ETW Provider of Windows Defender,\nso nothing would be logged to Microsoft-Windows-Windows-Defender/Operational anymore.\nhttps://www.cisa.gov/news-events/cybersecurity-advisories/aa23-075a\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "New-ItemProperty \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" -Name Enabled  -PropertyType DWord -Value 0 -Force\n",
+                            "cleanup_command": "Remove-ItemProperty \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" -Name Enabled -Force -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKCU Registry - Cmd",
+                        "auto_generated_guid": "fdac1f79-b833-4bab-b4a1-11b1ed676a4b",
+                        "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKCU registry using the reg.exe utility. In order for changes to take effect a logout might be required.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "REG ADD HKCU\\Environment /v COMPlus_ETWEnabled /t REG_SZ /d 0 /f",
+                            "cleanup_command": "REG DELETE HKCU\\Environment /v COMPlus_ETWEnabled /f > nul 2>&1",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKCU Registry - PowerShell",
+                        "auto_generated_guid": "b42c1f8c-399b-47ae-8fd8-763181395fee",
+                        "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKCU registry using PowerShell. In order for changes to take effect a logout might be required.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "New-ItemProperty -Path HKCU:\\Environment -Name COMPlus_ETWEnabled -Value 0 -PropertyType \"String\" -Force",
+                            "cleanup_command": "Remove-ItemProperty -Path HKCU:\\Environment -Name COMPlus_ETWEnabled",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKLM Registry - Cmd",
+                        "auto_generated_guid": "110b4281-43fe-405f-a184-5d8eaf228ebf",
+                        "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKLM registry using the reg.exe utility. In order for changes to take effect a reboot might be required.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "REG ADD \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v COMPlus_ETWEnabled /t REG_SZ /d 0 /f",
+                            "cleanup_command": "REG DELETE \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v COMPlus_ETWEnabled /f > nul 2>&1",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKLM Registry - PowerShell",
+                        "auto_generated_guid": "4d61779d-be7f-425c-b560-0cafb2522911",
+                        "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKLM registry using PowerShell. In order for changes to take effect a reboot might be required.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "New-ItemProperty -Path \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" -Name COMPlus_ETWEnabled -Value 0 -PropertyType \"String\" -Force",
+                            "cleanup_command": "Remove-ItemProperty -Path \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" -Name COMPlus_ETWEnabled",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:44:36"
+}

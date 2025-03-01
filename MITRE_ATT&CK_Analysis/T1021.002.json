@@ -1,0 +1,638 @@
+{
+    "id": "T1021.002",
+    "name": "SMB/Windows Admin Shares",
+    "description": "Adversaries may use [Valid Accounts](T1078) to interact with a remote network share using Server Message Block (SMB). The adversary may then perform actions as the logged-on user.\nSMB is a file, printer, and serial port sharing protocol for Windows machines on the same network or domain. Adversaries may use SMB to interact with file shares, allowing them to move laterally throughout a network. Linux and macOS implementations of SMB typically use Samba.\nWindows systems have hidden network shares that are accessible only to administrators and provide the ability for remote file copy and other administrative functions. Example network shares include `C$`, `ADMIN$`, and `IPC$`. Adversaries may use this technique in conjunction with administrator-level [Valid Accounts](T1078) to remotely access a networked system over SMB,(Citation: Wikipedia Server Message Block) to interact with systems using remote procedure calls (RPCs),(Citation: TechNet RPC) transfer files, and run transferred binaries through remote Execution. Example execution techniques that rely on authenticated sessions over SMB/RPC are [Scheduled Task/Job](T1053), [Service Execution](T1569.002), and [Windows Management Instrumentation](T1047). Adversaries can also use NTLM hashes to access administrator shares on systems with [Pass the Hash](T1550.002) and certain configuration and patch levels.(Citation: Microsoft Admin Shares)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Lateral Movement",
+    "data_sources": "Command: Command Execution, Network Traffic: Network Connection Creation, Network Traffic: Network Traffic Flow, Logon Session: Logon Session Creation, Network Share: Network Share Access",
+    "detection": "Ensure that proper logging of accounts used to log into systems is turned on and centrally collected. Windows logging is able to collect success/failure for accounts that may be used to move laterally and can be collected using tools such as Windows Event Forwarding. (Citation: Lateral Movement Payne)(Citation: Windows Event Forwarding Payne) Monitor remote login events and associated SMB activity for file transfers and remote process execution. Monitor the actions of remote users who connect to administrative shares. Monitor for use of tools and commands to connect to remote shares, such as [Net](S0039), on the command-line interface and Discovery techniques that could be used to find remotely accessible systems.(Citation: Medium Detecting WMI Persistence)",
+    "url": "https://attack.mitre.org/techniques/T1021/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1021.002",
+                "atomic_attack_guid": "d41aaab5-bdfe-431d-a3d5-c29e9136ff46",
+                "atomic_attack_name": "Execute command writing output to local Admin Share",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Redirection to Local Admin Share",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_redirect_local_admin_share.yml",
+                        "remote_content": "title: Suspicious Redirection to Local Admin Share\nid: ab9e3b40-0c85-4ba1-aede-455d226fd124\nstatus: test\ndescription: Detects a suspicious output redirection to the local admins share, this technique is often found in malicious scripts or hacktool stagers\nreferences:\n    - https://www.microsoft.com/security/blog/2022/01/15/destructive-malware-targeting-ukrainian-organizations/\n    - http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-01-16\nmodified: 2023-12-28\ntags:\n    - attack.exfiltration\n    - attack.t1048\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_redirect:\n        CommandLine|contains: '>'\n    selection_share:\n        CommandLine|contains:\n            - '\\\\\\\\127.0.0.1\\\\admin$\\\\'\n            - '\\\\\\\\localhost\\\\admin$\\\\'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "HackTool - CrackMapExec Execution Patterns",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_crackmapexec_execution_patterns.yml",
+                        "remote_content": "title: HackTool - CrackMapExec Execution Patterns\nid: 058f4380-962d-40a5-afce-50207d36d7e2\nstatus: stable\ndescription: Detects various execution patterns of the CrackMapExec pentesting framework\nreferences:\n    - https://github.com/byt3bl33d3r/CrackMapExec\nauthor: Thomas Patzke\ndate: 2020-05-22\nmodified: 2023-11-06\ntags:\n    - attack.execution\n    - attack.t1047\n    - attack.t1053\n    - attack.t1059.003\n    - attack.t1059.001\n    - attack.s0106\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            # cme/protocols/smb/wmiexec.py (generalized execute_remote and execute_fileless)\n            - 'cmd.exe /Q /c * 1> \\\\\\\\*\\\\*\\\\* 2>&1'\n            # cme/protocols/smb/atexec.py:109 (fileless output via share)\n            - 'cmd.exe /C * > \\\\\\\\*\\\\*\\\\* 2>&1'\n            # cme/protocols/smb/atexec.py:111 (fileless output via share)\n            - 'cmd.exe /C * > *\\\\Temp\\\\* 2>&1'\n            # https://github.com/byt3bl33d3r/CrackMapExec/blob/d8c50c8cbaf36c29329078662473f75e440978d2/cme/helpers/powershell.py#L136 (PowerShell execution with obfuscation)\n            - 'powershell.exe -exec bypass -noni -nop -w 1 -C \"'\n            # https://github.com/byt3bl33d3r/CrackMapExec/blob/d8c50c8cbaf36c29329078662473f75e440978d2/cme/helpers/powershell.py#L160 (PowerShell execution without obfuscation)\n            - 'powershell.exe -noni -nop -w 1 -enc '\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Impacket Lateral Movement Commandline Parameters",
+                        "rule_link": "https://research.splunk.com/endpoint/8ce07472-496f-11ec-ab3b-3e22fbd008af/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1021.002",
+                "atomic_attack_guid": "0eb03d41-79e4-4393-8e57-6344856be1cf",
+                "atomic_attack_name": "Copy and Execute File with PsExec",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Psexec Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml",
+                        "remote_content": "title: Psexec Execution\nid: 730fc21b-eaff-474b-ad23-90fd265d4988\nstatus: test\ndescription: Detects user accept agreement execution in psexec commandline\nreferences:\n    - https://www.fireeye.com/blog/threat-research/2020/10/kegtap-and-singlemalt-with-a-ransomware-chaser.html\nauthor: omkar72\ndate: 2020-10-30\nmodified: 2023-02-28\ntags:\n    - attack.execution\n    - attack.t1569\n    - attack.t1021\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\psexec.exe'\n        - OriginalFileName: 'psexec.c'\n    condition: selection\nfalsepositives:\n    - Administrative scripts.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Execution of Sysinternals Tools",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_eula_accepted.yml",
+                        "remote_content": "title: Potential Execution of Sysinternals Tools\nid: 7cccd811-7ae9-4ebe-9afd-cb5c406b824b\nrelated:\n    - id: 25ffa65d-76d8-4da5-a832-3f2b0136e133\n      type: derived\nstatus: test\ndescription: Detects command lines that contain the 'accepteula' flag which could be a sign of execution of one of the Sysinternals tools\nreferences:\n    - https://twitter.com/Moti_B/status/1008587936735035392\nauthor: Markus Neis\ndate: 2017-08-28\nmodified: 2024-03-13\ntags:\n    - attack.resource-development\n    - attack.t1588.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|windash: ' -accepteula'\n    condition: selection\nfalsepositives:\n    - Legitimate use of SysInternals tools\n    - Programs that use the same command line flag\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Detect PsExec With accepteula Flag",
+                        "rule_link": "https://research.splunk.com/endpoint/27c3a83d-cada-47c6-9042-67baf19d2574/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1021.002",
+                "atomic_attack_guid": "3386975b-367a-4fbb-9d77-4dcf3639ffd3",
+                "atomic_attack_name": "Map admin share",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "CMD Carry Out String Command Parameter",
+                        "rule_link": "https://research.splunk.com/endpoint/54a6ed00-3256-11ec-b031-acde48001122/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "098d7118-55bc-4912-a836-dc6483a8d150",
+                    "1a17ce75-ff0d-4f02-9709-2b7bb5618cf0",
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "4f9ca633-15c5-463c-9724-bdcd54fde541",
+                    "1c563233-030e-4a07-af8c-ee0490a66d3a",
+                    "7707a579-e0d8-4886-a853-ce47e4575aaa",
+                    "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                    "f6c68d5f-e101-4b86-8c84-7d96851fd65c",
+                    "5cdb711b-5740-4fb2-ba88-f7945027afac",
+                    "f117933c-980c-4f78-b384-e3d838111165",
+                    "b210394c-ba12-4f89-9117-44a2464b9511",
+                    "32d56ea1-417f-44ff-822b-882873f5f43b",
+                    "f1b3a22a-45e6-4004-afb5-4291f9c21166",
+                    "72124974-a68b-4366-b990-d30e0b2a190d",
+                    "75925535-ca97-4e0a-a850-00b5c00779dc",
+                    "d7a95147-145f-4678-b85d-d1ff4a3bb3f6",
+                    "1c3be8c5-6171-41d3-b792-cab6f717fcdb",
+                    "c39f0c81-7348-4965-ab27-2fde35a1b641",
+                    "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                    "f354eba5-623b-450f-b073-0b5b2773b6aa",
+                    "021310d9-30a6-480a-84b7-eaa69aeb92bb",
+                    "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                    "c462f537-a1e3-41a6-b5fc-b2c2cef9bf82",
+                    "3abd6094-7027-475f-9630-8ab9be7b9725",
+                    "9e77ed63-2ecf-4c7b-b09d-640834882028",
+                    "e554f142-5cf3-4e55-ace9-a1b59e0def65",
+                    "214e8f95-100a-4e04-bb31-ef6cba8ce07e",
+                    "5bb68627-3198-40ca-b458-49f973db8752",
+                    "52a85084-6989-40c3-8f32-091e12e13f09",
+                    "586a8d6b-6bfe-4ad9-9d78-888cd2fe50c3",
+                    "45545954-4016-43c6-855e-eae8f1c369dc",
+                    "5a105d34-05fc-401e-8553-272b45c1522d",
+                    "61a7697c-cb79-42a8-a2ff-5f0cdfae0130",
+                    "52d8b0c6-53d6-439a-9e41-52ad442ad9ad",
+                    "6fb63b40-e02a-403e-9ffd-3bcc1d749442",
+                    "bae2865c-5565-470d-b505-9496c87d0c30",
+                    "2f7979ae-f82b-45af-ac1d-2b10e93b0baa",
+                    "614a7e17-5643-4d89-b6fe-f9df1a79641c"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "098d7118-55bc-4912-a836-dc6483a8d150",
+                        "lookup_data": {
+                            "description": "Detects access to $ADMIN share",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/04\ndescription: Detects access to $ADMIN share\ndetection:\n  condition: selection and not filter\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    EventID: 5140\n    ShareName: Admin$\nfalsepositives:\n- Legitimate administrative activity\nid: 098d7118-55bc-4912-a836-dc6483a8d150\nlevel: low\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit File Share\"\n    must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Access to ADMIN$ Share\n",
+                            "sigma:id": "098d7118-55bc-4912-a836-dc6483a8d150",
+                            "title": "Access to ADMIN$ Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1a17ce75-ff0d-4f02-9709-2b7bb5618cf0",
+                        "lookup_data": {
+                            "description": "Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and Impacket psexec.py by triggering on specific service installation",
+                            "raw": "action: global\nauthor: Bartlomiej Czyz, Relativity\ndate: 2021/01/21\ndescription: Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and\n  Impacket psexec.py by triggering on specific service installation\ndetection:\n  condition: selection and selection_1 and not filter\n  filter:\n    ServiceName: PSEXESVC\n  selection_1:\n    ServiceFileName|re: ^.*\\\\[a-zA-Z]{8}\\.exe$\n    ServiceName|re: (^[a-zA-Z]{4}$)|(^[a-zA-Z]{8}$)|(^[a-zA-Z]{16}$)\nfalsepositives:\n- Highly unlikely\nfields:\n- ComputerName\n- SubjectDomainName\n- SubjectUserName\n- ServiceName\n- ServiceFileName\nid: 1a17ce75-ff0d-4f02-9709-2b7bb5618cf0\nlevel: high\nreferences:\n- https://bczyz1.github.io/2021/01/30/psexec.html\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1570\n- attack.execution\n- attack.t1569.002\ntitle: Metasploit Or Impacket Service Installation Via SMB PsExec\n",
+                            "sigma:id": "1a17ce75-ff0d-4f02-9709-2b7bb5618cf0",
+                            "title": "Metasploit Or Impacket Service Installation Via SMB PsExec",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4f9ca633-15c5-463c-9724-bdcd54fde541",
+                        "lookup_data": {
+                            "capec": "CAPEC-561",
+                            "mitre-attack-id": "T1021.002",
+                            "mitre-cti:description": "Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to interact with a remote network share using Server Message Block (SMB). The adversary may then perform actions as the logged-on user.\n\nSMB is a file, printer, and serial port sharing protocol for Windows machines on the same network or domain. Adversaries may use SMB to interact with file shares, allowing them to move laterally throughout a network. Linux and macOS implementations of SMB typically use Samba.\n\nWindows systems have hidden network shares that are accessible only to administrators and provide the ability for remote file copy and other administrative functions. Example network shares include `C$`, `ADMIN$`, and `IPC$`. Adversaries may use this technique in conjunction with administrator-level [Valid Accounts](https://attack.mitre.org/techniques/T1078) to remotely access a networked system over SMB,(Citation: Wikipedia Server Message Block) to interact with systems using remote procedure calls (RPCs),(Citation: TechNet RPC) transfer files, and run transferred binaries through remote Execution. Example execution techniques that rely on authenticated sessions over SMB/RPC are [Scheduled Task/Job](https://attack.mitre.org/techniques/T1053), [Service Execution](https://attack.mitre.org/techniques/T1569/002), and [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047). Adversaries can also use NTLM hashes to access administrator shares on systems with [Pass the Hash](https://attack.mitre.org/techniques/T1550/002) and certain configuration and patch levels.(Citation: Microsoft Admin Shares)",
+                            "mitre-cti:name": "SMB/Windows Admin Shares",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--4f9ca633-15c5-463c-9724-bdcd54fde541', 'type': 'attack-pattern', 'created': '2020-02-11T18:25:28.212Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1021.002', 'url': 'https://attack.mitre.org/techniques/T1021/002'}, {'external_id': 'CAPEC-561', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/561.html'}, {'url': 'https://en.wikipedia.org/wiki/Server_Message_Block', 'description': 'Wikipedia. (2017, December 16). Server Message Block. Retrieved December 21, 2017.', 'source_name': 'Wikipedia Server Message Block'}, {'url': 'https://technet.microsoft.com/en-us/library/cc787851.aspx', 'description': 'Microsoft. (2003, March 28). What Is RPC?. Retrieved June 12, 2016.', 'source_name': 'TechNet RPC'}, {'url': 'http://support.microsoft.com/kb/314984', 'description': 'Microsoft. (n.d.). How to create and delete hidden or administrative shares on client computers. Retrieved November 20, 2014.', 'source_name': 'Microsoft Admin Shares'}, {'source_name': 'Lateral Movement Payne', 'description': 'Payne, J. (2015, November 26). Tracking Lateral Movement Part One - Special Groups and Specific Service Accounts. Retrieved February 1, 2016.', 'url': 'https://docs.microsoft.com/en-us/archive/blogs/jepayne/tracking-lateral-movement-part-one-special-groups-and-specific-service-accounts'}, {'url': 'https://docs.microsoft.com/en-us/archive/blogs/jepayne/monitoring-what-matters-windows-event-forwarding-for-everyone-even-if-you-already-have-a-siem', 'description': 'Payne, J. (2015, November 23). Monitoring what matters - Windows Event Forwarding for everyone (even if you already have a SIEM.). Retrieved February 1, 2016.', 'source_name': 'Windows Event Forwarding Payne'}, {'description': 'French, D. (2018, October 9). Detecting & Removing an Attacker’s WMI Persistence. Retrieved October 11, 2019.', 'url': 'https://medium.com/threatpunter/detecting-removing-wmi-persistence-60ccbb7dff96', 'source_name': 'Medium Detecting WMI Persistence'}], 'modified': '2020-03-23T21:16:02.812Z', 'name': 'SMB/Windows Admin Shares', 'description': 'Adversaries may use [Valid Accounts](https://attack.mitre.org/techniques/T1078) to interact with a remote network share using Server Message Block (SMB). The adversary may then perform actions as the logged-on user.\\n\\nSMB is a file, printer, and serial port sharing protocol for Windows machines on the same network or domain. Adversaries may use SMB to interact with file shares, allowing them to move laterally throughout a network. Linux and macOS implementations of SMB typically use Samba.\\n\\nWindows systems have hidden network shares that are accessible only to administrators and provide the ability for remote file copy and other administrative functions. Example network shares include `C$`, `ADMIN$`, and `IPC$`. Adversaries may use this technique in conjunction with administrator-level [Valid Accounts](https://attack.mitre.org/techniques/T1078) to remotely access a networked system over SMB,(Citation: Wikipedia Server Message Block) to interact with systems using remote procedure calls (RPCs),(Citation: TechNet RPC) transfer files, and run transferred binaries through remote Execution. Example execution techniques that rely on authenticated sessions over SMB/RPC are [Scheduled Task/Job](https://attack.mitre.org/techniques/T1053), [Service Execution](https://attack.mitre.org/techniques/T1569/002), and [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047). Adversaries can also use NTLM hashes to access administrator shares on systems with [Pass the Hash](https://attack.mitre.org/techniques/T1550/002) and certain configuration and patch levels.(Citation: Microsoft Admin Shares)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'lateral-movement'}], 'x_mitre_detection': 'Ensure that proper logging of accounts used to log into systems is turned on and centrally collected. Windows logging is able to collect success/failure for accounts that may be used to move laterally and can be collected using tools such as Windows Event Forwarding. (Citation: Lateral Movement Payne)(Citation: Windows Event Forwarding Payne) Monitor remote login events and associated SMB activity for file transfers and remote process execution. Monitor the actions of remote users who connect to administrative shares. Monitor for use of tools and commands to connect to remote shares, such as [Net](https://attack.mitre.org/software/S0039), on the command-line interface and Discovery techniques that could be used to find remotely accessible systems.(Citation: Medium Detecting WMI Persistence)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Connection Creation', 'Network Traffic: Network Traffic Flow', 'Logon Session: Logon Session Creation', 'Command: Command Execution', 'Network Share: Network Share Access'], 'x_mitre_permissions_required': ['User', 'Administrator'], 'x_mitre_system_requirements': ['SMB enabled; Host/network firewalls not blocking SMB ports between source and destination; Use of domain account in administrator group on remote system or default system admin account.']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1c563233-030e-4a07-af8c-ee0490a66d3a",
+                        "lookup_data": {
+                            "description": "Adversaries may use to interact with a remote network share using Server Message Block (SMB). The adversary may then perform actions as the logged-on user.",
+                            "raw": "author: frack113\ndate: 2022/08/13\ndescription: Adversaries may use to interact with a remote network share using Server\n  Message Block (SMB). The adversary may then perform actions as the logged-on user.\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - New-PSDrive\n    - '-psprovider '\n    - filesystem\n    - '-root '\n    - \\\\\\\\\n    - $\nfalsepositives:\n- Unknown\nid: 1c563233-030e-4a07-af8c-ee0490a66d3a\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1021.002/T1021.002.md#atomic-test-2---map-admin-share-powershell\n- https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-psdrive?view=powershell-7.2\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Suspicious New-PSDrive to Admin Share\n",
+                            "sigma:id": "1c563233-030e-4a07-af8c-ee0490a66d3a",
+                            "title": "Suspicious New-PSDrive to Admin Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7707a579-e0d8-4886-a853-ce47e4575aaa",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\` directory over the network and loading it for a WMI DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\`\n  directory over the network and loading it for a WMI DLL Hijack scenario.\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith: \\wbem\\wbemcomn.dll\n    Image|endswith: \\wmiprvse.exe\nfalsepositives:\n- Unknown\nid: 7707a579-e0d8-4886-a853-ce47e4575aaa\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009173318.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Wmiprvse Wbemcomn DLL Hijack\n",
+                            "sigma:id": "7707a579-e0d8-4886-a853-ce47e4575aaa",
+                            "title": "Wmiprvse Wbemcomn DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                        "lookup_data": {
+                            "description": "Detects a suspicious copy command to or from an Admin share or remote",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Teymur Kheirkhabarov @HeirhabarovT,\n  Zach Stanford @svch0st, Nasreddine Bencherchali\ndate: 2019/12/30\ndescription: Detects a suspicious copy command to or from an Admin share or remote\ndetection:\n  condition: target and (selection_other_tools or all of selection_cmd_* or all of\n    selection_pwsh_*)\n  selection_cmd_cli:\n    CommandLine|contains: copy\n  selection_cmd_img:\n  - Image|endswith: \\cmd.exe\n  - OriginalFileName: Cmd.Exe\n  selection_other_tools:\n  - Image|endswith:\n    - \\robocopy.exe\n    - \\xcopy.exe\n  - OriginalFileName:\n    - robocopy.exe\n    - XCOPY.EXE\n  selection_pwsh_cli:\n    CommandLine|contains:\n    - copy-item\n    - 'copy '\n    - 'cpi '\n    - ' cp '\n    - 'move '\n    - move-item\n    - ' mi '\n    - ' mv '\n  selection_pwsh_img:\n  - Image|contains:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n  target:\n    CommandLine|contains|all:\n    - \\\\\\\\\n    - $\nfalsepositives:\n- Administrative scripts\nfields:\n- CommandLine\n- ParentCommandLine\nid: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/31\nreferences:\n- https://twitter.com/SBousseaden/status/1211636381086339073\n- https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\n- https://www.elastic.co/guide/en/security/current/remote-file-copy-to-a-hidden-share.html\n- https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.collection\n- attack.exfiltration\n- attack.t1039\n- attack.t1048\n- attack.t1021.002\ntitle: Copy from Admin Share\n",
+                            "sigma:id": "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                            "title": "Copy from Admin Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f6c68d5f-e101-4b86-8c84-7d96851fd65c",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\` directory over the network for a WMI DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\`\n  directory over the network for a WMI DLL Hijack scenario.\ndetection:\n  condition: selection and not filter\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    EventID: 5145\n    Provider_Name: Microsoft-Windows-Security-Auditing\n    RelativeTargetName|endswith: \\wbem\\wbemcomn.dll\nfalsepositives:\n- Unknown\nid: f6c68d5f-e101-4b86-8c84-7d96851fd65c\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/02/24\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009173318.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.002\ntitle: T1047 Wmiprvse Wbemcomn DLL Hijack\n",
+                            "sigma:id": "f6c68d5f-e101-4b86-8c84-7d96851fd65c",
+                            "title": "T1047 Wmiprvse Wbemcomn DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cdb711b-5740-4fb2-ba88-f7945027afac",
+                        "lookup_data": {
+                            "description": "Detects rundll32 execution where the DLL is located on a remote location (share)",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/10\ndescription: Detects rundll32 execution where the DLL is located on a remote location\n  (share)\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: ' \\\\\\\\'\n  selection_img:\n  - Image|endswith: \\rundll32.exe\n  - OriginalFileName: RUNDLL32.EXE\n  - CommandLine|contains: rundll32\nfalsepositives:\n- Unlikely\nid: 5cdb711b-5740-4fb2-ba88-f7945027afac\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.cybereason.com/blog/rundll32-the-infamous-proxy-for-executing-malicious-code\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1021.002\n- attack.t1218.011\ntitle: Rundll32 UNC Path Execution\n",
+                            "sigma:id": "5cdb711b-5740-4fb2-ba88-f7945027afac",
+                            "title": "Rundll32 UNC Path Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f117933c-980c-4f78-b384-e3d838111165",
+                        "lookup_data": {
+                            "description": "Detects when a share is mounted using the \"net.exe\" utility",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/02/02\ndescription: Detects when a share is mounted using the \"net.exe\" utility\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ' use '\n    - ' \\\\\\\\'\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Legitimate activity by administrators and scripts\nid: f117933c-980c-4f78-b384-e3d838111165\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\nrelated:\n- id: 3abd6094-7027-475f-9630-8ab9be7b9725\n  type: similar\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Windows Share Mounted Via Net.EXE\n",
+                            "sigma:id": "f117933c-980c-4f78-b384-e3d838111165",
+                            "title": "Windows Share Mounted Via Net.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b210394c-ba12-4f89-9117-44a2464b9511",
+                        "lookup_data": {
+                            "description": "Look for non-system accounts SMB accessing a file with write (0x2) access mask via administrative share (i.e C$).",
+                            "raw": "author: Jose Rodriguez (@Cyb3rPandaH), OTR (Open Threat Research)\ndate: 2020/08/06\ndescription: Look for non-system accounts SMB accessing a file with write (0x2) access\n  mask via administrative share (i.e C$).\ndetection:\n  condition: selection and not filter\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    AccessMask: '0x2'\n    EventID: 5145\n    ShareName|endswith: C$\nfalsepositives:\n- Unknown\nid: b210394c-ba12-4f89-9117-44a2464b9511\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://github.com/OTRF/ThreatHunter-Playbook/blob/f7a58156dbfc9b019f17f638b8c62d22e557d350/playbooks/WIN-201012004336.yaml\n- https://securitydatasets.com/notebooks/small/windows/08_lateral_movement/SDWIN-200806015757.html?highlight=create%20file\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: SMB Create Remote File Admin Share\n",
+                            "sigma:id": "b210394c-ba12-4f89-9117-44a2464b9511",
+                            "title": "SMB Create Remote File Admin Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "32d56ea1-417f-44ff-822b-882873f5f43b",
+                        "lookup_data": {
+                            "description": "Detects execution of Impacket's psexec.py.",
+                            "raw": "author: Bhabesh Raj\ndate: 2020/12/14\ndescription: Detects execution of Impacket's psexec.py.\ndetection:\n  condition: selection1\n  selection1:\n    EventID: 5145\n    RelativeTargetName|contains:\n    - RemCom_stdin\n    - RemCom_stdout\n    - RemCom_stderr\n    ShareName: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Unknown\nid: 32d56ea1-417f-44ff-822b-882873f5f43b\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/09/22\nreferences:\n- https://blog.menasec.net/2019/02/threat-hunting-3-detecting-psexec.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Impacket PsExec Execution\n",
+                            "sigma:id": "32d56ea1-417f-44ff-822b-882873f5f43b",
+                            "title": "Impacket PsExec Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f1b3a22a-45e6-4004-afb5-4291f9c21166",
+                        "lookup_data": {
+                            "description": "detects execution of psexec or paexec with renamed service name, this rule helps to filter out the noise if psexec is used for legit purposes or if attacker uses a different psexec client other than sysinternal one",
+                            "raw": "author: Samir Bousseaden, @neu5ron, Tim Shelton\ndate: 2020/04/02\ndescription: detects execution of psexec or paexec with renamed service name, this\n  rule helps to filter out the noise if psexec is used for legit purposes or if attacker\n  uses a different psexec client other than sysinternal one\ndetection:\n  condition: selection and not filter\n  filter:\n    name|startswith: PSEXESVC\n  selection:\n    name|endswith:\n    - -stdin\n    - -stdout\n    - -stderr\n    path|contains|all:\n    - \\\\\n    - \\IPC$\nfalsepositives:\n- Unknown\nid: f1b3a22a-45e6-4004-afb5-4291f9c21166\nlevel: high\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2022/12/27\nreferences:\n- https://blog.menasec.net/2019/02/threat-hunting-3-detecting-psexec.html\nrelated:\n- id: c462f537-a1e3-41a6-b5fc-b2c2cef9bf82\n  type: derived\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Suspicious PsExec Execution - Zeek\n",
+                            "sigma:id": "f1b3a22a-45e6-4004-afb5-4291f9c21166",
+                            "title": "Suspicious PsExec Execution - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "72124974-a68b-4366-b990-d30e0b2a190d",
+                        "lookup_data": {
+                            "description": "Alerts on Metasploit host's authentications on the domain.",
+                            "raw": "author: Chakib Gzenayi (@Chak092), Hosni Mribah\ndate: 2020/05/06\ndescription: Alerts on Metasploit host's authentications on the domain.\ndetection:\n  condition: 1 of selection*\n  selection1:\n    AuthenticationPackageName: NTLM\n    EventID:\n    - 4625\n    - 4624\n    LogonType: 3\n    WorkstationName|re: ^[A-Za-z0-9]{16}$\n  selection2:\n    EventID: 4776\n    ProcessName: null\n    Workstation|re: ^[A-Za-z0-9]{16}$\nfalsepositives:\n- Linux hostnames composed of 16 characters.\nid: 72124974-a68b-4366-b990-d30e0b2a190d\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://github.com/rapid7/metasploit-framework/blob/1416b5776d963f21b7b5b45d19f3e961201e0aed/lib/rex/proto/smb/client.rb\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Metasploit SMB Authentication\n",
+                            "sigma:id": "72124974-a68b-4366-b990-d30e0b2a190d",
+                            "title": "Metasploit SMB Authentication",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "75925535-ca97-4e0a-a850-00b5c00779dc",
+                        "lookup_data": {
+                            "description": "Detects automated lateral movement by Turla group",
+                            "raw": "author: Markus Neis\ndate: 2017/11/07\ndescription: Detects automated lateral movement by Turla group\ndetection:\n  condition: netCommand1 | near netCommand2 and netCommand3\n  netCommand1:\n    CommandLine: net view /DOMAIN\n  netCommand2:\n    CommandLine: net session\n  netCommand3:\n    CommandLine: net share\n  timeframe: 1m\nfalsepositives:\n- Unknown\nid: 75925535-ca97-4e0a-a850-00b5c00779dc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://securelist.com/the-epic-turla-operation/65545/\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059\n- attack.lateral_movement\n- attack.t1021.002\n- attack.discovery\n- attack.t1083\n- attack.t1135\ntitle: Automated Turla Group Lateral Movement\n",
+                            "sigma:id": "75925535-ca97-4e0a-a850-00b5c00779dc",
+                            "title": "Automated Turla Group Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d7a95147-145f-4678-b85d-d1ff4a3bb3f6",
+                        "lookup_data": {
+                            "description": "Detects known malicious service installs that appear in cases in which a Cobalt Strike beacon elevates privileges or lateral movement",
+                            "raw": "author: Florian Roth (Nextron Systems), Wojciech Lesicki\ndate: 2021/05/26\ndescription: Detects known malicious service installs that appear in cases in which\n  a Cobalt Strike beacon elevates privileges or lateral movement\ndetection:\n  condition: event_id and 1 of selection*\n  event_id:\n    EventID: 4697\n  selection1:\n    ServiceFileName|contains|all:\n    - ADMIN$\n    - .exe\n  selection2:\n    ServiceFileName|contains|all:\n    - '%COMSPEC%'\n    - start\n    - powershell\n  selection3:\n    ServiceFileName|contains: powershell -nop -w hidden -encodedcommand\n  selection4:\n    ServiceFileName|base64offset|contains: 'IEX (New-Object Net.Webclient).DownloadString(''http://127.0.0.1:'\nfalsepositives:\n- Unknown\nid: d7a95147-145f-4678-b85d-d1ff4a3bb3f6\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://www.sans.org/webcasts/119395\n- https://www.crowdstrike.com/blog/getting-the-bacon-from-cobalt-strike-beacon/\n- https://thedfirreport.com/2021/08/29/cobalt-strike-a-defenders-guide/\nrelated:\n- id: 5a105d34-05fc-401e-8553-272b45c1522d\n  type: derived\nstatus: test\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1543.003\n- attack.t1569.002\ntitle: CobaltStrike Service Installations - Security\n",
+                            "sigma:id": "d7a95147-145f-4678-b85d-d1ff4a3bb3f6",
+                            "title": "CobaltStrike Service Installations - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1c3be8c5-6171-41d3-b792-cab6f717fcdb",
+                        "lookup_data": {
+                            "description": "Detects repeated failed (outgoing) attempts to mount a hidden share",
+                            "raw": "author: Fabian Franz\ndate: 2022/08/30\ndescription: Detects repeated failed (outgoing) attempts to mount a hidden share\ndetection:\n  condition: selection | count() > 10\n  selection:\n    EventID: 31010\n    ShareName|endswith: $\n  timeframe: 1m\nfalsepositives:\n- Legitimate administrative activity\n- Faulty scripts\nfields:\n- ShareName\nid: 1c3be8c5-6171-41d3-b792-cab6f717fcdb\nlevel: medium\nlogsource:\n  product: windows\n  service: smbclient-security\nmodified: 2022/08/30\nreferences:\n- https://twitter.com/moti_b/status/1032645458634653697\n- https://www.bsi.bund.de/SharedDocs/Downloads/EN/BSI/Cyber-Security/SiSyPHuS/AP10/Logging_Configuration_Guideline.pdf?__blob=publicationFile&v=5\nstatus: experimental\ntags:\n- attack.t1021.002\n- attack.lateral_movement\ntitle: Failed Mounting of Hidden Share\n",
+                            "sigma:id": "1c3be8c5-6171-41d3-b792-cab6f717fcdb",
+                            "title": "Failed Mounting of Hidden Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c39f0c81-7348-4965-ab27-2fde35a1b641",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program Files\\Internet Explorer\\` directory over the network for a DCOM InternetExplorer DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program\n  Files\\Internet Explorer\\` directory over the network for a DCOM InternetExplorer\n  DLL Hijack scenario.\ndetection:\n  condition: selection and not filter\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    EventID: 5145\n    RelativeTargetName|endswith: \\Internet Explorer\\iertutil.dll\nfalsepositives:\n- Unknown\nid: c39f0c81-7348-4965-ab27-2fde35a1b641\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/26\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009183000.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: DCOM InternetExplorer.Application Iertutil DLL Hijack - Security\n",
+                            "sigma:id": "c39f0c81-7348-4965-ab27-2fde35a1b641",
+                            "title": "DCOM InternetExplorer.Application Iertutil DLL Hijack - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                        "lookup_data": {
+                            "description": "Detects execution of Net.exe, whether suspicious or benign.",
+                            "raw": "author: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community\n  (improvements)\ndate: 2019/01/16\ndescription: Detects execution of Net.exe, whether suspicious or benign.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' group'\n    - ' localgroup'\n    - ' user'\n    - ' view'\n    - ' share'\n    - ' accounts'\n    - ' stop '\n    - ' start'\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Will need to be tuned. If using Splunk, I recommend | stats count by Computer,CommandLine\n  following the search for easy hunting by computer/CommandLine.\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n- https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n- https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n- https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1007\n- attack.t1049\n- attack.t1018\n- attack.t1135\n- attack.t1201\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1087.001\n- attack.t1087.002\n- attack.lateral_movement\n- attack.t1021.002\n- attack.s0039\ntitle: Net.exe Execution\n",
+                            "sigma:id": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                            "title": "Net.exe Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f354eba5-623b-450f-b073-0b5b2773b6aa",
+                        "lookup_data": {
+                            "description": "Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application Class",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR), wagga\ndate: 2020/10/12\ndescription: Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application\n  Class\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith: \\Internet Explorer\\iertutil.dll\n    Image|endswith: \\Internet Explorer\\iexplore.exe\nfalsepositives:\n- Unknown\nid: f354eba5-623b-450f-b073-0b5b2773b6aa\nlevel: critical\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/18\nreferences:\n- https://threathunterplaybook.com/hunts/windows/201009-RemoteDCOMIErtUtilDLLHijack/notebook.html\nrelated:\n- id: e554f142-5cf3-4e55-ace9-a1b59e0def65\n  type: obsoletes\n- id: 2f7979ae-f82b-45af-ac1d-2b10e93b0baa\n  type: similar\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: Potential DCOM InternetExplorer.Application DLL Hijack - Image Load\n",
+                            "sigma:id": "f354eba5-623b-450f-b073-0b5b2773b6aa",
+                            "title": "Potential DCOM InternetExplorer.Application DLL Hijack - Image Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "021310d9-30a6-480a-84b7-eaa69aeb92bb",
+                        "lookup_data": {
+                            "description": "This detection excludes known namped pipes accessible remotely and notify on newly observed ones, may help to detect lateral movement and remote exec using named pipes",
+                            "raw": "author: Samir Bousseaden, @neu5ron, Tim Shelton\ndate: 2020/04/02\ndescription: This detection excludes known namped pipes accessible remotely and notify\n  on newly observed ones, may help to detect lateral movement and remote exec using\n  named pipes\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_keywords:\n  - samr\n  - lsarpc\n  - winreg\n  - netlogon\n  - srvsvc\n  - protected_storage\n  - wkssvc\n  - browser\n  - netdfs\n  - svcctl\n  - spoolss\n  - ntsvcs\n  - LSM_API_service\n  - HydraLsPipe\n  - TermSrv_API_service\n  - MsFteWds\n  selection:\n    path: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Update the excluded named pipe to filter out any newly observed legit named pipe\nid: 021310d9-30a6-480a-84b7-eaa69aeb92bb\nlevel: high\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2022/12/27\nreferences:\n- https://twitter.com/menasec1/status/1104489274387451904\nrelated:\n- id: 52d8b0c6-53d6-439a-9e41-52ad442ad9ad\n  type: derived\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: First Time Seen Remote Named Pipe - Zeek\n",
+                            "sigma:id": "021310d9-30a6-480a-84b7-eaa69aeb92bb",
+                            "title": "First Time Seen Remote Named Pipe - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                        "lookup_data": {
+                            "description": "Detects automated lateral movement by Turla group",
+                            "raw": "author: Markus Neis\ndate: 2017/11/07\ndescription: Detects automated lateral movement by Turla group\ndetection:\n  condition: selection\n  selection:\n    CommandLine:\n    - net use \\\\\\\\%DomainController%\\C$ \"P@ssw0rd\" *\n    - dir c:\\\\*.doc* /s\n    - dir %TEMP%\\\\*.exe\nfalsepositives:\n- Unknown\nid: c601f20d-570a-4cde-a7d6-e17f99cb8e7f\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://securelist.com/the-epic-turla-operation/65545/\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059\n- attack.lateral_movement\n- attack.t1021.002\n- attack.discovery\n- attack.t1083\n- attack.t1135\ntitle: Turla Group Lateral Movement\n",
+                            "sigma:id": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+                            "title": "Turla Group Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c462f537-a1e3-41a6-b5fc-b2c2cef9bf82",
+                        "lookup_data": {
+                            "description": "detects execution of psexec or paexec with renamed service name, this rule helps to filter out the noise if psexec is used for legit purposes or if attacker uses a different psexec client other than sysinternal one",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: detects execution of psexec or paexec with renamed service name, this\n  rule helps to filter out the noise if psexec is used for legit purposes or if attacker\n  uses a different psexec client other than sysinternal one\ndetection:\n  condition: selection1 and not filter\n  filter:\n    RelativeTargetName|startswith: PSEXESVC\n  selection1:\n    EventID: 5145\n    RelativeTargetName|endswith:\n    - -stdin\n    - -stdout\n    - -stderr\n    ShareName: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Unknown\nid: c462f537-a1e3-41a6-b5fc-b2c2cef9bf82\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://blog.menasec.net/2019/02/threat-hunting-3-detecting-psexec.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Suspicious PsExec Execution\n",
+                            "sigma:id": "c462f537-a1e3-41a6-b5fc-b2c2cef9bf82",
+                            "title": "Suspicious PsExec Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3abd6094-7027-475f-9630-8ab9be7b9725",
+                        "lookup_data": {
+                            "description": "Detects when an admin share is mounted using net.exe",
+                            "raw": "author: oscd.community, Teymur Kheirkhabarov @HeirhabarovT, Zach Stanford @svch0st,\n  wagga\ndate: 2020/10/05\ndescription: Detects when an admin share is mounted using net.exe\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - ' use '\n    - ' \\\\\\\\*\\\\*$'\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Administrators\nid: 3abd6094-7027-475f-9630-8ab9be7b9725\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/01\nreferences:\n- https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\nrelated:\n- id: f117933c-980c-4f78-b384-e3d838111165\n  type: similar\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Windows Admin Share Mounted Via Net.EXE\n",
+                            "sigma:id": "3abd6094-7027-475f-9630-8ab9be7b9725",
+                            "title": "Windows Admin Share Mounted Via Net.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9e77ed63-2ecf-4c7b-b09d-640834882028",
+                        "lookup_data": {
+                            "description": "Detecting use PsExec via Pipe Creation/Access to pipes",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/05/10\ndescription: Detecting use PsExec via Pipe Creation/Access to pipes\ndetection:\n  condition: selection\n  selection:\n    PipeName|startswith:\n    - psexec\n    - paexec\n    - remcom\n    - csexec\nfalsepositives:\n- Legitimate Administrator activity\nid: 9e77ed63-2ecf-4c7b-b09d-640834882028\nlevel: medium\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    check powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.execution\n- attack.t1569.002\ntitle: PsExec Pipes Artifacts\n",
+                            "sigma:id": "9e77ed63-2ecf-4c7b-b09d-640834882028",
+                            "title": "PsExec Pipes Artifacts",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e554f142-5cf3-4e55-ace9-a1b59e0def65",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program Files\\Internet Explorer\\` directory over the network and loading it for a DCOM InternetExplorer DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `iertutil.dll` in the `C:\\Program\n  Files\\Internet Explorer\\` directory over the network and loading it for a DCOM InternetExplorer\n  DLL Hijack scenario.\ndetection:\n  condition: selection_one or selection_two\n  selection_one:\n    EventID: 11\n    Image: System\n    TargetFilename: '*\\Internet Explorer\\iertutil.dll'\n  selection_two:\n    EventID: 7\n    Image: '*\\Internet Explorer\\iexplore.exe'\n    ImageLoaded: '*\\Internet Explorer\\iertutil.dll'\nfalsepositives:\n- Unknown\nid: e554f142-5cf3-4e55-ace9-a1b59e0def65\nlevel: critical\nlogsource:\n  product: windows\n  service: sysmon\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009183000.html\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: T1021 DCOM InternetExplorer.Application Iertutil DLL Hijack\n",
+                            "sigma:id": "e554f142-5cf3-4e55-ace9-a1b59e0def65",
+                            "title": "T1021 DCOM InternetExplorer.Application Iertutil DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "214e8f95-100a-4e04-bb31-ef6cba8ce07e",
+                        "lookup_data": {
+                            "description": "Detects the use of the spoolss named pipe over SMB. This can be used to trigger the authentication via NTLM of any machine that has the spoolservice enabled.",
+                            "raw": "author: OTR (Open Threat Research)\ndate: 2018/11/28\ndescription: Detects the use of the spoolss named pipe over SMB. This can be used\n  to trigger the authentication via NTLM of any machine that has the spoolservice\n  enabled.\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    RelativeTargetName: spoolss\n    ShareName: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Domain Controllers acting as printer servers too? :)\nid: 214e8f95-100a-4e04-bb31-ef6cba8ce07e\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://posts.specterops.io/hunting-in-active-directory-unconstrained-delegation-forests-trusts-71f2b33688e1\n- https://dirkjanm.io/a-different-way-of-abusing-zerologon/\n- https://twitter.com/_dirkjan/status/1309214379003588608\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: DCERPC SMB Spoolss Named Pipe\n",
+                            "sigma:id": "214e8f95-100a-4e04-bb31-ef6cba8ce07e",
+                            "title": "DCERPC SMB Spoolss Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5bb68627-3198-40ca-b458-49f973db8752",
+                        "lookup_data": {
+                            "description": "Detects rundll32 execution without parameters as observed when running Metasploit windows/smb/psexec exploit module",
+                            "raw": "author: Bartlomiej Czyz, Relativity\ndate: 2021/01/31\ndescription: Detects rundll32 execution without parameters as observed when running\n  Metasploit windows/smb/psexec exploit module\ndetection:\n  condition: selection\n  selection:\n    CommandLine: rundll32.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- SubjectUserName\n- CommandLine\n- Image\n- ParentImage\nid: 5bb68627-3198-40ca-b458-49f973db8752\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://bczyz1.github.io/2021/01/30/psexec.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1570\n- attack.execution\n- attack.t1569.002\ntitle: Rundll32 Without Parameters\n",
+                            "sigma:id": "5bb68627-3198-40ca-b458-49f973db8752",
+                            "title": "Rundll32 Without Parameters",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52a85084-6989-40c3-8f32-091e12e13f09",
+                        "lookup_data": {
+                            "description": "Detects the use of smbexec.py tool by detecting a specific service installation",
+                            "raw": "author: Omer Faruk Celik\ndate: 2018/03/20\ndescription: Detects the use of smbexec.py tool by detecting a specific service installation\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|endswith: \\execute.bat\n    Provider_Name: Service Control Manager\n    ServiceName: BTOBTO\nfalsepositives:\n- Unknown\nfields:\n- ServiceName\n- ServiceFileName\nid: 52a85084-6989-40c3-8f32-091e12e13f09\nlevel: critical\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/03/21\nreferences:\n- https://blog.ropnop.com/using-credentials-to-own-windows-boxes-part-2-psexec-and-services/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.execution\n- attack.t1021.002\n- attack.t1569.002\ntitle: smbexec.py Service Installation\n",
+                            "sigma:id": "52a85084-6989-40c3-8f32-091e12e13f09",
+                            "title": "smbexec.py Service Installation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "586a8d6b-6bfe-4ad9-9d78-888cd2fe50c3",
+                        "lookup_data": {
+                            "description": "Detects remote service activity via remote access to the svcctl named pipe",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: Detects remote service activity via remote access to the svcctl named\n  pipe\ndetection:\n  condition: selection\n  selection:\n    Accesses|contains: WriteData\n    EventID: 5145\n    RelativeTargetName: svcctl\n    ShareName: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Unknown\nid: 586a8d6b-6bfe-4ad9-9d78-888cd2fe50c3\nlevel: medium\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://blog.menasec.net/2019/03/threat-hunting-26-remote-windows.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.persistence\n- attack.t1021.002\ntitle: Remote Service Activity via SVCCTL Named Pipe\n",
+                            "sigma:id": "586a8d6b-6bfe-4ad9-9d78-888cd2fe50c3",
+                            "title": "Remote Service Activity via SVCCTL Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "45545954-4016-43c6-855e-eae8f1c369dc",
+                        "lookup_data": {
+                            "description": "Detects access to a protected_storage service over the network. Potential abuse of DPAPI to extract domain backup keys from Domain Controllers",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g\ndate: 2019/08/10\ndescription: Detects access to a protected_storage service over the network. Potential\n  abuse of DPAPI to extract domain backup keys from Domain Controllers\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    RelativeTargetName: protected_storage\n    ShareName|contains: IPC\nfalsepositives:\n- Unknown\nid: 45545954-4016-43c6-855e-eae8f1c369dc\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/06_credential_access/WIN-190620024610.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Protected Storage Service Access\n",
+                            "sigma:id": "45545954-4016-43c6-855e-eae8f1c369dc",
+                            "title": "Protected Storage Service Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5a105d34-05fc-401e-8553-272b45c1522d",
+                        "lookup_data": {
+                            "description": "Detects known malicious service installs that appear in cases in which a Cobalt Strike beacon elevates privileges or lateral movement",
+                            "raw": "author: Florian Roth (Nextron Systems), Wojciech Lesicki\ndate: 2021/05/26\ndescription: Detects known malicious service installs that appear in cases in which\n  a Cobalt Strike beacon elevates privileges or lateral movement\ndetection:\n  condition: selection_id and (selection1 or selection2 or selection3 or selection4)\n  selection1:\n    ImagePath|contains|all:\n    - ADMIN$\n    - .exe\n  selection2:\n    ImagePath|contains|all:\n    - '%COMSPEC%'\n    - start\n    - powershell\n  selection3:\n    ImagePath|contains: powershell -nop -w hidden -encodedcommand\n  selection4:\n    ImagePath|base64offset|contains: 'IEX (New-Object Net.Webclient).DownloadString(''http://127.0.0.1:'\n  selection_id:\n    EventID: 7045\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 5a105d34-05fc-401e-8553-272b45c1522d\nlevel: critical\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/27\nreferences:\n- https://www.sans.org/webcasts/119395\n- https://www.crowdstrike.com/blog/getting-the-bacon-from-cobalt-strike-beacon/\n- https://thedfirreport.com/2021/08/29/cobalt-strike-a-defenders-guide/\nstatus: test\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1543.003\n- attack.t1569.002\ntitle: CobaltStrike Service Installations - System\n",
+                            "sigma:id": "5a105d34-05fc-401e-8553-272b45c1522d",
+                            "title": "CobaltStrike Service Installations - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "61a7697c-cb79-42a8-a2ff-5f0cdfae0130",
+                        "lookup_data": {
+                            "description": "Detects known malicious service installs that appear in cases in which a Cobalt Strike beacon elevates privileges or lateral movement.\nWe can also catch this by system log 7045 (https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/win_cobaltstrike_service_installs.yml)\nIn some SIEM you can catch those events also in HKLM\\System\\ControlSet001\\Services or HKLM\\System\\ControlSet002\\Services, however, this rule is based on a regular sysmon's events.\n",
+                            "raw": "author: Wojciech Lesicki\ndate: 2021/06/29\ndescription: 'Detects known malicious service installs that appear in cases in which\n  a Cobalt Strike beacon elevates privileges or lateral movement.\n\n  We can also catch this by system log 7045 (https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/win_cobaltstrike_service_installs.yml)\n\n  In some SIEM you can catch those events also in HKLM\\System\\ControlSet001\\Services\n  or HKLM\\System\\ControlSet002\\Services, however, this rule is based on a regular\n  sysmon''s events.\n\n  '\ndetection:\n  condition: main and 1 of selection_*\n  main:\n    EventType: SetValue\n    TargetObject|contains: HKLM\\System\\CurrentControlSet\\Services\n  selection_1:\n    Details|contains|all:\n    - ADMIN$\n    - .exe\n  selection_2:\n    Details|contains|all:\n    - '%COMSPEC%'\n    - start\n    - powershell\nfalsepositives:\n- Unknown\nid: 61a7697c-cb79-42a8-a2ff-5f0cdfae0130\nlevel: critical\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://www.sans.org/webcasts/tech-tuesday-workshop-cobalt-strike-detection-log-analysis-119395\nstatus: test\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1543.003\n- attack.t1569.002\ntitle: CobaltStrike Service Installations in Registry\n",
+                            "sigma:id": "61a7697c-cb79-42a8-a2ff-5f0cdfae0130",
+                            "title": "CobaltStrike Service Installations in Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52d8b0c6-53d6-439a-9e41-52ad442ad9ad",
+                        "lookup_data": {
+                            "description": "This detection excludes known namped pipes accessible remotely and notify on newly observed ones, may help to detect lateral movement and remote exec using named pipes",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: This detection excludes known namped pipes accessible remotely and notify\n  on newly observed ones, may help to detect lateral movement and remote exec using\n  named pipes\ndetection:\n  condition: selection1 and not false_positives\n  false_positives:\n    RelativeTargetName:\n    - atsvc\n    - samr\n    - lsarpc\n    - lsass\n    - winreg\n    - netlogon\n    - srvsvc\n    - protected_storage\n    - wkssvc\n    - browser\n    - netdfs\n    - svcctl\n    - spoolss\n    - ntsvcs\n    - LSM_API_service\n    - HydraLsPipe\n    - TermSrv_API_service\n    - MsFteWds\n    - sql\\query\n  selection1:\n    EventID: 5145\n    ShareName: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Update the excluded named pipe to filter out any newly observed legit named pipe\nid: 52d8b0c6-53d6-439a-9e41-52ad442ad9ad\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2021/12/06\nreferences:\n- https://twitter.com/menasec1/status/1104489274387451904\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: First Time Seen Remote Named Pipe\n",
+                            "sigma:id": "52d8b0c6-53d6-439a-9e41-52ad442ad9ad",
+                            "title": "First Time Seen Remote Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6fb63b40-e02a-403e-9ffd-3bcc1d749442",
+                        "lookup_data": {
+                            "description": "Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and Impacket psexec.py by triggering on specific service installation",
+                            "raw": "author: Bartlomiej Czyz, Relativity\ndate: 2021/01/21\ndescription: Detects usage of Metasploit SMB PsExec (exploit/windows/smb/psexec) and\n  Impacket psexec.py by triggering on specific service installation\ndetection:\n  condition: selection and not filter\n  filter:\n    ServiceName: PSEXESVC\n  selection:\n    EventID: 4697\n    ServiceFileName|re: ^%systemroot%\\\\[a-zA-Z]{8}\\.exe$\n    ServiceName|re: (^[a-zA-Z]{4}$)|(^[a-zA-Z]{8}$)|(^[a-zA-Z]{16}$)\n    ServiceStartType: 3\n    ServiceType: '0x10'\nfalsepositives:\n- Possible, different agents with a 8 character binary and a 4, 8 or 16 character\n  service name\nfields:\n- ComputerName\n- SubjectDomainName\n- SubjectUserName\n- ServiceName\n- ServiceFileName\nid: 6fb63b40-e02a-403e-9ffd-3bcc1d749442\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/10/05\nreferences:\n- https://bczyz1.github.io/2021/01/30/psexec.html\nrelated:\n- id: 1a17ce75-ff0d-4f02-9709-2b7bb5618cf0\n  type: derived\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1570\n- attack.execution\n- attack.t1569.002\ntitle: Metasploit Or Impacket Service Installation Via SMB PsExec\n",
+                            "sigma:id": "6fb63b40-e02a-403e-9ffd-3bcc1d749442",
+                            "title": "Metasploit Or Impacket Service Installation Via SMB PsExec",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bae2865c-5565-470d-b505-9496c87d0c30",
+                        "lookup_data": {
+                            "description": "Detects the use of the spoolss named pipe over SMB. This can be used to trigger the authentication via NTLM of any machine that has the spoolservice enabled.",
+                            "raw": "author: OTR (Open Threat Research), @neu5ron\ndate: 2018/11/28\ndescription: Detects the use of the spoolss named pipe over SMB. This can be used\n  to trigger the authentication via NTLM of any machine that has the spoolservice\n  enabled.\ndetection:\n  condition: selection\n  selection:\n    name: spoolss\n    path|endswith: IPC$\nfalsepositives:\n- Domain Controllers that are sometimes, commonly although should not be, acting as\n  printer servers too\nid: bae2865c-5565-470d-b505-9496c87d0c30\nlevel: medium\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2022/10/09\nreferences:\n- https://posts.specterops.io/hunting-in-active-directory-unconstrained-delegation-forests-trusts-71f2b33688e1\n- https://dirkjanm.io/a-different-way-of-abusing-zerologon/\n- https://twitter.com/_dirkjan/status/1309214379003588608\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\ntitle: SMB Spoolss Name Piped Usage\n",
+                            "sigma:id": "bae2865c-5565-470d-b505-9496c87d0c30",
+                            "title": "SMB Spoolss Name Piped Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2f7979ae-f82b-45af-ac1d-2b10e93b0baa",
+                        "lookup_data": {
+                            "description": "Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application Class over the network",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR), wagga\ndate: 2020/10/12\ndescription: Detects potential DLL hijack of \"iertutil.dll\" found in the DCOM InternetExplorer.Application\n  Class over the network\ndetection:\n  condition: selection\n  selection:\n    Image: System\n    TargetFilename|endswith: \\Internet Explorer\\iertutil.dll\nfalsepositives:\n- Unknown\nid: 2f7979ae-f82b-45af-ac1d-2b10e93b0baa\nlevel: critical\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/18\nreferences:\n- https://threathunterplaybook.com/hunts/windows/201009-RemoteDCOMIErtUtilDLLHijack/notebook.html\nrelated:\n- id: e554f142-5cf3-4e55-ace9-a1b59e0def65\n  type: obsoletes\n- id: f354eba5-623b-450f-b073-0b5b2773b6aa\n  type: similar\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.002\n- attack.t1021.003\ntitle: Potential DCOM InternetExplorer.Application DLL Hijack\n",
+                            "sigma:id": "2f7979ae-f82b-45af-ac1d-2b10e93b0baa",
+                            "title": "Potential DCOM InternetExplorer.Application DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "614a7e17-5643-4d89-b6fe-f9df1a79641c",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\` directory over the network and loading it for a WMI DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\`\n  directory over the network and loading it for a WMI DLL Hijack scenario.\ndetection:\n  condition: selection\n  selection:\n    Image: System\n    TargetFilename|endswith: \\wbem\\wbemcomn.dll\nfalsepositives:\n- Unknown\nid: 614a7e17-5643-4d89-b6fe-f9df1a79641c\nlevel: critical\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009173318.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Wmiprvse Wbemcomn DLL Hijack - File\n",
+                            "sigma:id": "614a7e17-5643-4d89-b6fe-f9df1a79641c",
+                            "title": "Wmiprvse Wbemcomn DLL Hijack - File",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1021.002",
+                "display_name": "Remote Services: SMB/Windows Admin Shares",
+                "atomic_tests": [
+                    {
+                        "name": "Map admin share",
+                        "auto_generated_guid": "3386975b-367a-4fbb-9d77-4dcf3639ffd3",
+                        "description": "Connecting To Remote Shares\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "user_name": {
+                                "description": "Username",
+                                "type": "string",
+                                "default": "DOMAIN\\Administrator"
+                            },
+                            "share_name": {
+                                "description": "Examples C$, IPC$, Admin$",
+                                "type": "string",
+                                "default": "C$"
+                            },
+                            "password": {
+                                "description": "Password",
+                                "type": "string",
+                                "default": "P@ssw0rd1"
+                            },
+                            "computer_name": {
+                                "description": "Target Computer Name",
+                                "type": "string",
+                                "default": "Target"
+                            }
+                        },
+                        "executor": {
+                            "command": "cmd.exe /c \"net use \\\\#{computer_name}\\#{share_name} #{password} /u:#{user_name}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Map Admin Share PowerShell",
+                        "auto_generated_guid": "514e9cd7-9207-4882-98b1-c8f791bae3c5",
+                        "description": "Map Admin share utilizing PowerShell\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "share_name": {
+                                "description": "Examples C$, IPC$, Admin$",
+                                "type": "string",
+                                "default": "C$"
+                            },
+                            "map_name": {
+                                "description": "Mapped Drive Letter",
+                                "type": "string",
+                                "default": "g"
+                            },
+                            "computer_name": {
+                                "description": "Target Computer Name",
+                                "type": "string",
+                                "default": "Target"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-PSDrive -name #{map_name} -psprovider filesystem -root \\\\#{computer_name}\\#{share_name}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Copy and Execute File with PsExec",
+                        "auto_generated_guid": "0eb03d41-79e4-4393-8e57-6344856be1cf",
+                        "description": "Copies a file to a remote host and executes it using PsExec. Requires the download of PsExec from [https://docs.microsoft.com/en-us/sysinternals/downloads/psexec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec).\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_path": {
+                                "description": "File to copy and execute",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            },
+                            "remote_host": {
+                                "description": "Remote computer to receive the copy and execute the file",
+                                "type": "string",
+                                "default": "\\\\localhost"
+                            },
+                            "psexec_exe": {
+                                "description": "Path to PsExec",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "PsExec tool from Sysinternals must exist on disk at specified location (#{psexec_exe})\n",
+                                "prereq_command": "if (Test-Path \"#{psexec_exe}\") { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\" -Force\nNew-Item -ItemType Directory (Split-Path \"#{psexec_exe}\") -Force | Out-Null\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\\PsExec.exe\" \"#{psexec_exe}\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{psexec_exe}\" #{remote_host} -accepteula -c #{command_path}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Execute command writing output to local Admin Share",
+                        "auto_generated_guid": "d41aaab5-bdfe-431d-a3d5-c29e9136ff46",
+                        "description": "Executes a command, writing the output to a local Admin Share.\nThis technique is used by post-exploitation frameworks.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Remote computer to receive the copy and execute the file",
+                                "type": "string",
+                                "default": "output.txt"
+                            },
+                            "command_to_execute": {
+                                "description": "Command to execute for output.",
+                                "type": "string",
+                                "default": "hostname"
+                            }
+                        },
+                        "executor": {
+                            "command": "cmd.exe /Q /c #{command_to_execute} 1> \\\\127.0.0.1\\ADMIN$\\#{output_file} 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:59:21"
+}

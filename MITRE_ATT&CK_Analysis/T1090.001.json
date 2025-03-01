@@ -1,0 +1,211 @@
+{
+    "id": "T1090.001",
+    "name": "Internal Proxy",
+    "description": "Adversaries may use an internal proxy to direct command and control traffic between two or more systems in a compromised environment. Many tools exist that enable traffic redirection through proxies or port redirection, including [HTRAN](S0040), ZXProxy, and ZXPortMap. (Citation: Trend Micro APT Attack Tools) Adversaries use internal proxies to manage command and control communications inside a compromised environment, to reduce the number of simultaneous outbound network connections, to provide resiliency in the face of connection loss, or to ride over existing trusted communications paths between infected systems to avoid suspicion. Internal proxy connections may use common peer-to-peer (p2p) networking protocols, such as SMB, to better blend in with the environment.\nBy using a compromised internal system as a proxy, adversaries may conceal the true destination of C2 traffic while reducing the need for numerous connections to external systems.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Command and Control",
+    "data_sources": "Network Traffic: Network Traffic Flow, Network Traffic: Network Connection Creation, Network Traffic: Network Traffic Content",
+    "detection": "Analyze network data for uncommon data flows between clients that should not or often do not communicate with one another. Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used.(Citation: University of Birmingham C2)",
+    "url": "https://attack.mitre.org/techniques/T1090/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1090.001",
+                "atomic_attack_guid": "0ac21132-4485-4212-a681-349e8a6637cd",
+                "atomic_attack_name": "Connection Proxy",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Connection Proxy",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_proxy_connection.yml",
+                        "remote_content": "title: Connection Proxy\nid: 72f4ab3f-787d-495d-a55d-68c2ff46cf4c\nstatus: test\ndescription: Detects setting proxy configuration\nreferences:\n    - https://attack.mitre.org/techniques/T1090/\nauthor: Ömer Günal\ndate: 2020-06-17\nmodified: 2022-10-05\ntags:\n    - attack.defense-evasion\n    - attack.t1090\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'http_proxy='\n            - 'https_proxy='\n    condition: selection\nfalsepositives:\n    - Legitimate administration activities\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1090.001",
+                "atomic_attack_guid": "b8223ea9-4be2-44a6-b50a-9657a3d4e72a",
+                "atomic_attack_name": "portproxy reg key",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "New Port Forwarding Rule Added Via Netsh.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_netsh_port_forwarding.yml",
+                        "remote_content": "title: New Port Forwarding Rule Added Via Netsh.EXE\nid: 322ed9ec-fcab-4f67-9a34-e7c6aef43614\nstatus: test\ndescription: Detects the execution of netsh commands that configure a new port forwarding (PortProxy) rule\nreferences:\n    - https://www.fireeye.com/blog/threat-research/2019/01/bypassing-network-restrictions-through-rdp-tunneling.html\n    - https://adepts.of0x.cc/netsh-portproxy-code/\n    - https://www.dfirnotes.net/portproxy_detection/\nauthor: Florian Roth (Nextron Systems), omkar72, oscd.community, Swachchhanda Shrawan Poudel\ndate: 2019-01-29\nmodified: 2023-09-01\ntags:\n    - attack.lateral-movement\n    - attack.defense-evasion\n    - attack.command-and-control\n    - attack.t1090\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\netsh.exe'\n        - OriginalFileName: 'netsh.exe'\n    selection_cli_1:\n        CommandLine|contains|all:\n            - 'interface'\n            - 'portproxy'\n            - 'add'\n            - 'v4tov4'\n    selection_cli_2:\n        CommandLine|contains|all:\n            # Example: netsh I p a v l=8001 listena=127.0.0.1 connectp=80 c=192.168.1.1\n            - 'i ' # interface\n            - 'p ' # portproxy\n            - 'a ' # add\n            - 'v ' # v4tov4\n    selection_cli_3:\n        CommandLine|contains|all:\n            - 'connectp'\n            - 'listena'\n            - 'c='\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate administration activity\n    - WSL2 network bridge PowerShell script used for WSL/Kubernetes/Docker (e.g. https://github.com/microsoft/WSL/issues/4150#issuecomment-504209723)\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "8b0e12da-d3c3-49db-bb4f-256703f380e5",
+                    "f6dacc85-b37d-458e-b58d-74fc4bbf5755",
+                    "5bed80b6-b3e8-428e-a3ae-d3c757589e41",
+                    "cf93e05e-d798-4d9e-b522-b0248dc61eaf"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "8b0e12da-d3c3-49db-bb4f-256703f380e5",
+                        "lookup_data": {
+                            "description": "Detects usage of the Chisel tunneling tool via the commandline arguments",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/13\ndescription: Detects usage of the Chisel tunneling tool via the commandline arguments\ndetection:\n  condition: selection_img or all of selection_param*\n  selection_img:\n    Image|endswith: \\chisel.exe\n  selection_param1:\n    CommandLine|contains:\n    - 'exe client '\n    - 'exe server '\n  selection_param2:\n    CommandLine|contains:\n    - -socks5\n    - -reverse\n    - ' r:'\n    - ':127.0.0.1:'\n    - '-tls-skip-verify '\n    - :socks\nfalsepositives:\n- Some false positives may occure with other tools with similar commandlines\nid: 8b0e12da-d3c3-49db-bb4f-256703f380e5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/07\nreferences:\n- https://github.com/jpillora/chisel/\n- https://arcticwolf.com/resources/blog/lorenz-ransomware-chiseling-in/\n- https://blog.sekoia.io/lucky-mouse-incident-response-to-detection-engineering/\nrelated:\n- id: cf93e05e-d798-4d9e-b522-b0248dc61eaf\n  type: similar\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1090.001\ntitle: Chisel Tunneling Tool Usage\n",
+                            "sigma:id": "8b0e12da-d3c3-49db-bb4f-256703f380e5",
+                            "title": "Chisel Tunneling Tool Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f6dacc85-b37d-458e-b58d-74fc4bbf5755",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1090.001",
+                            "mitre-cti:description": "Adversaries may use an internal proxy to direct command and control traffic between two or more systems in a compromised environment. Many tools exist that enable traffic redirection through proxies or port redirection, including [HTRAN](https://attack.mitre.org/software/S0040), ZXProxy, and ZXPortMap. (Citation: Trend Micro APT Attack Tools) Adversaries use internal proxies to manage command and control communications inside a compromised environment, to reduce the number of simultaneous outbound network connections, to provide resiliency in the face of connection loss, or to ride over existing trusted communications paths between infected systems to avoid suspicion. Internal proxy connections may use common peer-to-peer (p2p) networking protocols, such as SMB, to better blend in with the environment.\n\nBy using a compromised internal system as a proxy, adversaries may conceal the true destination of C2 traffic while reducing the need for numerous connections to external systems.",
+                            "mitre-cti:name": "Internal Proxy",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--f6dacc85-b37d-458e-b58d-74fc4bbf5755', 'type': 'attack-pattern', 'created': '2020-03-14T23:08:20.244Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1090.001', 'url': 'https://attack.mitre.org/techniques/T1090/001'}, {'url': 'http://blog.trendmicro.com/trendlabs-security-intelligence/in-depth-look-apt-attack-tools-of-the-trade/', 'description': 'Wilhoit, K. (2013, March 4). In-Depth Look: APT Attack Tools of the Trade. Retrieved December 2, 2015.', 'source_name': 'Trend Micro APT Attack Tools'}, {'url': 'https://arxiv.org/ftp/arxiv/papers/1408/1408.1136.pdf', 'description': 'Gardiner, J.,  Cova, M., Nagaraja, S. (2014, February). Command & Control Understanding, Denying and Detecting. Retrieved April 20, 2016.', 'source_name': 'University of Birmingham C2'}], 'modified': '2020-03-15T00:46:26.598Z', 'name': 'Internal Proxy', 'description': 'Adversaries may use an internal proxy to direct command and control traffic between two or more systems in a compromised environment. Many tools exist that enable traffic redirection through proxies or port redirection, including [HTRAN](https://attack.mitre.org/software/S0040), ZXProxy, and ZXPortMap. (Citation: Trend Micro APT Attack Tools) Adversaries use internal proxies to manage command and control communications inside a compromised environment, to reduce the number of simultaneous outbound network connections, to provide resiliency in the face of connection loss, or to ride over existing trusted communications paths between infected systems to avoid suspicion. Internal proxy connections may use common peer-to-peer (p2p) networking protocols, such as SMB, to better blend in with the environment.\\n\\nBy using a compromised internal system as a proxy, adversaries may conceal the true destination of C2 traffic while reducing the need for numerous connections to external systems.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'command-and-control'}], 'x_mitre_detection': 'Analyze network data for uncommon data flows between clients that should not or often do not communicate with one another. Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used.(Citation: University of Birmingham C2)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Traffic Flow', 'Network Traffic: Network Traffic Content', 'Network Traffic: Network Connection Creation']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5bed80b6-b3e8-428e-a3ae-d3c757589e41",
+                        "lookup_data": {
+                            "description": "Detects svchost hosting RDP termsvcs communicating with the loopback address",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/02/16\ndescription: Detects svchost hosting RDP termsvcs communicating with the loopback\n  address\ndetection:\n  condition: selection and ( sourceRDP or destinationRDP ) and not 1 of filter*\n  destinationRDP:\n    DestPort: 3389\n    SourceAddress:\n    - 127.*\n    - ::1\n  filter_app_container:\n    FilterOrigin: AppContainer Loopback\n  filter_thor:\n    Application|endswith:\n    - \\thor.exe\n    - \\thor64.exe\n  selection:\n    EventID: 5156\n  sourceRDP:\n    DestAddress:\n    - 127.*\n    - ::1\n    SourcePort: 3389\nfalsepositives:\n- Programs that connect locally to the RDP port\nid: 5bed80b6-b3e8-428e-a3ae-d3c757589e41\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/09/02\nreferences:\n- https://twitter.com/SBousseaden/status/1096148422984384514\n- https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES/blob/44fbe85f72ee91582876b49678f9a26292a155fb/Command%20and%20Control/DE_RDP_Tunnel_5156.evtx\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.command_and_control\n- attack.lateral_movement\n- attack.t1090.001\n- attack.t1090.002\n- attack.t1021.001\n- car.2013-07-002\ntitle: RDP over Reverse SSH Tunnel WFP\n",
+                            "sigma:id": "5bed80b6-b3e8-428e-a3ae-d3c757589e41",
+                            "title": "RDP over Reverse SSH Tunnel WFP",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cf93e05e-d798-4d9e-b522-b0248dc61eaf",
+                        "lookup_data": {
+                            "description": "Detects usage of the Sharp Chisel via the commandline arguments",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/05\ndescription: Detects usage of the Sharp Chisel via the commandline arguments\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\SharpChisel.exe\n  - Product: SharpChisel\nfalsepositives:\n- Unlikely\nid: cf93e05e-d798-4d9e-b522-b0248dc61eaf\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/13\nreferences:\n- https://github.com/shantanu561993/SharpChisel\n- https://www.sentinelone.com/labs/wading-through-muddy-waters-recent-activity-of-an-iranian-state-sponsored-threat-actor/\nrelated:\n- id: 8b0e12da-d3c3-49db-bb4f-256703f380e5\n  type: similar\nstatus: experimental\ntags:\n- attack.command_and_control\n- attack.t1090.001\ntitle: SharpChisel Usage\n",
+                            "sigma:id": "cf93e05e-d798-4d9e-b522-b0248dc61eaf",
+                            "title": "SharpChisel Usage",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1090.001",
+                "display_name": "Proxy: Internal Proxy",
+                "atomic_tests": [
+                    {
+                        "name": "Connection Proxy",
+                        "auto_generated_guid": "0ac21132-4485-4212-a681-349e8a6637cd",
+                        "description": "Enable traffic redirection.\n\nNote that this test may conflict with pre-existing system configuration.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "proxy_server": {
+                                "description": "Proxy server URL",
+                                "type": "url",
+                                "default": "127.0.0.1"
+                            },
+                            "proxy_port": {
+                                "description": "Proxy server port",
+                                "type": "integer",
+                                "default": 3128
+                            },
+                            "proxy_scheme": {
+                                "description": "Protocol to proxy (http or https)",
+                                "type": "string",
+                                "default": "http"
+                            },
+                            "test_url": {
+                                "description": "URL to test proxy connection",
+                                "type": "string",
+                                "default": "http://google.com"
+                            },
+                            "run_squid": {
+                                "description": "If set to true, the test will install and configure a proxy server on the endpoint.\nNote that this test may conflict with pre-existing system configuration.\n",
+                                "type": "string",
+                                "default": "false"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Squid must be installed and running",
+                                "prereq_command": "if ([ \"#{run_squid}\" = \"false\" ] || ([ -x \"$(command -v squid --version)\" ] && (ps aux | grep \"squid -N\" | grep -v \"grep\"))); then exit 0; else exit 1; fi;",
+                                "get_prereq_command": "[ \"#{run_squid}\" = \"true\" ] && ([ -x \"$(command -v squid --version)\" ] || sudo DEBIAN_FRONTEND=noninteractive apt-get -y install squid curl || sudo yum install -y squid curl || sudo dnf install -y squid curl || brew install curl squid) && (squid -N -d 1 &) && exit 0\necho \"Value #{run_squid} for variable \"run_squid\" is not valid\" && exit 1"
+                            }
+                        ],
+                        "executor": {
+                            "command": "export #{proxy_scheme}_proxy=#{proxy_server}:#{proxy_port}\ncurl #{test_url}\n",
+                            "cleanup_command": "unset #{proxy_scheme}_proxy\n[ \"#{run_squid}\" == \"true\" ] && (kill -9 $(ps aux | grep \"squid -N\" | grep -v \"grep\" | awk '{print $2}'))\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Connection Proxy for macOS UI",
+                        "auto_generated_guid": "648d68c1-8bcd-4486-9abe-71c6655b6a2c",
+                        "description": "Enable traffic redirection on macOS UI (not terminal).\nThe test will modify and enable the \"Web Proxy\" and \"Secure Web Proxy\" settings  in System Preferences => Network => Advanced => Proxies for the specified network interface.\n\nNote that this test may conflict with pre-existing system configuration.\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "proxy_server": {
+                                "description": "Proxy server URL (host)",
+                                "type": "url",
+                                "default": "127.0.0.1"
+                            },
+                            "proxy_port": {
+                                "description": "Proxy server port",
+                                "type": "integer",
+                                "default": 8080
+                            },
+                            "interface": {
+                                "description": "Protocol to proxy (http or https)",
+                                "type": "string",
+                                "default": "Wi-Fi"
+                            }
+                        },
+                        "executor": {
+                            "name": "sh",
+                            "command": "networksetup -setwebproxy #{interface} #{proxy_server} #{proxy_port}\nnetworksetup -setsecurewebproxy #{interface} #{proxy_server} #{proxy_port}\n",
+                            "cleanup_command": "networksetup -setwebproxystate #{interface} off\nnetworksetup -setsecurewebproxystate #{interface} off\n"
+                        }
+                    },
+                    {
+                        "name": "portproxy reg key",
+                        "auto_generated_guid": "b8223ea9-4be2-44a6-b50a-9657a3d4e72a",
+                        "description": "Adds a registry key to set up a proxy on the endpoint at HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\PortProxy\\v4tov4\nUpon execution there will be a new proxy entry in netsh\nnetsh interface portproxy show all\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "connectaddress": {
+                                "description": "Specifies the IPv4 address to which to connect. Acceptable values are IP address, computer NetBIOS name, or computer DNS name. If an address is not specified, the default is the local computer.",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "connectport": {
+                                "description": "Specifies the IPv4 port, by port number or service name, to which to connect. If connectport is not specified, the default is the value of listenport on the local computer.",
+                                "type": "string",
+                                "default": "1337"
+                            },
+                            "listenport": {
+                                "description": "Specifies the IPv4 port, by port number or service name, on which to listen.",
+                                "type": "string",
+                                "default": "1337"
+                            }
+                        },
+                        "executor": {
+                            "command": "netsh interface portproxy add v4tov4 listenport=#{listenport} connectport=#{connectport} connectaddress=#{connectaddress}",
+                            "cleanup_command": "netsh interface portproxy delete v4tov4 listenport=#{listenport} -ErrorAction Ignore | Out-Null",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:43:16"
+}

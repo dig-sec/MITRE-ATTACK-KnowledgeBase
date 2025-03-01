@@ -1,0 +1,170 @@
+{
+    "id": "T1574",
+    "name": "Hijack Execution Flow",
+    "description": "Adversaries may execute their own malicious payloads by hijacking the way operating systems run programs. Hijacking execution flow can be for the purposes of persistence, since this hijacked execution may reoccur over time. Adversaries may also use these mechanisms to elevate privileges or evade defenses, such as application control or other restrictions on execution.\nThere are many ways an adversary may hijack the flow of execution, including by manipulating how the operating system locates programs to be executed. How the operating system locates libraries to be used by a program can also be intercepted. Locations where the operating system looks for programs/resources, such as file directories and in the case of Windows the Registry, could also be poisoned to include malicious payloads.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation, Defense Evasion",
+    "data_sources": "Windows Registry: Windows Registry Key Modification, Process: Process Creation, Module: Module Load, Command: Command Execution, Service: Service Metadata, File: File Creation, File: File Modification",
+    "detection": "Monitor file systems for moving, renaming, replacing, or modifying DLLs. Changes in the set of DLLs that are loaded by a process (compared with past behavior) that do not correlate with known software, patches, etc., are suspicious. Monitor DLLs loaded into a process and detect DLLs that have the same file name but abnormal paths. Modifications to or creation of .manifest and .local redirection files that do not correlate with software updates are suspicious.\nLook for changes to binaries and service executables that may normally occur during software updates. If an executable is written, renamed, and/or moved to match an existing service executable, it could be detected and correlated with other suspicious behavior. Hashing of binaries and service executables could be used to detect replacement against historical data.\nMonitor for changes to environment variables, as well as the commands to implement these changes.\nMonitor processes for unusual activity (e.g., a process that does not use the network begins to do so, abnormal process call trees). Track library metadata, such as a hash, and compare libraries that are loaded at process execution time against previous executions to detect differences that do not correlate with patching or updates.\nService changes are reflected in the Registry. Modification to existing services should not occur frequently. If a service binary path or failure parameters are changed to values that are not typical for that service and does not correlate with software updates, then it may be due to malicious activity. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current service information. (Citation: Autoruns for Windows) Suspicious program execution through services may show up as outlier processes that have not been seen before when compared against historical data.",
+    "url": "https://attack.mitre.org/techniques/T1574",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "02fb90de-c321-4e63-a6b9-25f4b03dfd14",
+                    "e0813366-0407-449a-9869-a2db1119dc41",
+                    "1c373b6d-76ce-4553-997d-8c1da9a6b5f5",
+                    "5b2bbc47-dead-4ef7-8908-0cf73fcbecbf",
+                    "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                    "9827ae57-3802-418f-994b-d5ecf5cd974b",
+                    "50919691-7302-437f-8e10-1fe088afa145",
+                    "a2910908-e86f-4687-aeba-76a5f996e652",
+                    "dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c",
+                    "d6d9f4fb-4c1c-4f53-b306-62a22c7c61e1",
+                    "e3e245fa-1e8e-41db-94d3-6991edd0eaee",
+                    "aedfca76-3b30-4866-b2aa-0f1d7fd1e4b6"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02fb90de-c321-4e63-a6b9-25f4b03dfd14",
+                        "lookup_data": {
+                            "description": "Detect DLL Load from Spooler Service backup folder",
+                            "raw": "author: FPT.EagleEye, Thomas Patzke (improvements)\ndate: 2021/06/29\ndescription: Detect DLL Load from Spooler Service backup folder\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|contains:\n    - \\Windows\\System32\\spool\\drivers\\x64\\3\\\n    - \\Windows\\System32\\spool\\drivers\\x64\\4\\\n    ImageLoaded|endswith: .dll\n    Image|endswith: \\spoolsv.exe\nfalsepositives:\n- Loading of legitimate driver\nid: 02fb90de-c321-4e63-a6b9-25f4b03dfd14\nlevel: informational\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://github.com/hhlxf/PrintNightmare\n- https://github.com/ly4k/SpoolFool\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1574\n- cve.2021.1675\n- cve.2021.34527\ntitle: Windows Spooler Service Suspicious Binary Load\n",
+                            "sigma:id": "02fb90de-c321-4e63-a6b9-25f4b03dfd14",
+                            "title": "Windows Spooler Service Suspicious Binary Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e0813366-0407-449a-9869-a2db1119dc41",
+                        "lookup_data": {
+                            "description": "Detects a suspicious printer driver installation with an empty Manufacturer value",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/07/01\ndescription: Detects a suspicious printer driver installation with an empty Manufacturer\n  value\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_cutepdf:\n    TargetObject|contains: \\CutePDF Writer v4.0\\\n  filter_vnc:\n    TargetObject|contains:\n    - \\VNC Printer (PS)\\\n    - \\VNC Printer (UD)\\\n  selection:\n    Details: (Empty)\n    EventType: SetValue\n    TargetObject|contains|all:\n    - \\Control\\Print\\Environments\\Windows x64\\Drivers\n    - \\Manufacturer\nfalsepositives:\n- Alerts on legitimate printer drivers that do not set any more details in the Manufacturer\n  value\nid: e0813366-0407-449a-9869-a2db1119dc41\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://twitter.com/SBousseaden/status/1410545674773467140\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1574\n- cve.2021.1675\ntitle: Suspicious Printer Driver Empty Manufacturer\n",
+                            "sigma:id": "e0813366-0407-449a-9869-a2db1119dc41",
+                            "title": "Suspicious Printer Driver Empty Manufacturer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1c373b6d-76ce-4553-997d-8c1da9a6b5f5",
+                        "lookup_data": {
+                            "description": "Detects exploitation attempt of privilege escalation vulnerability via SetupComplete.cmd and PartnerSetupComplete.cmd described in CVE-2019-1378",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019/11/15\ndescription: Detects exploitation attempt of privilege escalation vulnerability via\n  SetupComplete.cmd and PartnerSetupComplete.cmd described in CVE-2019-1378\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|startswith:\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n    - C:\\Windows\\WinSxS\\\n    - C:\\Windows\\Setup\\\n  selection:\n    ParentCommandLine|contains|all:\n    - \\cmd.exe\n    - /c\n    - C:\\Windows\\Setup\\Scripts\\\n    ParentCommandLine|endswith:\n    - SetupComplete.cmd\n    - PartnerSetupComplete.cmd\nfalsepositives:\n- Unknown\nid: 1c373b6d-76ce-4553-997d-8c1da9a6b5f5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.embercybersecurity.com/blog/cve-2019-1378-exploiting-an-access-control-privilege-escalation-vulnerability-in-windows-10-update-assistant-wua\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1068\n- attack.execution\n- attack.t1059.003\n- attack.t1574\n- cve.2019.1378\ntitle: Exploiting SetupComplete.cmd CVE-2019-1378\n",
+                            "sigma:id": "1c373b6d-76ce-4553-997d-8c1da9a6b5f5",
+                            "title": "Exploiting SetupComplete.cmd CVE-2019-1378",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5b2bbc47-dead-4ef7-8908-0cf73fcbecbf",
+                        "lookup_data": {
+                            "description": "Detect DLL deletions from Spooler Service driver folder",
+                            "raw": "author: Bhabesh Raj\ndate: 2021/07/01\ndescription: Detect DLL deletions from Spooler Service driver folder\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\spoolsv.exe\n    TargetFilename|contains: C:\\Windows\\System32\\spool\\drivers\\x64\\3\\\nfalsepositives:\n- Unknown\nid: 5b2bbc47-dead-4ef7-8908-0cf73fcbecbf\nlevel: high\nlogsource:\n  category: file_delete\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://github.com/hhlxf/PrintNightmare\n- https://github.com/cube0x0/CVE-2021-1675\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.privilege_escalation\n- attack.t1574\n- cve.2021.1675\ntitle: Windows Spooler Service Suspicious File Deletion\n",
+                            "sigma:id": "5b2bbc47-dead-4ef7-8908-0cf73fcbecbf",
+                            "title": "Windows Spooler Service Suspicious File Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                        "lookup_data": {
+                            "description": "Buzzing in the Background: BumbleBee, a New Modular Backdoor Evolved From BookWorm",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/758d96ed-9dd4-4009-9270-65f2c3dd30cc.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603410",
+                            "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9827ae57-3802-418f-994b-d5ecf5cd974b",
+                        "lookup_data": {
+                            "description": "Detects the addition of the \"Debugger\" value to the \"DbgManagedDebugger\" key in order to achieve persistence. Which will get invoked when an application crashes",
+                            "raw": "author: frack113\ndate: 2022/08/07\ndescription: Detects the addition of the \"Debugger\" value to the \"DbgManagedDebugger\"\n  key in order to achieve persistence. Which will get invoked when an application\n  crashes\ndetection:\n  condition: selection and not filter\n  filter:\n    Details: '\"C:\\Windows\\system32\\vsjitdebugger.exe\" PID %d APPDOM %d EXTEXT \"%s\"\n      EVTHDL %d'\n  selection:\n    EventType: SetValue\n    TargetObject|endswith: \\Microsoft\\.NETFramework\\DbgManagedDebugger\nfalsepositives:\n- Legitimate use of the key to setup a debugger. Which is often the case on developers\n  machines\nid: 9827ae57-3802-418f-994b-d5ecf5cd974b\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/12/19\nreferences:\n- https://www.hexacorn.com/blog/2013/09/19/beyond-good-ol-run-key-part-4/\n- https://github.com/last-byte/PersistenceSniper\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1574\ntitle: Potential Registry Persistence Attempt Via DbgManagedDebugger\n",
+                            "sigma:id": "9827ae57-3802-418f-994b-d5ecf5cd974b",
+                            "title": "Potential Registry Persistence Attempt Via DbgManagedDebugger",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "50919691-7302-437f-8e10-1fe088afa145",
+                        "lookup_data": {
+                            "description": "Detects a regsvr.exe execution that doesn't contain a DLL in the command line",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/07/17\ndescription: Detects a regsvr.exe execution that doesn't contain a DLL in the command\n  line\ndetection:\n  condition: selection and not filter and not filter_null1_for_4688 and not filter_null2_for_4688\n  filter:\n    CommandLine|contains:\n    - .dll\n    - .ocx\n    - .cpl\n    - .ax\n    - .bav\n    - .ppl\n  filter_null1_for_4688:\n    CommandLine: null\n  filter_null2_for_4688:\n    CommandLine: ''\n  selection:\n    Image|endswith: \\regsvr32.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 50919691-7302-437f-8e10-1fe088afa145\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://app.any.run/tasks/34221348-072d-4b70-93f3-aa71f6ebecad/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1574\n- attack.execution\ntitle: Regsvr32 Command Line Without DLL\n",
+                            "sigma:id": "50919691-7302-437f-8e10-1fe088afa145",
+                            "title": "Regsvr32 Command Line Without DLL",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a2910908-e86f-4687-aeba-76a5f996e652",
+                        "lookup_data": {
+                            "description": "Detects using register-cimprovider.exe to execute arbitrary dll file.",
+                            "raw": "author: Ivan Dyachkov, Yulia Fomina, oscd.community\ndate: 2020/10/07\ndescription: Detects using register-cimprovider.exe to execute arbitrary dll file.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - -path\n    - dll\n    Image|endswith: \\register-cimprovider.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\nid: a2910908-e86f-4687-aeba-76a5f996e652\nlevel: medium\nlogsource:\n  category: process_creation\n  definition: 'Requirements: Sysmon ProcessCreation logging must be activated and\n    Windows audit msut Include command line in process creation events'\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/PhilipTsukerman/status/992021361106268161\n- https://lolbas-project.github.io/lolbas/Binaries/Register-cimprovider/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1574\ntitle: DLL Execution Via Register-cimprovider.exe\n",
+                            "sigma:id": "a2910908-e86f-4687-aeba-76a5f996e652",
+                            "title": "DLL Execution Via Register-cimprovider.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c",
+                        "lookup_data": {
+                            "description": "Detects attempts to create a DLL file to a known desktop application dependencies folder such as Slack, Teams or OneDrive and by an unusual process. This may indicate an attempt to load a malicious module via DLL search order hijacking.",
+                            "raw": "author: Tim Rauch (rule), Elastic (idea)\ndate: 2022/10/21\ndescription: Detects attempts to create a DLL file to a known desktop application\n  dependencies folder such as Slack, Teams or OneDrive and by an unusual process.\n  This may indicate an attempt to load a malicious module via DLL search order hijacking.\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|endswith: \\cmd.exe\n    TargetFilename|contains|all:\n    - \\Users\\\n    - \\AppData\\\n    - \\Microsoft\\OneDrive\\\n    - \\api-ms-win-core-\n  selection:\n    Image|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n    - \\MSACCESS.EXE\n    - \\MSPUB.EXE\n    - \\fltldr.exe\n    - \\cmd.exe\n    - \\certutil.exe\n    - \\mshta.exe\n    - \\cscript.exe\n    - \\wscript.exe\n    - \\curl.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    TargetFilename|contains:\n    - \\Microsoft\\OneDrive\\\n    - \\Microsoft OneDrive\\\n    - \\Microsoft\\Teams\\\n    - \\Local\\slack\\app-\n    - \\Local\\Programs\\Microsoft VS Code\\\n    TargetFilename|contains|all:\n    - \\Users\\\n    - \\AppData\\\n    TargetFilename|endswith: .dll\nfalsepositives:\n- Unknown\nid: dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-5d46dd4ac6866b4337ec126be8cee0e115467b3e8703794ba6f6df6432c806bc\n- https://posts.specterops.io/automating-dll-hijack-discovery-81c4295904b0\nstatus: experimental\ntags:\n- attack.t1566\n- attack.t1566.001\n- attack.initial_access\n- attack.t1574\n- attack.t1574.001\n- attack.defense_evasion\ntitle: Potential Initial Access via DLL Search Order Hijacking\n",
+                            "sigma:id": "dbbd9f66-2ed3-4ca2-98a4-6ea985dd1a1c",
+                            "title": "Potential Initial Access via DLL Search Order Hijacking",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d6d9f4fb-4c1c-4f53-b306-62a22c7c61e1",
+                        "lookup_data": {
+                            "description": "Search for dropping of files to Windows/Program Files fodlers by non-priviledged processes",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Ryan Plas (rule), oscd.community\ndate: 2020/10/17\ndescription: Search for dropping of files to Windows/Program Files fodlers by non-priviledged\n  processes\ndetection:\n  condition: integrity and (program_files or windows and not temp)\n  integrity:\n    IntegrityLevel: Medium\n  program_files:\n  - TargetFilename|contains:\n    - \\Program Files\\\n    - \\Program Files (x86)\\\n  temp:\n    TargetFilename|contains: temp\n  windows:\n    TargetFilename|startswith: \\Windows\\\nfalsepositives:\n- Unknown\nid: d6d9f4fb-4c1c-4f53-b306-62a22c7c61e1\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://image.slidesharecdn.com/kheirkhabarovoffzonefinal-181117201458/95/hunting-for-privilege-escalation-in-windows-environment-37-638.jpg\nstatus: experimental\ntags:\n- attack.persistence\n- attack.defense_evasion\n- attack.t1574\n- attack.t1574.010\ntitle: Files Dropped to Program Files by Non-Priviledged Process\n",
+                            "sigma:id": "d6d9f4fb-4c1c-4f53-b306-62a22c7c61e1",
+                            "title": "Files Dropped to Program Files by Non-Priviledged Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e3e245fa-1e8e-41db-94d3-6991edd0eaee",
+                        "lookup_data": {
+                            "description": "Always Another Secret: Lifting the Haze on China-nexus Espionage in Southeast Asia | Mandiant",
+                            "link": "http://www.botvrij.eu/data/feed-osint/e3e245fa-1e8e-41db-94d3-6991edd0eaee.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1670434101",
+                            "uuid": "e3e245fa-1e8e-41db-94d3-6991edd0eaee",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aedfca76-3b30-4866-b2aa-0f1d7fd1e4b6",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1574",
+                            "mitre-cti:description": "Adversaries may execute their own malicious payloads by hijacking the way operating systems run programs. Hijacking execution flow can be for the purposes of persistence, since this hijacked execution may reoccur over time. Adversaries may also use these mechanisms to elevate privileges or evade defenses, such as application control or other restrictions on execution.\n\nThere are many ways an adversary may hijack the flow of execution, including by manipulating how the operating system locates programs to be executed. How the operating system locates libraries to be used by a program can also be intercepted. Locations where the operating system looks for programs/resources, such as file directories and in the case of Windows the Registry, could also be poisoned to include malicious payloads.",
+                            "mitre-cti:name": "Hijack Execution Flow",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--aedfca76-3b30-4866-b2aa-0f1d7fd1e4b6', 'created': '2020-03-12T20:38:12.465Z', 'x_mitre_version': '1.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1574', 'url': 'https://attack.mitre.org/techniques/T1574'}, {'source_name': 'Autoruns for Windows', 'url': 'https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns', 'description': 'Mark Russinovich. (2019, June 28). Autoruns for Windows v13.96. Retrieved March 13, 2020.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may execute their own malicious payloads by hijacking the way operating systems run programs. Hijacking execution flow can be for the purposes of persistence, since this hijacked execution may reoccur over time. Adversaries may also use these mechanisms to elevate privileges or evade defenses, such as application control or other restrictions on execution.\\n\\nThere are many ways an adversary may hijack the flow of execution, including by manipulating how the operating system locates programs to be executed. How the operating system locates libraries to be used by a program can also be intercepted. Locations where the operating system looks for programs/resources, such as file directories and in the case of Windows the Registry, could also be poisoned to include malicious payloads.', 'modified': '2022-05-05T04:07:01.191Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Hijack Execution Flow', 'x_mitre_detection': 'Monitor file systems for moving, renaming, replacing, or modifying DLLs. Changes in the set of DLLs that are loaded by a process (compared with past behavior) that do not correlate with known software, patches, etc., are suspicious. Monitor DLLs loaded into a process and detect DLLs that have the same file name but abnormal paths. Modifications to or creation of .manifest and .local redirection files that do not correlate with software updates are suspicious.\\n\\nLook for changes to binaries and service executables that may normally occur during software updates. If an executable is written, renamed, and/or moved to match an existing service executable, it could be detected and correlated with other suspicious behavior. Hashing of binaries and service executables could be used to detect replacement against historical data.\\n\\nMonitor for changes to environment variables, as well as the commands to implement these changes.\\n\\nMonitor processes for unusual activity (e.g., a process that does not use the network begins to do so, abnormal process call trees). Track library metadata, such as a hash, and compare libraries that are loaded at process execution time against previous executions to detect differences that do not correlate with patching or updates.\\n\\nService changes are reflected in the Registry. Modification to existing services should not occur frequently. If a service binary path or failure parameters are changed to values that are not typical for that service and does not correlate with software updates, then it may be due to malicious activity. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.\\n\\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current service information. (Citation: Autoruns for Windows) Suspicious program execution through services may show up as outlier processes that have not been seen before when compared against historical data.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Service: Service Metadata', 'File: File Modification', 'Module: Module Load', 'Windows Registry: Windows Registry Key Modification', 'Process: Process Creation', 'File: File Creation', 'Command: Command Execution'], 'x_mitre_defense_bypassed': ['Anti-virus', 'Application Control'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": []
+    },
+    "timestamp": "2025-02-28 17:22:47"
+}

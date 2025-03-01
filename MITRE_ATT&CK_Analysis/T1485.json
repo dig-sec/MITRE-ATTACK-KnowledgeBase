@@ -1,0 +1,436 @@
+{
+    "id": "T1485",
+    "name": "Data Destruction",
+    "description": "Adversaries may destroy data and files on specific systems or in large numbers on a network to interrupt availability to systems, services, and network resources. Data destruction is likely to render stored data irrecoverable by forensic techniques through overwriting files or data on local and remote drives.(Citation: Symantec Shamoon 2012)(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)(Citation: Unit 42 Shamoon3 2018)(Citation: Talos Olympic Destroyer 2018) Common operating system file deletion commands such as `del` and `rm` often only remove pointers to files without wiping the contents of the files themselves, making the files recoverable by proper forensic methodology. This behavior is distinct from [Disk Content Wipe](T1561.001) and [Disk Structure Wipe](T1561.002) because individual files are destroyed rather than sections of a storage disk or the disk's logical structure.\nAdversaries may attempt to overwrite files and directories with randomly generated data to make it irrecoverable.(Citation: Kaspersky StoneDrill 2017)(Citation: Unit 42 Shamoon3 2018) In some cases politically oriented image files have been used to overwrite data.(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)\nTo maximize impact on the target organization in operations where network-wide availability interruption is the goal, malware designed for destroying data may have worm-like features to propagate across a network by leveraging additional techniques like [Valid Accounts](T1078), [OS Credential Dumping](T1003), and [SMB/Windows Admin Shares](T1021.002).(Citation: Symantec Shamoon 2012)(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)(Citation: Talos Olympic Destroyer 2018).\nIn cloud environments, adversaries may leverage access to delete cloud storage, cloud storage accounts, machine images, and other infrastructure crucial to operations to damage an organization or their customers.(Citation: Data Destruction - Threat Post)(Citation: DOJ  - Cisco Insider)",
+    "platforms": "Windows, IaaS, Linux, macOS",
+    "kill_chain_phases": "Impact",
+    "data_sources": "Process: Process Creation, Command: Command Execution, File: File Modification, File: File Deletion, Image: Image Deletion, Instance: Instance Deletion, Snapshot: Snapshot Deletion, Cloud Storage: Cloud Storage Deletion, Volume: Volume Deletion",
+    "detection": "Use process monitoring to monitor the execution and command-line parameters of binaries that could be involved in data destruction activity, such as [SDelete](S0195). Monitor for the creation of suspicious files as well as high unusual file modification activity. In particular, look for large quantities of file modifications in user directories and under `C:WindowsSystem32`.\nIn cloud environments, the occurrence of anomalous high-volume deletion events, such as the `DeleteDBCluster` and `DeleteGlobalCluster` events in AWS, or a high quantity of data deletion events, such as `DeleteBucket`, within a short period of time may indicate suspicious activity.",
+    "url": "https://attack.mitre.org/techniques/T1485",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1485",
+                "atomic_attack_guid": "38deee99-fd65-4031-bec8-bfa4f9f26146",
+                "atomic_attack_name": "FreeBSD/macOS/Linux - Overwrite file with DD",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "DD File Overwrite",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_dd_file_overwrite.yml",
+                        "remote_content": "title: DD File Overwrite\nid: 2953194b-e33c-4859-b9e8-05948c167447\nstatus: test\ndescription: Detects potential overwriting and deletion of a file using DD.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1485/T1485.md#atomic-test-2---macoslinux---overwrite-file-with-dd\nauthor: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research), MSTIC\ndate: 2021-10-15\nmodified: 2022-07-07\ntags:\n    - attack.impact\n    - attack.t1485\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection1:\n        Image:\n            - '/bin/dd'\n            - '/usr/bin/dd'\n    selection2:\n        CommandLine|contains: 'of='\n    selection3:\n        CommandLine|contains:\n            - 'if=/dev/zero'\n            - 'if=/dev/null'\n    condition: all of selection*\nfalsepositives:\n    - Any user deleting files that way.\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux DD File Overwrite",
+                        "rule_link": "https://research.splunk.com/endpoint/9b6aae5e-8d85-11ec-b2ae-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1485",
+                "atomic_attack_guid": "1207ddff-f25b-41b3-aa0e-7c26d2b546d1",
+                "atomic_attack_name": "ESXi - Delete VM Snapshots",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Tunneling Tool Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_susp_exfil_and_tunneling_tool_execution.yml",
+                        "remote_content": "title: Tunneling Tool Execution\nid: c75309a3-59f8-4a8d-9c2c-4c927ad50555\nstatus: test\ndescription: Detects the execution of well known tools that can be abused for data exfiltration and tunneling.\nauthor: Daniil Yugoslavskiy, oscd.community\nreferences:\n    - https://www.microsoft.com/en-us/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\ndate: 2019-10-24\nmodified: 2024-01-18\ntags:\n    - attack.exfiltration\n    - attack.command-and-control\n    - attack.t1041\n    - attack.t1572\n    - attack.t1071.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\httptunnel.exe'\n            - '\\plink.exe'\n            - '\\socat.exe'\n            - '\\stunnel.exe'\n    condition: selection\nfalsepositives:\n    - Legitimate administrators using one of these tools\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Protocol Tunneling with Plink",
+                        "rule_link": "https://research.splunk.com/endpoint/8aac5e1e-0fab-4437-af0b-c6e60af23eed/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1485",
+                "atomic_attack_guid": "476419b5-aebf-4366-a131-ae3e8dae5fc2",
+                "atomic_attack_name": "Windows - Overwrite file with SysInternals SDelete",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Command and Scripting Interpreter Hunting Path Traversal",
+                        "rule_link": "https://research.splunk.com/endpoint/d0026380-b3c4-4da0-ac8e-02790063ff6b/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1485",
+                "atomic_attack_guid": "321fd25e-0007-417f-adec-33232252be19",
+                "atomic_attack_name": "Overwrite deleted data on C drive",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Deleted Data Overwritten Via Cipher.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cipher_overwrite_deleted_data.yml",
+                        "remote_content": "title: Deleted Data Overwritten Via Cipher.EXE\nid: 4b046706-5789-4673-b111-66f25fe99534\nstatus: test\ndescription: |\n    Detects usage of the \"cipher\" built-in utility in order to overwrite deleted data from disk.\n    Adversaries may destroy data and files on specific systems or in large numbers on a network to interrupt availability to systems, services, and network resources.\n    Data destruction is likely to render stored data irrecoverable by forensic techniques through overwriting files or data on local and remote drives\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1485/T1485.md#atomic-test-3---overwrite-deleted-data-on-c-drive\nauthor: frack113\ndate: 2021-12-26\nmodified: 2023-02-21\ntags:\n    - attack.impact\n    - attack.t1485\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName: 'CIPHER.EXE'\n        - Image|endswith: '\\cipher.exe'\n    selection_cli:\n        CommandLine|contains: ' /w:'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "6a7ba45c-63d8-473e-9736-2eaabff79964",
+                    "b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046",
+                    "78a34b67-3c39-4886-8fb4-61c46dc18ecd",
+                    "39a80702-d7ca-4a83-b776-525b1f86a36d",
+                    "c1d867fe-8d95-4487-aab4-e53f2d339f90",
+                    "0165e5d7-51e6-4c2e-a382-1dd1e706f7bb",
+                    "33d50d03-20ec-4b74-a74e-1e65a38af1c0",
+                    "46530378-f9db-4af9-a9e5-889c177d3881",
+                    "4b046706-5789-4673-b111-66f25fe99534",
+                    "56cb2bd3-5525-46bd-a454-ea895a5b4d0d",
+                    "a4824fca-976f-4964-b334-0621379e84c4",
+                    "d45a3d09-b3cf-48f4-9f0f-f521ee5cb05c",
+                    "37222991-11e9-4b6d-8bdf-60fbe48f753e",
+                    "2953194b-e33c-4859-b9e8-05948c167447",
+                    "8cc5335e-915b-4e16-837d-49143e6987b4",
+                    "1a70042a-6622-4a2b-8958-267625349abf"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "6a7ba45c-63d8-473e-9736-2eaabff79964",
+                        "lookup_data": {
+                            "description": "Detects when a EFS Fileshare Mount is modified or deleted. An adversary breaking any file system using the mount target that is being deleted, which might disrupt instances or applications using those mounts.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/08/15\ndescription: Detects when a EFS Fileshare Mount is modified or deleted. An adversary\n  breaking any file system using the mount target that is being deleted, which might\n  disrupt instances or applications using those mounts.\ndetection:\n  condition: selection\n  selection:\n    eventName: DeleteMountTarget\n    eventSource: elasticfilesystem.amazonaws.com\nfalsepositives:\n- Unknown\nid: 6a7ba45c-63d8-473e-9736-2eaabff79964\nlevel: medium\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/10/09\nreferences:\n- https://docs.aws.amazon.com/efs/latest/ug/API_DeleteMountTarget.html\nstatus: test\ntags:\n- attack.impact\n- attack.t1485\ntitle: AWS EFS Fileshare Mount Modified or Deleted\n",
+                            "sigma:id": "6a7ba45c-63d8-473e-9736-2eaabff79964",
+                            "title": "AWS EFS Fileshare Mount Modified or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046",
+                        "lookup_data": {
+                            "description": "HermeticWiper | New Destructive Malware Used In Cyber Attacks on Ukraine",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1664880605",
+                            "uuid": "b9b6dcfa-0b11-40dc-9bf4-9a36a2c1a046",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "78a34b67-3c39-4886-8fb4-61c46dc18ecd",
+                        "lookup_data": {
+                            "description": "Detects when a Microsoft Cloud App Security reported a user has deleted a unusual a large volume of files.",
+                            "raw": "author: austinsonger\ndate: 2021/08/19\ndescription: Detects when a Microsoft Cloud App Security reported a user has deleted\n  a unusual a large volume of files.\ndetection:\n  condition: selection\n  selection:\n    eventName: Unusual volume of file deletion\n    eventSource: SecurityComplianceCenter\n    status: success\nfalsepositives:\n- Unknown\nid: 78a34b67-3c39-4886-8fb4-61c46dc18ecd\nlevel: medium\nlogsource:\n  product: m365\n  service: threat_management\nmodified: 2022/10/09\nreferences:\n- https://docs.microsoft.com/en-us/cloud-app-security/anomaly-detection-policy\n- https://docs.microsoft.com/en-us/cloud-app-security/policy-template-reference\nstatus: test\ntags:\n- attack.impact\n- attack.t1485\ntitle: Microsoft 365 - Unusual Volume of File Deletion\n",
+                            "sigma:id": "78a34b67-3c39-4886-8fb4-61c46dc18ecd",
+                            "title": "Microsoft 365 - Unusual Volume of File Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "39a80702-d7ca-4a83-b776-525b1f86a36d",
+                        "lookup_data": {
+                            "description": "Detects renaming of file while deletion with SDelete tool.",
+                            "raw": "author: Thomas Patzke\ndate: 2017/06/14\ndescription: Detects renaming of file while deletion with SDelete tool.\ndetection:\n  condition: selection\n  selection:\n    EventID:\n    - 4656\n    - 4663\n    - 4658\n    ObjectName|endswith:\n    - .AAA\n    - .ZZZ\nfalsepositives:\n- Legitimate usage of SDelete\nid: 39a80702-d7ca-4a83-b776-525b1f86a36d\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://jpcertcc.github.io/ToolAnalysisResultSheet/details/sdelete.htm\n- https://www.jpcert.or.jp/english/pub/sr/ir_research.html\n- https://docs.microsoft.com/en-gb/sysinternals/downloads/sdelete\nstatus: test\ntags:\n- attack.impact\n- attack.defense_evasion\n- attack.t1070.004\n- attack.t1027.005\n- attack.t1485\n- attack.t1553.002\n- attack.s0195\ntitle: Secure Deletion with SDelete\n",
+                            "sigma:id": "39a80702-d7ca-4a83-b776-525b1f86a36d",
+                            "title": "Secure Deletion with SDelete",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1d867fe-8d95-4487-aab4-e53f2d339f90",
+                        "lookup_data": {
+                            "description": "Detects the use of a renamed SysInternals Sdelete, which is something an administrator shouldn't do (the renaming)",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/06\ndescription: Detects the use of a renamed SysInternals Sdelete, which is something\n  an administrator shouldn't do (the renaming)\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|endswith:\n    - \\sdelete.exe\n    - \\sdelete64.exe\n  selection:\n    OriginalFileName: sdelete.exe\nfalsepositives:\n- System administrator usage\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: c1d867fe-8d95-4487-aab4-e53f2d339f90\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://docs.microsoft.com/en-us/sysinternals/downloads/sdelete\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1485/T1485.md\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1485\ntitle: Renamed Sysinternals Sdelete Usage\n",
+                            "sigma:id": "c1d867fe-8d95-4487-aab4-e53f2d339f90",
+                            "title": "Renamed Sysinternals Sdelete Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0165e5d7-51e6-4c2e-a382-1dd1e706f7bb",
+                        "lookup_data": {
+                            "description": "OSINT - DearCry ransomware (abusing Exchange Server)",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/0165e5d7-51e6-4c2e-a382-1dd1e706f7bb.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1615541608",
+                            "uuid": "0165e5d7-51e6-4c2e-a382-1dd1e706f7bb",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "33d50d03-20ec-4b74-a74e-1e65a38af1c0",
+                        "lookup_data": {
+                            "description": "Identifies when an EKS cluster is created or deleted.",
+                            "raw": "author: Austin Songer\ndate: 2021/08/16\ndescription: Identifies when an EKS cluster is created or deleted.\ndetection:\n  condition: selection\n  selection:\n    eventName:\n    - CreateCluster\n    - DeleteCluster\n    eventSource: eks.amazonaws.com\nfalsepositives:\n- EKS Cluster being created or deleted may be performed by a system administrator.\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- EKS Cluster created or deleted from unfamiliar users should be investigated. If\n  known behavior is causing false positives, it can be exempted from the rule.\nid: 33d50d03-20ec-4b74-a74e-1e65a38af1c0\nlevel: low\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/10/09\nreferences:\n- https://any-api.com/amazonaws_com/eks/docs/API_Description\nstatus: test\ntags:\n- attack.impact\n- attack.t1485\ntitle: AWS EKS Cluster Created or Deleted\n",
+                            "sigma:id": "33d50d03-20ec-4b74-a74e-1e65a38af1c0",
+                            "title": "AWS EKS Cluster Created or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "46530378-f9db-4af9-a9e5-889c177d3881",
+                        "lookup_data": {
+                            "description": "Identifies when a device or device configuration in azure is modified or deleted.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/09/03\ndescription: Identifies when a device or device configuration in azure is modified\n  or deleted.\ndetection:\n  condition: selection\n  selection:\n    properties.message:\n    - Delete device\n    - Delete device configuration\n    - Update device\n    - Update device configuration\nfalsepositives:\n- Device or device configuration being modified or deleted may be performed by a system\n  administrator.\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- Device or device configuration modified or deleted from unfamiliar users should\n  be investigated. If known behavior is causing false positives, it can be exempted\n  from the rule.\nid: 46530378-f9db-4af9-a9e5-889c177d3881\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nmodified: 2022/10/09\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/reports-monitoring/reference-audit-activities#core-directory\nstatus: test\ntags:\n- attack.impact\n- attack.t1485\n- attack.t1565.001\ntitle: Azure Device or Configuration Modified or Deleted\n",
+                            "sigma:id": "46530378-f9db-4af9-a9e5-889c177d3881",
+                            "title": "Azure Device or Configuration Modified or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4b046706-5789-4673-b111-66f25fe99534",
+                        "lookup_data": {
+                            "description": "Adversaries may destroy data and files on specific systems or in large numbers on a network to interrupt availability to systems, services, and network resources.\nData destruction is likely to render stored data irrecoverable by forensic techniques through overwriting files or data on local and remote drives\n",
+                            "raw": "author: frack113\ndate: 2021/12/26\ndescription: 'Adversaries may destroy data and files on specific systems or in large\n  numbers on a network to interrupt availability to systems, services, and network\n  resources.\n\n  Data destruction is likely to render stored data irrecoverable by forensic techniques\n  through overwriting files or data on local and remote drives\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: ' /w:'\n  selection_img:\n  - OriginalFileName: CIPHER.EXE\n  - Image|endswith: \\cipher.exe\nfalsepositives:\n- Unknown\nid: 4b046706-5789-4673-b111-66f25fe99534\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1485/T1485.md#atomic-test-3---overwrite-deleted-data-on-c-drive\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1485\ntitle: Overwrite Deleted Data with Cipher\n",
+                            "sigma:id": "4b046706-5789-4673-b111-66f25fe99534",
+                            "title": "Overwrite Deleted Data with Cipher",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "56cb2bd3-5525-46bd-a454-ea895a5b4d0d",
+                        "lookup_data": {
+                            "description": "New data wiper malware used in Ukraine",
+                            "link": "http://www.botvrij.eu/data/feed-osint/56cb2bd3-5525-46bd-a454-ea895a5b4d0d.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1645960728",
+                            "uuid": "56cb2bd3-5525-46bd-a454-ea895a5b4d0d",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a4824fca-976f-4964-b334-0621379e84c4",
+                        "lookup_data": {
+                            "description": "Detects the use of SDelete to erase a file not the free space",
+                            "raw": "author: frack113\ndate: 2021/06/03\ndescription: Detects the use of SDelete to erase a file not the free space\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains:\n    - ' -h'\n    - ' -c'\n    - ' -z'\n    - ' /\\?'\n  selection:\n    OriginalFileName: sdelete.exe\nfalsepositives:\n- System administrator usage\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: a4824fca-976f-4964-b334-0621379e84c4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/06\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1485/T1485.md\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1485\ntitle: Sysinternals SDelete Delete File\n",
+                            "sigma:id": "a4824fca-976f-4964-b334-0621379e84c4",
+                            "title": "Sysinternals SDelete Delete File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d45a3d09-b3cf-48f4-9f0f-f521ee5cb05c",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1485",
+                            "mitre-cti:description": "Adversaries may destroy data and files on specific systems or in large numbers on a network to interrupt availability to systems, services, and network resources. Data destruction is likely to render stored data irrecoverable by forensic techniques through overwriting files or data on local and remote drives.(Citation: Symantec Shamoon 2012)(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)(Citation: Unit 42 Shamoon3 2018)(Citation: Talos Olympic Destroyer 2018) Common operating system file deletion commands such as <code>del</code> and <code>rm</code> often only remove pointers to files without wiping the contents of the files themselves, making the files recoverable by proper forensic methodology. This behavior is distinct from [Disk Content Wipe](https://attack.mitre.org/techniques/T1561/001) and [Disk Structure Wipe](https://attack.mitre.org/techniques/T1561/002) because individual files are destroyed rather than sections of a storage disk or the disk's logical structure.\n\nAdversaries may attempt to overwrite files and directories with randomly generated data to make it irrecoverable.(Citation: Kaspersky StoneDrill 2017)(Citation: Unit 42 Shamoon3 2018) In some cases politically oriented image files have been used to overwrite data.(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)\n\nTo maximize impact on the target organization in operations where network-wide availability interruption is the goal, malware designed for destroying data may have worm-like features to propagate across a network by leveraging additional techniques like [Valid Accounts](https://attack.mitre.org/techniques/T1078), [OS Credential Dumping](https://attack.mitre.org/techniques/T1003), and [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002).(Citation: Symantec Shamoon 2012)(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)(Citation: Talos Olympic Destroyer 2018).\n\nIn cloud environments, adversaries may leverage access to delete cloud storage, cloud storage accounts, machine images, and other infrastructure crucial to operations to damage an organization or their customers.(Citation: Data Destruction - Threat Post)(Citation: DOJ  - Cisco Insider)",
+                            "mitre-cti:name": "Data Destruction",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'IaaS', 'Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Brent Murphy, Elastic', 'David French, Elastic', 'Syed Ummar Farooqh, McAfee', 'Prasad Somasamudram, McAfee', 'Sekhar Sarukkai, McAfee', 'Varonis Threat Labs'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--d45a3d09-b3cf-48f4-9f0f-f521ee5cb05c', 'type': 'attack-pattern', 'created': '2019-03-14T18:47:17.701Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1485', 'url': 'https://attack.mitre.org/techniques/T1485'}, {'description': 'Symantec. (2012, August 16). The Shamoon Attacks. Retrieved March 14, 2019.', 'url': 'https://www.symantec.com/connect/blogs/shamoon-attacks', 'source_name': 'Symantec Shamoon 2012'}, {'url': 'https://www.fireeye.com/blog/threat-research/2016/11/fireeye_respondsto.html', 'description': 'FireEye. (2016, November 30). FireEye Responds to Wave of Destructive Cyber Attacks in Gulf Region. Retrieved January 11, 2017.', 'source_name': 'FireEye Shamoon Nov 2016'}, {'url': 'http://researchcenter.paloaltonetworks.com/2016/11/unit42-shamoon-2-return-disttrack-wiper/', 'description': 'Falcone, R.. (2016, November 30). Shamoon 2: Return of the Disttrack Wiper. Retrieved January 11, 2017.', 'source_name': 'Palo Alto Shamoon Nov 2016'}, {'source_name': 'Kaspersky StoneDrill 2017', 'url': 'https://media.kasperskycontenthub.com/wp-content/uploads/sites/43/2018/03/07180722/Report_Shamoon_StoneDrill_final.pdf', 'description': 'Kaspersky Lab. (2017, March 7). From Shamoon to StoneDrill: Wipers attacking Saudi organizations and beyond. Retrieved March 14, 2019.'}, {'description': 'Falcone, R. (2018, December 13). Shamoon 3 Targets Oil and Gas Organization. Retrieved March 14, 2019.', 'url': 'https://unit42.paloaltonetworks.com/shamoon-3-targets-oil-gas-organization/', 'source_name': 'Unit 42 Shamoon3 2018'}, {'source_name': 'Talos Olympic Destroyer 2018', 'url': 'https://blog.talosintelligence.com/2018/02/olympic-destroyer.html', 'description': 'Mercer, W. and Rascagneres, P. (2018, February 12). Olympic Destroyer Takes Aim At Winter Olympics. Retrieved March 14, 2019.'}, {'source_name': 'Data Destruction - Threat Post', 'url': 'https://threatpost.com/hacker-puts-hosting-service-code-spaces-out-of-business/106761/', 'description': 'Mimoso, M.. (2014, June 18). Hacker Puts Hosting Service Code Spaces Out of Business. Retrieved December 15, 2020.'}, {'source_name': 'DOJ  - Cisco Insider', 'url': 'https://www.justice.gov/usao-ndca/pr/san-jose-man-pleads-guilty-damaging-cisco-s-network', 'description': 'DOJ. (2020, August 26). San Jose Man Pleads Guilty To Damaging Cisco’s Network. Retrieved December 15, 2020.'}], 'modified': '2021-03-25T14:47:48.728Z', 'name': 'Data Destruction', 'description': \"Adversaries may destroy data and files on specific systems or in large numbers on a network to interrupt availability to systems, services, and network resources. Data destruction is likely to render stored data irrecoverable by forensic techniques through overwriting files or data on local and remote drives.(Citation: Symantec Shamoon 2012)(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)(Citation: Unit 42 Shamoon3 2018)(Citation: Talos Olympic Destroyer 2018) Common operating system file deletion commands such as <code>del</code> and <code>rm</code> often only remove pointers to files without wiping the contents of the files themselves, making the files recoverable by proper forensic methodology. This behavior is distinct from [Disk Content Wipe](https://attack.mitre.org/techniques/T1561/001) and [Disk Structure Wipe](https://attack.mitre.org/techniques/T1561/002) because individual files are destroyed rather than sections of a storage disk or the disk's logical structure.\\n\\nAdversaries may attempt to overwrite files and directories with randomly generated data to make it irrecoverable.(Citation: Kaspersky StoneDrill 2017)(Citation: Unit 42 Shamoon3 2018) In some cases politically oriented image files have been used to overwrite data.(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)\\n\\nTo maximize impact on the target organization in operations where network-wide availability interruption is the goal, malware designed for destroying data may have worm-like features to propagate across a network by leveraging additional techniques like [Valid Accounts](https://attack.mitre.org/techniques/T1078), [OS Credential Dumping](https://attack.mitre.org/techniques/T1003), and [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002).(Citation: Symantec Shamoon 2012)(Citation: FireEye Shamoon Nov 2016)(Citation: Palo Alto Shamoon Nov 2016)(Citation: Kaspersky StoneDrill 2017)(Citation: Talos Olympic Destroyer 2018).\\n\\nIn cloud environments, adversaries may leverage access to delete cloud storage, cloud storage accounts, machine images, and other infrastructure crucial to operations to damage an organization or their customers.(Citation: Data Destruction - Threat Post)(Citation: DOJ  - Cisco Insider)\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'impact'}], 'x_mitre_detection': 'Use process monitoring to monitor the execution and command-line parameters of binaries that could be involved in data destruction activity, such as [SDelete](https://attack.mitre.org/software/S0195). Monitor for the creation of suspicious files as well as high unusual file modification activity. In particular, look for large quantities of file modifications in user directories and under <code>C:\\\\Windows\\\\System32\\\\</code>.\\n\\nIn cloud environments, the occurrence of anomalous high-volume deletion events, such as the <code>DeleteDBCluster</code> and <code>DeleteGlobalCluster</code> events in AWS, or a high quantity of data deletion events, such as <code>DeleteBucket</code>, within a short period of time may indicate suspicious activity.', 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Instance: Instance Deletion', 'Image: Image Deletion', 'Snapshot: Snapshot Deletion', 'File: File Deletion', 'Cloud Storage: Cloud Storage Deletion', 'Process: Process Creation', 'File: File Modification', 'Command: Command Execution', 'Volume: Volume Deletion'], 'x_mitre_impact_type': ['Availability'], 'x_mitre_permissions_required': ['User', 'Administrator', 'root', 'SYSTEM'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "37222991-11e9-4b6d-8bdf-60fbe48f753e",
+                        "lookup_data": {
+                            "description": "Detects overwriting (effectively wiping/deleting) of a file.",
+                            "raw": "author: Jakob Weinzettl, oscd.community\ndate: 2019/10/23\ndescription: Detects overwriting (effectively wiping/deleting) of a file.\ndetection:\n  condition: selection\n  selection:\n    a0|contains: dd\n    a1|contains:\n    - if=/dev/null\n    - if=/dev/zero\n    type: EXECVE\nfalsepositives:\n- Appending null bytes to files.\n- Legitimate overwrite of files.\nid: 37222991-11e9-4b6d-8bdf-60fbe48f753e\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1485/T1485.md\nstatus: stable\ntags:\n- attack.impact\n- attack.t1485\ntitle: Overwriting the File with Dev Zero or Null\n",
+                            "sigma:id": "37222991-11e9-4b6d-8bdf-60fbe48f753e",
+                            "title": "Overwriting the File with Dev Zero or Null",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2953194b-e33c-4859-b9e8-05948c167447",
+                        "lookup_data": {
+                            "description": "Detects potential overwriting and deletion of a file using DD.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research), MSTIC\ndate: 2021/10/15\ndescription: Detects potential overwriting and deletion of a file using DD.\ndetection:\n  condition: all of selection*\n  selection1:\n    Image:\n    - /bin/dd\n    - /usr/bin/dd\n  selection2:\n    CommandLine|contains: of=\n  selection3:\n    CommandLine|contains:\n    - if=/dev/zero\n    - if=/dev/null\nfalsepositives:\n- Any user deleting files that way.\nid: 2953194b-e33c-4859-b9e8-05948c167447\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/07/07\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1485/T1485.md#atomic-test-2---macoslinux---overwrite-file-with-dd\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1485\ntitle: DD File Overwrite\n",
+                            "sigma:id": "2953194b-e33c-4859-b9e8-05948c167447",
+                            "title": "DD File Overwrite",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8cc5335e-915b-4e16-837d-49143e6987b4",
+                        "lookup_data": {
+                            "description": "MSFT - MSTIC - Destructive malware targeting Ukrainian organizations",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/8cc5335e-915b-4e16-837d-49143e6987b4.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1642348752",
+                            "uuid": "8cc5335e-915b-4e16-837d-49143e6987b4",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1a70042a-6622-4a2b-8958-267625349abf",
+                        "lookup_data": {
+                            "description": "Payloads may be compressed, archived, or encrypted in order to avoid detection",
+                            "raw": "author: frack113\ndate: 2021/12/26\ndescription: Payloads may be compressed, archived, or encrypted in order to avoid\n  detection\ndetection:\n  condition: selection\n  selection:\n    Image|contains: .zip\\\nfalsepositives:\n- Unknown\nid: 1a70042a-6622-4a2b-8958-267625349abf\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1027/T1027.md#atomic-test-4---execution-from-compressed-file\nstatus: test\ntags:\n- attack.impact\n- attack.t1485\ntitle: Run from a Zip File\n",
+                            "sigma:id": "1a70042a-6622-4a2b-8958-267625349abf",
+                            "title": "Run from a Zip File",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1485",
+                "display_name": "Data Destruction",
+                "atomic_tests": [
+                    {
+                        "name": "Windows - Overwrite file with SysInternals SDelete",
+                        "auto_generated_guid": "476419b5-aebf-4366-a131-ae3e8dae5fc2",
+                        "description": "Overwrites and deletes a file using SysInternals SDelete. Upon successful execution, \"Files deleted: 1\" will be displayed in\nthe powershell session along with other information about the file that was deleted.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "sdelete_exe": {
+                                "description": "Path of sdelete executable",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\Sdelete\\sdelete.exe"
+                            },
+                            "file_to_delete": {
+                                "description": "Path of file to delete",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1485.txt"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Secure delete tool from SysInternals must exist on disk at specified location (#{sdelete_exe})\n",
+                                "prereq_command": "if (Test-Path \"#{sdelete_exe}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.sysinternals.com/files/SDelete.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\SDelete.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\SDelete.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\Sdelete\" -Force\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\SDelete.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "if (-not (Test-Path \"#{file_to_delete}\")) { New-Item \"#{file_to_delete}\" -Force }\n& \"#{sdelete_exe}\" -accepteula \"#{file_to_delete}\"\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "FreeBSD/macOS/Linux - Overwrite file with DD",
+                        "auto_generated_guid": "38deee99-fd65-4031-bec8-bfa4f9f26146",
+                        "description": "Overwrites and deletes a file using DD.\nTo stop the test, break the command with CTRL/CMD+C.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "overwrite_source": {
+                                "description": "Path of data source to overwrite with",
+                                "type": "path",
+                                "default": "/dev/zero"
+                            },
+                            "file_to_overwrite": {
+                                "description": "Path of file to overwrite and remove",
+                                "type": "path",
+                                "default": "/var/log/syslog"
+                            }
+                        },
+                        "executor": {
+                            "command": "dd of=#{file_to_overwrite} if=#{overwrite_source} count=$(ls -l #{file_to_overwrite} | awk '{print $5}') iflag=count_bytes\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Overwrite deleted data on C drive",
+                        "auto_generated_guid": "321fd25e-0007-417f-adec-33232252be19",
+                        "description": "RansomEXX malware removes all deleted files using windows built-in cipher.exe to prevent forensic recover.\nThis process is very slow and test execution may timeout. \nhttps://www.cybereason.com/blog/cybereason-vs.-ransomexx-ransomware\nhttps://support.microsoft.com/en-us/topic/cipher-exe-security-tool-for-the-encrypting-file-system-56c85edd-85cf-ac07-f2f7-ca2d35dab7e4\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "cipher.exe /w:C:\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "GCP - Delete Bucket",
+                        "auto_generated_guid": "4ac71389-40f4-448a-b73f-754346b3f928",
+                        "description": "This Atomic will create a Google Storage Bucket then delete it. The idea for this Atomic came from a Rule published by the Elastic team.\n\nIdentifies when a Google Cloud Platform (GCP) storage bucket is deleted. An adversary may delete a storage bucket in order to disrupt their target's business operations.\nThis atomic will create a bucket then delete the bucket.\n\nReference: https://github.com/elastic/detection-rules/blob/main/rules/integrations/gcp/impact_gcp_storage_bucket_deleted.toml\n",
+                        "supported_platforms": [
+                            "iaas:gcp"
+                        ],
+                        "input_arguments": {
+                            "project_id": {
+                                "description": "ID of the GCP Project you to execute the command against.",
+                                "type": "string",
+                                "default": "atomic-test-1"
+                            },
+                            "bucket_name": {
+                                "description": "The name of the bucket to delete.",
+                                "type": "string",
+                                "default": "atomic-red-team-bucket"
+                            }
+                        },
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "gcloud config set project #{project_id}\ngcloud storage buckets delete gs://#{bucket_name}\n",
+                            "cleanup_command": "cd \"$PathToAtomicsFolder/T1485/src/T1485-4/\"\nterraform state rm google_storage_bucket.bucket\nterraform destroy -auto-approve\n"
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Requires gcloud\n",
+                                "prereq_command": "if [ -x \"$(command -v gcloud)\" ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "echo \"Please Install Google Cloud SDK before running this atomic test : https://cloud.google.com/sdk/docs/install\"\n"
+                            },
+                            {
+                                "description": "Check if user is logged in \n",
+                                "prereq_command": "gcloud config get-value account\n",
+                                "get_prereq_command": "gcloud auth login --no-launch-browser\n"
+                            },
+                            {
+                                "description": "Check if terraform is installed.\n",
+                                "prereq_command": "terraform version\n",
+                                "get_prereq_command": "echo Please install the terraform.\n"
+                            },
+                            {
+                                "description": "Create dependency resources using terraform\n",
+                                "prereq_command": "stat \"$PathToAtomicsFolder/T1485/src/T1485-4/terraform.tfstate\"\n",
+                                "get_prereq_command": "cd \"$PathToAtomicsFolder/T1485/src/T1485-4/\"\nterraform init\nterraform apply -auto-approve\n"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "ESXi - Delete VM Snapshots",
+                        "auto_generated_guid": "1207ddff-f25b-41b3-aa0e-7c26d2b546d1",
+                        "description": "Deletes all snapshots for all Virtual Machines on an ESXi Host\n[Reference](https://lolesxi-project.github.io/LOLESXi/lolesxi/Binaries/vim-cmd/#inhibit%20recovery)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vm_host": {
+                                "description": "Specify the host name or IP of the ESXi server.",
+                                "type": "string",
+                                "default": "atomic.local"
+                            },
+                            "vm_user": {
+                                "description": "Specify the privilege user account on the ESXi server.",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "vm_pass": {
+                                "description": "Specify the privileged user's password.",
+                                "type": "string",
+                                "default": "password"
+                            },
+                            "plink_file": {
+                                "description": "Path to Plink",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if we have plink\n",
+                                "prereq_command": "if (Test-Path \"#{plink_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe\" -OutFile \"#{plink_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "echo \"\" | \"#{plink_file}\" -batch \"#{vm_host}\" -ssh -l #{vm_user} -pw \"#{vm_pass}\" \"for i in `vim-cmd vmsvc/getallvms | awk 'NR>1 {print $1}'`; do vim-cmd vmsvc/snapshot.removeall $i & done\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:34:24"
+}

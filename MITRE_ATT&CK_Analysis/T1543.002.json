@@ -1,0 +1,224 @@
+{
+    "id": "T1543.002",
+    "name": "Systemd Service",
+    "description": "Adversaries may create or modify systemd services to repeatedly execute malicious payloads as part of persistence. The systemd service manager is commonly used for managing background daemon processes (also known as services) and other system resources.(Citation: Linux man-pages: systemd January 2014)(Citation: Freedesktop.org Linux systemd 29SEP2018) Systemd is the default initialization (init) system on many Linux distributions starting with Debian 8, Ubuntu 15.04, CentOS 7, RHEL 7, Fedora 15, and replaces legacy init systems including SysVinit and Upstart while remaining backwards compatible with the aforementioned init systems.\nSystemd utilizes configuration files known as service units to control how services boot and under what conditions. By default, these unit files are stored in the `/etc/systemd/system` and `/usr/lib/systemd/system` directories and have the file extension `.service`. Each service unit file may contain numerous directives that can execute system commands:\n* ExecStart, ExecStartPre, and ExecStartPost directives cover execution of commands when a services is started manually by 'systemctl' or on system start if the service is set to automatically start.\n* ExecReload directive covers when a service restarts.\n* ExecStop and ExecStopPost directives cover when a service is stopped or manually by 'systemctl'.\nAdversaries have used systemd functionality to establish persistent access to victim systems by creating and/or modifying service unit files that cause systemd to execute malicious commands at system boot.(Citation: Anomali Rocke March 2019)\nWhile adversaries typically require root privileges to create/modify service unit files in the `/etc/systemd/system` and `/usr/lib/systemd/system` directories, low privilege users can create/modify service unit files in directories such as `~/.config/systemd/user/` to achieve user-level persistence.(Citation: Rapid7 Service Persistence 22JUNE2016)",
+    "platforms": "Linux",
+    "kill_chain_phases": "Persistence, Privilege Escalation",
+    "data_sources": "File: File Creation, File: File Modification, Process: Process Creation, Command: Command Execution, Service: Service Creation, Service: Service Modification",
+    "detection": "Systemd service unit files may be detected by auditing file creation and modification events within the `/etc/systemd/system`, `/usr/lib/systemd/system/`, and `/home/<username>/.config/systemd/user/` directories, as well as associated symbolic links. Suspicious processes or scripts spawned in this manner will have a parent process of ‘systemd’, a parent process ID of 1, and will usually execute as the ‘root’ user.\nSuspicious systemd services can also be identified by comparing results against a trusted system baseline. Malicious systemd services may be detected by using the systemctl utility to examine system wide services: `systemctl list-units -–type=service –all`. Analyze the contents of `.service` files present on the file system and ensure that they refer to legitimate, expected executables.\nAuditing the execution and command-line arguments of the 'systemctl' utility, as well related utilities such as `/usr/sbin/service` may reveal malicious systemd service execution.",
+    "url": "https://attack.mitre.org/techniques/T1543/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1543.002",
+                "atomic_attack_guid": "c35ac4a8-19de-43af-b9f8-755da7e89c89",
+                "atomic_attack_name": "Create Systemd Service file,  Enable the service , Modify and Reload the service.",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Linux Service Restarted",
+                        "rule_link": "https://research.splunk.com/endpoint/084275ba-61b8-11ec-8d64-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Linux Service Started Or Enabled",
+                        "rule_link": "https://research.splunk.com/endpoint/e0428212-61b7-11ec-88a3-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1543.002",
+                "atomic_attack_guid": "760fe8d2-79d9-494f-905e-a239a3df86f6",
+                "atomic_attack_name": "Create SysV Service",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1543.002",
+                "atomic_attack_guid": "d9e4f24f-aa67-4c6e-bcbf-85622b697a7c",
+                "atomic_attack_name": "Create Systemd Service",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Execution Of Script Located In Potentially Suspicious Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_shell_script_exec_from_susp_location.yml",
+                        "remote_content": "title: Execution Of Script Located In Potentially Suspicious Directory\nid: 30bcce26-51c5-49f2-99c8-7b59e3af36c7\nstatus: test\ndescription: Detects executions of scripts located in potentially suspicious locations such as \"/tmp\" via a shell such as \"bash\", \"sh\", etc.\nreferences:\n    - https://blogs.jpcert.or.jp/en/2023/05/gobrat.html\n    - https://jstnk9.github.io/jstnk9/research/GobRAT-Malware/\n    - https://www.virustotal.com/gui/file/60bcd645450e4c846238cf0e7226dc40c84c96eba99f6b2cffcd0ab4a391c8b3/detection\n    - https://www.virustotal.com/gui/file/3e44c807a25a56f4068b5b8186eee5002eed6f26d665a8b791c472ad154585d1/detection\nauthor: Joseliyo Sanchez, @Joseliyo_Jstnk\ndate: 2023-06-02\ntags:\n    - attack.execution\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith:\n            - '/bash'\n            - '/csh'\n            - '/dash'\n            - '/fish'\n            - '/ksh'\n            - '/sh'\n            - '/zsh'\n    selection_flag:\n        CommandLine|contains: ' -c '\n    selection_paths:\n        # Note: Add more suspicious paths\n        CommandLine|contains: '/tmp/'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Service Restarted",
+                        "rule_link": "https://research.splunk.com/endpoint/084275ba-61b8-11ec-8d64-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Linux Service Started Or Enabled",
+                        "rule_link": "https://research.splunk.com/endpoint/e0428212-61b7-11ec-88a3-acde48001122/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "2625cc59-0634-40d0-821e-cb67382a3dd7",
+                    "dfefe2ed-4389-4318-8762-f0272b350a1b",
+                    "1bac86ba-41aa-4f62-9d6b-405eac99b485"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "2625cc59-0634-40d0-821e-cb67382a3dd7",
+                        "lookup_data": {
+                            "description": "Detects a reload or a start of a service.",
+                            "raw": "author: Jakob Weinzettl, oscd.community\ndate: 2019/09/23\ndescription: Detects a reload or a start of a service.\ndetection:\n  condition: selection\n  selection:\n    a0|contains: systemctl\n    a1|contains:\n    - daemon-reload\n    - start\n    type: EXECVE\nfalsepositives:\n- Installation of legitimate service.\n- Legitimate reconfiguration of service.\nid: 2625cc59-0634-40d0-821e-cb67382a3dd7\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1543.002/T1543.002.md\nstatus: test\ntags:\n- attack.persistence\n- attack.t1543.002\ntitle: Systemd Service Reload or Start\n",
+                            "sigma:id": "2625cc59-0634-40d0-821e-cb67382a3dd7",
+                            "title": "Systemd Service Reload or Start",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dfefe2ed-4389-4318-8762-f0272b350a1b",
+                        "lookup_data": {
+                            "capec": "CAPEC-551",
+                            "mitre-attack-id": "T1543.002",
+                            "mitre-cti:description": "Adversaries may create or modify systemd services to repeatedly execute malicious payloads as part of persistence. The systemd service manager is commonly used for managing background daemon processes (also known as services) and other system resources.(Citation: Linux man-pages: systemd January 2014)(Citation: Freedesktop.org Linux systemd 29SEP2018) Systemd is the default initialization (init) system on many Linux distributions starting with Debian 8, Ubuntu 15.04, CentOS 7, RHEL 7, Fedora 15, and replaces legacy init systems including SysVinit and Upstart while remaining backwards compatible with the aforementioned init systems.\n\nSystemd utilizes configuration files known as service units to control how services boot and under what conditions. By default, these unit files are stored in the <code>/etc/systemd/system</code> and <code>/usr/lib/systemd/system</code> directories and have the file extension <code>.service</code>. Each service unit file may contain numerous directives that can execute system commands:\n\n* ExecStart, ExecStartPre, and ExecStartPost directives cover execution of commands when a services is started manually by 'systemctl' or on system start if the service is set to automatically start. \n* ExecReload directive covers when a service restarts. \n* ExecStop and ExecStopPost directives cover when a service is stopped or manually by 'systemctl'.\n\nAdversaries have used systemd functionality to establish persistent access to victim systems by creating and/or modifying service unit files that cause systemd to execute malicious commands at system boot.(Citation: Anomali Rocke March 2019)\n\nWhile adversaries typically require root privileges to create/modify service unit files in the <code>/etc/systemd/system</code> and <code>/usr/lib/systemd/system</code> directories, low privilege users can create/modify service unit files in directories such as <code>~/.config/systemd/user/</code> to achieve user-level persistence.(Citation: Rapid7 Service Persistence 22JUNE2016)",
+                            "mitre-cti:name": "Systemd Service",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Tony Lambert, Red Canary'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--dfefe2ed-4389-4318-8762-f0272b350a1b', 'type': 'attack-pattern', 'created': '2020-01-17T16:15:19.870Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1543.002', 'url': 'https://attack.mitre.org/techniques/T1543/002'}, {'external_id': 'CAPEC-550', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/550.html'}, {'external_id': 'CAPEC-551', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/551.html'}, {'source_name': 'Linux man-pages: systemd January 2014', 'url': 'http://man7.org/linux/man-pages/man1/systemd.1.html', 'description': 'Linux man-pages. (2014, January). systemd(1) - Linux manual page. Retrieved April 23, 2019.'}, {'source_name': 'Freedesktop.org Linux systemd 29SEP2018', 'url': 'https://www.freedesktop.org/wiki/Software/systemd/', 'description': 'Freedesktop.org. (2018, September 29). systemd System and Service Manager. Retrieved April 23, 2019.'}, {'source_name': 'Anomali Rocke March 2019', 'url': 'https://www.anomali.com/blog/rocke-evolves-its-arsenal-with-a-new-malware-family-written-in-golang', 'description': 'Anomali Labs. (2019, March 15). Rocke Evolves Its Arsenal With a New Malware Family Written in Golang. Retrieved April 24, 2019.'}, {'source_name': 'Rapid7 Service Persistence 22JUNE2016', 'url': 'https://www.rapid7.com/db/modules/exploit/linux/local/service_persistence', 'description': 'Rapid7. (2016, June 22). Service Persistence. Retrieved April 23, 2019.'}], 'modified': '2020-10-09T13:46:29.701Z', 'name': 'Systemd Service', 'description': \"Adversaries may create or modify systemd services to repeatedly execute malicious payloads as part of persistence. The systemd service manager is commonly used for managing background daemon processes (also known as services) and other system resources.(Citation: Linux man-pages: systemd January 2014)(Citation: Freedesktop.org Linux systemd 29SEP2018) Systemd is the default initialization (init) system on many Linux distributions starting with Debian 8, Ubuntu 15.04, CentOS 7, RHEL 7, Fedora 15, and replaces legacy init systems including SysVinit and Upstart while remaining backwards compatible with the aforementioned init systems.\\n\\nSystemd utilizes configuration files known as service units to control how services boot and under what conditions. By default, these unit files are stored in the <code>/etc/systemd/system</code> and <code>/usr/lib/systemd/system</code> directories and have the file extension <code>.service</code>. Each service unit file may contain numerous directives that can execute system commands:\\n\\n* ExecStart, ExecStartPre, and ExecStartPost directives cover execution of commands when a services is started manually by 'systemctl' or on system start if the service is set to automatically start. \\n* ExecReload directive covers when a service restarts. \\n* ExecStop and ExecStopPost directives cover when a service is stopped or manually by 'systemctl'.\\n\\nAdversaries have used systemd functionality to establish persistent access to victim systems by creating and/or modifying service unit files that cause systemd to execute malicious commands at system boot.(Citation: Anomali Rocke March 2019)\\n\\nWhile adversaries typically require root privileges to create/modify service unit files in the <code>/etc/systemd/system</code> and <code>/usr/lib/systemd/system</code> directories, low privilege users can create/modify service unit files in directories such as <code>~/.config/systemd/user/</code> to achieve user-level persistence.(Citation: Rapid7 Service Persistence 22JUNE2016)\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': \"Systemd service unit files may be detected by auditing file creation and modification events within the <code>/etc/systemd/system</code>, <code>/usr/lib/systemd/system/</code>, and <code>/home/<username>/.config/systemd/user/</code> directories, as well as associated symbolic links. Suspicious processes or scripts spawned in this manner will have a parent process of ‘systemd’, a parent process ID of 1, and will usually execute as the ‘root’ user.\\n\\nSuspicious systemd services can also be identified by comparing results against a trusted system baseline. Malicious systemd services may be detected by using the systemctl utility to examine system wide services: <code>systemctl list-units -–type=service –all</code>. Analyze the contents of <code>.service</code> files present on the file system and ensure that they refer to legitimate, expected executables.\\n\\nAuditing the execution and command-line arguments of the 'systemctl' utility, as well related utilities such as <code>/usr/sbin/service</code> may reveal malicious systemd service execution.\", 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution', 'Service: Service Creation', 'File: File Creation', 'File: File Modification', 'Service: Service Modification'], 'x_mitre_permissions_required': ['User', 'root']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1bac86ba-41aa-4f62-9d6b-405eac99b485",
+                        "lookup_data": {
+                            "description": "Detects a creation of systemd services which could be used by adversaries to execute malicious code.",
+                            "raw": "author: Pawel Mazur\ndate: 2022/02/03\ndescription: Detects a creation of systemd services which could be used by adversaries\n  to execute malicious code.\ndetection:\n  condition: path and 1 of name_*\n  name_1:\n    name|startswith:\n    - /usr/lib/systemd/system/\n    - /etc/systemd/system/\n  name_2:\n    name|contains: /.config/systemd/user/\n  path:\n    nametype: CREATE\n    type: PATH\nfalsepositives:\n- Admin work like legit service installs.\nid: 1bac86ba-41aa-4f62-9d6b-405eac99b485\nlevel: medium\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/02/06\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1543.002/T1543.002.md\nstatus: test\ntags:\n- attack.persistence\n- attack.t1543.002\ntitle: Systemd Service Creation\n",
+                            "sigma:id": "1bac86ba-41aa-4f62-9d6b-405eac99b485",
+                            "title": "Systemd Service Creation",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1543.002",
+                "display_name": "Create or Modify System Process: SysV/Systemd Service",
+                "atomic_tests": [
+                    {
+                        "name": "Create Systemd Service",
+                        "auto_generated_guid": "d9e4f24f-aa67-4c6e-bcbf-85622b697a7c",
+                        "description": "This test creates a Systemd service unit file and enables it as a service.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "systemd_service_path": {
+                                "description": "Path to systemd service unit file",
+                                "type": "path",
+                                "default": "/etc/systemd/system"
+                            },
+                            "systemd_service_file": {
+                                "description": "File name of systemd service unit file",
+                                "type": "string",
+                                "default": "art-systemd-service.service"
+                            },
+                            "execstoppost_action": {
+                                "description": "ExecStopPost action for Systemd service",
+                                "type": "string",
+                                "default": "/bin/touch /tmp/art-systemd-execstoppost-marker"
+                            },
+                            "execreload_action": {
+                                "description": "ExecReload action for Systemd service",
+                                "type": "string",
+                                "default": "/bin/touch /tmp/art-systemd-execreload-marker"
+                            },
+                            "execstart_action": {
+                                "description": "ExecStart action for Systemd service",
+                                "type": "string",
+                                "default": "/bin/touch /tmp/art-systemd-execstart-marker"
+                            },
+                            "execstop_action": {
+                                "description": "ExecStop action for Systemd service",
+                                "type": "string",
+                                "default": "/bin/touch /tmp/art-systemd-execstop-marker"
+                            },
+                            "execstartpre_action": {
+                                "description": "ExecStartPre action for Systemd service",
+                                "type": "string",
+                                "default": "/bin/touch /tmp/art-systemd-execstartpre-marker"
+                            },
+                            "execstartpost_action": {
+                                "description": "ExecStartPost action for Systemd service",
+                                "type": "string",
+                                "default": "/bin/touch /tmp/art-systemd-execstartpost-marker"
+                            }
+                        },
+                        "executor": {
+                            "command": "echo \"[Unit]\" > #{systemd_service_path}/#{systemd_service_file}\necho \"Description=Atomic Red Team Systemd Service\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"[Service]\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"Type=simple\"\necho \"ExecStart=#{execstart_action}\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"ExecStartPre=#{execstartpre_action}\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"ExecStartPost=#{execstartpost_action}\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"ExecReload=#{execreload_action}\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"ExecStop=#{execstop_action}\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"ExecStopPost=#{execstoppost_action}\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"[Install]\" >> #{systemd_service_path}/#{systemd_service_file}\necho \"WantedBy=default.target\" >> #{systemd_service_path}/#{systemd_service_file}\nsystemctl daemon-reload\nsystemctl enable #{systemd_service_file}\nsystemctl start #{systemd_service_file}\n",
+                            "cleanup_command": "systemctl stop #{systemd_service_file}\nsystemctl disable #{systemd_service_file}\nrm -rf #{systemd_service_path}/#{systemd_service_file}\nsystemctl daemon-reload\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create SysV Service",
+                        "auto_generated_guid": "760fe8d2-79d9-494f-905e-a239a3df86f6",
+                        "description": "This test creates a SysV service unit file and enables it as a service.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "rc_service_path": {
+                                "description": "Path to rc service file",
+                                "type": "path",
+                                "default": "/usr/local/etc/rc.d"
+                            },
+                            "rc_service_file": {
+                                "description": "File name of rc service file",
+                                "type": "string",
+                                "default": "art-test"
+                            }
+                        },
+                        "executor": {
+                            "command": "echo '#\\!/bin/sh' > #{rc_service_path}/#{rc_service_file}\necho ' ' >> #{rc_service_path}/#{rc_service_file}\necho '#' >> #{rc_service_path}/#{rc_service_file}\necho '# PROVIDE: art-test' >> #{rc_service_path}/#{rc_service_file}\necho '# REQUIRE: LOGIN' >> #{rc_service_path}/#{rc_service_file}\necho '# KEYWORD: shutdown' >> #{rc_service_path}/#{rc_service_file}\necho ' ' >> #{rc_service_path}/#{rc_service_file}\necho '. /etc/rc.subr' >> #{rc_service_path}/#{rc_service_file}\necho ' ' >> #{rc_service_path}/#{rc_service_file}\necho 'name=\"art_test\"' >> #{rc_service_path}/#{rc_service_file}\necho 'rcvar=art_test_enable' >> #{rc_service_path}/#{rc_service_file}\necho 'load_rc_config ${name}' >> #{rc_service_path}/#{rc_service_file}\necho 'command=\"/usr/bin/touch\"' >> #{rc_service_path}/#{rc_service_file}\necho 'start_cmd=\"art_test_start\"' >> #{rc_service_path}/#{rc_service_file}\necho '' >> #{rc_service_path}/#{rc_service_file}\necho 'art_test_start()' >> #{rc_service_path}/#{rc_service_file}     \necho '{' >> #{rc_service_path}/#{rc_service_file}\necho '  ${command} /tmp/art-test.marker' >> #{rc_service_path}/#{rc_service_file}\necho '}' >> #{rc_service_path}/#{rc_service_file}\necho ' ' >> #{rc_service_path}/#{rc_service_file}     \necho 'run_rc_command \"$1\"' >> #{rc_service_path}/#{rc_service_file}\nchmod +x #{rc_service_path}/#{rc_service_file}\nservice art-test enable\nservice art-test start\n",
+                            "cleanup_command": "sysrc -x art_test_enable\nrm -f #{rc_service_path}/#{rc_service_file}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Create Systemd Service file,  Enable the service , Modify and Reload the service.",
+                        "auto_generated_guid": "c35ac4a8-19de-43af-b9f8-755da7e89c89",
+                        "description": "This test creates a systemd service unit file and enables it to autostart on boot. Once service is created and enabled, it also modifies this same service file showcasing both Creation and Modification of system process. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependencies": [
+                            {
+                                "description": "System must be Ubuntu ,Kali OR CentOS.\n",
+                                "prereq_command": "if [ $(cat /etc/os-release | grep -i ID=ubuntu) ] || [ $(cat /etc/os-release | grep -i ID=kali) ] || [ $(cat /etc/os-release | grep -i 'ID=\"centos\"') ]; then exit /b 0; else exit /b 1; fi;\n",
+                                "get_prereq_command": "echo Please run from Ubuntu ,Kali OR CentOS.\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "bash",
+                            "elevation_required": true,
+                            "command": "echo \"#!/bin/bash\" > /etc/init.d/T1543.002\necho \"### BEGIN INIT INFO\" >> /etc/init.d/T1543.002\necho \"# Provides : Atomic Test T1543.002\" >> /etc/init.d/T1543.002\necho \"# Required-Start: \\$all\" >> /etc/init.d/T1543.002\necho \"# Required-Stop : \" >> /etc/init.d/T1543.002\necho \"# Default-Start: 2 3 4 5\" >> /etc/init.d/T1543.002\necho \"# Default-Stop: \" >> /etc/init.d/T1543.002\necho \"# Short Description: Atomic Test for Systemd Service Creation\" >> /etc/init.d/T1543.002\necho \"### END INIT INFO\" >> /etc/init.d/T1543.002\necho \"python3 -c \\\"import os, base64;exec(base64.b64decode('aW1wb3J0IG9zCm9zLnBvcGVuKCdlY2hvIGF0b21pYyB0ZXN0IGZvciBDcmVhdGluZyBTeXN0ZW1kIFNlcnZpY2UgVDE1NDMuMDAyID4gL3RtcC9UMTU0My4wMDIuc3lzdGVtZC5zZXJ2aWNlLmNyZWF0aW9uJykK')) \\\" \" >> /etc/init.d/T1543.002\nchmod +x /etc/init.d/T1543.002\nif [ $(cat /etc/os-release | grep -i ID=ubuntu) ] || [ $(cat /etc/os-release | grep -i ID=kali) ]; then update-rc.d T1543.002 defaults; elif [ $(cat /etc/os-release | grep -i 'ID=\"centos\"') ]; then chkconfig T1543.002 on ; else echo \"Please run this test on Ubnutu , kali OR centos\" ; fi\nsystemctl enable T1543.002\nsystemctl start T1543.002\necho \"python3 -c \\\"import os, base64;exec(base64.b64decode('aW1wb3J0IG9zCm9zLnBvcGVuKCdlY2hvIGF0b21pYyB0ZXN0IGZvciBtb2RpZnlpbmcgYSBTeXN0ZW1kIFNlcnZpY2UgVDE1NDMuMDAyID4gL3RtcC9UMTU0My4wMDIuc3lzdGVtZC5zZXJ2aWNlLm1vZGlmaWNhdGlvbicpCg=='))\\\"\" | sudo tee -a /etc/init.d/T1543.002\nsystemctl daemon-reload\nsystemctl restart T1543.002\n",
+                            "cleanup_command": "systemctl stop T1543.002\nsystemctl disable T1543.002\nrm -rf /etc/init.d/T1543.002\nsystemctl daemon-reload\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:18:11"
+}

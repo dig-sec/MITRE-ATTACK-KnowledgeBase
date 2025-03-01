@@ -1,0 +1,82 @@
+{
+    "id": "T1055.002",
+    "name": "Portable Executable Injection",
+    "description": "Adversaries may inject portable executables (PE) into processes in order to evade process-based defenses as well as possibly elevate privileges. PE injection is a method of executing arbitrary code in the address space of a separate live process.\nPE injection is commonly performed by copying code (perhaps without a file on disk) into the virtual address space of the target process before invoking it via a new thread. The write can be performed with native Windows API calls such as `VirtualAllocEx` and `WriteProcessMemory`, then invoked with `CreateRemoteThread` or additional code (ex: shellcode). The displacement of the injected code does introduce the additional requirement for functionality to remap memory references. (Citation: Elastic Process Injection July 2017)\nRunning code in the context of another process may allow access to the process's memory, system/network resources, and possibly elevated privileges. Execution via PE injection may also evade detection from security products since the execution is masked under a legitimate process.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion, Privilege Escalation",
+    "data_sources": "Process: Process Modification, Process: OS API Execution, Process: Process Access",
+    "detection": "Monitoring Windows API calls indicative of the various types of code injection may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances for known bad sequences of calls, since benign use of API functions may be common and difficult to distinguish from malicious behavior. Windows API calls such as `CreateRemoteThread` and those that can be used to modify memory within another process, such as `VirtualAllocEx`/`WriteProcessMemory`, may be used for this technique.(Citation: Elastic Process Injection July 2017)\nAnalyze process behavior to determine if a process is performing actions it usually does not, such as opening network connections, reading files, or other suspicious actions that could relate to post-compromise behavior.",
+    "url": "https://attack.mitre.org/techniques/T1055/002",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5f113a8f-8b61-41ca-b90f-d374fa7e4a39",
+                    "806a49c4-970d-43f9-9acc-ac0ee11e6662"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5f113a8f-8b61-41ca-b90f-d374fa7e4a39",
+                        "lookup_data": {
+                            "description": "Detects the access to processes by other suspicious processes which have reflectively loaded libraries in their memory space. An example is SilentTrinity C2 behaviour. Generally speaking, when Sysmon EventID 10 cannot reference a stack call to a dll loaded from disk (the standard way), it will display \"UNKNOWN\" as the module name. Usually this means the stack call points to a module that was reflectively loaded in memory. Adding to this, it is not common to see such few calls in the stack (ntdll.dll --> kernelbase.dll --> unknown) which essentially means that most of the functions required by the process to execute certain routines are already present in memory, not requiring any calls to external libraries. The latter should also be considered suspicious.",
+                            "raw": "author: Perez Diego (@darkquassar), oscd.community, Jonhnathan Ribeiro\ndate: 2019/10/27\ndescription: Detects the access to processes by other suspicious processes which have\n  reflectively loaded libraries in their memory space. An example is SilentTrinity\n  C2 behaviour. Generally speaking, when Sysmon EventID 10 cannot reference a stack\n  call to a dll loaded from disk (the standard way), it will display \"UNKNOWN\" as\n  the module name. Usually this means the stack call points to a module that was reflectively\n  loaded in memory. Adding to this, it is not common to see such few calls in the\n  stack (ntdll.dll --> kernelbase.dll --> unknown) which essentially means that most\n  of the functions required by the process to execute certain routines are already\n  present in memory, not requiring any calls to external libraries. The latter should\n  also be considered suspicious.\ndetection:\n  condition: (selection1 or selection2) or (selection3 and granted_access) and not\n    filter\n  filter:\n    SourceImage|endswith:\n    - \\Windows\\System32\\sdiagnhost.exe\n  granted_access:\n    GrantedAccess:\n    - '0x1F0FFF'\n    - '0x1F1FFF'\n    - '0x143A'\n    - '0x1410'\n    - '0x1010'\n    - '0x1F2FFF'\n    - '0x1F3FFF'\n    - '0x1FFFFF'\n  selection1:\n    CallTrace|contains|all:\n    - C:\\\\Windows\\\\SYSTEM32\\\\ntdll.dll+\n    - '|C:\\\\Windows\\\\System32\\\\KERNELBASE.dll+'\n    - '|UNKNOWN('\n    - )\n  selection2:\n    CallTrace|contains|all:\n    - UNKNOWN(\n    - )|UNKNOWN(\n    CallTrace|endswith: )\n  selection3:\n    CallTrace|contains: UNKNOWN\nfalsepositives:\n- Low\nfields:\n- ComputerName\n- User\n- SourceImage\n- TargetImage\n- CallTrace\nid: 5f113a8f-8b61-41ca-b90f-d374fa7e4a39\nlevel: critical\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2021/05/16\nreferences:\n- https://azure.microsoft.com/en-ca/blog/detecting-in-memory-attacks-with-sysmon-and-azure-security-center/\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1055.001\n- attack.t1055.002\n- attack.t1055\ntitle: Suspicious In-Memory Module Execution\n",
+                            "sigma:id": "5f113a8f-8b61-41ca-b90f-d374fa7e4a39",
+                            "title": "Suspicious In-Memory Module Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "806a49c4-970d-43f9-9acc-ac0ee11e6662",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1055.002",
+                            "mitre-cti:description": "Adversaries may inject portable executables (PE) into processes in order to evade process-based defenses as well as possibly elevate privileges. PE injection is a method of executing arbitrary code in the address space of a separate live process. \n\nPE injection is commonly performed by copying code (perhaps without a file on disk) into the virtual address space of the target process before invoking it via a new thread. The write can be performed with native Windows API calls such as <code>VirtualAllocEx</code> and <code>WriteProcessMemory</code>, then invoked with <code>CreateRemoteThread</code> or additional code (ex: shellcode). The displacement of the injected code does introduce the additional requirement for functionality to remap memory references. (Citation: Elastic Process Injection July 2017) \n\nRunning code in the context of another process may allow access to the process's memory, system/network resources, and possibly elevated privileges. Execution via PE injection may also evade detection from security products since the execution is masked under a legitimate process. ",
+                            "mitre-cti:name": "Portable Executable Injection",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--806a49c4-970d-43f9-9acc-ac0ee11e6662', 'type': 'attack-pattern', 'created': '2020-01-14T01:27:31.344Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1055.002', 'url': 'https://attack.mitre.org/techniques/T1055/002'}, {'url': 'https://www.endgame.com/blog/technical-blog/ten-process-injection-techniques-technical-survey-common-and-trending-process', 'description': 'Hosseini, A. (2017, July 18). Ten Process Injection Techniques: A Technical Survey Of Common And Trending Process Injection Techniques. Retrieved December 7, 2017.', 'source_name': 'Elastic Process Injection July 2017'}], 'modified': '2021-10-18T12:21:11.178Z', 'name': 'Portable Executable Injection', 'description': \"Adversaries may inject portable executables (PE) into processes in order to evade process-based defenses as well as possibly elevate privileges. PE injection is a method of executing arbitrary code in the address space of a separate live process. \\n\\nPE injection is commonly performed by copying code (perhaps without a file on disk) into the virtual address space of the target process before invoking it via a new thread. The write can be performed with native Windows API calls such as <code>VirtualAllocEx</code> and <code>WriteProcessMemory</code>, then invoked with <code>CreateRemoteThread</code> or additional code (ex: shellcode). The displacement of the injected code does introduce the additional requirement for functionality to remap memory references. (Citation: Elastic Process Injection July 2017) \\n\\nRunning code in the context of another process may allow access to the process's memory, system/network resources, and possibly elevated privileges. Execution via PE injection may also evade detection from security products since the execution is masked under a legitimate process. \", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': 'Monitoring Windows API calls indicative of the various types of code injection may generate a significant amount of data and may not be directly useful for defense unless collected under specific circumstances for known bad sequences of calls, since benign use of API functions may be common and difficult to distinguish from malicious behavior. Windows API calls such as <code>CreateRemoteThread</code> and those that can be used to modify memory within another process, such as <code>VirtualAllocEx</code>/<code>WriteProcessMemory</code>, may be used for this technique.(Citation: Elastic Process Injection July 2017)\\n\\nAnalyze process behavior to determine if a process is performing actions it usually does not, such as opening network connections, reading files, or other suspicious actions that could relate to post-compromise behavior. ', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Access', 'Process: OS API Execution', 'Process: Process Modification'], 'x_mitre_defense_bypassed': ['Anti-virus', 'Application control'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1055.002",
+                "display_name": "Process Injection: Portable Executable Injection",
+                "atomic_tests": [
+                    {
+                        "name": "Portable Executable Injection",
+                        "auto_generated_guid": "578025d5-faa9-4f6d-8390-aae739d503e1",
+                        "description": "This test injects a portable executable into a remote Notepad process memory using Portable Executable Injection and base-address relocation techniques. When successful, a message box will appear with the title \"Warning\" and the content \"Atomic Red Team\" after a few seconds.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "exe_binary": {
+                                "description": "PE binary",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1055.002\\bin\\RedInjection.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Portable Executable to inject must exist at specified location (#{exe_binary})\n",
+                                "prereq_command": "if (Test-Path \"#{exe_binary}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{exe_binary}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1055.002/bin/RedInjection.exe\" -OutFile \"#{exe_binary}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process \"#{exe_binary}\"\nStart-Sleep -Seconds 7\nGet-Process -Name Notepad -ErrorAction SilentlyContinue | Stop-Process -Force",
+                            "cleanup_command": "Get-Process -Name Notepad -ErrorAction SilentlyContinue | Stop-Process -Force",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:47:13"
+}

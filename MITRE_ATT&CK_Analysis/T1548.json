@@ -1,0 +1,257 @@
+{
+    "id": "T1548",
+    "name": "Abuse Elevation Control Mechanism",
+    "description": "Adversaries may circumvent mechanisms designed to control elevate privileges to gain higher-level permissions. Most modern systems contain native elevation control mechanisms that are intended to limit privileges that a user can perform on a machine. Authorization has to be granted to specific users in order to perform tasks that can be considered of higher risk. An adversary can perform several methods to take advantage of built-in control mechanisms in order to escalate privileges on a system.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Privilege Escalation, Defense Evasion",
+    "data_sources": "Process: Process Metadata, Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution, File: File Metadata, File: File Modification, Process: OS API Execution",
+    "detection": "Monitor the file system for files that have the setuid or setgid bits set. Also look for any process API calls for behavior that may be indicative of [Process Injection](T1055) and unusual loaded DLLs through [DLL Search Order Hijacking](T1574.001), which indicate attempts to gain access to higher privileged processes. On Linux, auditd can alert every time a user's actual ID and effective ID are different (this is what happens when you sudo).\nConsider monitoring for `/usr/libexec/security_authtrampoline` executions which may indicate that AuthorizationExecuteWithPrivileges is being executed. MacOS system logs may also indicate when AuthorizationExecuteWithPrivileges is being called. Monitoring OS API callbacks for the execution can also be a way to detect this behavior but requires specialized security tooling.\nOn Linux, auditd can alert every time a user's actual ID and effective ID are different (this is what happens when you sudo). This technique is abusing normal functionality in macOS and Linux systems, but sudo has the ability to log all input and output based on the `LOG_INPUT` and `LOG_OUTPUT` directives in the `/etc/sudoers` file.\nThere are many ways to perform UAC bypasses when a user is in the local administrator group on a system, so it may be difficult to target detection on all variations. Efforts should likely be placed on mitigation and collecting enough information on process launches and actions that could be performed before and after a UAC bypass is performed. Some UAC bypass methods rely on modifying specific, user-accessible Registry settings. Analysts should monitor Registry settings for unauthorized changes.",
+    "url": "https://attack.mitre.org/techniques/T1548",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "d522eca2-2973-4391-a3e0-ef0374321dae",
+                    "26e7c5e2-6545-481e-b7e6-050143459635",
+                    "dae8171c-5ec6-4396-b210-8466585b53e9",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "a0cb7110-edf0-47a4-9177-541a4083128a",
+                    "fe10751f-1995-40a5-aaa2-c97ccb4123fe",
+                    "07743f65-7ec9-404a-a519-913db7118a8d",
+                    "67720091-eee3-4d2d-ae16-8264567f6f5b",
+                    "883835a7-df45-43e4-bf1d-4268768afda4",
+                    "e52cb31c-10ed-4aea-bcb7-593c9f4a315b",
+                    "905d389b-b853-46d0-9d3d-dea0d3a3cd49",
+                    "067d8238-7127-451c-a9ec-fa78045b618b",
+                    "eb4ee171-8930-4c15-8917-9af8775417fb",
+                    "665e2d43-70dc-4ccc-9d27-026c9dd7ed9c",
+                    "174afcfa-6e40-4ae9-af64-496546389294",
+                    "91c95675-1f27-46d0-bead-d1ae96b97cd3",
+                    "f43f5d2f-3f2a-4cc8-b1af-81fde7dbaf0e",
+                    "0922467f-db53-4348-b7bf-dee8d0d348c6",
+                    "00eee2a5-fdb0-4746-a21d-e43fbdea5681",
+                    "b45ab1d2-712f-4f01-a751-df3826969807",
+                    "50a3c7aa-ec29-44a4-92c1-fce229eef6fc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "d522eca2-2973-4391-a3e0-ef0374321dae",
+                        "lookup_data": {
+                            "description": "Detection of unusual child processes by different system processes",
+                            "raw": "author: Semanur Guneysu @semanurtg, oscd.community\ndate: 2020/10/28\ndescription: Detection of unusual child processes by different system processes\ndetection:\n  condition: all of selection_* and not filter\n  filter:\n    CommandLine|contains|all:\n    - ' route '\n    - ' ADD '\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\cmd.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n    - Cmd.Exe\n  selection_parent:\n    ParentImage|endswith:\n    - \\winlogon.exe\n    - \\services.exe\n    - \\lsass.exe\n    - \\csrss.exe\n    - \\smss.exe\n    - \\wininit.exe\n    - \\spoolsv.exe\n    - \\searchindexer.exe\n    User|contains:\n    - AUTHORI\n    - AUTORI\nfalsepositives:\n- Unknown\nfields:\n- ParentImage\n- Image\n- User\n- CommandLine\nid: d522eca2-2973-4391-a3e0-ef0374321dae\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://image.slidesharecdn.com/kheirkhabarovoffzonefinal-181117201458/95/hunting-for-privilege-escalation-in-windows-environment-74-638.jpg\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1548\ntitle: Abused Debug Privilege by Arbitrary Parent Processes\n",
+                            "sigma:id": "d522eca2-2973-4391-a3e0-ef0374321dae",
+                            "title": "Abused Debug Privilege by Arbitrary Parent Processes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "26e7c5e2-6545-481e-b7e6-050143459635",
+                        "lookup_data": {
+                            "description": "Monitor and alert on conditional access changes where non approved actor removed CA Policy.",
+                            "raw": "author: Corissa Koopmans, '@corissalea'\ndate: 2022/07/19\ndescription: Monitor and alert on conditional access changes where non approved actor\n  removed CA Policy.\ndetection:\n  condition: selection\n  selection:\n    properties.message: Delete conditional access policy\nfalsepositives:\n- Misconfigured role permissions\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\nid: 26e7c5e2-6545-481e-b7e6-050143459635\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: CA Policy Removed by Non Approved Actor\n",
+                            "sigma:id": "26e7c5e2-6545-481e-b7e6-050143459635",
+                            "title": "CA Policy Removed by Non Approved Actor",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dae8171c-5ec6-4396-b210-8466585b53e9",
+                        "lookup_data": {
+                            "description": "Detects non-system users performing privileged operation os the SCM database",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Tim Shelton\ndate: 2019/08/15\ndescription: Detects non-system users performing privileged operation os the SCM database\ndetection:\n  condition: selection and not filter\n  filter:\n    ProcessName|endswith: :\\Windows\\System32\\services.exe\n    SubjectLogonId: '0x3e4'\n  selection:\n    EventID: 4674\n    ObjectName: servicesactive\n    ObjectType: SC_MANAGER OBJECT\n    PrivilegeList: SeTakeOwnershipPrivilege\nfalsepositives:\n- Unknown\nid: dae8171c-5ec6-4396-b210-8466585b53e9\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/09/18\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/07_discovery/WIN-190826010110.html\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1548\ntitle: SCM Database Privileged Operation\n",
+                            "sigma:id": "dae8171c-5ec6-4396-b210-8466585b53e9",
+                            "title": "SCM Database Privileged Operation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a0cb7110-edf0-47a4-9177-541a4083128a",
+                        "lookup_data": {
+                            "description": "Detects that a vulnerable Netlogon secure channel connection was allowed, which could be an indicator of CVE-2020-1472.",
+                            "raw": "author: NVISO\ndate: 2020/09/15\ndescription: Detects that a vulnerable Netlogon secure channel connection was allowed,\n  which could be an indicator of CVE-2020-1472.\ndetection:\n  condition: selection\n  selection:\n    EventID: 5829\n    Provider_Name: NetLogon\nfalsepositives:\n- Unknown\nfields:\n- SAMAccountName\nid: a0cb7110-edf0-47a4-9177-541a4083128a\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/12/25\nreferences:\n- https://support.microsoft.com/en-us/help/4557222/how-to-manage-the-changes-in-netlogon-secure-channel-connections-assoc\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1548\ntitle: Vulnerable Netlogon Secure Channel Connection Allowed\n",
+                            "sigma:id": "a0cb7110-edf0-47a4-9177-541a4083128a",
+                            "title": "Vulnerable Netlogon Secure Channel Connection Allowed",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fe10751f-1995-40a5-aaa2-c97ccb4123fe",
+                        "lookup_data": {
+                            "description": "Detects attempts to discover the files with setuid/setgid capability on them. That would allow adversary to escalate their privileges.",
+                            "raw": "author: Pawel Mazur\ndate: 2021/11/28\ndescription: Detects attempts to discover the files with setuid/setgid capability\n  on them. That would allow adversary to escalate their privileges.\ndetection:\n  condition: selection\n  selection:\n    a0: getcap\n    a1: -r\n    a2: /\n    type: EXECVE\nfalsepositives:\n- Unknown\nid: fe10751f-1995-40a5-aaa2-c97ccb4123fe\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/12/25\nreferences:\n- https://man7.org/linux/man-pages/man8/getcap.8.html\n- https://www.hackingarticles.in/linux-privilege-escalation-using-capabilities/\n- https://mn3m.info/posts/suid-vs-capabilities/\n- https://int0x33.medium.com/day-44-linux-capabilities-privilege-escalation-via-openssl-with-selinux-enabled-and-enforced-74d2bec02099\nstatus: test\ntags:\n- attack.collection\n- attack.privilege_escalation\n- attack.t1123\n- attack.t1548\ntitle: Linux Capabilities Discovery\n",
+                            "sigma:id": "fe10751f-1995-40a5-aaa2-c97ccb4123fe",
+                            "title": "Linux Capabilities Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "07743f65-7ec9-404a-a519-913db7118a8d",
+                        "lookup_data": {
+                            "description": "Detects changes to 'HKCU\\Software\\Classes\\Folder\\shell\\open\\command\\DelegateExecute'",
+                            "raw": "author: Omkar Gudhate\ndate: 2020/09/27\ndescription: Detects changes to 'HKCU\\Software\\Classes\\Folder\\shell\\open\\command\\DelegateExecute'\ndetection:\n  condition: selection\n  selection:\n    EventType: Setvalue\n    TargetObject: HKCU\\Software\\Classes\\Folder\\shell\\open\\command\\DelegateExecute\nfalsepositives:\n- Unknown\nid: 07743f65-7ec9-404a-a519-913db7118a8d\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/06/26\nreferences:\n- http://blog.sevagas.com/?Yet-another-sdclt-UAC-bypass\n- https://www.exploit-db.com/exploits/47696\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1546\n- attack.t1548\ntitle: COM Hijack via Sdclt\n",
+                            "sigma:id": "07743f65-7ec9-404a-a519-913db7118a8d",
+                            "title": "COM Hijack via Sdclt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "67720091-eee3-4d2d-ae16-8264567f6f5b",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1548",
+                            "mitre-cti:description": "Adversaries may circumvent mechanisms designed to control elevate privileges to gain higher-level permissions. Most modern systems contain native elevation control mechanisms that are intended to limit privileges that a user can perform on a machine. Authorization has to be granted to specific users in order to perform tasks that can be considered of higher risk. An adversary can perform several methods to take advantage of built-in control mechanisms in order to escalate privileges on a system.",
+                            "mitre-cti:name": "Abuse Elevation Control Mechanism",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--67720091-eee3-4d2d-ae16-8264567f6f5b', 'type': 'attack-pattern', 'created': '2020-01-30T13:58:14.373Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1548', 'url': 'https://attack.mitre.org/techniques/T1548'}], 'modified': '2022-03-21T19:01:25.043Z', 'name': 'Abuse Elevation Control Mechanism', 'description': 'Adversaries may circumvent mechanisms designed to control elevate privileges to gain higher-level permissions. Most modern systems contain native elevation control mechanisms that are intended to limit privileges that a user can perform on a machine. Authorization has to be granted to specific users in order to perform tasks that can be considered of higher risk. An adversary can perform several methods to take advantage of built-in control mechanisms in order to escalate privileges on a system.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': \"Monitor the file system for files that have the setuid or setgid bits set. Also look for any process API calls for behavior that may be indicative of [Process Injection](https://attack.mitre.org/techniques/T1055) and unusual loaded DLLs through [DLL Search Order Hijacking](https://attack.mitre.org/techniques/T1574/001), which indicate attempts to gain access to higher privileged processes. On Linux, auditd can alert every time a user's actual ID and effective ID are different (this is what happens when you sudo).\\n\\nConsider monitoring for <code>/usr/libexec/security_authtrampoline</code> executions which may indicate that AuthorizationExecuteWithPrivileges is being executed. MacOS system logs may also indicate when AuthorizationExecuteWithPrivileges is being called. Monitoring OS API callbacks for the execution can also be a way to detect this behavior but requires specialized security tooling.\\n\\nOn Linux, auditd can alert every time a user's actual ID and effective ID are different (this is what happens when you sudo). This technique is abusing normal functionality in macOS and Linux systems, but sudo has the ability to log all input and output based on the <code>LOG_INPUT</code> and <code>LOG_OUTPUT</code> directives in the <code>/etc/sudoers</code> file.\\n\\nThere are many ways to perform UAC bypasses when a user is in the local administrator group on a system, so it may be difficult to target detection on all variations. Efforts should likely be placed on mitigation and collecting enough information on process launches and actions that could be performed before and after a UAC bypass is performed. Some UAC bypass methods rely on modifying specific, user-accessible Registry settings. Analysts should monitor Registry settings for unauthorized changes.\", 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'File: File Modification', 'Windows Registry: Windows Registry Key Modification', 'Process: Process Metadata', 'Process: Process Creation', 'Process: OS API Execution', 'File: File Metadata'], 'x_mitre_permissions_required': ['Administrator', 'User'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "883835a7-df45-43e4-bf1d-4268768afda4",
+                        "lookup_data": {
+                            "description": "Detects a regedit started with TrustedInstaller privileges or by ProcessHacker.exe",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/05/27\ndescription: Detects a regedit started with TrustedInstaller privileges or by ProcessHacker.exe\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\regedit.exe\n    ParentImage|endswith:\n    - \\TrustedInstaller.exe\n    - \\ProcessHacker.exe\nfalsepositives:\n- Unlikely\nid: 883835a7-df45-43e4-bf1d-4268768afda4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://twitter.com/1kwpeter/status/1397816101455765504\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1548\ntitle: Regedit as Trusted Installer\n",
+                            "sigma:id": "883835a7-df45-43e4-bf1d-4268768afda4",
+                            "title": "Regedit as Trusted Installer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e52cb31c-10ed-4aea-bcb7-593c9f4a315b",
+                        "lookup_data": {
+                            "description": "Detects attempts to bypass User Account Control (UAC) by hijacking the Microsoft Management Console (MMC) Windows Firewall snap-in",
+                            "raw": "author: Tim Rauch\ndate: 2022/09/27\ndescription: Detects attempts to bypass User Account Control (UAC) by hijacking the\n  Microsoft Management Console (MMC) Windows Firewall snap-in\ndetection:\n  condition: selection and not filter\n  filter:\n    Image|endswith: \\WerFault.exe\n  selection:\n    ParentCommandLine|contains: WF.msc\n    ParentImage|endswith: \\mmc.exe\nfalsepositives:\n- Unknown\nid: e52cb31c-10ed-4aea-bcb7-593c9f4a315b\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.elastic.co/guide/en/security/current/uac-bypass-via-windows-firewall-snap-in-hijack.html#uac-bypass-via-windows-firewall-snap-in-hijack\nstatus: experimental\ntags:\n- attack.privilege_escalation\n- attack.t1548\ntitle: UAC Bypass via Windows Firewall Snap-In Hijack\n",
+                            "sigma:id": "e52cb31c-10ed-4aea-bcb7-593c9f4a315b",
+                            "title": "UAC Bypass via Windows Firewall Snap-In Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "905d389b-b853-46d0-9d3d-dea0d3a3cd49",
+                        "lookup_data": {
+                            "description": "Identifies the suspicious use of AssumeRole. Attackers could move laterally and escalate privileges.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/07/24\ndescription: Identifies the suspicious use of AssumeRole. Attackers could move laterally\n  and escalate privileges.\ndetection:\n  condition: selection\n  selection:\n    userIdentity.sessionContext.sessionIssuer.type: Role\n    userIdentity.type: AssumedRole\nfalsepositives:\n- AssumeRole may be done by a system or network administrator. Verify whether the\n  user identity, user agent, and/or hostname should be making changes in your environment.\n- AssumeRole from unfamiliar users or hosts should be investigated. If known behavior\n  is causing false positives, it can be exempted from the rule.\n- Automated processes that uses Terraform may lead to false positives.\nid: 905d389b-b853-46d0-9d3d-dea0d3a3cd49\nlevel: low\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/10/09\nreferences:\n- https://github.com/elastic/detection-rules/pull/1214\n- https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.t1548\n- attack.t1550\n- attack.t1550.001\ntitle: AWS STS AssumeRole Misuse\n",
+                            "sigma:id": "905d389b-b853-46d0-9d3d-dea0d3a3cd49",
+                            "title": "AWS STS AssumeRole Misuse",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "067d8238-7127-451c-a9ec-fa78045b618b",
+                        "lookup_data": {
+                            "description": "Detects the doas tool execution in linux host platform. This utility tool allow standard users to perform tasks as root, the same way sudo does.",
+                            "raw": "author: Sittikorn S, Teoderick Contreras\ndate: 2022/01/20\ndescription: Detects the doas tool execution in linux host platform. This utility\n  tool allow standard users to perform tasks as root, the same way sudo does.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: /doas\nfalsepositives:\n- Unlikely\nid: 067d8238-7127-451c-a9ec-fa78045b618b\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://research.splunk.com/endpoint/linux_doas_tool_execution/\n- https://www.makeuseof.com/how-to-install-and-use-doas/\nstatus: stable\ntags:\n- attack.privilege_escalation\n- attack.t1548\ntitle: Linux Doas Tool Execution\n",
+                            "sigma:id": "067d8238-7127-451c-a9ec-fa78045b618b",
+                            "title": "Linux Doas Tool Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eb4ee171-8930-4c15-8917-9af8775417fb",
+                        "lookup_data": {
+                            "description": "CERT-FR report extended - sandworm intrusion set campaign targeting Centreon systems",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/eb4ee171-8930-4c15-8917-9af8775417fb.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1613463604",
+                            "uuid": "eb4ee171-8930-4c15-8917-9af8775417fb",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "665e2d43-70dc-4ccc-9d27-026c9dd7ed9c",
+                        "lookup_data": {
+                            "description": "Monitor and alert on group membership removal of groups that have CA policy modification access",
+                            "raw": "author: Mark Morowczynski '@markmorow', Thomas Detzner '@tdetzner'\ndate: 2022/08/04\ndescription: Monitor and alert on group membership removal of groups that have CA\n  policy modification access\ndetection:\n  condition: selection\n  selection:\n    properties.message: Remove member from group\nfalsepositives:\n- User removed from the group is approved\nid: 665e2d43-70dc-4ccc-9d27-026c9dd7ed9c\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: User Removed From Group With CA Policy Modification Access\n",
+                            "sigma:id": "665e2d43-70dc-4ccc-9d27-026c9dd7ed9c",
+                            "title": "User Removed From Group With CA Policy Modification Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "174afcfa-6e40-4ae9-af64-496546389294",
+                        "lookup_data": {
+                            "description": "Detects when a process, such as mimikatz, accesses the memory of svchost to dump credentials",
+                            "raw": "author: Florent Labouyrie\ndate: 2021/04/30\ndescription: Detects when a process, such as mimikatz, accesses the memory of svchost\n  to dump credentials\ndetection:\n  condition: selection_process and selection_memory and not filter_trusted_process_access\n  filter_trusted_process_access:\n    SourceImage|endswith:\n    - '*\\services.exe'\n    - '*\\msiexec.exe'\n  selection_memory:\n    GrantedAccess: '0x143a'\n  selection_process:\n    TargetImage|endswith: \\svchost.exe\nfalsepositives:\n- Non identified legit exectubale\nid: 174afcfa-6e40-4ae9-af64-496546389294\nlevel: high\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2022/10/09\nstatus: test\ntags:\n- attack.t1548\ntitle: SVCHOST Credential Dump\n",
+                            "sigma:id": "174afcfa-6e40-4ae9-af64-496546389294",
+                            "title": "SVCHOST Credential Dump",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "91c95675-1f27-46d0-bead-d1ae96b97cd3",
+                        "lookup_data": {
+                            "description": "Monitor and alert on group membership additions of groups that have CA policy modification access",
+                            "raw": "author: Mark Morowczynski '@markmorow', Thomas Detzner '@tdetzner'\ndate: 2022/08/04\ndescription: Monitor and alert on group membership additions of groups that have CA\n  policy modification access\ndetection:\n  condition: selection\n  selection:\n    properties.message: Add member from group\nfalsepositives:\n- User removed from the group is approved\nid: 91c95675-1f27-46d0-bead-d1ae96b97cd3\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: User Added To Group With CA Policy Modification Access\n",
+                            "sigma:id": "91c95675-1f27-46d0-bead-d1ae96b97cd3",
+                            "title": "User Added To Group With CA Policy Modification Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f43f5d2f-3f2a-4cc8-b1af-81fde7dbaf0e",
+                        "lookup_data": {
+                            "description": "Identifies when suspicious SAML activity has occurred in AWS. An adversary could gain backdoor access via SAML.",
+                            "raw": "author: Austin Songer\ndate: 2021/09/22\ndescription: Identifies when suspicious SAML activity has occurred in AWS. An adversary\n  could gain backdoor access via SAML.\ndetection:\n  condition: 1 of selection_*\n  selection_iam:\n    eventName: UpdateSAMLProvider\n    eventSource: iam.amazonaws.com\n  selection_sts:\n    eventName: AssumeRoleWithSAML\n    eventSource: sts.amazonaws.com\nfalsepositives:\n- Automated processes that uses Terraform may lead to false positives.\n- SAML Provider could be updated by a system administrator. Verify whether the user\n  identity, user agent, and/or hostname should be making changes in your environment.\n- SAML Provider being updated from unfamiliar users should be investigated. If known\n  behavior is causing false positives, it can be exempted from the rule.\nid: f43f5d2f-3f2a-4cc8-b1af-81fde7dbaf0e\nlevel: medium\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/12/18\nreferences:\n- https://docs.aws.amazon.com/IAM/latest/APIReference/API_UpdateSAMLProvider.html\n- https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithSAML.html\nstatus: test\ntags:\n- attack.initial_access\n- attack.t1078\n- attack.lateral_movement\n- attack.t1548\n- attack.privilege_escalation\n- attack.t1550\n- attack.t1550.001\ntitle: AWS Suspicious SAML Activity\n",
+                            "sigma:id": "f43f5d2f-3f2a-4cc8-b1af-81fde7dbaf0e",
+                            "title": "AWS Suspicious SAML Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0922467f-db53-4348-b7bf-dee8d0d348c6",
+                        "lookup_data": {
+                            "description": "Monitor and alert on conditional access changes.",
+                            "raw": "author: Corissa Koopmans, '@corissalea'\ndate: 2022/07/18\ndescription: Monitor and alert on conditional access changes.\ndetection:\n  condition: selection\n  selection:\n    properties.message: Add conditional access policy\nfalsepositives:\n- Misconfigured role permissions\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\nid: 0922467f-db53-4348-b7bf-dee8d0d348c6\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1548\ntitle: New CA Policy by Non-approved Actor\n",
+                            "sigma:id": "0922467f-db53-4348-b7bf-dee8d0d348c6",
+                            "title": "New CA Policy by Non-approved Actor",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "00eee2a5-fdb0-4746-a21d-e43fbdea5681",
+                        "lookup_data": {
+                            "description": "Detects the creation of doas.conf file in linux host platform.",
+                            "raw": "author: Sittikorn S, Teoderick Contreras\ndate: 2022/01/20\ndescription: Detects the creation of doas.conf file in linux host platform.\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: /etc/doas.conf\nfalsepositives:\n- Unlikely\nid: 00eee2a5-fdb0-4746-a21d-e43fbdea5681\nlevel: medium\nlogsource:\n  category: file_event\n  product: linux\nmodified: 2022/12/31\nreferences:\n- https://research.splunk.com/endpoint/linux_doas_conf_file_creation/\n- https://www.makeuseof.com/how-to-install-and-use-doas/\nstatus: stable\ntags:\n- attack.privilege_escalation\n- attack.t1548\ntitle: Linux Doas Conf File Creation\n",
+                            "sigma:id": "00eee2a5-fdb0-4746-a21d-e43fbdea5681",
+                            "title": "Linux Doas Conf File Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b45ab1d2-712f-4f01-a751-df3826969807",
+                        "lookup_data": {
+                            "description": "Identifies the suspicious use of GetSessionToken. Tokens could be created and used by attackers to move laterally and escalate privileges.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/07/24\ndescription: Identifies the suspicious use of GetSessionToken. Tokens could be created\n  and used by attackers to move laterally and escalate privileges.\ndetection:\n  condition: selection\n  selection:\n    eventName: GetSessionToken\n    eventSource: sts.amazonaws.com\n    userIdentity.type: IAMUser\nfalsepositives:\n- GetSessionToken may be done by a system or network administrator. Verify whether\n  the user identity, user agent, and/or hostname should be making changes in your\n  environment. GetSessionToken from unfamiliar users or hosts should be investigated.\n  If known behavior is causing false positives, it can be exempted from the rule.\nid: b45ab1d2-712f-4f01-a751-df3826969807\nlevel: low\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/10/09\nreferences:\n- https://github.com/elastic/detection-rules/pull/1213\n- https://docs.aws.amazon.com/STS/latest/APIReference/API_GetSessionToken.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.privilege_escalation\n- attack.t1548\n- attack.t1550\n- attack.t1550.001\ntitle: AWS STS GetSessionToken Misuse\n",
+                            "sigma:id": "b45ab1d2-712f-4f01-a751-df3826969807",
+                            "title": "AWS STS GetSessionToken Misuse",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "50a3c7aa-ec29-44a4-92c1-fce229eef6fc",
+                        "lookup_data": {
+                            "description": "Monitor and alert on conditional access changes. Is Initiated by (actor) approved to make changes? Review Modified Properties and compare \"old\" vs \"new\" value.",
+                            "raw": "author: Corissa Koopmans, '@corissalea'\ndate: 2022/07/19\ndescription: Monitor and alert on conditional access changes. Is Initiated by (actor)\n  approved to make changes? Review Modified Properties and compare \"old\" vs \"new\"\n  value.\ndetection:\n  condition: keywords\n  keywords:\n  - Update conditional access policy\nfalsepositives:\n- Misconfigured role permissions\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\nid: 50a3c7aa-ec29-44a4-92c1-fce229eef6fc\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: CA Policy Updated by Non Approved Actor\n",
+                            "sigma:id": "50a3c7aa-ec29-44a4-92c1-fce229eef6fc",
+                            "title": "CA Policy Updated by Non Approved Actor",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": []
+    },
+    "timestamp": "2025-02-28 15:50:00"
+}

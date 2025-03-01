@@ -1,0 +1,121 @@
+{
+    "id": "T1114.001",
+    "name": "Local Email Collection",
+    "description": "Adversaries may target user email on local systems to collect sensitive information. Files containing email data can be acquired from a user’s local system, such as Outlook storage or cache files.\nOutlook stores data locally in offline data files with an extension of .ost. Outlook 2010 and later supports .ost file sizes up to 50GB, while earlier versions of Outlook support up to 20GB.(Citation: Outlook File Sizes) IMAP accounts in Outlook 2013 (and earlier) and POP accounts use Outlook Data Files (.pst) as opposed to .ost, whereas IMAP accounts in Outlook 2016 (and later) use .ost files. Both types of Outlook data files are typically stored in `C:Users<username>DocumentsOutlook Files` or `C:Users<username>AppDataLocalMicrosoftOutlook`.(Citation: Microsoft Outlook Files)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Collection",
+    "data_sources": "File: File Access, Command: Command Execution",
+    "detection": "Monitor processes and command-line arguments for actions that could be taken to gather local email files. Monitor for unusual processes accessing local email files. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1114/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1114.001",
+                "atomic_attack_guid": "3f1b5096-0139-4736-9b78-19bcb02bb1cb",
+                "atomic_attack_name": "Email Collection with PowerShell Get-Inbox",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Use Short Name Path in Command Line",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_ntfs_short_name_path_use_cli.yml",
+                        "remote_content": "title: Use Short Name Path in Command Line\nid: 349d891d-fef0-4fe4-bc53-eee623a15969\nrelated:\n    - id: a96970af-f126-420d-90e1-d37bf25e50e1\n      type: similar\nstatus: test\ndescription: Detect use of the Windows 8.3 short name. Which could be used as a method to avoid command-line detection\nreferences:\n    - https://www.acunetix.com/blog/articles/windows-short-8-3-filenames-web-security-problem/\n    - https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-2000-server/cc959352(v=technet.10)\n    - https://twitter.com/frack113/status/1555830623633375232\nauthor: frack113, Nasreddine Bencherchali\ndate: 2022-08-07\nmodified: 2022-10-26\ntags:\n    - attack.defense-evasion\n    - attack.t1564.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '~1\\'\n            - '~2\\'\n    filter:\n        - ParentImage:\n              - 'C:\\Windows\\System32\\Dism.exe'\n              - 'C:\\Windows\\System32\\cleanmgr.exe'\n              - 'C:\\Program Files\\GPSoftware\\Directory Opus\\dopus.exe'\n        - ParentImage|endswith:\n              - '\\WebEx\\WebexHost.exe'\n              - '\\thor\\thor64.exe'\n              - '\\veam.backup.shell.exe'\n              - '\\winget.exe'\n              - '\\Everything\\Everything.exe'\n        - ParentImage|contains: '\\AppData\\Local\\Temp\\WinGet\\'\n        - CommandLine|contains:\n              - '\\appdata\\local\\webex\\webex64\\meetings\\wbxreport.exe'\n              - 'C:\\Program Files\\Git\\post-install.bat'\n              - 'C:\\Program Files\\Git\\cmd\\scalar.exe'\n    condition: selection and not filter\nfalsepositives:\n    - Applications could use this notation occasionally which might generate some false positives. In that case investigate the parent and child process.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Script Interpreter Execution From Suspicious Folder",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_script_exec_from_env_folder.yml",
+                        "remote_content": "title: Script Interpreter Execution From Suspicious Folder\nid: 1228c958-e64e-4e71-92ad-7d429f4138ba\nstatus: test\ndescription: Detects a suspicious script execution in temporary folders or folders accessible by environment variables\nreferences:\n    - https://www.virustotal.com/gui/file/91ba814a86ddedc7a9d546e26f912c541205b47a853d227756ab1334ade92c3f\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/shuckworm-russia-ukraine-military\n    - https://learn.microsoft.com/en-us/windows/win32/shell/csidl\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-02-08\nmodified: 2023-06-16\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_proc_image:\n        Image|endswith:\n            - '\\cscript.exe'\n            - '\\mshta.exe'\n            - '\\wscript.exe'\n    selection_proc_flags:\n        CommandLine|contains:\n            - ' -ep bypass '\n            - ' -ExecutionPolicy bypass '\n            - ' -w hidden '\n            - '/e:javascript '\n            - '/e:Jscript '\n            - '/e:vbscript '\n    selection_proc_original:\n        OriginalFileName:\n            - 'cscript.exe'\n            - 'mshta.exe'\n            - 'wscript.exe'\n    selection_folders_1:\n        CommandLine|contains:\n            - ':\\Perflogs\\'\n            - ':\\Users\\Public\\'\n            - '\\AppData\\Local\\Temp'\n            - '\\AppData\\Roaming\\Temp'\n            - '\\Temporary Internet'\n            - '\\Windows\\Temp'\n    selection_folders_2:\n        - CommandLine|contains|all:\n              - ':\\Users\\'\n              - '\\Favorites\\'\n        - CommandLine|contains|all:\n              - ':\\Users\\'\n              - '\\Favourites\\'\n        - CommandLine|contains|all:\n              - ':\\Users\\'\n              - '\\Contacts\\'\n    condition: 1 of selection_proc_* and 1 of selection_folders_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Script Execution From Temp Folder",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_script_exec_from_temp.yml",
+                        "remote_content": "title: Suspicious Script Execution From Temp Folder\nid: a6a39bdb-935c-4f0a-ab77-35f4bbf44d33\nstatus: test\ndescription: Detects a suspicious script executions from temporary folder\nreferences:\n    - https://www.microsoft.com/security/blog/2021/07/13/microsoft-discovers-threat-actor-targeting-solarwinds-serv-u-software-with-0-day-exploit/\nauthor: Florian Roth (Nextron Systems), Max Altgelt (Nextron Systems), Tim Shelton\ndate: 2021-07-14\nmodified: 2022-10-05\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n            - '\\mshta.exe'\n            - '\\wscript.exe'\n            - '\\cscript.exe'\n        CommandLine|contains:\n            - '\\Windows\\Temp'\n            - '\\Temporary Internet'\n            - '\\AppData\\Local\\Temp'\n            - '\\AppData\\Roaming\\Temp'\n            - '%TEMP%'\n            - '%TMP%'\n            - '%LocalAppData%\\Temp'\n    filter:\n        CommandLine|contains:\n            - ' >'\n            - 'Out-File'\n            - 'ConvertTo-Json'\n            - '-WindowStyle hidden -Verb runAs'  # VSCode behaviour if file cannot be written as current user\n            - '\\Windows\\system32\\config\\systemprofile\\AppData\\Local\\Temp\\Amazon\\EC2-Windows\\' # EC2 AWS\n    condition: selection and not filter\nfalsepositives:\n    - Administrative scripts\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Change PowerShell Policies to an Insecure Level",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_set_policies_to_unsecure_level.yml",
+                        "remote_content": "title: Change PowerShell Policies to an Insecure Level\nid: 87e3c4e8-a6a8-4ad9-bb4f-46e7ff99a180\nrelated:\n    - id: cf2e938e-9a3e-4fe8-a347-411642b28a9f # ProcCreation Registry\n      type: similar\n    - id: 61d0475c-173f-4844-86f7-f3eebae1c66b # ScriptBlock\n      type: similar\n    - id: fad91067-08c5-4d1a-8d8c-d96a21b37814 # Registry\n      type: similar\nstatus: test\ndescription: Detects changing the PowerShell script execution policy to a potentially insecure level using the \"-ExecutionPolicy\" flag.\nreferences:\n    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-executionpolicy?view=powershell-7.4\n    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.4\n    - https://adsecurity.org/?p=2604\n    - https://thedfirreport.com/2021/11/01/from-zero-to-domain-admin/\nauthor: frack113\ndate: 2021-11-01\nmodified: 2023-12-13\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n    selection_option:\n        CommandLine|contains:\n            - '-executionpolicy '\n            - ' -ep '\n            - ' -exec '\n    selection_level:\n        CommandLine|contains:\n            - 'Bypass'\n            - 'Unrestricted'\n    condition: all of selection_*\nfalsepositives:\n    - Administrator scripts\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Malicious PowerShell Process - Execution Policy Bypass",
+                        "rule_link": "https://research.splunk.com/endpoint/9be56c82-b1cc-4318-87eb-d138afaaca39/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "2837e152-93c8-43d2-85ba-c3cd3c2ae614",
+                    "1e9eb839-294b-48cc-b0d3-c45555a2a004"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "2837e152-93c8-43d2-85ba-c3cd3c2ae614",
+                        "lookup_data": {
+                            "description": "Adversaries may target user email on local systems to collect sensitive information.\nFiles containing email data can be acquired from a users local system, such as Outlook storage or cache files.\n",
+                            "raw": "author: frack113\ndate: 2021/07/21\ndescription: 'Adversaries may target user email on local systems to collect sensitive\n  information.\n\n  Files containing email data can be acquired from a users local system, such as Outlook\n  storage or cache files.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - Get-Inbox.ps1\n    - Microsoft.Office.Interop.Outlook\n    - Microsoft.Office.Interop.Outlook.olDefaultFolders\n    - -comobject outlook.application\nfalsepositives:\n- Unknown\nid: 2837e152-93c8-43d2-85ba-c3cd3c2ae614\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1114.001/T1114.001.md\nstatus: test\ntags:\n- attack.collection\n- attack.t1114.001\ntitle: Powershell Local Email Collection\n",
+                            "sigma:id": "2837e152-93c8-43d2-85ba-c3cd3c2ae614",
+                            "title": "Powershell Local Email Collection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1e9eb839-294b-48cc-b0d3-c45555a2a004",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1114.001",
+                            "mitre-cti:description": "Adversaries may target user email on local systems to collect sensitive information. Files containing email data can be acquired from a user’s local system, such as Outlook storage or cache files.\n\nOutlook stores data locally in offline data files with an extension of .ost. Outlook 2010 and later supports .ost file sizes up to 50GB, while earlier versions of Outlook support up to 20GB.(Citation: Outlook File Sizes) IMAP accounts in Outlook 2013 (and earlier) and POP accounts use Outlook Data Files (.pst) as opposed to .ost, whereas IMAP accounts in Outlook 2016 (and later) use .ost files. Both types of Outlook data files are typically stored in `C:\\Users\\<username>\\Documents\\Outlook Files` or `C:\\Users\\<username>\\AppData\\Local\\Microsoft\\Outlook`.(Citation: Microsoft Outlook Files)",
+                            "mitre-cti:name": "Local Email Collection",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--1e9eb839-294b-48cc-b0d3-c45555a2a004', 'type': 'attack-pattern', 'created': '2020-02-19T18:46:06.098Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1114.001', 'url': 'https://attack.mitre.org/techniques/T1114/001'}, {'source_name': 'Outlook File Sizes', 'url': 'https://practical365.com/clients/office-365-proplus/outlook-cached-mode-ost-file-sizes/', 'description': \"N. O'Bryan. (2018, May 30). Managing Outlook Cached Mode and OST File Sizes. Retrieved February 19, 2020.\"}, {'source_name': 'Microsoft Outlook Files', 'url': 'https://support.office.com/en-us/article/introduction-to-outlook-data-files-pst-and-ost-222eaf92-a995-45d9-bde2-f331f60e2790', 'description': 'Microsoft. (n.d.). Introduction to Outlook Data Files (.pst and .ost). Retrieved February 19, 2020.'}], 'modified': '2020-03-24T17:59:20.983Z', 'name': 'Local Email Collection', 'description': 'Adversaries may target user email on local systems to collect sensitive information. Files containing email data can be acquired from a user’s local system, such as Outlook storage or cache files.\\n\\nOutlook stores data locally in offline data files with an extension of .ost. Outlook 2010 and later supports .ost file sizes up to 50GB, while earlier versions of Outlook support up to 20GB.(Citation: Outlook File Sizes) IMAP accounts in Outlook 2013 (and earlier) and POP accounts use Outlook Data Files (.pst) as opposed to .ost, whereas IMAP accounts in Outlook 2016 (and later) use .ost files. Both types of Outlook data files are typically stored in `C:\\\\Users\\\\<username>\\\\Documents\\\\Outlook Files` or `C:\\\\Users\\\\<username>\\\\AppData\\\\Local\\\\Microsoft\\\\Outlook`.(Citation: Microsoft Outlook Files)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}], 'x_mitre_detection': 'Monitor processes and command-line arguments for actions that could be taken to gather local email files. Monitor for unusual processes accessing local email files. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'File: File Access'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1114.001",
+                "display_name": "Email Collection: Local Email Collection",
+                "atomic_tests": [
+                    {
+                        "name": "Email Collection with PowerShell Get-Inbox",
+                        "auto_generated_guid": "3f1b5096-0139-4736-9b78-19bcb02bb1cb",
+                        "description": "Search through local Outlook installation, extract mail, compress the contents, and saves everything to a directory for later exfiltration.\nSuccessful execution will produce stdout message stating \"Please be patient, this may take some time...\". Upon completion, final output will be a mail.csv file.\n\nNote: Outlook is required, but no email account necessary to produce artifacts.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Output file path",
+                                "type": "string",
+                                "default": "$env:TEMP\\mail.csv"
+                            },
+                            "file_path": {
+                                "description": "File path for Get-Inbox.ps1",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1114.001\\src"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Get-Inbox.ps1 must be located at #{file_path}\n",
+                                "prereq_command": "if (Test-Path \"#{file_path}\\Get-Inbox.ps1\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Invoke-WebRequest \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1114.001/src/Get-Inbox.ps1\" -OutFile \"#{file_path}\\Get-Inbox.ps1\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "powershell -executionpolicy bypass -command \"#{file_path}\\Get-Inbox.ps1\" -file #{output_file}\n",
+                            "cleanup_command": "Remove-Item #{output_file} -Force -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:09:08"
+}

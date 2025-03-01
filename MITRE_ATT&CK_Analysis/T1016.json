@@ -1,0 +1,477 @@
+{
+    "id": "T1016",
+    "name": "System Network Configuration Discovery",
+    "description": "Adversaries may look for details about the network configuration and settings, such as IP and/or MAC addresses, of systems they access or through information discovery of remote systems. Several operating system administration utilities exist that can be used to gather this information. Examples include [Arp](S0099), [ipconfig](S0100)/[ifconfig](S0101), [nbtstat](S0102), and [route](S0103).\nAdversaries may use the information from [System Network Configuration Discovery](T1016) during automated discovery to shape follow-on behaviors, including determining certain access within the target network and what actions to do next.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Script: Script Execution, Command: Command Execution, Process: OS API Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1016",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1016",
+                "atomic_attack_guid": "34557863-344a-468f-808b-a1bfb89b4fa9",
+                "atomic_attack_name": "DNS Server Discovery Using nslookup",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Network Reconnaissance Activity",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_nslookup_domain_discovery.yml",
+                        "remote_content": "title: Network Reconnaissance Activity\nid: e6313acd-208c-44fc-a0ff-db85d572e90e\nstatus: test\ndescription: Detects a set of suspicious network related commands often used in recon stages\nreferences:\n    - https://thedfirreport.com/2022/02/07/qbot-likes-to-move-it-move-it/\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-07\ntags:\n    - attack.discovery\n    - attack.t1087\n    - attack.t1082\n    - car.2016-03-001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'nslookup'\n            - '_ldap._tcp.dc._msdcs.'\n    condition: selection\nfalsepositives:\n    - False positives depend on scripts and administrative tools used in the monitored environment\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows System Discovery Using ldap Nslookup",
+                        "rule_link": "https://research.splunk.com/endpoint/2418780f-7c3e-4c45-b8b4-996ea850cd49/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1016",
+                "atomic_attack_guid": "9bb45dd7-c466-4f93-83a1-be30e56033ee",
+                "atomic_attack_name": "Adfind - Enumerate Active Directory Subnet Objects",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - AdFind Suspicious Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_susp_usage.yml",
+                        "remote_content": "title: PUA - AdFind Suspicious Execution\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nrelated:\n    - id: 455b9d50-15a1-4b99-853f-8d37655a4c1b\n      type: similar\n    - id: 75df3b17-8bcc-4565-b89b-c9898acef911\n      type: obsolete\nstatus: test\ndescription: Detects AdFind execution with common flags seen used during attacks\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://thedfirreport.com/2020/05/08/adfind-recon/\n    - https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n    - https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\n    - https://github.com/redcanaryco/atomic-red-team/blob/0f229c0e42bfe7ca736a14023836d65baa941ed2/atomics/T1087.002/T1087.002.md#atomic-test-7---adfind---enumerate-active-directory-user-objects\nauthor: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72, oscd.community\ndate: 2021-02-02\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1018\n    - attack.t1087.002\n    - attack.t1482\n    - attack.t1069.002\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'domainlist'\n            - 'trustdmp'\n            - 'dcmodes'\n            - 'adinfo'\n            - ' dclist '\n            - 'computer_pwdnotreqd'\n            - 'objectcategory='\n            - '-subnets -f'\n            - 'name=\"Domain Admins\"'\n            - '-sc u:'\n            - 'domainncs'\n            - 'dompol'\n            - ' oudmp '\n            - 'subnetdmp'\n            - 'gpodmp'\n            - 'fspdmp'\n            - 'users_noexpire'\n            - 'computers_active'\n            - 'computers_pwdnotreqd'\n    condition: selection\nfalsepositives:\n    - Legitimate admin activity\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows AdFind Exe",
+                        "rule_link": "https://research.splunk.com/endpoint/bd3b0187-189b-46c0-be45-f52da2bae67f/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1016",
+                "atomic_attack_guid": "dafaf052-5508-402d-bf77-51e0700c02e2",
+                "atomic_attack_name": "System Network Configuration Discovery (TrickBot Style)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Network Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_network_command.yml",
+                        "remote_content": "title: Suspicious Network Command\nid: a29c1813-ab1f-4dde-b489-330b952e91ae\nstatus: test\ndescription: Adversaries may look for details about the network configuration and settings of systems they access or through information discovery of remote systems\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1016/T1016.md#atomic-test-1---system-network-configuration-discovery-on-windows\nauthor: frack113, Christopher Peacock '@securepeacock', SCYTHE '@scythe_io'\ndate: 2021-12-07\nmodified: 2022-04-11\ntags:\n    - attack.discovery\n    - attack.t1016\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'ipconfig /all'\n            - 'netsh interface show interface'\n            - 'arp -a'\n            - 'nbtstat -n'\n            - 'net config'\n            - 'route print'\n    condition: selection\nfalsepositives:\n    - Administrator, hotline ask to user\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1016",
+                "atomic_attack_guid": "970ab6a1-0157-4f3f-9a73-ec4166754b23",
+                "atomic_attack_name": "System Network Configuration Discovery on Windows",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Network Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_network_command.yml",
+                        "remote_content": "title: Suspicious Network Command\nid: a29c1813-ab1f-4dde-b489-330b952e91ae\nstatus: test\ndescription: Adversaries may look for details about the network configuration and settings of systems they access or through information discovery of remote systems\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1016/T1016.md#atomic-test-1---system-network-configuration-discovery-on-windows\nauthor: frack113, Christopher Peacock '@securepeacock', SCYTHE '@scythe_io'\ndate: 2021-12-07\nmodified: 2022-04-11\ntags:\n    - attack.discovery\n    - attack.t1016\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'ipconfig /all'\n            - 'netsh interface show interface'\n            - 'arp -a'\n            - 'nbtstat -n'\n            - 'net config'\n            - 'route print'\n    condition: selection\nfalsepositives:\n    - Administrator, hotline ask to user\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "0e4164da-94bc-450d-a7be-a4b176179f1f",
+                    "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "a29c1813-ab1f-4dde-b489-330b952e91ae",
+                    "707399d6-ab3e-4963-9315-d9d3818cd6a0",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "c3d53999-4b14-4ddd-9d9b-e618c366b54d",
+                    "eeb66bbb-3dde-4582-815a-584aee9fe6d1",
+                    "58800443-f9fc-4d55-ae0c-98a3966dfb97",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                    "5cccb246-0da0-4c93-a463-61fe0a016219",
+                    "e7bd1cfa-b446-4c88-8afb-403bcd79e3fa",
+                    "5cc90652-4cbd-4241-aa3b-4b462fa5a248",
+                    "170901d1-de11-4de7-bccb-8fa13678d857",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "684feec3-f9ba-4049-9d8f-52d52f3e0e40"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0e4164da-94bc-450d-a7be-a4b176179f1f",
+                        "lookup_data": {
+                            "description": "Adversaries may look for details about the network configuration and settings of systems they access or through information discovery of remote systems",
+                            "raw": "author: frack113, Christopher Peacock '@securepeacock', SCYTHE '@scythe_io'\ndate: 2021/12/07\ndescription: Adversaries may look for details about the network configuration and\n  settings of systems they access or through information discovery of remote systems\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - 'config '\n    - 'state '\n    - 'rule '\n    - name=all\n    CommandLine|contains|all:\n    - 'netsh '\n    - 'show '\n    - 'firewall '\nfalsepositives:\n- Administrative activity\nid: 0e4164da-94bc-450d-a7be-a4b176179f1f\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/04/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1016/T1016.md#atomic-test-2---list-windows-firewall-rules\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1016\ntitle: Suspicious Netsh Discovery Command\n",
+                            "sigma:id": "0e4164da-94bc-450d-a7be-a4b176179f1f",
+                            "title": "Suspicious Netsh Discovery Command",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                        "lookup_data": {
+                            "description": "Find information about network devices that is not stored in config files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Find information about network devices that is not stored in config files\ndetection:\n  condition: keywords\n  keywords:\n  - dir\n  - show processes\n  - show arp\n  - show cdp\n  - show version\n  - show ip route\n  - show ip interface\n  - show ip sockets\n  - show users\n  - show ssh\n  - show clock\nfalsepositives:\n- Commonly used by administrators for troubleshooting\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 9705a6a1-6db6-4a16-a987-15b7151e299b\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\n- attack.t1201\n- attack.t1057\n- attack.t1018\n- attack.t1082\n- attack.t1016\n- attack.t1049\n- attack.t1033\n- attack.t1124\ntitle: Cisco Discovery\n",
+                            "sigma:id": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                            "title": "Cisco Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a29c1813-ab1f-4dde-b489-330b952e91ae",
+                        "lookup_data": {
+                            "description": "Adversaries may look for details about the network configuration and settings of systems they access or through information discovery of remote systems",
+                            "raw": "author: frack113, Christopher Peacock '@securepeacock', SCYTHE '@scythe_io'\ndate: 2021/12/07\ndescription: Adversaries may look for details about the network configuration and\n  settings of systems they access or through information discovery of remote systems\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ipconfig /all\n    - netsh interface show interface\n    - arp -a\n    - nbtstat -n\n    - net config\n    - route print\nfalsepositives:\n- Administrator, hotline ask to user\nid: a29c1813-ab1f-4dde-b489-330b952e91ae\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/04/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1016/T1016.md#atomic-test-1---system-network-configuration-discovery-on-windows\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1016\ntitle: Suspicious Network Command\n",
+                            "sigma:id": "a29c1813-ab1f-4dde-b489-330b952e91ae",
+                            "title": "Suspicious Network Command",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "707399d6-ab3e-4963-9315-d9d3818cd6a0",
+                        "lookup_data": {
+                            "capec": "CAPEC-309",
+                            "mitre-attack-id": "T1016",
+                            "mitre-cti:description": "Adversaries may look for details about the network configuration and settings, such as IP and/or MAC addresses, of systems they access or through information discovery of remote systems. Several operating system administration utilities exist that can be used to gather this information. Examples include [Arp](https://attack.mitre.org/software/S0099), [ipconfig](https://attack.mitre.org/software/S0100)/[ifconfig](https://attack.mitre.org/software/S0101), [nbtstat](https://attack.mitre.org/software/S0102), and [route](https://attack.mitre.org/software/S0103).\n\nAdversaries may also leverage a [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) on network devices to gather information about configurations and settings, such as IP addresses of configured interfaces and static/dynamic routes (e.g. <code>show ip route</code>, <code>show ip interface</code>).(Citation: US-CERT-TA18-106A)(Citation: Mandiant APT41 Global Intrusion )\n\nAdversaries may use the information from [System Network Configuration Discovery](https://attack.mitre.org/techniques/T1016) during automated discovery to shape follow-on behaviors, including determining certain access within the target network and what actions to do next. ",
+                            "mitre-cti:name": "System Network Configuration Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-09-06T22:32:35.833Z', 'name': 'System Network Configuration Discovery', 'description': 'Adversaries may look for details about the network configuration and settings, such as IP and/or MAC addresses, of systems they access or through information discovery of remote systems. Several operating system administration utilities exist that can be used to gather this information. Examples include [Arp](https://attack.mitre.org/software/S0099), [ipconfig](https://attack.mitre.org/software/S0100)/[ifconfig](https://attack.mitre.org/software/S0101), [nbtstat](https://attack.mitre.org/software/S0102), and [route](https://attack.mitre.org/software/S0103).\\n\\nAdversaries may also leverage a [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) on network devices to gather information about configurations and settings, such as IP addresses of configured interfaces and static/dynamic routes (e.g. <code>show ip route</code>, <code>show ip interface</code>).(Citation: US-CERT-TA18-106A)(Citation: Mandiant APT41 Global Intrusion )\\n\\nAdversaries may use the information from [System Network Configuration Discovery](https://attack.mitre.org/techniques/T1016) during automated discovery to shape follow-on behaviors, including determining certain access within the target network and what actions to do next. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Further, {{LinkById|T1059.008} commands may also be used to gather system and network information with built-in features native to the network device platform.  Monitor CLI activity for unexpected or unauthorized use  commands being run by non-standard users from non-standard locations.  Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).', 'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'Network'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.5', 'x_mitre_contributors': ['Austin Clark, @c2defense'], 'x_mitre_data_sources': ['Command: Command Execution', 'Script: Script Execution', 'Process: Process Creation', 'Process: OS API Execution'], 'type': 'attack-pattern', 'id': 'attack-pattern--707399d6-ab3e-4963-9315-d9d3818cd6a0', 'created': '2017-05-31T21:30:27.342Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1016', 'external_id': 'T1016'}, {'source_name': 'Mandiant APT41 Global Intrusion ', 'description': 'Gyler, C.,Perez D.,Jones, S.,Miller, S.. (2021, February 25). This is Not a Test: APT41 Initiates Global Intrusion Campaign Using Multiple Exploits. Retrieved February 17, 2022.', 'url': 'https://www.mandiant.com/resources/apt41-initiates-global-intrusion-campaign-using-multiple-exploits'}, {'source_name': 'US-CERT-TA18-106A', 'description': 'US-CERT. (2018, April 20). Alert (TA18-106A) Russian State-Sponsored Cyber Actors Targeting Network Infrastructure Devices. Retrieved October 19, 2020.', 'url': 'https://www.us-cert.gov/ncas/alerts/TA18-106A'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/309.html', 'external_id': 'CAPEC-309'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c3d53999-4b14-4ddd-9d9b-e618c366b54d",
+                        "lookup_data": {
+                            "description": "Detects network enumeration performed on AWS.",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/12/13\ndescription: Detects network enumeration performed on AWS.\ndetection:\n  condition: selection | count() > 5\n  selection:\n    eventName:\n    - DescribeCarrierGateways\n    - DescribeVpcEndpointConnectionNotifications\n    - DescribeTransitGatewayMulticastDomains\n    - DescribeClientVpnRoutes\n    - DescribeDhcpOptions\n    - GetTransitGatewayRouteTableAssociations\n    eventSource: ec2.amazonaws.com\n  timeframe: 10m\nfalsepositives:\n- Unknown\nid: c3d53999-4b14-4ddd-9d9b-e618c366b54d\nlevel: low\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/12/28\nreferences:\n- https://unit42.paloaltonetworks.com/compromised-cloud-compute-credentials/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1016\ntitle: Potential Network Enumeration on AWS\n",
+                            "sigma:id": "c3d53999-4b14-4ddd-9d9b-e618c366b54d",
+                            "title": "Potential Network Enumeration on AWS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eeb66bbb-3dde-4582-815a-584aee9fe6d1",
+                        "lookup_data": {
+                            "description": "The attacker might use LOLBAS nltest.exe for discovery of domain controllers, domain trusts, parent domain and the current user permissions.",
+                            "raw": "author: Arun Chauhan\ndate: 2021/10/04\ndescription: The attacker might use LOLBAS nltest.exe for discovery of domain controllers,\n  domain trusts, parent domain and the current user permissions.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4689\n    ProcessName|endswith: nltest.exe\n    Status: '0x0'\nfalsepositives:\n- Red team activity\n- Rare legitimate use by an administrator\nfields:\n- SubjectUserName\n- SubjectDomainName\nid: eeb66bbb-3dde-4582-815a-584aee9fe6d1\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://jpcertcc.github.io/ToolAnalysisResultSheet/details/nltest.htm\n- https://attack.mitre.org/software/S0359/\nstatus: test\ntags:\n- attack.discovery\n- attack.t1482\n- attack.t1018\n- attack.t1016\ntitle: Correct Execution of Nltest.exe\n",
+                            "sigma:id": "eeb66bbb-3dde-4582-815a-584aee9fe6d1",
+                            "title": "Correct Execution of Nltest.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "58800443-f9fc-4d55-ae0c-98a3966dfb97",
+                        "lookup_data": {
+                            "description": "Detects enumeration of local network configuration",
+                            "raw": "author: remotephone, oscd.community\ndate: 2020/10/06\ndescription: Detects enumeration of local network configuration\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image|endswith:\n    - /netstat\n    - /ifconfig\n    - /socketfilterfw\n    - /networksetup\n    - /arp\n  selection2:\n    CommandLine|contains|all:\n    - read\n    - /Library/Preferences/com.apple.alf\n    Image: /usr/bin/defaults\nfalsepositives:\n- Legitimate administration activities\nid: 58800443-f9fc-4d55-ae0c-98a3966dfb97\nlevel: informational\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/12/28\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1016/T1016.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1016\ntitle: System Network Discovery - macOS\n",
+                            "sigma:id": "58800443-f9fc-4d55-ae0c-98a3966dfb97",
+                            "title": "System Network Discovery - macOS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - â€˜Operation Sharpshooterâ€™ Targets Global Defense, Critical Infrastructure",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c125ad1-a1a8-495e-ae07-48bd950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1544734085",
+                            "uuid": "5c125ad1-a1a8-495e-ae07-48bd950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cccb246-0da0-4c93-a463-61fe0a016219",
+                        "lookup_data": {
+                            "description": "ESET Turla LightNeuron Research",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5cccb246-0da0-4c93-a463-61fe0a016219.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1607525139",
+                            "uuid": "5cccb246-0da0-4c93-a463-61fe0a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e7bd1cfa-b446-4c88-8afb-403bcd79e3fa",
+                        "lookup_data": {
+                            "description": "Detects enumeration of local network configuration",
+                            "raw": "author: \"\\xD6mer G\\xFCnal and remotephone, oscd.community\"\ndate: 2020/10/06\ndescription: Detects enumeration of local network configuration\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith:\n    - /firewall-cmd\n    - /ufw\n    - /iptables\n    - /netstat\n    - /ss\n    - /ip\n    - /ifconfig\n    - /systemd-resolve\n    - /route\n  - CommandLine|contains: /etc/resolv.conf\nfalsepositives:\n- Legitimate administration activities\nid: e7bd1cfa-b446-4c88-8afb-403bcd79e3fa\nlevel: informational\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/09/15\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1016/T1016.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1016\ntitle: System Network Discovery - Linux\n",
+                            "sigma:id": "e7bd1cfa-b446-4c88-8afb-403bcd79e3fa",
+                            "title": "System Network Discovery - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5cc90652-4cbd-4241-aa3b-4b462fa5a248",
+                        "lookup_data": {
+                            "description": "Detects nltest commands that can be used for information discovery",
+                            "raw": "author: Craig Young, oscd.community, Georg Lauenstein\ndate: 2021/07/24\ndescription: Detects nltest commands that can be used for information discovery\ndetection:\n  condition: selection_nltest and 1 of selection_recon*\n  selection_nltest:\n  - Image|endswith: \\nltest.exe\n  - OriginalFileName: nltestrk.exe\n  selection_recon1:\n    CommandLine|contains|all:\n    - /server\n    - /query\n  selection_recon2:\n    CommandLine|contains:\n    - '/dclist:'\n    - /parentdomain\n    - /domain_trusts\n    - /trusted_domains\n    - /user\nfalsepositives:\n- Legitimate administration use but user must be check out\nfields:\n- Image\n- User\n- CommandLine\n- ParentCommandLine\nid: 5cc90652-4cbd-4241-aa3b-4b462fa5a248\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/01\nreferences:\n- https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc731935(v=ws.11)\n- https://thedfirreport.com/2021/08/16/trickbot-leads-up-to-fake-1password-installation/\n- https://book.hacktricks.xyz/windows/basic-cmd-for-pentesters\n- https://research.nccgroup.com/2022/08/19/back-in-black-unlocking-a-lockbit-3-0-ransomware-attack/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1016\n- attack.t1482\ntitle: Potential Recon Activity Via Nltest.EXE\n",
+                            "sigma:id": "5cc90652-4cbd-4241-aa3b-4b462fa5a248",
+                            "title": "Potential Recon Activity Via Nltest.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "170901d1-de11-4de7-bccb-8fa13678d857",
+                        "lookup_data": {
+                            "description": "Detects Silence downloader. These commands are hardcoded into the binary.",
+                            "raw": "author: Alina Stepchenkova, Roman Rezvukhin, Group-IB, oscd.community\ndate: 2019/11/01\ndescription: Detects Silence downloader. These commands are hardcoded into the binary.\ndetection:\n  condition: selection_recon | near selection_persistence\n  selection_persistence:\n    CommandLine|contains: /C REG ADD \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"\n      /v \"WinNetworkSecurity\" /t REG_SZ /d\n  selection_recon:\n    CommandLine|contains: '>>'\n    CommandLine|endswith: temps.dat\n    Image|endswith:\n    - \\tasklist.exe\n    - \\qwinsta.exe\n    - \\ipconfig.exe\n    - \\hostname.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- Image\n- CommandLine\nid: 170901d1-de11-4de7-bccb-8fa13678d857\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\n- attack.discovery\n- attack.t1057\n- attack.t1082\n- attack.t1016\n- attack.t1033\n- attack.g0091\ntitle: Silence.Downloader V3\n",
+                            "sigma:id": "170901d1-de11-4de7-bccb-8fa13678d857",
+                            "title": "Silence.Downloader V3",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "684feec3-f9ba-4049-9d8f-52d52f3e0e40",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1016",
+                            "mitre-cti:description": "Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about a system's network configuration, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "System Network Configuration Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--684feec3-f9ba-4049-9d8f-52d52f3e0e40', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1016', 'url': 'https://attack.mitre.org/mitigations/T1016', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.705Z', 'name': 'System Network Configuration Discovery Mitigation', 'description': \"Identify unnecessary system utilities or potentially malicious software that may be used to acquire information about a system's network configuration, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)\", 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1016",
+                "display_name": "System Network Configuration Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "System Network Configuration Discovery on Windows",
+                        "auto_generated_guid": "970ab6a1-0157-4f3f-9a73-ec4166754b23",
+                        "description": "Identify network configuration information\n\nUpon successful execution, cmd.exe will spawn multiple commands to list network configuration settings. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "ipconfig /all\nnetsh interface show interface\narp -a\nnbtstat -n\nnet config\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "List Windows Firewall Rules",
+                        "auto_generated_guid": "038263cb-00f4-4b0a-98ae-0696c67e1752",
+                        "description": "Enumerates Windows Firewall Rules using netsh.\n\nUpon successful execution, cmd.exe will spawn netsh.exe to list firewall rules. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "netsh advfirewall firewall show rule name=all\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "System Network Configuration Discovery",
+                        "auto_generated_guid": "c141bbdb-7fca-4254-9fd6-f47e79447e17",
+                        "description": "Identify network configuration information.\nUpon successful execution, sh will spawn multiple commands and output will be via stdout.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if arp command exists on the machine\n",
+                                "prereq_command": "if [ -x \"$(command -v arp)\" ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "(which yum && yum -y install net-tools)||(which apt-get && DEBIAN_FRONTEND=noninteractive apt-get install -y net-tools)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "if [ \"$(uname)\" = 'FreeBSD' ]; then cmd=\"netstat -Sp tcp\"; else cmd=\"netstat -ant\"; fi;\nif [ -x \"$(command -v arp)\" ]; then arp -a; else echo \"arp is missing from the machine. skipping...\"; fi;\nif [ -x \"$(command -v ifconfig)\" ]; then ifconfig; else echo \"ifconfig is missing from the machine. skipping...\"; fi;\nif [ -x \"$(command -v ip)\" ]; then ip addr; else echo \"ip is missing from the machine. skipping...\"; fi;\nif [ -x \"$(command -v netstat)\" ]; then $cmd | awk '{print $NF}' | grep -v '[[:lower:]]' | sort | uniq -c; else echo \"netstat is missing from the machine. skipping...\"; fi;\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "System Network Configuration Discovery (TrickBot Style)",
+                        "auto_generated_guid": "dafaf052-5508-402d-bf77-51e0700c02e2",
+                        "description": "Identify network configuration information as seen by Trickbot and described here https://www.sneakymonkey.net/2019/10/29/trickbot-analysis-part-ii/\n\nUpon successful execution, cmd.exe will spawn `ipconfig /all`, `net config workstation`, `net view /all /domain`, `nltest /domain_trusts`. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "ipconfig /all\nnet config workstation\nnet view /all /domain\nnltest /domain_trusts\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "List Open Egress Ports",
+                        "auto_generated_guid": "4b467538-f102-491d-ace7-ed487b853bf5",
+                        "description": "This is to test for what ports are open outbound.  The technique used was taken from the following blog:\nhttps://www.blackhillsinfosec.com/poking-holes-in-the-firewall-egress-testing-with-allports-exposed/\n\nUpon successful execution, powershell will read top-128.txt (ports) and contact each port to confirm if open or not. Output will be to Desktop\\open-ports.txt.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "Path of file to write port scan results",
+                                "type": "path",
+                                "default": "$env:USERPROFILE\\Desktop\\open-ports.txt"
+                            },
+                            "portfile_url": {
+                                "description": "URL to top-128.txt",
+                                "type": "url",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1016/src/top-128.txt"
+                            },
+                            "port_file": {
+                                "description": "The path to a text file containing ports to be scanned, one port per line. The default list uses the top 128 ports as defined by Nmap.",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1016\\src\\top-128.txt"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Test requires #{port_file} to exist\n",
+                                "prereq_command": "if (Test-Path \"#{port_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{port_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"#{portfile_url}\" -OutFile \"#{port_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "$ports = Get-content \"#{port_file}\"\n$file = \"#{output_file}\"\n$totalopen = 0\n$totalports = 0\nNew-Item $file -Force\nforeach ($port in $ports) {\n    $test = new-object system.Net.Sockets.TcpClient\n    $wait = $test.beginConnect(\"allports.exposed\", $port, $null, $null)\n    $wait.asyncwaithandle.waitone(250, $false) | Out-Null\n    $totalports++ | Out-Null\n    if ($test.Connected) {\n        $result = \"$port open\" \n        Write-Host -ForegroundColor Green $result\n        $result | Out-File -Encoding ASCII -append $file\n        $totalopen++ | Out-Null\n    }\n    else {\n        $result = \"$port closed\" \n        Write-Host -ForegroundColor Red $result\n        $totalclosed++ | Out-Null\n        $result | Out-File -Encoding ASCII -append $file\n    }\n}\n$results = \"There were a total of $totalopen open ports out of $totalports ports tested.\"\n$results | Out-File -Encoding ASCII -append $file\nWrite-Host $results\n",
+                            "cleanup_command": "Remove-Item -ErrorAction ignore \"#{output_file}\"\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Adfind - Enumerate Active Directory Subnet Objects",
+                        "auto_generated_guid": "9bb45dd7-c466-4f93-83a1-be30e56033ee",
+                        "description": "Adfind tool can be used for reconnaissance in an Active directory environment. This example has been documented by ransomware actors enumerating Active Directory Subnet Objects\nreference- http://www.joeware.net/freetools/tools/adfind/, https://www.fireeye.com/blog/threat-research/2019/04/pick-six-intercepting-a-fin6-intrusion.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" -f (objectcategory=subnet) #{optional_args}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Qakbot Recon",
+                        "auto_generated_guid": "121de5c6-5818-4868-b8a7-8fd07c455c1b",
+                        "description": "A list of commands known to be performed by Qakbot for recon purposes",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "recon_commands": {
+                                "description": "File that houses list of commands to be executed",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1016\\src\\qakbot.bat"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "File to copy must exist on disk at specified location (#{recon_commands})\n",
+                                "prereq_command": "if (Test-Path \"#{recon_commands}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{recon_commands}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1016/src/qakbot.bat\" -OutFile \"#{recon_commands}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{recon_commands}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "List macOS Firewall Rules",
+                        "auto_generated_guid": "ff1d8c25-2aa4-4f18-a425-fede4a41ee88",
+                        "description": "\"This will test if the macOS firewall is enabled and/or show what rules are configured. Must be run with elevated privileges. Upon successful execution, these commands will output various information about the firewall configuration, including status and specific port/protocol blocks or allows. \n\nUsing `defaults`, additional arguments can be added to see filtered details, such as `globalstate` for global configuration (\\\"Is it on or off?\\\"), `firewall` for common application allow rules, and `explicitauths` for specific rules configured by the user. \n\nUsing `socketfilterfw`, flags such as --getglobalstate or --listapps can be used for similar filtering. At least one flag is required to send parseable output to standard out. \n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "sudo defaults read /Library/Preferences/com.apple.alf\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "DNS Server Discovery Using nslookup",
+                        "auto_generated_guid": "34557863-344a-468f-808b-a1bfb89b4fa9",
+                        "description": "Identify System domain dns controller on an endpoint using nslookup ldap query. This tool is being abused by qakbot malware to gather information on the domain\ncontroller of the targeted or compromised host. reference https://securelist.com/qakbot-technical-analysis/103931/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "nslookup -querytype=ALL -timeout=12 _ldap._tcp.dc._msdcs.%USERDNSDOMAIN%\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:53:04"
+}

@@ -1,0 +1,195 @@
+{
+    "id": "T1053.002",
+    "name": "At (Windows)",
+    "description": "Adversaries may abuse the `at.exe` utility to perform task scheduling for initial or recurring execution of malicious code. The [at](S0110) utility exists as an executable within Windows for scheduling tasks at a specified time and date. Using [at](S0110) requires that the Task Scheduler service be running, and the user to be logged on as a member of the local Administrators group.\nAn adversary may use `at.exe` in Windows environments to execute programs at system startup or on a scheduled basis for persistence. [at](S0110) can also be abused to conduct remote Execution as part of Lateral Movement and or to run a process under the context of a specified account (such as SYSTEM).\nNote: The `at.exe` command line utility has been deprecated in current versions of Windows in favor of `schtasks`.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Execution, Persistence, Privilege Escalation",
+    "data_sources": "Scheduled Job: Scheduled Job Creation, Command: Command Execution, File: File Modification, Process: Process Creation",
+    "detection": "Monitor process execution from the svchost.exe in Windows 10 and the Windows Task Scheduler taskeng.exe for older versions of Windows. (Citation: Twitter Leoloobeek Scheduled Task) If scheduled tasks are not used for persistence, then the adversary is likely to remove the task when the action is complete. Monitor Windows Task Scheduler stores in %systemroot%System32Tasks for change entries related to scheduled tasks that do not correlate with known software, patch cycles, etc.\nConfigure event logging for scheduled task creation and changes by enabling the \"Microsoft-Windows-TaskScheduler/Operational\" setting within the event logging service. (Citation: TechNet Forum Scheduled Task Operational Setting) Several events will then be logged on scheduled task activity, including: (Citation: TechNet Scheduled Task Events)(Citation: Microsoft Scheduled Task Events Win10)\n* Event ID 106 on Windows 7, Server 2008 R2 - Scheduled task registered\n* Event ID 140 on Windows 7, Server 2008 R2 / 4702 on Windows 10, Server 2016 - Scheduled task updated\n* Event ID 141 on Windows 7, Server 2008 R2 / 4699 on Windows 10, Server 2016 - Scheduled task deleted\n* Event ID 4698 on Windows 10, Server 2016 - Scheduled task created\n* Event ID 4700 on Windows 10, Server 2016 - Scheduled task enabled\n* Event ID 4701 on Windows 10, Server 2016 - Scheduled task disabled\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current scheduled tasks. (Citation: TechNet Autoruns)\nRemote access tools with built-in features may interact directly with the Windows API to perform these functions outside of typical system utilities. Tasks may also be created through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001), so additional logging may need to be configured to gather the appropriate data.",
+    "url": "https://attack.mitre.org/techniques/T1053/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1053.002",
+                "atomic_attack_guid": "4a6c0dc4-0f2a-4203-9298-a5a9bdc21ed8",
+                "atomic_attack_name": "At.exe Scheduled task",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Interactive AT Job",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_at_interactive_execution.yml",
+                        "remote_content": "title: Interactive AT Job\nid: 60fc936d-2eb0-4543-8a13-911c750a1dfc\nstatus: test\ndescription: Detects an interactive AT job, which may be used as a form of privilege escalation.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.002/T1053.002.md\n    - https://eqllib.readthedocs.io/en/latest/analytics/d8db43cf-ed52-4f5c-9fb3-c9a4b95a0b56.html\nauthor: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019-10-24\nmodified: 2021-11-27\ntags:\n    - attack.privilege-escalation\n    - attack.t1053.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\at.exe'\n        CommandLine|contains: 'interactive'\n    condition: selection\nfalsepositives:\n    - Unlikely (at.exe deprecated as of Windows 8)\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0fcd1c79-4eeb-4746-aba9-1b458f7a79cb",
+                    "60fc936d-2eb0-4543-8a13-911c750a1dfc",
+                    "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                    "f6de6525-4509-495a-8a82-1f8b0ed73a00",
+                    "dde85b37-40cd-4a94-b00c-0b8794f956b5",
+                    "aff229ab-f8cd-447b-b215-084d11e79eb0",
+                    "f3d95a1f-bba2-44ce-9af7-37866cd63fd0",
+                    "ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d",
+                    "d2d642d7-b393-43fe-bae4-e81ed5915c4b"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0fcd1c79-4eeb-4746-aba9-1b458f7a79cb",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls to create or execute a scheduled task via ATSvc",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls to create or execute a scheduled task via ATSvc\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: 1ff70682-0a51-30e8-076d-740be8cee98b\n    OpNum:\n    - 0\n    - 1\nfalsepositives:\n- Unknown\nid: 0fcd1c79-4eeb-4746-aba9-1b458f7a79cb\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:1ff70682-0a51-30e8-076d-740be8cee98b\"'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tsch/d1058a28-7e02-4948-8b8d-4a347fa64931\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-TSCH.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1053\n- attack.t1053.002\ntitle: Remote Schedule Task Lateral Movement via ATSvc\n",
+                            "sigma:id": "0fcd1c79-4eeb-4746-aba9-1b458f7a79cb",
+                            "title": "Remote Schedule Task Lateral Movement via ATSvc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "60fc936d-2eb0-4543-8a13-911c750a1dfc",
+                        "lookup_data": {
+                            "description": "Detect an interactive AT job, which may be used as a form of privilege escalation.",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Endgame), oscd.community\ndate: 2019/10/24\ndescription: Detect an interactive AT job, which may be used as a form of privilege\n  escalation.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: interactive\n    Image|endswith: \\at.exe\nfalsepositives:\n- Unlikely (at.exe deprecated as of Windows 8)\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 60fc936d-2eb0-4543-8a13-911c750a1dfc\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.002/T1053.002.md\n- https://eqllib.readthedocs.io/en/latest/analytics/d8db43cf-ed52-4f5c-9fb3-c9a4b95a0b56.html\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1053.002\ntitle: Interactive AT Job\n",
+                            "sigma:id": "60fc936d-2eb0-4543-8a13-911c750a1dfc",
+                            "title": "Interactive AT Job",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                        "lookup_data": {
+                            "description": "Windows DCE-RPC functions which indicate an execution techniques on the remote system. All credit for the Zeek mapping of the suspicious endpoint/operation field goes to MITRE",
+                            "raw": "author: '@neu5ron, SOC Prime'\ndate: 2020/03/19\ndescription: Windows DCE-RPC functions which indicate an execution techniques on the\n  remote system. All credit for the Zeek mapping of the suspicious endpoint/operation\n  field goes to MITRE\ndetection:\n  condition: 1 of op*\n  op1:\n    endpoint: JobAdd\n    operation: atsvc\n  op10:\n    endpoint: svcctl\n    operation: StartServiceW\n  op2:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcEnableTask\n  op3:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcRegisterTask\n  op4:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcRun\n  op5:\n    endpoint: IWbemServices\n    operation: ExecMethod\n  op6:\n    endpoint: IWbemServices\n    operation: ExecMethodAsync\n  op7:\n    endpoint: svcctl\n    operation: CreateServiceA\n  op8:\n    endpoint: svcctl\n    operation: CreateServiceW\n  op9:\n    endpoint: svcctl\n    operation: StartServiceA\nfalsepositives:\n- Windows administrator tasks or troubleshooting\n- Windows management scripts or software\nid: b640c0b8-87f8-4daa-aef8-95a24261dd1d\nlevel: medium\nlogsource:\n  product: zeek\n  service: dce_rpc\nmodified: 2021/11/27\nreferences:\n- https://github.com/mitre-attack/bzar#indicators-for-attck-execution\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1053.002\n- attack.t1569.002\ntitle: MITRE BZAR Indicators for Execution\n",
+                            "sigma:id": "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                            "title": "MITRE BZAR Indicators for Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f6de6525-4509-495a-8a82-1f8b0ed73a00",
+                        "lookup_data": {
+                            "description": "Detects remote task creation via at.exe or API interacting with ATSVC namedpipe",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: Detects remote task creation via at.exe or API interacting with ATSVC\n  namedpipe\ndetection:\n  condition: selection\n  selection:\n    Accesses|contains: WriteData\n    EventID: 5145\n    RelativeTargetName: atsvc\n    ShareName: \\\\\\\\\\*\\\\IPC$\nfalsepositives:\n- Unknown\nid: f6de6525-4509-495a-8a82-1f8b0ed73a00\nlevel: medium\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2022/08/11\nreferences:\n- https://blog.menasec.net/2019/03/threat-hunting-25-scheduled-tasks-for.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.persistence\n- car.2013-05-004\n- car.2015-04-001\n- attack.t1053.002\ntitle: Remote Task Creation via ATSVC Named Pipe\n",
+                            "sigma:id": "f6de6525-4509-495a-8a82-1f8b0ed73a00",
+                            "title": "Remote Task Creation via ATSVC Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dde85b37-40cd-4a94-b00c-0b8794f956b5",
+                        "lookup_data": {
+                            "description": "Detects remote task creation via at.exe or API interacting with ATSVC namedpipe",
+                            "raw": "author: Samir Bousseaden, @neu5rn\ndate: 2020/04/03\ndescription: Detects remote task creation via at.exe or API interacting with ATSVC\n  namedpipe\ndetection:\n  condition: selection\n  selection:\n    name: atsvc\n    path: \\\\\\*\\IPC$\nfalsepositives:\n- Unknown\nid: dde85b37-40cd-4a94-b00c-0b8794f956b5\nlevel: medium\nlogsource:\n  product: zeek\n  service: smb_files\nmodified: 2022/12/27\nreferences:\n- https://blog.menasec.net/2019/03/threat-hunting-25-scheduled-tasks-for.html\nrelated:\n- id: f6de6525-4509-495a-8a82-1f8b0ed73a00\n  type: derived\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.persistence\n- car.2013-05-004\n- car.2015-04-001\n- attack.t1053.002\ntitle: Remote Task Creation via ATSVC Named Pipe - Zeek\n",
+                            "sigma:id": "dde85b37-40cd-4a94-b00c-0b8794f956b5",
+                            "title": "Remote Task Creation via ATSVC Named Pipe - Zeek",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aff229ab-f8cd-447b-b215-084d11e79eb0",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls to create or execute a scheduled task via SASec",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls to create or execute a scheduled task via SASec\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: 378e52b0-c0a9-11cf-822d-00aa0051e40f\n    OpNum:\n    - 0\n    - 1\nfalsepositives:\n- Unknown\nid: aff229ab-f8cd-447b-b215-084d11e79eb0\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:378e52b0-c0a9-11cf-822d-00aa0051e40f\"'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tsch/d1058a28-7e02-4948-8b8d-4a347fa64931\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-TSCH.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1053\n- attack.t1053.002\ntitle: Remote Schedule Task Lateral Movement via SASec\n",
+                            "sigma:id": "aff229ab-f8cd-447b-b215-084d11e79eb0",
+                            "title": "Remote Schedule Task Lateral Movement via SASec",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f3d95a1f-bba2-44ce-9af7-37866cd63fd0",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1053.002",
+                            "mitre-cti:description": "Adversaries may abuse the [at](https://attack.mitre.org/software/S0110) utility to perform task scheduling for initial or recurring execution of malicious code. The [at](https://attack.mitre.org/software/S0110) utility exists as an executable within Windows, Linux, and macOS for scheduling tasks at a specified time and date. Although deprecated in favor of [Scheduled Task](https://attack.mitre.org/techniques/T1053/005)'s [schtasks](https://attack.mitre.org/software/S0111) in Windows environments, using [at](https://attack.mitre.org/software/S0110) requires that the Task Scheduler service be running, and the user to be logged on as a member of the local Administrators group.\n\nOn Linux and macOS, [at](https://attack.mitre.org/software/S0110) may be invoked by the superuser as well as any users added to the <code>at.allow</code> file. If the <code>at.allow</code> file does not exist, the <code>at.deny</code> file is checked. Every username not listed in <code>at.deny</code> is allowed to invoke [at](https://attack.mitre.org/software/S0110). If the <code>at.deny</code> exists and is empty, global use of [at](https://attack.mitre.org/software/S0110) is permitted. If neither file exists (which is often the baseline) only the superuser is allowed to use [at](https://attack.mitre.org/software/S0110).(Citation: Linux at)\n\nAdversaries may use [at](https://attack.mitre.org/software/S0110) to execute programs at system startup or on a scheduled basis for [Persistence](https://attack.mitre.org/tactics/TA0003). [at](https://attack.mitre.org/software/S0110) can also be abused to conduct remote [Execution](https://attack.mitre.org/tactics/TA0002) as part of [Lateral Movement](https://attack.mitre.org/tactics/TA0008) and/or to run a process under the context of a specified account (such as SYSTEM).\n\nIn Linux environments, adversaries may also abuse [at](https://attack.mitre.org/software/S0110) to break out of restricted environments by using a task to spawn an interactive system shell or to run system commands. Similarly, [at](https://attack.mitre.org/software/S0110) may also be used for [Privilege Escalation](https://attack.mitre.org/tactics/TA0004) if the binary is allowed to run as superuser via <code>sudo</code>.(Citation: GTFObins at)",
+                            "mitre-cti:name": "At",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--f3d95a1f-bba2-44ce-9af7-37866cd63fd0', 'created': '2019-11-27T13:52:45.853Z', 'x_mitre_version': '2.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1053.002', 'url': 'https://attack.mitre.org/techniques/T1053/002'}, {'source_name': 'rowland linux at 2019', 'url': 'https://www.linkedin.com/pulse/getting-attacker-ip-address-from-malicious-linux-job-craig-rowland/', 'description': 'Craig Rowland. (2019, July 25). Getting an Attacker IP Address from a Malicious Linux At Job. Retrieved October 15, 2021.'}, {'source_name': 'GTFObins at', 'url': 'https://gtfobins.github.io/gtfobins/at/', 'description': 'Emilio Pinna, Andrea Cardaci. (n.d.). gtfobins at. Retrieved September 28, 2021.'}, {'source_name': 'Linux at', 'url': 'https://man7.org/linux/man-pages/man1/at.1p.html', 'description': 'IEEE/The Open Group. (2017). at(1p) — Linux manual page. Retrieved February 25, 2022.'}, {'source_name': 'Twitter Leoloobeek Scheduled Task', 'url': 'https://twitter.com/leoloobeek/status/939248813465853953', 'description': 'Loobeek, L. (2017, December 8). leoloobeek Status. Retrieved December 12, 2017.'}, {'source_name': 'Microsoft Scheduled Task Events Win10', 'url': 'https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/audit-other-object-access-events', 'description': 'Microsoft. (2017, May 28). Audit Other Object Access Events. Retrieved June 27, 2019.'}, {'source_name': 'TechNet Scheduled Task Events', 'url': 'https://technet.microsoft.com/library/dd315590.aspx', 'description': 'Microsoft. (n.d.). General Task Registration. Retrieved December 12, 2017.'}, {'source_name': 'TechNet Autoruns', 'url': 'https://technet.microsoft.com/en-us/sysinternals/bb963902', 'description': 'Russinovich, M. (2016, January 4). Autoruns for Windows v13.51. Retrieved June 6, 2016.'}, {'source_name': 'TechNet Forum Scheduled Task Operational Setting', 'url': 'https://social.technet.microsoft.com/Forums/en-US/e5bca729-52e7-4fcb-ba12-3225c564674c/scheduled-tasks-history-retention-settings?forum=winserver8gen', 'description': 'Satyajit321. (2015, November 3). Scheduled Tasks History Retention settings. Retrieved December 12, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"Adversaries may abuse the [at](https://attack.mitre.org/software/S0110) utility to perform task scheduling for initial or recurring execution of malicious code. The [at](https://attack.mitre.org/software/S0110) utility exists as an executable within Windows, Linux, and macOS for scheduling tasks at a specified time and date. Although deprecated in favor of [Scheduled Task](https://attack.mitre.org/techniques/T1053/005)'s [schtasks](https://attack.mitre.org/software/S0111) in Windows environments, using [at](https://attack.mitre.org/software/S0110) requires that the Task Scheduler service be running, and the user to be logged on as a member of the local Administrators group.\\n\\nOn Linux and macOS, [at](https://attack.mitre.org/software/S0110) may be invoked by the superuser as well as any users added to the <code>at.allow</code> file. If the <code>at.allow</code> file does not exist, the <code>at.deny</code> file is checked. Every username not listed in <code>at.deny</code> is allowed to invoke [at](https://attack.mitre.org/software/S0110). If the <code>at.deny</code> exists and is empty, global use of [at](https://attack.mitre.org/software/S0110) is permitted. If neither file exists (which is often the baseline) only the superuser is allowed to use [at](https://attack.mitre.org/software/S0110).(Citation: Linux at)\\n\\nAdversaries may use [at](https://attack.mitre.org/software/S0110) to execute programs at system startup or on a scheduled basis for [Persistence](https://attack.mitre.org/tactics/TA0003). [at](https://attack.mitre.org/software/S0110) can also be abused to conduct remote [Execution](https://attack.mitre.org/tactics/TA0002) as part of [Lateral Movement](https://attack.mitre.org/tactics/TA0008) and/or to run a process under the context of a specified account (such as SYSTEM).\\n\\nIn Linux environments, adversaries may also abuse [at](https://attack.mitre.org/software/S0110) to break out of restricted environments by using a task to spawn an interactive system shell or to run system commands. Similarly, [at](https://attack.mitre.org/software/S0110) may also be used for [Privilege Escalation](https://attack.mitre.org/tactics/TA0004) if the binary is allowed to run as superuser via <code>sudo</code>.(Citation: GTFObins at)\", 'modified': '2022-04-18T20:12:04.110Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'At', 'x_mitre_detection': 'Monitor process execution from the svchost.exe in Windows 10 and the Windows Task Scheduler taskeng.exe for older versions of Windows. (Citation: Twitter Leoloobeek Scheduled Task) If scheduled tasks are not used for persistence, then the adversary is likely to remove the task when the action is complete. Monitor Windows Task Scheduler stores in %systemroot%\\\\System32\\\\Tasks for change entries related to scheduled tasks that do not correlate with known software, patch cycles, etc.\\n\\nConfigure event logging for scheduled task creation and changes by enabling the \"Microsoft-Windows-TaskScheduler/Operational\" setting within the event logging service. (Citation: TechNet Forum Scheduled Task Operational Setting) Several events will then be logged on scheduled task activity, including: (Citation: TechNet Scheduled Task Events)(Citation: Microsoft Scheduled Task Events Win10)\\n\\n* Event ID 106 on Windows 7, Server 2008 R2 - Scheduled task registered\\n* Event ID 140 on Windows 7, Server 2008 R2 / 4702 on Windows 10, Server 2016 - Scheduled task updated\\n* Event ID 141 on Windows 7, Server 2008 R2 / 4699 on Windows 10, Server 2016 - Scheduled task deleted\\n* Event ID 4698 on Windows 10, Server 2016 - Scheduled task created\\n* Event ID 4700 on Windows 10, Server 2016 - Scheduled task enabled\\n* Event ID 4701 on Windows 10, Server 2016 - Scheduled task disabled\\n\\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current scheduled tasks. (Citation: TechNet Autoruns)\\n\\nRemote access tools with built-in features may interact directly with the Windows API to perform these functions outside of typical system utilities. Tasks may also be created through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001), so additional logging may need to be configured to gather the appropriate data.\\n\\nIn Linux and macOS environments, monitor scheduled task creation using command-line invocation. Legitimate scheduled tasks may be created during installation of new software or through system administration functions. Look for changes to tasks that do not correlate with known software, patch cycles, etc. \\n\\nReview all jobs using the <code>atq</code> command and ensure IP addresses stored in the <code>SSH_CONNECTION</code> and <code>SSH_CLIENT</code> variables, machines that created the jobs, are trusted hosts. All [at](https://attack.mitre.org/software/S0110) jobs are stored in <code>/var/spool/cron/atjobs/</code>.(Citation: rowland linux at 2019)\\n\\nSuspicious program execution through scheduled tasks may show up as outlier processes that have not been seen before when compared against historical data. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for [Command and Control](https://attack.mitre.org/tactics/TA0011), learning details about the environment through [Discovery](https://attack.mitre.org/tactics/TA0007), and [Lateral Movement](https://attack.mitre.org/tactics/TA0008).', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution', 'File: File Modification', 'Scheduled Job: Scheduled Job Creation'], 'x_mitre_permissions_required': ['Administrator', 'User'], 'x_mitre_remote_support': True, 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls to create or execute a scheduled task",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls to create or execute a scheduled task\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid: 86d35949-83c9-4044-b424-db363231fd0c\n    OpNum:\n    - 1\n    - 3\n    - 4\n    - 10\n    - 11\n    - 12\n    - 13\n    - 14\n    - 15\nfalsepositives:\n- Unknown\nid: ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:86d35949-83c9-4044-b424-db363231fd0c\"'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tsch/d1058a28-7e02-4948-8b8d-4a347fa64931\n- https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/ddd4608fe8684fcf2fcf9b48c5f0b3c28097f8a3/documents/MS-TSCH.md\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1053\n- attack.t1053.002\ntitle: Remote Schedule Task Lateral Movement via ITaskSchedulerService\n",
+                            "sigma:id": "ace3ff54-e7fd-46bd-8ea0-74b49a0aca1d",
+                            "title": "Remote Schedule Task Lateral Movement via ITaskSchedulerService",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d2d642d7-b393-43fe-bae4-e81ed5915c4b",
+                        "lookup_data": {
+                            "description": "Detects the use of at/atd which are utilities that are used to schedule tasks.\nThey are often abused by adversaries to maintain persistence or to perform task scheduling for initial or recurring execution of malicious code\n",
+                            "raw": "author: \"\\xD6mer G\\xFCnal, oscd.community\"\ndate: 2020/10/06\ndescription: 'Detects the use of at/atd which are utilities that are used to schedule\n  tasks.\n\n  They are often abused by adversaries to maintain persistence or to perform task\n  scheduling for initial or recurring execution of malicious code\n\n  '\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - /at\n    - /atd\nfalsepositives:\n- Legitimate administration activities\nid: d2d642d7-b393-43fe-bae4-e81ed5915c4b\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/07/07\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.002/T1053.002.md\nstatus: stable\ntags:\n- attack.persistence\n- attack.t1053.002\ntitle: Scheduled Task/Job At\n",
+                            "sigma:id": "d2d642d7-b393-43fe-bae4-e81ed5915c4b",
+                            "title": "Scheduled Task/Job At",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1053.002",
+                "display_name": "Scheduled Task/Job: At",
+                "atomic_tests": [
+                    {
+                        "name": "At.exe Scheduled task",
+                        "auto_generated_guid": "4a6c0dc4-0f2a-4203-9298-a5a9bdc21ed8",
+                        "description": "Executes cmd.exe\nNote: deprecated in Windows 8+\n\nUpon successful execution, cmd.exe will spawn at.exe and create a scheduled task that will spawn cmd at a specific time.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "at 13:20 /interactive cmd\n"
+                        }
+                    },
+                    {
+                        "name": "At - Schedule a job",
+                        "auto_generated_guid": "7266d898-ac82-4ec0-97c7-436075d0d08e",
+                        "description": "This test submits a command to be run in the future by the `at` daemon.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "time_spec": {
+                                "description": "Time specification of when the command should run",
+                                "type": "string",
+                                "default": "now + 1 minute"
+                            },
+                            "at_command": {
+                                "description": "The command to be run",
+                                "type": "string",
+                                "default": "echo Hello from Atomic Red Team"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "The `at` and `atd` executables must exist in the PATH\n",
+                                "prereq_command": "if [ \"$(uname)\" = 'FreeBSD' ]; then which at; else which at && which atd; fi;\n",
+                                "get_prereq_command": "echo 'Please install `at` and `atd`; they were not found in the PATH (Package name: `at`)'\n"
+                            },
+                            {
+                                "description": "The `atd` daemon must be running\n",
+                                "prereq_command": "if [ $(uname) = 'Linux' ]; then systemctl status atd || service atd status; fi;\n",
+                                "get_prereq_command": "echo 'Please start the `atd` daemon (sysv: `service atd start` ; systemd: `systemctl start atd`)'\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "echo \"#{at_command}\" | at #{time_spec}"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:40:29"
+}

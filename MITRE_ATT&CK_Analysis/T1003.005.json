@@ -1,0 +1,169 @@
+{
+    "id": "T1003.005",
+    "name": "Cached Domain Credentials",
+    "description": "Adversaries may attempt to access cached domain credentials used to allow authentication to occur in the event a domain controller is unavailable.(Citation: Microsoft - Cached Creds)\nOn Windows Vista and newer, the hash format is DCC2 (Domain Cached Credentials version 2) hash, also known as MS-Cache v2 hash.(Citation: PassLib mscache) The number of default cached credentials varies and can be altered per system. This hash does not allow pass-the-hash style attacks, and instead requires [Password Cracking](T1110.002) to recover the plaintext password.(Citation: ired mscache)\nWith SYSTEM access, the tools/utilities such as [Mimikatz](S0002), [Reg](S0075), and secretsdump.py can be used to extract the cached credentials.\nNote: Cached credentials for Windows Vista are derived using PBKDF2.(Citation: PassLib mscache)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "Command: Command Execution",
+    "detection": "Monitor processes and command-line arguments for program execution that may be indicative of credential dumping. Remote access tools may contain built-in features or incorporate existing tools like Mimikatz. PowerShell scripts also exist that contain credential dumping functionality, such as PowerSploit's Invoke-Mimikatz module,(Citation: Powersploit) which may require additional logging features to be configured in the operating system to collect necessary information for analysis.\nDetection of compromised [Valid Accounts](T1078) in-use by adversaries may help as well.",
+    "url": "https://attack.mitre.org/techniques/T1003/005",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1003.005",
+                "atomic_attack_guid": "56506854-89d6-46a3-9804-b7fde90791f9",
+                "atomic_attack_name": "Cached Credential Dump via Cmdkey",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Reconnaissance For Cached Credentials Via Cmdkey.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmdkey_recon.yml",
+                        "remote_content": "title: Potential Reconnaissance For Cached Credentials Via Cmdkey.EXE\nid: 07f8bdc2-c9b3-472a-9817-5a670b872f53\nstatus: test\ndescription: Detects usage of cmdkey to look for cached credentials on the system\nreferences:\n    - https://www.peew.pw/blog/2017/11/26/exploring-cmdkey-an-edge-case-for-privilege-escalation\n    - https://technet.microsoft.com/en-us/library/cc754243(v=ws.11).aspx\n    - https://github.com/redcanaryco/atomic-red-team/blob/b27a3cb25025161d49ac861cb216db68c46a3537/atomics/T1003.005/T1003.005.md#atomic-test-1---cached-credential-dump-via-cmdkey\nauthor: jmallette, Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2024-03-05\ntags:\n    - attack.credential-access\n    - attack.t1003.005\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmdkey.exe'\n        - OriginalFileName: 'cmdkey.exe'\n    selection_cli:\n        CommandLine|contains|windash: ' -l'\n    condition: all of selection*\nfields:\n    - CommandLine\n    - ParentCommandLine\n    - User\nfalsepositives:\n    - Legitimate administrative tasks\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                    "c9aed93d-4023-40c3-92a4-7e8607cd6cb6",
+                    "6add2ab5-2711-4e9d-87c8-7a0be8531530",
+                    "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                    "07f8bdc2-c9b3-472a-9817-5a670b872f53",
+                    "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                    "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                    "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                    "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                    "f0d1feba-4344-4ca9-8121-a6c97bd6df52"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2\nlevel: critical\nlogsource:\n  category: driver_load\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution\n",
+                            "sigma:id": "df5ff0a5-f83f-4a5b-bba1-3e6a3f6f6ea2",
+                            "title": "Credential Dumping Tools Service Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c9aed93d-4023-40c3-92a4-7e8607cd6cb6",
+                        "lookup_data": {
+                            "description": "Scraper: Talos Website",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c9aed93d-4023-40c3-92a4-7e8607cd6cb6.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1663009124",
+                            "uuid": "c9aed93d-4023-40c3-92a4-7e8607cd6cb6",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6add2ab5-2711-4e9d-87c8-7a0be8531530",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1003.005",
+                            "mitre-cti:description": "Adversaries may attempt to access cached domain credentials used to allow authentication to occur in the event a domain controller is unavailable.(Citation: Microsoft - Cached Creds)\n\nOn Windows Vista and newer, the hash format is DCC2 (Domain Cached Credentials version 2) hash, also known as MS-Cache v2 hash.(Citation: PassLib mscache) The number of default cached credentials varies and can be altered per system. This hash does not allow pass-the-hash style attacks, and instead requires [Password Cracking](https://attack.mitre.org/techniques/T1110/002) to recover the plaintext password.(Citation: ired mscache)\n\nWith SYSTEM access, the tools/utilities such as [Mimikatz](https://attack.mitre.org/software/S0002), [Reg](https://attack.mitre.org/software/S0075), and secretsdump.py can be used to extract the cached credentials.\n\nNote: Cached credentials for Windows Vista are derived using PBKDF2.(Citation: PassLib mscache)",
+                            "mitre-cti:name": "Cached Domain Credentials",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Ed Williams, Trustwave, SpiderLabs'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--6add2ab5-2711-4e9d-87c8-7a0be8531530', 'type': 'attack-pattern', 'created': '2020-02-21T15:42:25.991Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1003.005', 'url': 'https://attack.mitre.org/techniques/T1003/005'}, {'source_name': 'Microsoft - Cached Creds', 'url': 'https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh994565(v%3Dws.11)', 'description': 'Microsfot. (2016, August 21). Cached and Stored Credentials Technical Overview. Retrieved February 21, 2020.'}, {'source_name': 'PassLib mscache', 'url': 'https://passlib.readthedocs.io/en/stable/lib/passlib.hash.msdcc2.html', 'description': \"Eli Collins. (2016, November 25). Windows' Domain Cached Credentials v2. Retrieved February 21, 2020.\"}, {'source_name': 'ired mscache', 'url': 'https://ired.team/offensive-security/credential-access-and-credential-dumping/dumping-and-cracking-mscash-cached-domain-credentials', 'description': 'Mantvydas Baranauskas. (2019, November 16). Dumping and Cracking mscash - Cached Domain Credentials. Retrieved February 21, 2020.'}, {'url': 'https://github.com/mattifestation/PowerSploit', 'description': 'PowerSploit. (n.d.). Retrieved December 4, 2014.', 'source_name': 'Powersploit'}], 'modified': '2020-03-24T20:41:08.996Z', 'name': 'Cached Domain Credentials', 'description': 'Adversaries may attempt to access cached domain credentials used to allow authentication to occur in the event a domain controller is unavailable.(Citation: Microsoft - Cached Creds)\\n\\nOn Windows Vista and newer, the hash format is DCC2 (Domain Cached Credentials version 2) hash, also known as MS-Cache v2 hash.(Citation: PassLib mscache) The number of default cached credentials varies and can be altered per system. This hash does not allow pass-the-hash style attacks, and instead requires [Password Cracking](https://attack.mitre.org/techniques/T1110/002) to recover the plaintext password.(Citation: ired mscache)\\n\\nWith SYSTEM access, the tools/utilities such as [Mimikatz](https://attack.mitre.org/software/S0002), [Reg](https://attack.mitre.org/software/S0075), and secretsdump.py can be used to extract the cached credentials.\\n\\nNote: Cached credentials for Windows Vista are derived using PBKDF2.(Citation: PassLib mscache)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': \"Monitor processes and command-line arguments for program execution that may be indicative of credential dumping. Remote access tools may contain built-in features or incorporate existing tools like Mimikatz. PowerShell scripts also exist that contain credential dumping functionality, such as PowerSploit's Invoke-Mimikatz module,(Citation: Powersploit) which may require additional logging features to be configured in the operating system to collect necessary information for analysis.\\n\\nDetection of compromised [Valid Accounts](https://attack.mitre.org/techniques/T1078) in-use by adversaries may help as well.\", 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution'], 'x_mitre_permissions_required': ['SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                        "lookup_data": {
+                            "description": "Files with well-known filenames (parts of credential dump software or files produced by them) creation",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/11/01\ndescription: Files with well-known filenames (parts of credential dump software or\n  files produced by them) creation\ndetection:\n  condition: selection\n  selection:\n  - TargetFilename|contains:\n    - \\pwdump\n    - \\kirbi\n    - \\pwhashes\n    - \\wce_ccache\n    - \\wce_krbtkts\n    - \\fgdump-log\n  - TargetFilename|endswith:\n    - \\test.pwd\n    - \\lsremora64.dll\n    - \\lsremora.dll\n    - \\fgexec.exe\n    - \\wceaux.dll\n    - \\SAM.out\n    - \\SECURITY.out\n    - \\SYSTEM.out\n    - \\NTDS.out\n    - \\DumpExt.dll\n    - \\DumpSvc.exe\n    - \\cachedump64.exe\n    - \\cachedump.exe\n    - \\pstgdump.exe\n    - \\servpw.exe\n    - \\servpw64.exe\n    - \\pwdump.exe\n    - \\procdump64.exe\n    - \\Dumpy.exe\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: 8fbf3271-1ef6-4e94-8210-03c2317947f6\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/09/21\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.003\n- attack.t1003.004\n- attack.t1003.005\ntitle: Cred Dump Tools Dropped Files\n",
+                            "sigma:id": "8fbf3271-1ef6-4e94-8210-03c2317947f6",
+                            "title": "Cred Dump Tools Dropped Files",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "07f8bdc2-c9b3-472a-9817-5a670b872f53",
+                        "lookup_data": {
+                            "description": "Detects usage of cmdkey to look for cached credentials",
+                            "raw": "author: jmallette, Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron\n  Systems)\ndate: 2019/01/16\ndescription: Detects usage of cmdkey to look for cached credentials\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains:\n    - ' /l'\n    - ' -l'\n  selection_img:\n  - Image|endswith: \\cmdkey.exe\n  - OriginalFileName: cmdkey.exe\nfalsepositives:\n- Legitimate administrative tasks\nfields:\n- CommandLine\n- ParentCommandLine\n- User\nid: 07f8bdc2-c9b3-472a-9817-5a670b872f53\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/11\nreferences:\n- https://www.peew.pw/blog/2017/11/26/exploring-cmdkey-an-edge-case-for-privilege-escalation\n- https://technet.microsoft.com/en-us/library/cc754243(v=ws.11).aspx\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1003.005\ntitle: Cmdkey Cached Credentials Recon\n",
+                            "sigma:id": "07f8bdc2-c9b3-472a-9817-5a670b872f53",
+                            "title": "Cmdkey Cached Credentials Recon",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                        "lookup_data": {
+                            "description": "Dump sam, system or security hives using REG.exe utility",
+                            "raw": "author: Teymur Kheirkhabarov, Endgame, JHasenbusch, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/22\ndescription: Dump sam, system or security hives using REG.exe utility\ndetection:\n  condition: all of selection_*\n  selection_1:\n    CommandLine|contains:\n    - save\n    - export\n    - \"\\u02E2ave\"\n    - \"e\\u02E3port\"\n    Image|endswith: \\reg.exe\n  selection_2:\n    CommandLine|contains:\n    - hklm\n    - \"hk\\u02EAm\"\n    - hkey_local_machine\n    - \"hkey_\\u02EAocal_machine\"\n    - \"hkey_loca\\u02EA_machine\"\n    - \"hkey_\\u02EAoca\\u02EA_machine\"\n  selection_3:\n    CommandLine|endswith:\n    - \\system\n    - \\sam\n    - \\security\n    - \"\\\\\\u02E2ystem\"\n    - \"\\\\sy\\u02E2tem\"\n    - \"\\\\\\u02E2y\\u02E2tem\"\n    - \"\\\\\\u02E2am\"\n    - \"\\\\\\u02E2ecurity\"\nfalsepositives:\n- Dumping hives for legitimate purpouse i.e. backup or forensic investigation\nid: fd877b94-9bb5-4191-bb25-d79cbd93c167\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://eqllib.readthedocs.io/en/latest/analytics/aed95fc6-5e3f-49dc-8b35-06508613f979.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1003/T1003.md\n- https://www.wietzebeukema.nl/blog/windows-command-line-obfuscation\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- car.2013-07-001\ntitle: Grabbing Sensitive Hives via Reg Utility\n",
+                            "sigma:id": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+                            "title": "Grabbing Sensitive Hives via Reg Utility",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - System\n",
+                            "sigma:id": "4976aa50-8f41-45c6-8b15-ab3fc10e79ed",
+                            "title": "Credential Dumping Tools Service Execution - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via specific named pipes",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community\ndate: 2019/11/01\ndescription: Detects well-known credential dumping tools execution via specific named\n  pipes\ndetection:\n  condition: selection\n  selection:\n    PipeName|contains:\n    - \\lsadump\n    - \\cachedump\n    - \\wceservicepipe\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: 961d0ba2-3eea-4303-a930-2cf78bbfcc5e\nlevel: critical\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    check powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\ntitle: Cred Dump-Tools Named Pipes\n",
+                            "sigma:id": "961d0ba2-3eea-4303-a930-2cf78bbfcc5e",
+                            "title": "Cred Dump-Tools Named Pipes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                        "lookup_data": {
+                            "description": "Detection well-known mimikatz command line arguments",
+                            "raw": "author: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim\n  Shelton\ndate: 2019/10/22\ndescription: Detection well-known mimikatz command line arguments\ndetection:\n  condition: ( selection_1 or (module_names and mimikatz_separator) or (function_names\n    and mimikatz_separator) ) and not 1 of filter*\n  filter_1:\n    CommandLine|contains: function Convert-GuidToCompressedGuid\n  filter_vscode:\n    CommandLine|contains|all:\n    - '/d /s /c '\n    - 'checkfilenameiocs --ioc-path '\n    ParentImage|endswith: \\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\n  function_names:\n    CommandLine|contains:\n    - aadcookie\n    - detours\n    - memssp\n    - mflt\n    - ncroutemon\n    - ngcsign\n    - printnightmare\n    - skeleton\n    - preshutdown\n    - mstsc\n    - multirdp\n  mimikatz_separator:\n    CommandLine|contains: '::'\n  module_names:\n    CommandLine|contains:\n    - rpc\n    - token\n    - crypto\n    - dpapi\n    - sekurlsa\n    - kerberos\n    - lsadump\n    - privilege\n    - process\n    - vault\n  selection_1:\n    CommandLine|contains:\n    - DumpCreds\n    - invoke-mimikatz\nfalsepositives:\n- Legitimate Administrator using tool for password recovery\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/07\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://tools.thehacker.recipes/mimikatz/modules\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\ntitle: Mimikatz Command Line\n",
+                            "sigma:id": "a642964e-bead-4bed-8910-1bb4d63e3b4d",
+                            "title": "Mimikatz Command Line",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                        "lookup_data": {
+                            "description": "Detects well-known credential dumping tools execution via service execution events",
+                            "raw": "author: Florian Roth (Nextron Systems), Teymur Kheirkhabarov, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2017/03/05\ndescription: Detects well-known credential dumping tools execution via service execution\n  events\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - fgexec\n    - dumpsvc\n    - cachedump\n    - mimidrv\n    - gsecdump\n    - servpw\n    - pwdump\nfalsepositives:\n- Legitimate Administrator using credential dumping tool for password recovery\nid: f0d1feba-4344-4ca9-8121-a6c97bd6df52\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\nrelated:\n- id: 4976aa50-8f41-45c6-8b15-ab3fc10e79ed\n  type: derived\nstatus: test\ntags:\n- attack.credential_access\n- attack.execution\n- attack.t1003.001\n- attack.t1003.002\n- attack.t1003.004\n- attack.t1003.005\n- attack.t1003.006\n- attack.t1569.002\n- attack.s0005\ntitle: Credential Dumping Tools Service Execution - Security\n",
+                            "sigma:id": "f0d1feba-4344-4ca9-8121-a6c97bd6df52",
+                            "title": "Credential Dumping Tools Service Execution - Security",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1003.005",
+                "display_name": "OS Credential Dumping: Cached Domain Credentials",
+                "atomic_tests": [
+                    {
+                        "name": "Cached Credential Dump via Cmdkey",
+                        "auto_generated_guid": "56506854-89d6-46a3-9804-b7fde90791f9",
+                        "description": "List credentials currently stored on the host via the built-in Windows utility cmdkey.exe\nCredentials listed with Cmdkey only pertain to the current user\nPasswords will not be displayed once they are stored\nhttps://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cmdkey\nhttps://www.peew.pw/blog/2017/11/26/exploring-cmdkey-an-edge-case-for-privilege-escalation\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "cmdkey /list\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:41:03"
+}

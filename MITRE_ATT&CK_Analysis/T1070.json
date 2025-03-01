@@ -1,0 +1,331 @@
+{
+    "id": "T1070",
+    "name": "Indicator Removal on Host",
+    "description": "Adversaries may delete or alter generated artifacts on a host system, including logs or captured files such as quarantined malware. Locations and format of logs are platform or product-specific, however standard operating system logs are captured as Windows events or Linux/macOS files such as [Bash History](T1552.003) and /var/log/*.\nThese actions may interfere with event collection, reporting, or other notifications used to detect intrusion activity. This may compromise the integrity of security solutions by causing notable events to go unreported. This activity may also impede forensic analysis and incident response, due to lack of sufficient data to determine what occurred.",
+    "platforms": "Linux, macOS, Windows, Containers",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, File: File Deletion, File: File Modification, Windows Registry: Windows Registry Key Modification, Windows Registry: Windows Registry Key Deletion, Process: OS API Execution, Command: Command Execution, Network Traffic: Network Traffic Content, User Account: User Account Authentication, File: File Metadata",
+    "detection": "File system monitoring may be used to detect improper deletion or modification of indicator files.  Events not stored on the file system may require different detection mechanisms.",
+    "url": "https://attack.mitre.org/techniques/T1070",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1070",
+                "atomic_attack_guid": "b4115c7a-0e92-47f0-a61e-17e7218b2435",
+                "atomic_attack_name": "Indicator Removal using FSUtil",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Fsutil Suspicious Invocation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_fsutil_usage.yml",
+                        "remote_content": "title: Fsutil Suspicious Invocation\nid: add64136-62e5-48ea-807e-88638d02df1e\nstatus: stable\ndescription: |\n  Detects suspicious parameters of fsutil (deleting USN journal, configuring it with small size, etc).\n  Might be used by ransomwares during the attack (seen by NotPetya and others).\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-usn\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070/T1070.md\n    - https://eqllib.readthedocs.io/en/latest/analytics/c91f422a-5214-4b17-8664-c5fcf115c0a2.html\n    - https://github.com/albertzsigovits/malware-notes/blob/558898932c1579ff589290092a2c8febefc3a4c9/Ransomware/Lockbit.md\n    - https://blog.cluster25.duskrise.com/2023/05/22/back-in-black-blackbyte-nt\nauthor: Ecco, E.M. Anhaus, oscd.community\ndate: 2019-09-26\nmodified: 2023-09-09\ntags:\n    - attack.defense-evasion\n    - attack.impact\n    - attack.t1070\n    - attack.t1485\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\fsutil.exe'\n        - OriginalFileName: 'fsutil.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'deletejournal'        # usn deletejournal ==> generally ransomware or attacker\n            - 'createjournal'        # usn createjournal ==> can modify config to set it to a tiny size\n            - 'setZeroData'          # file setZeroData  ==> empties a file with zeroes\n    condition: all of selection_*\nfalsepositives:\n    - Admin activity\n    - Scripts and administrative tools used in the monitored environment\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "799ace7f-e227-4411-baa0-8868704f2a69",
+                    "a55349d8-9588-4c5a-8e3b-1925fe2a4ffe",
+                    "a238b5d0-ce2d-4414-a676-7a531b3d13d6",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "d99b79d2-0a6f-4f46-ad8b-260b6e17f982",
+                    "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+                    "6cac62ce-550b-4793-8ee6-6a1b8836edb0",
+                    "c9fbe8e9-119d-40a6-9b59-dd58a5d84429",
+                    "4d7cda18-1b12-4e52-b45c-d28653210df8",
+                    "09570ae5-889e-43ea-aac0-0e1221fb3d95",
+                    "bde47d4b-9987-405c-94c7-b080410e8ea7",
+                    "add64136-62e5-48ea-807e-88638d02df1e",
+                    "20f754db-d025-4a8f-9d74-e0037e999a9a",
+                    "79aeeb41-8156-4fac-a0cd-076495ab82a1",
+                    "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+                    "f2f01843-e7b8-4f95-a35a-d23584476423",
+                    "115fdba9-f017-42e6-84cf-d5573bf2ddf8",
+                    "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                    "3eb8c339-a765-48cc-a150-4364c04652bf",
+                    "d813d662-785b-42ca-8b4a-f7457d78d5a9",
+                    "07bdd2f5-9c58-4f38-aec8-e101bb79ef8d",
+                    "9e9a9002-56c4-40fd-9eff-e4b09bfa5f6c"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "799ace7f-e227-4411-baa0-8868704f2a69",
+                        "lookup_data": {
+                            "capec": "CAPEC-93",
+                            "mitre-attack-id": "T1070",
+                            "mitre-cti:description": "Adversaries may delete or modify artifacts generated within systems to remove evidence of their presence or hinder defenses. Various artifacts may be created by an adversary or something that can be attributed to an adversary’s actions. Typically these artifacts are used as defensive indicators related to monitored events, such as strings from downloaded files, logs that are generated from user actions, and other data analyzed by defenders. Location, format, and type of artifact (such as command or login history) are often specific to each platform.\n\nRemoval of these indicators may interfere with event collection, reporting, or other processes used to detect intrusion activity. This may compromise the integrity of security solutions by causing notable events to go unreported. This activity may also impede forensic analysis and incident response, due to lack of sufficient data to determine what occurred.",
+                            "mitre-cti:name": "Indicator Removal",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-21T16:12:54.457Z', 'name': 'Indicator Removal', 'description': 'Adversaries may delete or modify artifacts generated within systems to remove evidence of their presence or hinder defenses. Various artifacts may be created by an adversary or something that can be attributed to an adversary’s actions. Typically these artifacts are used as defensive indicators related to monitored events, such as strings from downloaded files, logs that are generated from user actions, and other data analyzed by defenders. Location, format, and type of artifact (such as command or login history) are often specific to each platform.\\n\\nRemoval of these indicators may interfere with event collection, reporting, or other processes used to detect intrusion activity. This may compromise the integrity of security solutions by causing notable events to go unreported. This activity may also impede forensic analysis and incident response, due to lack of sufficient data to determine what occurred.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'File system monitoring may be used to detect improper deletion or modification of indicator files.  Events not stored on the file system may require different detection mechanisms.', 'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'Containers', 'Network', 'Office 365', 'Google Workspace'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '2.0', 'x_mitre_contributors': ['Brad Geesaman, @bradgeesaman', 'Ed Williams, Trustwave, SpiderLabs', 'Blake Strom, Microsoft 365 Defender'], 'x_mitre_data_sources': ['Process: OS API Execution', 'Network Traffic: Network Traffic Content', 'File: File Modification', 'File: File Deletion', 'Command: Command Execution', 'Windows Registry: Windows Registry Key Modification', 'File: File Metadata', 'Firewall: Firewall Rule Modification', 'Scheduled Job: Scheduled Job Modification', 'Process: Process Creation', 'Windows Registry: Windows Registry Key Deletion', 'User Account: User Account Authentication'], 'x_mitre_defense_bypassed': ['Log analysis', 'Host intrusion prevention systems', 'Anti-virus'], 'type': 'attack-pattern', 'id': 'attack-pattern--799ace7f-e227-4411-baa0-8868704f2a69', 'created': '2017-05-31T21:30:55.892Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1070', 'external_id': 'T1070'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/93.html', 'external_id': 'CAPEC-93'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a55349d8-9588-4c5a-8e3b-1925fe2a4ffe",
+                        "lookup_data": {
+                            "description": "Detects the deletion of the Exchange PowerShell cmdlet History logs which may indicate an attempt to destroy forensic evidence",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/26\ndescription: Detects the deletion of the Exchange PowerShell cmdlet History logs which\n  may indicate an attempt to destroy forensic evidence\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|contains: _Cmdlet_\n    TargetFilename|startswith: \\Logging\\CmdletInfra\\LocalPowerShell\\Cmdlet\\\nfalsepositives:\n- Possible FP during log rotation\nid: a55349d8-9588-4c5a-8e3b-1925fe2a4ffe\nlevel: high\nlogsource:\n  category: file_delete\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://m365internals.com/2022/10/07/hunting-in-on-premises-exchange-server-logs/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070\ntitle: Exchange PowerShell Cmdlet History Deleted\n",
+                            "sigma:id": "a55349d8-9588-4c5a-8e3b-1925fe2a4ffe",
+                            "title": "Exchange PowerShell Cmdlet History Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a238b5d0-ce2d-4414-a676-7a531b3d13d6",
+                        "lookup_data": {
+                            "description": "Detects a command that clears or disables any ETW trace log which could indicate a logging evasion.",
+                            "raw": "author: '@neu5ron, Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community'\ndate: 2019/03/22\ndescription: Detects a command that clears or disables any ETW trace log which could\n  indicate a logging evasion.\ndetection:\n  condition: 1 of selection*\n  selection_clear_1:\n    CommandLine|contains|all:\n    - cl\n    - /Trace\n  selection_clear_2:\n    CommandLine|contains|all:\n    - clear-log\n    - /Trace\n  selection_disable_1:\n    CommandLine|contains|all:\n    - sl\n    - /e:false\n  selection_disable_2:\n    CommandLine|contains|all:\n    - set-log\n    - /e:false\n  selection_disable_3:\n    CommandLine|contains|all:\n    - logman\n    - update\n    - trace\n    - --p\n    - -ets\n  selection_pwsh_remove:\n    CommandLine|contains: Remove-EtwTraceProvider\n  selection_pwsh_set:\n    CommandLine|contains|all:\n    - Set-EtwTraceProvider\n    - '0x11'\nfalsepositives:\n- Unknown\nid: a238b5d0-ce2d-4414-a676-7a531b3d13d6\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/28\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/wevtutil\n- https://abuse.io/lockergoga.txt\n- https://medium.com/palantir/tampering-with-windows-event-tracing-background-offense-and-defense-4be7ac62ac63\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1562.006\n- car.2016-04-002\ntitle: Disable of ETW Trace\n",
+                            "sigma:id": "a238b5d0-ce2d-4414-a676-7a531b3d13d6",
+                            "title": "Disable of ETW Trace",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d99b79d2-0a6f-4f46-ad8b-260b6e17f982",
+                        "lookup_data": {
+                            "description": "One of the Windows Eventlogs has been cleared. e.g. caused by \"wevtutil cl\" command execution",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/01/10\ndescription: One of the Windows Eventlogs has been cleared. e.g. caused by \"wevtutil\n  cl\" command execution\ndetection:\n  condition: 1 of selection_*\n  selection_1102:\n    EventID: 1102\n    Provider_Name: Microsoft-Windows-Eventlog\n  selection_517:\n    EventID: 517\n    Provider_Name: Security\nfalsepositives:\n- Rollout of log collection agents (the setup routine often includes a reset of the\n  local Eventlog)\n- System provisioning (system reset before the golden image creation)\nid: d99b79d2-0a6f-4f46-ad8b-260b6e17f982\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/02/24\nreferences:\n- https://twitter.com/deviouspolack/status/832535435960209408\n- https://www.hybrid-analysis.com/sample/027cc450ef5f8c5f653329641ec1fed91f694e0d229928963b30f6b0d7d3a745?environmentId=100\nrelated:\n- id: f2f01843-e7b8-4f95-a35a-d23584476423\n  type: obsoletes\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070.001\n- car.2016-04-002\ntitle: Security Eventlog Cleared\n",
+                            "sigma:id": "d99b79d2-0a6f-4f46-ad8b-260b6e17f982",
+                            "title": "Security Eventlog Cleared",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+                        "lookup_data": {
+                            "description": "Shadow Copies deletion using operating systems utilities",
+                            "raw": "author: Florian Roth (Nextron Systems), Michael Haag, Teymur Kheirkhabarov, Daniil\n  Yugoslavskiy, oscd.community, Andreas Hunkeler (@Karneades)\ndate: 2019/10/22\ndescription: Shadow Copies deletion using operating systems utilities\ndetection:\n  condition: (all of selection1*) or (all of selection2*) or (all of selection3*)\n  selection1_cli:\n    CommandLine|contains|all:\n    - shadow\n    - delete\n  selection1_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wmic.exe\n    - \\vssadmin.exe\n    - \\diskshadow.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n    - wmic.exe\n    - VSSADMIN.EXE\n    - diskshadow.exe\n  selection2_cli:\n    CommandLine|contains|all:\n    - delete\n    - catalog\n    - quiet\n  selection2_img:\n  - Image|endswith: \\wbadmin.exe\n  - OriginalFileName: WBADMIN.EXE\n  selection3_cli:\n    CommandLine|contains:\n    - unbounded\n    - /MaxSize=\n    CommandLine|contains|all:\n    - resize\n    - shadowstorage\n  selection3_img:\n  - Image|endswith: \\vssadmin.exe\n  - OriginalFileName: VSSADMIN.EXE\nfalsepositives:\n- Legitimate Administrator deletes Shadow Copies using operating systems utilities\n  for legitimate reason\n- LANDesk LDClient Ivanti-PSModule (PS EncodedCommand)\nfields:\n- CommandLine\n- ParentCommandLine\nid: c947b146-0abc-4c87-9c64-b17e9d7274a2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/03\nreferences:\n- https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n- https://blog.talosintelligence.com/2017/05/wannacry.html\n- https://securingtomorrow.mcafee.com/other-blogs/mcafee-labs/new-teslacrypt-ransomware-arrives-via-spam/\n- https://www.bleepingcomputer.com/news/security/why-everyone-should-disable-vssadmin-exe-now/\n- https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\n- https://github.com/Neo23x0/Raccine#the-process\n- https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/gen_ransomware_command_lines.yar\n- https://redcanary.com/blog/intelligence-insights-october-2021/\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/blackbyte-exbyte-ransomware\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.impact\n- attack.t1070\n- attack.t1490\ntitle: Shadow Copies Deletion Using Operating Systems Utilities\n",
+                            "sigma:id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+                            "title": "Shadow Copies Deletion Using Operating Systems Utilities",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6cac62ce-550b-4793-8ee6-6a1b8836edb0",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1070",
+                            "mitre-cti:description": "Automatically forward events to a log server or data repository to prevent conditions in which the adversary can locate and manipulate data on the local system. When possible, minimize time delay on event reporting to avoid prolonged storage on the local system. Protect generated event files that are stored locally with proper permissions and authentication and limit opportunities for adversaries to increase privileges by preventing Privilege Escalation opportunities. Obfuscate/encrypt event files locally and in transit to avoid giving feedback to an adversary.",
+                            "mitre-cti:name": "Indicator Removal on Host Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--6cac62ce-550b-4793-8ee6-6a1b8836edb0', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/mitigations/T1070', 'external_id': 'T1070'}], 'modified': '2019-07-24T19:40:27.401Z', 'name': 'Indicator Removal on Host Mitigation', 'description': 'Automatically forward events to a log server or data repository to prevent conditions in which the adversary can locate and manipulate data on the local system. When possible, minimize time delay on event reporting to avoid prolonged storage on the local system. Protect generated event files that are stored locally with proper permissions and authentication and limit opportunities for adversaries to increase privileges by preventing Privilege Escalation opportunities. Obfuscate/encrypt event files locally and in transit to avoid giving feedback to an adversary.', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c9fbe8e9-119d-40a6-9b59-dd58a5d84429",
+                        "lookup_data": {
+                            "description": "Detects, possibly, malicious unauthorized usage of bcdedit.exe",
+                            "raw": "author: '@neu5ron'\ndate: 2019/02/07\ndescription: Detects, possibly, malicious unauthorized usage of bcdedit.exe\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - delete\n    - deletevalue\n    - import\n    - safeboot\n    - network\n    Image|endswith: \\bcdedit.exe\nid: c9fbe8e9-119d-40a6-9b59-dd58a5d84429\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://docs.microsoft.com/en-us/windows-hardware/drivers/devtest/bcdedit--set\n- https://twitter.com/malwrhunterteam/status/1372536434125512712/photo/2\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.persistence\n- attack.t1542.003\ntitle: Possible Ransomware or Unauthorized MBR Modifications\n",
+                            "sigma:id": "c9fbe8e9-119d-40a6-9b59-dd58a5d84429",
+                            "title": "Possible Ransomware or Unauthorized MBR Modifications",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4d7cda18-1b12-4e52-b45c-d28653210df8",
+                        "lookup_data": {
+                            "description": "Detect possible Sysmon driver unload",
+                            "raw": "author: Kirill Kiryanov, oscd.community\ndate: 2019/10/23\ndescription: Detect possible Sysmon driver unload\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - unload\n    - sys\n    Image|endswith: \\fltmc.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- Details\nid: 4d7cda18-1b12-4e52-b45c-d28653210df8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.darkoperator.com/blog/2018/10/5/operating-offensively-against-sysmon\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1562\n- attack.t1562.002\ntitle: Sysmon Driver Unload\n",
+                            "sigma:id": "4d7cda18-1b12-4e52-b45c-d28653210df8",
+                            "title": "Sysmon Driver Unload",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "09570ae5-889e-43ea-aac0-0e1221fb3d95",
+                        "lookup_data": {
+                            "description": "Detects removal of an exported Exchange mailbox which could be to cover tracks from ProxyShell exploit",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/08/27\ndescription: Detects removal of an exported Exchange mailbox which could be to cover\n  tracks from ProxyShell exploit\ndetection:\n  condition: keywords\n  keywords:\n    '|all':\n    - Remove-MailboxExportRequest\n    - ' -Identity '\n    - ' -Confirm \"False\"'\nfalsepositives:\n- Unknown\nid: 09570ae5-889e-43ea-aac0-0e1221fb3d95\nlevel: high\nlogsource:\n  product: windows\n  service: msexchange-management\nmodified: 2023/01/23\nreferences:\n- https://github.com/rapid7/metasploit-framework/blob/1416b5776d963f21b7b5b45d19f3e961201e0aed/modules/exploits/windows/http/exchange_proxyshell_rce.rb#L430\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\ntitle: Remove Exported Mailbox from Exchange Webserver\n",
+                            "sigma:id": "09570ae5-889e-43ea-aac0-0e1221fb3d95",
+                            "title": "Remove Exported Mailbox from Exchange Webserver",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bde47d4b-9987-405c-94c7-b080410e8ea7",
+                        "lookup_data": {
+                            "description": "Identifies when a user attempts to clear console history. An adversary may clear the command history of a compromised account to conceal the actions undertaken during an intrusion.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/11/25\ndescription: Identifies when a user attempts to clear console history. An adversary\n  may clear the command history of a compromised account to conceal the actions undertaken\n  during an intrusion.\ndetection:\n  condition: selection1 or selection2a and selection2b\n  selection1:\n    ScriptBlockText|contains: Clear-History\n  selection2a:\n    ScriptBlockText|contains:\n    - Remove-Item\n    - rm\n  selection2b:\n    ScriptBlockText|contains:\n    - ConsoleHost_history.txt\n    - (Get-PSReadlineOption).HistorySavePath\nfalsepositives:\n- Unknown\nid: bde47d4b-9987-405c-94c7-b080410e8ea7\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://stefanos.cloud/blog/kb/how-to-clear-the-powershell-command-history/\n- https://www.shellhacks.com/clear-history-powershell/\n- https://community.sophos.com/sophos-labs/b/blog/posts/powershell-command-history-forensics\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1070.003\ntitle: Clearing Windows Console History\n",
+                            "sigma:id": "bde47d4b-9987-405c-94c7-b080410e8ea7",
+                            "title": "Clearing Windows Console History",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "add64136-62e5-48ea-807e-88638d02df1e",
+                        "lookup_data": {
+                            "description": "Detects suspicious parameters of fsutil (deleting USN journal, configuring it with small size, etc).\nMight be used by ransomwares during the attack (seen by NotPetya and others).\n",
+                            "raw": "author: Ecco, E.M. Anhaus, oscd.community\ndate: 2019/09/26\ndescription: 'Detects suspicious parameters of fsutil (deleting USN journal, configuring\n  it with small size, etc).\n\n  Might be used by ransomwares during the attack (seen by NotPetya and others).\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - deletejournal\n    - createjournal\n  selection_img:\n  - Image|endswith: \\fsutil.exe\n  - OriginalFileName: fsutil.exe\nfalsepositives:\n- Admin activity\n- Scripts and administrative tools used in the monitored environment\nid: add64136-62e5-48ea-807e-88638d02df1e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-usn\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070/T1070.md\n- https://eqllib.readthedocs.io/en/latest/analytics/c91f422a-5214-4b17-8664-c5fcf115c0a2.html\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1070\ntitle: Fsutil Suspicious Invocation\n",
+                            "sigma:id": "add64136-62e5-48ea-807e-88638d02df1e",
+                            "title": "Fsutil Suspicious Invocation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "20f754db-d025-4a8f-9d74-e0037e999a9a",
+                        "lookup_data": {
+                            "description": "Detects an instance of an SES identity being deleted via the \"DeleteIdentity\" event. This may be an indicator of an adversary removing the account that carried out suspicious or malicious activities",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/12/13\ndescription: Detects an instance of an SES identity being deleted via the \"DeleteIdentity\"\n  event. This may be an indicator of an adversary removing the account that carried\n  out suspicious or malicious activities\ndetection:\n  condition: selection\n  selection:\n    eventName: DeleteIdentity\n    eventSource: ses.amazonaws.com\nfalsepositives:\n- Unknown\nid: 20f754db-d025-4a8f-9d74-e0037e999a9a\nlevel: medium\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/12/28\nreferences:\n- https://unit42.paloaltonetworks.com/compromised-cloud-compute-credentials/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070\ntitle: SES Identity Has Been Deleted\n",
+                            "sigma:id": "20f754db-d025-4a8f-9d74-e0037e999a9a",
+                            "title": "SES Identity Has Been Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "79aeeb41-8156-4fac-a0cd-076495ab82a1",
+                        "lookup_data": {
+                            "description": "Detects NotPetya ransomware activity in which the extracted passwords are passed back to the main module via named pipe, the file system journal of drive C is deleted and windows eventlogs are cleared using wevtutil",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom Ueltschi\ndate: 2019/01/16\ndescription: Detects NotPetya ransomware activity in which the extracted passwords\n  are passed back to the main module via named pipe, the file system journal of drive\n  C is deleted and windows eventlogs are cleared using wevtutil\ndetection:\n  condition: 1 of selection*\n  selection_pattern:\n    CommandLine|contains:\n    - 'wevtutil cl Application & fsutil usn deletejournal /D C:'\n    - dllhost.dat %WINDIR%\\ransoms\n  selection_perfc_keyword:\n  - \\perfc.dat\n  selection_rundll32_dash1:\n    CommandLine|endswith:\n    - .dat,#1\n    - '.dat #1'\n    - .zip.dll\",#1\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 79aeeb41-8156-4fac-a0cd-076495ab82a1\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/15\nreferences:\n- https://securelist.com/schroedingers-petya/78870/\n- https://www.hybrid-analysis.com/sample/64b0b58a2c030c77fdb2b537b2fcc4af432bc55ffb36599a31d418c7c69e94b1?environmentId=100\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.011\n- attack.t1070.001\n- attack.credential_access\n- attack.t1003.001\n- car.2016-04-002\ntitle: NotPetya Ransomware Activity\n",
+                            "sigma:id": "79aeeb41-8156-4fac-a0cd-076495ab82a1",
+                            "title": "NotPetya Ransomware Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+                        "lookup_data": {
+                            "description": "Detects clearing or configuration of eventlogs using wevtutil, powershell and wmic. Might be used by ransomwares during the attack (seen by NotPetya and others).",
+                            "raw": "author: Ecco, Daniil Yugoslavskiy, oscd.community, D3F7A5105\ndate: 2019/09/26\ndescription: Detects clearing or configuration of eventlogs using wevtutil, powershell\n  and wmic. Might be used by ransomwares during the attack (seen by NotPetya and others).\ndetection:\n  condition: 1 of selection_* and not 1 of filter_*\n  filter_msiexec:\n    CommandLine|contains: ' sl '\n    ParentImage:\n    - C:\\Windows\\SysWOW64\\msiexec.exe\n    - C:\\Windows\\System32\\msiexec.exe\n  selection_other_ps:\n    CommandLine|contains:\n    - 'Clear-EventLog '\n    - 'Remove-EventLog '\n    - 'Limit-EventLog '\n    - 'Clear-WinEvent '\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  selection_other_wmic:\n    CommandLine|contains: ' ClearEventLog '\n    Image|endswith: \\wmic.exe\n  selection_wevtutil:\n    CommandLine|contains:\n    - 'clear-log '\n    - ' cl '\n    - 'set-log '\n    - ' sl '\n    - 'lfn:'\n    Image|endswith: \\wevtutil.exe\nfalsepositives:\n- Admin activity\n- Scripts and administrative tools used in the monitored environment\n- Maintenance activity\nid: cc36992a-4671-4f21-a91d-6c2b72a2edf5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.001/T1070.001.md\n- https://eqllib.readthedocs.io/en/latest/analytics/5b223758-07d6-4100-9e11-238cfdd0fe97.html\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wevtutil\n- https://gist.github.com/fovtran/ac0624983c7722e80a8f5a4babb170ee\n- https://jdhnet.wordpress.com/2017/12/19/changing-the-location-of-the-windows-event-logs/\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1070.001\n- attack.t1562.002\n- car.2016-04-002\ntitle: Suspicious Eventlog Clear or Configuration Change\n",
+                            "sigma:id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+                            "title": "Suspicious Eventlog Clear or Configuration Change",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f2f01843-e7b8-4f95-a35a-d23584476423",
+                        "lookup_data": {
+                            "description": "Some threat groups tend to delete the local 'Security' Eventlog using certain utitlities",
+                            "raw": "author: Florian Roth\ndate: 2017/02/19\ndescription: Some threat groups tend to delete the local 'Security' Eventlog using\n  certain utitlities\ndetection:\n  condition: selection\n  selection:\n    EventID:\n    - 517\n    - 1102\nfalsepositives:\n- Rollout of log collection agents (the setup routine often includes a reset of the\n  local Eventlog)\n- System provisioning (system reset before the golden image creation)\nid: f2f01843-e7b8-4f95-a35a-d23584476423\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2020/08/23\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1070.001\n- car.2016-04-002\ntitle: Security Eventlog Cleared\n",
+                            "sigma:id": "f2f01843-e7b8-4f95-a35a-d23584476423",
+                            "title": "Security Eventlog Cleared",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "115fdba9-f017-42e6-84cf-d5573bf2ddf8",
+                        "lookup_data": {
+                            "description": "Detects usage of powershell cmdlets to disable or remove ETW trace sessions",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/28\ndescription: Detects usage of powershell cmdlets to disable or remove ETW trace sessions\ndetection:\n  condition: 1 of selection*\n  selection_pwsh_remove:\n    ScriptBlockText|contains: 'Remove-EtwTraceProvider '\n  selection_pwsh_set:\n    ScriptBlockText|contains|all:\n    - 'Set-EtwTraceProvider '\n    - '0x11'\nfalsepositives:\n- Unknown\nid: 115fdba9-f017-42e6-84cf-d5573bf2ddf8\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/25\nreferences:\n- https://medium.com/palantir/tampering-with-windows-event-tracing-background-offense-and-defense-4be7ac62ac63\nrelated:\n- id: a238b5d0-ce2d-4414-a676-7a531b3d13d6\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1562.006\n- car.2016-04-002\ntitle: Disable of ETW Trace - Powershell\n",
+                            "sigma:id": "115fdba9-f017-42e6-84cf-d5573bf2ddf8",
+                            "title": "Disable of ETW Trace - Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                        "lookup_data": {
+                            "description": "Buzzing in the Background: BumbleBee, a New Modular Backdoor Evolved From BookWorm",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/758d96ed-9dd4-4009-9270-65f2c3dd30cc.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603410",
+                            "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3eb8c339-a765-48cc-a150-4364c04652bf",
+                        "lookup_data": {
+                            "description": "Detects the deletion of WebServer access logs which may indicate an attempt to destroy forensic evidence",
+                            "raw": "author: Tim Rauch\ndate: 2022/09/16\ndescription: Detects the deletion of WebServer access logs which may indicate an attempt\n  to destroy forensic evidence\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: .log\n    TargetFilename|startswith: C:\\inetpub\\logs\\LogFiles\\\nfalsepositives:\n- During uninstallation of the IIS service\n- During log rotation\nid: 3eb8c339-a765-48cc-a150-4364c04652bf\nlevel: medium\nlogsource:\n  category: file_delete\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://www.elastic.co/guide/en/security/current/webserver-access-logs-deleted.html\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070\ntitle: WebServer Access Logs Deleted\n",
+                            "sigma:id": "3eb8c339-a765-48cc-a150-4364c04652bf",
+                            "title": "WebServer Access Logs Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d813d662-785b-42ca-8b4a-f7457d78d5a9",
+                        "lookup_data": {
+                            "description": "Detects the load of advapi31.dll by a process running in an uncommon folder",
+                            "raw": "author: frack113\ndate: 2022/02/03\ndescription: Detects the load of advapi31.dll by a process running in an uncommon\n  folder\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_common:\n    Image|startswith:\n    - C:\\Windows\\\n    - C:\\Program Files (x86)\\\n    - C:\\Program Files\\\n  filter_defender:\n    Image|endswith: \\MpCmdRun.exe\n    Image|startswith: C:\\ProgramData\\Microsoft\\Windows Defender\\platform\\\n  filter_onedrive:\n    Image|contains: \\AppData\\Local\\Microsoft\\OneDrive\\\n    Image|endswith: FileCoAuth.exe\n    Image|startswith: C:\\Users\\\n  selection:\n    ImageLoaded|endswith: \\advapi32.dll\nfalsepositives:\n- Unknown\nid: d813d662-785b-42ca-8b4a-f7457d78d5a9\nlevel: informational\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/02/11\nreferences:\n- https://github.com/hlldz/Phant0m\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\ntitle: Suspicious Load of Advapi31.dll\n",
+                            "sigma:id": "d813d662-785b-42ca-8b4a-f7457d78d5a9",
+                            "title": "Suspicious Load of Advapi31.dll",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "07bdd2f5-9c58-4f38-aec8-e101bb79ef8d",
+                        "lookup_data": {
+                            "description": "Detects the deletion of registry keys containing the MSTSC connection history",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/10/19\ndescription: Detects the deletion of registry keys containing the MSTSC connection\n  history\ndetection:\n  condition: 1 of selection*\n  selection1:\n    EventType: DeleteValue\n    TargetObject|contains: \\Microsoft\\Terminal Server Client\\Default\\MRU\n  selection2:\n    EventType: DeleteKey\n    TargetObject|contains: \\Microsoft\\Terminal Server Client\\Servers\\\nfalsepositives:\n- Unknown\nid: 07bdd2f5-9c58-4f38-aec8-e101bb79ef8d\nlevel: high\nlogsource:\n  category: registry_delete\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://docs.microsoft.com/en-us/troubleshoot/windows-server/remote/remove-entries-from-remote-desktop-connection-computer\n- http://woshub.com/how-to-clear-rdp-connections-history/\n- https://www.trendmicro.com/en_us/research/23/a/vice-society-ransomware-group-targets-manufacturing-companies.html\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1112\ntitle: Terminal Server Client Connection History Cleared\n",
+                            "sigma:id": "07bdd2f5-9c58-4f38-aec8-e101bb79ef8d",
+                            "title": "Terminal Server Client Connection History Cleared",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9e9a9002-56c4-40fd-9eff-e4b09bfa5f6c",
+                        "lookup_data": {
+                            "description": "Detects when a system process (ie located in system32, syswow64...etc) loads a DLL from a suspicious location such as %temp%",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/17\ndescription: Detects when a system process (ie located in system32, syswow64...etc)\n  loads a DLL from a suspicious location such as %temp%\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_cleanmgr:\n    Image: C:\\Windows\\System32\\cleanmgr.exe\n    ImageLoaded|endswith: \\ssshim.dll\n  filter_generic:\n  - Image|endswith: \\msiexec.exe\n  - ImageLoaded|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n  - Image:\n    - C:\\Windows\\SysWOW64\\rundll32.exe\n    - C:\\Windows\\System32\\rundll32.exe\n  - CommandLine|contains|all:\n    - \\AppData\\Local\\Temp\\\n    - \\setup.exe\n  filter_mscorsvw:\n    ImageLoaded|contains: \\AppData\\Local\\Temp\\\n    Image|endswith: \\mscorsvw.exe\n    Image|startswith: C:\\Windows\\Microsoft.NET\\Framework\\v\n  selection:\n    ImageLoaded|contains:\n    - \\Users\\Public\\\n    - \\Downloads\\\n    - \\AppData\\Local\\Temp\\\n    - C:\\PerfLogs\\\n    Image|startswith: C:\\Windows\\\nfalsepositives:\n- Unknown\nid: 9e9a9002-56c4-40fd-9eff-e4b09bfa5f6c\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/hackerhouse-opensource/iscsicpl_bypassUAC (Idea)\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1070\ntitle: DLL Load By System Process From Suspicious Locations\n",
+                            "sigma:id": "9e9a9002-56c4-40fd-9eff-e4b09bfa5f6c",
+                            "title": "DLL Load By System Process From Suspicious Locations",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1070",
+                "display_name": "Indicator Removal on Host",
+                "atomic_tests": [
+                    {
+                        "name": "Indicator Removal using FSUtil",
+                        "auto_generated_guid": "b4115c7a-0e92-47f0-a61e-17e7218b2435",
+                        "description": "Manages the update sequence number (USN) change journal, which provides a persistent log of all changes made to files on the volume. Upon execution, no output\nwill be displayed. More information about fsutil can be found at https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-usn\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "fsutil usn deletejournal /D C:\n",
+                            "cleanup_command": "fsutil usn createjournal m=1000 a=100 c:\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Indicator Manipulation using FSUtil",
+                        "auto_generated_guid": "96e86706-6afd-45b6-95d6-108d23eaf2e9",
+                        "description": "Finds a file by user name (if Disk Quotas are enabled), queries allocated ranges for a file, sets a file's short name, sets a file's valid data length, sets zero data for a file, or creates a new file. Upon execution, no output\nwill be displayed. More information about fsutil can be found at https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-file\n- https://tria.ge/230601-x8x6bsgb24/behavioral2\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_to_manipulate": {
+                                "description": "Path of file to manipulate",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1070-2.txt"
+                            },
+                            "file_data_length": {
+                                "description": "Data length to setzero",
+                                "type": "integer",
+                                "default": 10
+                            }
+                        },
+                        "executor": {
+                            "command": "if (-not (Test-Path \"#{file_to_manipulate}\")) { New-Item \"#{file_to_manipulate}\" -Force } \necho \"1234567890\" > \"#{file_to_manipulate}\"\nfsutil  file setZeroData offset=0 length=#{file_data_length} \"#{file_to_manipulate}\"\n",
+                            "cleanup_command": "rm \"#{file_to_manipulate}\"\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:15:29"
+}

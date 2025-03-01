@@ -1,0 +1,254 @@
+{
+    "id": "T1134.004",
+    "name": "Parent PID Spoofing",
+    "description": "Adversaries may spoof the parent process identifier (PPID) of a new process to evade process-monitoring defenses or to elevate privileges. New processes are typically spawned directly from their parent, or calling, process unless explicitly specified. One way of explicitly assigning the PPID of a new process is via the `CreateProcess` API call, which supports a parameter that defines the PPID to use.(Citation: DidierStevens SelectMyParent Nov 2009) This functionality is used by Windows features such as User Account Control (UAC) to correctly set the PPID after a requested elevated process is spawned by SYSTEM (typically via `svchost.exe` or `consent.exe`) rather than the current user context.(Citation: Microsoft UAC Nov 2018)\nAdversaries may abuse these mechanisms to evade defenses, such as those blocking processes spawning directly from Office documents, and analysis targeting unusual/potentially malicious parent-child process relationships, such as spoofing the PPID of [PowerShell](T1059.001)/[Rundll32](T1218.011) to be `explorer.exe` rather than an Office document delivered as part of [Spearphishing Attachment](T1566.001).(Citation: CounterCept PPID Spoofing Dec 2018) This spoofing could be executed via [Visual Basic](T1059.005) within a malicious Office document or any code that can perform [Native API](T1106).(Citation: CTD PPID Spoofing Macro Mar 2019)(Citation: CounterCept PPID Spoofing Dec 2018)\nExplicitly assigning the PPID may also enable elevated privileges given appropriate access rights to the parent process. For example, an adversary in a privileged user context (i.e. administrator) may spawn a new process and assign the parent as a process running as SYSTEM (such as `lsass.exe`), causing the new process to be elevated via the inherited access token.(Citation: XPNSec PPID Nov 2017)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion, Privilege Escalation",
+    "data_sources": "Process: OS API Execution, Process: Process Creation, Process: Process Metadata",
+    "detection": "Look for inconsistencies between the various fields that store PPID information, such as the EventHeader ProcessId from data collected via Event Tracing for Windows (ETW), Creator Process ID/Name from Windows event logs, and the ProcessID and ParentProcessID (which are also produced from ETW and other utilities such as Task Manager and Process Explorer). The ETW provided EventHeader ProcessId identifies the actual parent process.(Citation: CounterCept PPID Spoofing Dec 2018)\nMonitor and analyze API calls to `CreateProcess`/`CreateProcessA`, specifically those from user/potentially malicious processes and with parameters explicitly assigning PPIDs (ex: the Process Creation Flags of 0x8XXX, indicating that the process is being created with extended startup information(Citation: Microsoft Process Creation Flags May 2018)). Malicious use of `CreateProcess`/`CreateProcessA` may also be proceeded by a call to `UpdateProcThreadAttribute`, which may be necessary to update process creation attributes.(Citation: Secuirtyinbits Ataware3 May 2019) This may generate false positives from normal UAC elevation behavior, so compare to a system baseline/understanding of normal system activity if possible.",
+    "url": "https://attack.mitre.org/techniques/T1134/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1134.004",
+                "atomic_attack_guid": "cbbff285-9051-444a-9d17-c07cd2d230eb",
+                "atomic_attack_name": "Parent PID Spoofing - Spawn from Specified Process",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Weak or Abused Passwords In CLI",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_weak_or_abused_passwords.yml",
+                        "remote_content": "title: Weak or Abused Passwords In CLI\nid: 91edcfb1-2529-4ac2-9ecc-7617f895c7e4\nstatus: test\ndescription: |\n    Detects weak passwords or often abused passwords (seen used by threat actors) via the CLI.\n    An example would be a threat actor creating a new user via the net command and providing the password inline\nreferences:\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/espionage-asia-governments\n    - https://thedfirreport.com/2022/09/26/bumblebee-round-two/\n    - https://www.microsoft.com/en-us/security/blog/2022/10/25/dev-0832-vice-society-opportunistic-ransomware-campaigns-impacting-us-education-sector/\n    - https://www.huntress.com/blog/slashandgrab-screen-connect-post-exploitation-in-the-wild-cve-2024-1709-cve-2024-1708\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-14\nmodified: 2024-02-23\ntags:\n    - attack.defense-evasion\n    - attack.execution\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            # Add more passwords\n            - '123456789'\n            - '123123qwE'\n            - 'Asd123.aaaa'\n            - 'Decryptme'\n            - 'P@ssw0rd!'\n            - 'Pass8080'\n            - 'password123' # Also covers PASSWORD123123! as seen in https://www.microsoft.com/en-us/security/blog/2022/10/25/dev-0832-vice-society-opportunistic-ransomware-campaigns-impacting-us-education-sector/\n            - 'test@202' # Covers multiple years\n    condition: selection\nfalsepositives:\n    - Legitimate usage of the passwords by users via commandline (should be discouraged)\n    - Other currently unknown false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "93591901-3172-4e94-abf8-6034ab26f44a",
+                    "52ff7941-8211-46f9-84f8-9903efb7077d"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "93591901-3172-4e94-abf8-6034ab26f44a",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1134.004",
+                            "mitre-cti:description": "Adversaries may spoof the parent process identifier (PPID) of a new process to evade process-monitoring defenses or to elevate privileges. New processes are typically spawned directly from their parent, or calling, process unless explicitly specified. One way of explicitly assigning the PPID of a new process is via the <code>CreateProcess</code> API call, which supports a parameter that defines the PPID to use.(Citation: DidierStevens SelectMyParent Nov 2009) This functionality is used by Windows features such as User Account Control (UAC) to correctly set the PPID after a requested elevated process is spawned by SYSTEM (typically via <code>svchost.exe</code> or <code>consent.exe</code>) rather than the current user context.(Citation: Microsoft UAC Nov 2018)\n\nAdversaries may abuse these mechanisms to evade defenses, such as those blocking processes spawning directly from Office documents, and analysis targeting unusual/potentially malicious parent-child process relationships, such as spoofing the PPID of [PowerShell](https://attack.mitre.org/techniques/T1059/001)/[Rundll32](https://attack.mitre.org/techniques/T1218/011) to be <code>explorer.exe</code> rather than an Office document delivered as part of [Spearphishing Attachment](https://attack.mitre.org/techniques/T1566/001).(Citation: CounterCept PPID Spoofing Dec 2018) This spoofing could be executed via [Visual Basic](https://attack.mitre.org/techniques/T1059/005) within a malicious Office document or any code that can perform [Native API](https://attack.mitre.org/techniques/T1106).(Citation: CTD PPID Spoofing Macro Mar 2019)(Citation: CounterCept PPID Spoofing Dec 2018)\n\nExplicitly assigning the PPID may also enable elevated privileges given appropriate access rights to the parent process. For example, an adversary in a privileged user context (i.e. administrator) may spawn a new process and assign the parent as a process running as SYSTEM (such as <code>lsass.exe</code>), causing the new process to be elevated via the inherited access token.(Citation: XPNSec PPID Nov 2017)",
+                            "mitre-cti:name": "Parent PID Spoofing",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Wayne Silva, F-Secure Countercept'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--93591901-3172-4e94-abf8-6034ab26f44a', 'created': '2020-02-18T18:22:41.448Z', 'x_mitre_version': '1.0', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1134.004', 'url': 'https://attack.mitre.org/techniques/T1134/004'}, {'source_name': 'XPNSec PPID Nov 2017', 'url': 'https://blog.xpnsec.com/becoming-system/', 'description': 'Chester, A. (2017, November 20). Alternative methods of becoming SYSTEM. Retrieved June 4, 2019.'}, {'source_name': 'CounterCept PPID Spoofing Dec 2018', 'url': 'https://www.countercept.com/blog/detecting-parent-pid-spoofing/', 'description': 'Loh, I. (2018, December 21). Detecting Parent PID Spoofing. Retrieved June 3, 2019.'}, {'source_name': 'Microsoft UAC Nov 2018', 'url': 'https://docs.microsoft.com/windows/security/identity-protection/user-account-control/how-user-account-control-works', 'description': 'Montemayor, D. et al.. (2018, November 15). How User Account Control works. Retrieved June 3, 2019.'}, {'source_name': 'Microsoft Process Creation Flags May 2018', 'url': 'https://docs.microsoft.com/windows/desktop/ProcThread/process-creation-flags', 'description': 'Schofield, M. & Satran, M. (2018, May 30). Process Creation Flags. Retrieved June 4, 2019.'}, {'source_name': 'Secuirtyinbits Ataware3 May 2019', 'url': 'https://www.securityinbits.com/malware-analysis/parent-pid-spoofing-stage-2-ataware-ransomware-part-3', 'description': 'Secuirtyinbits . (2019, May 14). Parent PID Spoofing (Stage 2) Ataware Ransomware Part 3. Retrieved June 6, 2019.'}, {'source_name': 'DidierStevens SelectMyParent Nov 2009', 'url': 'https://blog.didierstevens.com/2009/11/22/quickpost-selectmyparent-or-playing-with-the-windows-process-tree/', 'description': 'Stevens, D. (2009, November 22). Quickpost: SelectMyParent or Playing With the Windows Process Tree. Retrieved June 3, 2019.'}, {'source_name': 'CTD PPID Spoofing Macro Mar 2019', 'url': 'https://blog.christophetd.fr/building-an-office-macro-to-spoof-process-parent-and-command-line/', 'description': 'Tafani-Dereeper, C. (2019, March 12). Building an Office macro to spoof parent processes and command line arguments. Retrieved June 3, 2019.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may spoof the parent process identifier (PPID) of a new process to evade process-monitoring defenses or to elevate privileges. New processes are typically spawned directly from their parent, or calling, process unless explicitly specified. One way of explicitly assigning the PPID of a new process is via the <code>CreateProcess</code> API call, which supports a parameter that defines the PPID to use.(Citation: DidierStevens SelectMyParent Nov 2009) This functionality is used by Windows features such as User Account Control (UAC) to correctly set the PPID after a requested elevated process is spawned by SYSTEM (typically via <code>svchost.exe</code> or <code>consent.exe</code>) rather than the current user context.(Citation: Microsoft UAC Nov 2018)\\n\\nAdversaries may abuse these mechanisms to evade defenses, such as those blocking processes spawning directly from Office documents, and analysis targeting unusual/potentially malicious parent-child process relationships, such as spoofing the PPID of [PowerShell](https://attack.mitre.org/techniques/T1059/001)/[Rundll32](https://attack.mitre.org/techniques/T1218/011) to be <code>explorer.exe</code> rather than an Office document delivered as part of [Spearphishing Attachment](https://attack.mitre.org/techniques/T1566/001).(Citation: CounterCept PPID Spoofing Dec 2018) This spoofing could be executed via [Visual Basic](https://attack.mitre.org/techniques/T1059/005) within a malicious Office document or any code that can perform [Native API](https://attack.mitre.org/techniques/T1106).(Citation: CTD PPID Spoofing Macro Mar 2019)(Citation: CounterCept PPID Spoofing Dec 2018)\\n\\nExplicitly assigning the PPID may also enable elevated privileges given appropriate access rights to the parent process. For example, an adversary in a privileged user context (i.e. administrator) may spawn a new process and assign the parent as a process running as SYSTEM (such as <code>lsass.exe</code>), causing the new process to be elevated via the inherited access token.(Citation: XPNSec PPID Nov 2017)', 'modified': '2022-05-03T02:15:42.360Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Parent PID Spoofing', 'x_mitre_detection': 'Look for inconsistencies between the various fields that store PPID information, such as the EventHeader ProcessId from data collected via Event Tracing for Windows (ETW), Creator Process ID/Name from Windows event logs, and the ProcessID and ParentProcessID (which are also produced from ETW and other utilities such as Task Manager and Process Explorer). The ETW provided EventHeader ProcessId identifies the actual parent process.(Citation: CounterCept PPID Spoofing Dec 2018)\\n\\nMonitor and analyze API calls to <code>CreateProcess</code>/<code>CreateProcessA</code>, specifically those from user/potentially malicious processes and with parameters explicitly assigning PPIDs (ex: the Process Creation Flags of 0x8XXX, indicating that the process is being created with extended startup information(Citation: Microsoft Process Creation Flags May 2018)). Malicious use of <code>CreateProcess</code>/<code>CreateProcessA</code> may also be proceeded by a call to <code>UpdateProcThreadAttribute</code>, which may be necessary to update process creation attributes.(Citation: Secuirtyinbits Ataware3 May 2019) This may generate false positives from normal UAC elevation behavior, so compare to a system baseline/understanding of normal system activity if possible.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: OS API Execution', 'Process: Process Metadata', 'Process: Process Creation'], 'x_mitre_permissions_required': ['User', 'Administrator'], 'x_mitre_defense_bypassed': ['Heuristic Detection', 'Host Forensic Analysis'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52ff7941-8211-46f9-84f8-9903efb7077d",
+                        "lookup_data": {
+                            "description": "Detects the use of parent process ID spoofing tools like Didier Stevens tool SelectMyParent",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/07/23\ndescription: Detects the use of parent process ID spoofing tools like Didier Stevens\n  tool SelectMyParent\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\SelectMyParent.exe\n  - CommandLine|contains:\n    - PPID-spoof\n    - ppid_spoof\n    - spoof-ppid\n    - spoof_ppid\n    - ppidspoof\n    - spoofppid\n    - spoofedppid\n    - ' -spawnto '\n  - OriginalFileName|contains:\n    - PPID-spoof\n    - ppid_spoof\n    - spoof-ppid\n    - spoof_ppid\n    - ppidspoof\n    - spoofppid\n    - spoofedppid\n  - Description: SelectMyParent\n  - Imphash:\n    - 04d974875bd225f00902b4cad9af3fbc\n    - a782af154c9e743ddf3f3eb2b8f3d16e\n    - 89059503d7fbf470e68f7e63313da3ad\n    - ca28337632625c8281ab8a130b3d6bad\n  - Hashes|contains:\n    - IMPHASH=04D974875BD225F00902B4CAD9AF3FBC\n    - IMPHASH=A782AF154C9E743DDF3F3EB2B8F3D16E\n    - IMPHASH=89059503D7FBF470E68F7E63313DA3AD\n    - IMPHASH=CA28337632625C8281AB8A130B3D6BAD\nfalsepositives:\n- Unlikely\nid: 52ff7941-8211-46f9-84f8-9903efb7077d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://pentestlab.blog/2020/02/24/parent-pid-spoofing/\n- https://www.picussecurity.com/resource/blog/how-to-detect-parent-pid-ppid-spoofing-attacks\n- https://www.ired.team/offensive-security/defense-evasion/parent-process-id-ppid-spoofing\n- https://www.virustotal.com/gui/search/filename%253A*spoof*%2520filename%253A*ppid*/files\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1134.004\ntitle: PPID Spoofing Tool Usage\n",
+                            "sigma:id": "52ff7941-8211-46f9-84f8-9903efb7077d",
+                            "title": "PPID Spoofing Tool Usage",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1134.004",
+                "display_name": "Access Token Manipulation: Parent PID Spoofing",
+                "atomic_tests": [
+                    {
+                        "name": "Parent PID Spoofing using PowerShell",
+                        "auto_generated_guid": "069258f4-2162-46e9-9a25-c9c6c56150d2",
+                        "description": "This test uses PowerShell to replicates how Cobalt Strike does ppid spoofing and masquerade a spawned process.\nUpon execution, \"Process C:\\Program Files\\Internet Explorer\\iexplore.exe is spawned with pid ####\" will be displayed and\ncalc.exe will be launched.\n\nCredit to In Ming Loh (https://github.com/countercept/ppid-spoofing/blob/master/PPID-Spoof.ps1)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "parent_process_name": {
+                                "description": "Name of the parent process",
+                                "type": "string",
+                                "default": "explorer"
+                            },
+                            "spawnto_process_path": {
+                                "description": "Path of the process to spawn",
+                                "type": "path",
+                                "default": "C:\\Program Files\\Internet Explorer\\iexplore.exe"
+                            },
+                            "dll_process_name": {
+                                "description": "Name of the created process from the injected dll",
+                                "type": "string",
+                                "default": "calculator"
+                            },
+                            "dll_path": {
+                                "description": "Path of the dll to inject",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1134.004\\bin\\calc.dll"
+                            },
+                            "spawnto_process_name": {
+                                "description": "Name of the process to spawn",
+                                "type": "string",
+                                "default": "iexplore"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DLL to inject must exist on disk at specified location (#{dll_path})\n",
+                                "prereq_command": "if (Test-Path \"#{dll_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1134.004/bin/calc.dll\" -OutFile \"#{dll_path}\"\n"
+                            },
+                            {
+                                "description": "PPID.ps1 must exist on disk at $PathToAtomicsFolder\\T1134.004\\src\\PPID-Spoof.ps1\n",
+                                "prereq_command": "if (Test-Path \"$PathToAtomicsFolder\\T1134.004\\src\\PPID-Spoof.ps1\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"$PathToAtomicsFolder\\T1134.004\\src\\PPID-Spoof.ps1\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1134.004/src/PPID-Spoof.ps1\" -OutFile \"$PathToAtomicsFolder\\T1134.004\\src\\PPID-Spoof.ps1\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": ". \"$PathToAtomicsFolder\\T1134.004\\src\\PPID-Spoof.ps1\"\n$ppid=Get-Process #{parent_process_name} | select -expand id\nPPID-Spoof -ppid $ppid -spawnto \"#{spawnto_process_path}\" -dllpath \"#{dll_path}\"\n",
+                            "cleanup_command": "Stop-Process -Name \"#{dll_process_name}\" -ErrorAction Ignore\nStop-Process -Name \"#{spawnto_process_name}\" -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Parent PID Spoofing - Spawn from Current Process",
+                        "auto_generated_guid": "14920ebd-1d61-491a-85e0-fe98efe37f25",
+                        "description": "Spawns a powershell.exe process as a child of the current process.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "File path or name of process to spawn",
+                                "type": "path",
+                                "default": "$Env:windir\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                            },
+                            "parent_pid": {
+                                "description": "PID of process to spawn from",
+                                "type": "string",
+                                "default": "$PID"
+                            },
+                            "command_line": {
+                                "description": "Specified command line to use",
+                                "type": "string",
+                                "default": "-Command Start-Sleep 10"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "The AtomicTestHarnesses module must be installed and Start-ATHProcessUnderSpecificParent must be exported in the module.",
+                                "prereq_command": "$RequiredModule = Get-Module -Name AtomicTestHarnesses -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Start-ATHProcessUnderSpecificParent']) {exit 1} else {exit 0}",
+                                "get_prereq_command": "Install-Module -Name AtomicTestHarnesses -Scope CurrentUser -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-ATHProcessUnderSpecificParent -FilePath #{file_path} -CommandLine '#{command_line}' -ParentId #{parent_pid}",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Parent PID Spoofing - Spawn from Specified Process",
+                        "auto_generated_guid": "cbbff285-9051-444a-9d17-c07cd2d230eb",
+                        "description": "Spawns a notepad.exe process as a child of the current process.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "parent_pid": {
+                                "description": "PID of process to spawn from",
+                                "type": "string",
+                                "default": "$PID"
+                            },
+                            "test_guid": {
+                                "description": "Defined test GUID",
+                                "type": "string",
+                                "default": "12345678-1234-1234-1234-123456789123"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "The AtomicTestHarnesses module must be installed and Start-ATHProcessUnderSpecificParent must be exported in the module.",
+                                "prereq_command": "$RequiredModule = Get-Module -Name AtomicTestHarnesses -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Start-ATHProcessUnderSpecificParent']) {exit 1} else {exit 0}",
+                                "get_prereq_command": "Install-Module -Name AtomicTestHarnesses -Scope CurrentUser -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-ATHProcessUnderSpecificParent  -ParentId #{parent_pid} -TestGuid #{test_guid}",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Parent PID Spoofing - Spawn from svchost.exe",
+                        "auto_generated_guid": "e9f2b777-3123-430b-805d-5cedc66ab591",
+                        "description": "Spawnd a process as a child of the first accessible svchost.exe process.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_line": {
+                                "description": "Specified command line to use",
+                                "type": "string",
+                                "default": "-Command Start-Sleep 10"
+                            },
+                            "file_path": {
+                                "description": "File path or name of process to spawn",
+                                "type": "path",
+                                "default": "$Env:windir\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "The AtomicTestHarnesses module must be installed and Start-ATHProcessUnderSpecificParent must be exported in the module.",
+                                "prereq_command": "$RequiredModule = Get-Module -Name AtomicTestHarnesses -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Start-ATHProcessUnderSpecificParent']) {exit 1} else {exit 0}",
+                                "get_prereq_command": "Install-Module -Name AtomicTestHarnesses -Scope CurrentUser -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Get-CimInstance -ClassName Win32_Process -Property Name, CommandLine, ProcessId -Filter \"Name = 'svchost.exe' AND CommandLine LIKE '%'\" | Select-Object -First 1 | Start-ATHProcessUnderSpecificParent -FilePath #{file_path} -CommandLine '#{command_line}'",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Parent PID Spoofing - Spawn from New Process",
+                        "auto_generated_guid": "2988133e-561c-4e42-a15f-6281e6a9b2db",
+                        "description": "Creates a notepad.exe process and then spawns a powershell.exe process as a child of it.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_line": {
+                                "description": "Specified command line to use",
+                                "type": "string",
+                                "default": "-Command Start-Sleep 10"
+                            },
+                            "file_path": {
+                                "description": "File path or name of process to spawn",
+                                "type": "path",
+                                "default": "$Env:windir\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                            },
+                            "parent_name": {
+                                "description": "Parent process to spoof from",
+                                "type": "path",
+                                "default": "$Env:windir\\System32\\notepad.exe"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "The AtomicTestHarnesses module must be installed and Start-ATHProcessUnderSpecificParent must be exported in the module.",
+                                "prereq_command": "$RequiredModule = Get-Module -Name AtomicTestHarnesses -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Start-ATHProcessUnderSpecificParent']) {exit 1} else {exit 0}",
+                                "get_prereq_command": "Install-Module -Name AtomicTestHarnesses -Scope CurrentUser -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process -FilePath #{parent_name} -PassThru | Start-ATHProcessUnderSpecificParent -FilePath #{file_path} -CommandLine '#{command_line}'",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:27:06"
+}

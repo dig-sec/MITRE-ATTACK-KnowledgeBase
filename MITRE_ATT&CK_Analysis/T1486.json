@@ -1,0 +1,676 @@
+{
+    "id": "T1486",
+    "name": "Data Encrypted for Impact",
+    "description": "Adversaries may encrypt data on target systems or on large numbers of systems in a network to interrupt availability to system and network resources. They can attempt to render stored data inaccessible by encrypting files or data on local and remote drives and withholding access to a decryption key. This may be done in order to extract monetary compensation from a victim in exchange for decryption or a decryption key (ransomware) or to render data permanently inaccessible in cases where the key is not saved or transmitted.(Citation: US-CERT Ransomware 2016)(Citation: FireEye WannaCry 2017)(Citation: US-CERT NotPetya 2017)(Citation: US-CERT SamSam 2018) In the case of ransomware, it is typical that common user files like Office documents, PDFs, images, videos, audio, text, and source code files will be encrypted. In some cases, adversaries may encrypt critical system files, disk partitions, and the MBR.(Citation: US-CERT NotPetya 2017)\nTo maximize impact on the target organization, malware designed for encrypting data may have worm-like features to propagate across a network by leveraging other attack techniques like [Valid Accounts](T1078), [OS Credential Dumping](T1003), and [SMB/Windows Admin Shares](T1021.002).(Citation: FireEye WannaCry 2017)(Citation: US-CERT NotPetya 2017)\nIn cloud environments, storage objects within compromised accounts may also be encrypted.(Citation: Rhino S3 Ransomware Part 1)",
+    "platforms": "Linux, macOS, Windows, IaaS",
+    "kill_chain_phases": "Impact",
+    "data_sources": "Cloud Storage: Cloud Storage Metadata, Cloud Storage: Cloud Storage Modification, Process: Process Creation, Command: Command Execution, File: File Modification, File: File Creation",
+    "detection": "Use process monitoring to monitor the execution and command line parameters of binaries involved in data destruction activity, such as vssadmin, wbadmin, and bcdedit. Monitor for the creation of suspicious files as well as unusual file modification activity. In particular, look for large quantities of file modifications in user directories.\nIn some cases, monitoring for unusual kernel driver installation activity can aid in detection.\nIn cloud environments, monitor for events that indicate storage objects have been anomalously replaced by copies.",
+    "url": "https://attack.mitre.org/techniques/T1486",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1486",
+                "atomic_attack_guid": "649349c7-9abf-493b-a7a2-b1aa4d141528",
+                "atomic_attack_name": "PureLocker Ransom Note",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "b80d107d-fa0d-4b60-9684-b0433e8bdba0",
+                    "7bf1cd5f-1f26-47b9-aed8-0e6275996aa1",
+                    "689308fc-cfba-4f72-9897-796c1dc61487",
+                    "e0eaf6f2-a12c-4b31-9d19-f77faf1ea4c9",
+                    "429a5c0c-e132-45c0-a4aa-c1f736c92a1c",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "0e0255bf-2548-47b8-9582-c0955c9283f5",
+                    "16124c2d-e40b-4fcc-8f2c-5ab7870a2223",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                    "0b6a1b71-fdec-479e-9736-aa84db3aa8c8",
+                    "bd132164-884a-48f1-aa2d-c6d646b04c69",
+                    "5e66dd0a-d858-4f9e-b0b2-a7c6950d210f",
+                    "34493f6d-9441-45df-9cb4-4de473709081",
+                    "74db3488-fd28-480a-95aa-b7af626de068",
+                    "caf02a0a-1e1c-4552-9b48-5e070bd88d11",
+                    "e3f673b3-65d1-4d80-9146-466f8b63fa99",
+                    "4c6ca276-d4d0-4a8c-9e4c-d69832f8671f",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "97919310-06a7-482c-9639-92b67ed63cf8",
+                    "41d40bff-377a-43e2-8e1b-2e543069e079",
+                    "0165e5d7-51e6-4c2e-a382-1dd1e706f7bb",
+                    "5ee3822c-6828-418c-b619-62de950d210f",
+                    "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                    "cdc842aa-761d-48e2-9b97-c344bed8b3a8"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b80d107d-fa0d-4b60-9684-b0433e8bdba0",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1486",
+                            "mitre-cti:description": "Adversaries may encrypt data on target systems or on large numbers of systems in a network to interrupt availability to system and network resources. They can attempt to render stored data inaccessible by encrypting files or data on local and remote drives and withholding access to a decryption key. This may be done in order to extract monetary compensation from a victim in exchange for decryption or a decryption key (ransomware) or to render data permanently inaccessible in cases where the key is not saved or transmitted.(Citation: US-CERT Ransomware 2016)(Citation: FireEye WannaCry 2017)(Citation: US-CERT NotPetya 2017)(Citation: US-CERT SamSam 2018)\n\nIn the case of ransomware, it is typical that common user files like Office documents, PDFs, images, videos, audio, text, and source code files will be encrypted (and often renamed and/or tagged with specific file markers). Adversaries may need to first employ other behaviors, such as [File and Directory Permissions Modification](https://attack.mitre.org/techniques/T1222) or [System Shutdown/Reboot](https://attack.mitre.org/techniques/T1529), in order to unlock and/or gain access to manipulate these files.(Citation: CarbonBlack Conti July 2020) In some cases, adversaries may encrypt critical system files, disk partitions, and the MBR.(Citation: US-CERT NotPetya 2017) \n\nTo maximize impact on the target organization, malware designed for encrypting data may have worm-like features to propagate across a network by leveraging other attack techniques like [Valid Accounts](https://attack.mitre.org/techniques/T1078), [OS Credential Dumping](https://attack.mitre.org/techniques/T1003), and [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002).(Citation: FireEye WannaCry 2017)(Citation: US-CERT NotPetya 2017) Encryption malware may also leverage [Internal Defacement](https://attack.mitre.org/techniques/T1491/001), such as changing victim wallpapers, or otherwise intimidate victims by sending ransom notes or other messages to connected printers (known as \"print bombing\").(Citation: NHS Digital Egregor Nov 2020)\n\nIn cloud environments, storage objects within compromised accounts may also be encrypted.(Citation: Rhino S3 Ransomware Part 1)",
+                            "mitre-cti:name": "Data Encrypted for Impact",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'IaaS'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Oleg Kolesnikov, Securonix', 'Mayuresh Dani, Qualys', 'Harshal Tupsamudre, Qualys', 'Travis Smith, Qualys', 'ExtraHop'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--b80d107d-fa0d-4b60-9684-b0433e8bdba0', 'created': '2019-03-15T13:59:30.390Z', 'x_mitre_version': '1.4', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1486', 'url': 'https://attack.mitre.org/techniques/T1486'}, {'source_name': 'CarbonBlack Conti July 2020', 'url': 'https://www.carbonblack.com/blog/tau-threat-discovery-conti-ransomware/', 'description': 'Baskin, B. (2020, July 8). TAU Threat Discovery: Conti Ransomware. Retrieved February 17, 2021.'}, {'source_name': 'FireEye WannaCry 2017', 'url': 'https://www.fireeye.com/blog/threat-research/2017/05/wannacry-malware-profile.html', 'description': 'Berry, A., Homan, J., and Eitzman, R. (2017, May 23). WannaCry Malware Profile. Retrieved March 15, 2019.'}, {'source_name': 'Rhino S3 Ransomware Part 1', 'url': 'https://rhinosecuritylabs.com/aws/s3-ransomware-part-1-attack-vector/', 'description': 'Gietzen, S. (n.d.). S3 Ransomware Part 1: Attack Vector. Retrieved April 14, 2021.'}, {'source_name': 'NHS Digital Egregor Nov 2020', 'url': 'https://digital.nhs.uk/cyber-alerts/2020/cc-3681#summary', 'description': 'NHS Digital. (2020, November 26). Egregor Ransomware The RaaS successor to Maze. Retrieved December 29, 2020.'}, {'source_name': 'US-CERT Ransomware 2016', 'url': 'https://www.us-cert.gov/ncas/alerts/TA16-091A', 'description': 'US-CERT. (2016, March 31). Alert (TA16-091A): Ransomware and Recent Variants. Retrieved March 15, 2019.'}, {'source_name': 'US-CERT NotPetya 2017', 'url': 'https://www.us-cert.gov/ncas/alerts/TA17-181A', 'description': 'US-CERT. (2017, July 1). Alert (TA17-181A): Petya Ransomware. Retrieved March 15, 2019.'}, {'source_name': 'US-CERT SamSam 2018', 'url': 'https://www.us-cert.gov/ncas/alerts/AA18-337A', 'description': 'US-CERT. (2018, December 3). Alert (AA18-337A): SamSam Ransomware. Retrieved March 15, 2019.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may encrypt data on target systems or on large numbers of systems in a network to interrupt availability to system and network resources. They can attempt to render stored data inaccessible by encrypting files or data on local and remote drives and withholding access to a decryption key. This may be done in order to extract monetary compensation from a victim in exchange for decryption or a decryption key (ransomware) or to render data permanently inaccessible in cases where the key is not saved or transmitted.(Citation: US-CERT Ransomware 2016)(Citation: FireEye WannaCry 2017)(Citation: US-CERT NotPetya 2017)(Citation: US-CERT SamSam 2018)\\n\\nIn the case of ransomware, it is typical that common user files like Office documents, PDFs, images, videos, audio, text, and source code files will be encrypted (and often renamed and/or tagged with specific file markers). Adversaries may need to first employ other behaviors, such as [File and Directory Permissions Modification](https://attack.mitre.org/techniques/T1222) or [System Shutdown/Reboot](https://attack.mitre.org/techniques/T1529), in order to unlock and/or gain access to manipulate these files.(Citation: CarbonBlack Conti July 2020) In some cases, adversaries may encrypt critical system files, disk partitions, and the MBR.(Citation: US-CERT NotPetya 2017) \\n\\nTo maximize impact on the target organization, malware designed for encrypting data may have worm-like features to propagate across a network by leveraging other attack techniques like [Valid Accounts](https://attack.mitre.org/techniques/T1078), [OS Credential Dumping](https://attack.mitre.org/techniques/T1003), and [SMB/Windows Admin Shares](https://attack.mitre.org/techniques/T1021/002).(Citation: FireEye WannaCry 2017)(Citation: US-CERT NotPetya 2017) Encryption malware may also leverage [Internal Defacement](https://attack.mitre.org/techniques/T1491/001), such as changing victim wallpapers, or otherwise intimidate victims by sending ransom notes or other messages to connected printers (known as \"print bombing\").(Citation: NHS Digital Egregor Nov 2020)\\n\\nIn cloud environments, storage objects within compromised accounts may also be encrypted.(Citation: Rhino S3 Ransomware Part 1)', 'modified': '2022-06-16T13:07:10.318Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Data Encrypted for Impact', 'x_mitre_detection': 'Use process monitoring to monitor the execution and command line parameters of binaries involved in data destruction activity, such as vssadmin, wbadmin, and bcdedit. Monitor for the creation of suspicious files as well as unusual file modification activity. In particular, look for large quantities of file modifications in user directories.\\n\\nIn some cases, monitoring for unusual kernel driver installation activity can aid in detection.\\n\\nIn cloud environments, monitor for events that indicate storage objects have been anomalously replaced by copies.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'impact'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['File: File Creation', 'File: File Modification', 'Network Share: Network Share Access', 'Command: Command Execution', 'Cloud Storage: Cloud Storage Modification', 'Process: Process Creation'], 'x_mitre_impact_type': ['Availability'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7bf1cd5f-1f26-47b9-aed8-0e6275996aa1",
+                        "lookup_data": {
+                            "description": "Alert (AA23-025A) - Protecting Against Malicious Use of Remote Monitoring and Management Software",
+                            "link": "http://www.botvrij.eu/data/feed-osint/7bf1cd5f-1f26-47b9-aed8-0e6275996aa1.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674714919",
+                            "uuid": "7bf1cd5f-1f26-47b9-aed8-0e6275996aa1",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "689308fc-cfba-4f72-9897-796c1dc61487",
+                        "lookup_data": {
+                            "description": "Conti ransomware command line ioc",
+                            "raw": "author: frack113\ndate: 2021/10/12\ndescription: Conti ransomware command line ioc\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - '-m '\n    - '-net '\n    - '-size '\n    - '-nomutex '\n    - -p \\\\\\\\\n    - $\nfalsepositives:\n- Unlikely\nid: 689308fc-cfba-4f72-9897-796c1dc61487\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/13\nreferences:\n- https://news.sophos.com/en-us/2021/09/03/conti-affiliates-use-proxyshell-exchange-exploit-in-ransomware-attacks/\n- https://twitter.com/VK_Intel/status/1447795359900704769?t=Xz7vaLTvaaCZ5kHoZa6gMw&s=19\nstatus: test\ntags:\n- attack.impact\n- attack.s0575\n- attack.t1486\ntitle: Conti Ransomware Execution\n",
+                            "sigma:id": "689308fc-cfba-4f72-9897-796c1dc61487",
+                            "title": "Conti Ransomware Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e0eaf6f2-a12c-4b31-9d19-f77faf1ea4c9",
+                        "lookup_data": {
+                            "description": "Kaseya ransomware attack - indicators and information publicly available",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/e0eaf6f2-a12c-4b31-9d19-f77faf1ea4c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1625650507",
+                            "uuid": "e0eaf6f2-a12c-4b31-9d19-f77faf1ea4c9",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "429a5c0c-e132-45c0-a4aa-c1f736c92a1c",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1486",
+                            "mitre-cti:description": "Consider implementing IT disaster recovery plans that contain procedures for regularly taking and testing data backups that can be used to restore organizational data.(Citation: Ready.gov IT DRP)\n\nIn some cases, the means to decrypt files affected by a ransomware campaign is released to the public. Research trusted sources for public releases of decryptor tools/keys to reverse the effects of ransomware.\n\nIdentify potentially malicious software and audit and/or block it by using whitelisting(Citation: Beechey 2010) tools, like AppLocker,(Citation: Windows Commands JPCERT)(Citation: NSA MS AppLocker) or Software Restriction Policies(Citation: Corio 2008) where appropriate.(Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Data Encrypted for Impact Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--429a5c0c-e132-45c0-a4aa-c1f736c92a1c', 'type': 'course-of-action', 'created': '2019-03-15T14:49:53.983Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'url': 'https://attack.mitre.org/mitigations/T1486', 'source_name': 'mitre-attack', 'external_id': 'T1486'}, {'source_name': 'Ready.gov IT DRP', 'url': 'https://www.ready.gov/business/implementation/IT', 'description': 'Ready.gov. (n.d.). IT Disaster Recovery Plan. Retrieved March 15, 2019.'}, {'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'source_name': 'Beechey 2010'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'source_name': 'Corio 2008'}, {'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'source_name': 'TechNet Applocker vs SRP'}], 'modified': '2021-08-23T20:25:21.498Z', 'name': 'Data Encrypted for Impact Mitigation', 'description': 'Consider implementing IT disaster recovery plans that contain procedures for regularly taking and testing data backups that can be used to restore organizational data.(Citation: Ready.gov IT DRP)\\n\\nIn some cases, the means to decrypt files affected by a ransomware campaign is released to the public. Research trusted sources for public releases of decryptor tools/keys to reverse the effects of ransomware.\\n\\nIdentify potentially malicious software and audit and/or block it by using whitelisting(Citation: Beechey 2010) tools, like AppLocker,(Citation: Windows Commands JPCERT)(Citation: NSA MS AppLocker) or Software Restriction Policies(Citation: Corio 2008) where appropriate.(Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0e0255bf-2548-47b8-9582-c0955c9283f5",
+                        "lookup_data": {
+                            "description": "Detects suspicious addition to BitLocker related registry keys via the reg.exe utility",
+                            "raw": "author: frack113\ndate: 2021/11/15\ndescription: Detects suspicious addition to BitLocker related registry keys via the\n  reg.exe utility\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - EnableBDEWithNoTPM\n    - UseAdvancedStartup\n    - UseTPM\n    - UseTPMKey\n    - UseTPMKeyPIN\n    - RecoveryKeyMessageSource\n    - UseTPMPIN\n    - RecoveryKeyMessage\n    CommandLine|contains|all:\n    - REG\n    - ADD\n    - \\SOFTWARE\\Policies\\Microsoft\\FVE\n    - /v\n    - /f\nfalsepositives:\n- Unlikely\nid: 0e0255bf-2548-47b8-9582-c0955c9283f5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://thedfirreport.com/2021/11/15/exchange-exploit-leads-to-domain-wide-ransomware/\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1486\ntitle: Suspicious Reg Add BitLocker\n",
+                            "sigma:id": "0e0255bf-2548-47b8-9582-c0955c9283f5",
+                            "title": "Suspicious Reg Add BitLocker",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "16124c2d-e40b-4fcc-8f2c-5ab7870a2223",
+                        "lookup_data": {
+                            "description": "Identifies disabling of default Amazon Elastic Block Store (EBS) encryption in the current region.\nDisabling default encryption does not change the encryption status of your existing volumes.\n",
+                            "raw": "author: Sittikorn S\ndate: 2021/06/29\ndescription: 'Identifies disabling of default Amazon Elastic Block Store (EBS) encryption\n  in the current region.\n\n  Disabling default encryption does not change the encryption status of your existing\n  volumes.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    eventName: DisableEbsEncryptionByDefault\n    eventSource: ec2.amazonaws.com\nfalsepositives:\n- System Administrator Activities\n- DEV, UAT, SAT environment. You should apply this rule with PROD account only.\nid: 16124c2d-e40b-4fcc-8f2c-5ab7870a2223\nlevel: medium\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2021/08/20\nreferences:\n- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DisableEbsEncryptionByDefault.html\nstatus: stable\ntags:\n- attack.impact\n- attack.t1486\n- attack.t1565\ntitle: AWS EC2 Disable EBS Encryption\n",
+                            "sigma:id": "16124c2d-e40b-4fcc-8f2c-5ab7870a2223",
+                            "title": "AWS EC2 Disable EBS Encryption",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0b6a1b71-fdec-479e-9736-aa84db3aa8c8",
+                        "lookup_data": {
+                            "description": "Indicators of Compromise Associated with LockBit 2.0 Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0b6a1b71-fdec-479e-9736-aa84db3aa8c8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644308770",
+                            "uuid": "0b6a1b71-fdec-479e-9736-aa84db3aa8c8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bd132164-884a-48f1-aa2d-c6d646b04c69",
+                        "lookup_data": {
+                            "description": "Detects when a Microsoft Cloud App Security reported when a user uploads files to the cloud that might be infected with ransomware.",
+                            "raw": "author: austinsonger\ndate: 2021/08/19\ndescription: Detects when a Microsoft Cloud App Security reported when a user uploads\n  files to the cloud that might be infected with ransomware.\ndetection:\n  condition: selection\n  selection:\n    eventName: Potential ransomware activity\n    eventSource: SecurityComplianceCenter\n    status: success\nfalsepositives:\n- Unknown\nid: bd132164-884a-48f1-aa2d-c6d646b04c69\nlevel: medium\nlogsource:\n  product: m365\n  service: threat_management\nmodified: 2022/10/09\nreferences:\n- https://docs.microsoft.com/en-us/cloud-app-security/anomaly-detection-policy\n- https://docs.microsoft.com/en-us/cloud-app-security/policy-template-reference\nstatus: test\ntags:\n- attack.impact\n- attack.t1486\ntitle: Microsoft 365 - Potential Ransomware Activity\n",
+                            "sigma:id": "bd132164-884a-48f1-aa2d-c6d646b04c69",
+                            "title": "Microsoft 365 - Potential Ransomware Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e66dd0a-d858-4f9e-b0b2-a7c6950d210f",
+                        "lookup_data": {
+                            "description": "Harma and Odveta Ransomware",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e66dd0a-d858-4f9e-b0b2-a7c6950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1583972578",
+                            "uuid": "5e66dd0a-d858-4f9e-b0b2-a7c6950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "34493f6d-9441-45df-9cb4-4de473709081",
+                        "lookup_data": {
+                            "description": "#StopRansomware: MedusaLocker",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/34493f6d-9441-45df-9cb4-4de473709081.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1657009711",
+                            "uuid": "34493f6d-9441-45df-9cb4-4de473709081",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74db3488-fd28-480a-95aa-b7af626de068",
+                        "lookup_data": {
+                            "description": "Detects LockerGoga Ransomware command line.",
+                            "raw": "author: Vasiliy Burov, oscd.community\ndate: 2020/10/18\ndescription: Detects LockerGoga Ransomware command line.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: -i SM-tgytutrc -s\nfalsepositives:\n- Unlikely\nid: 74db3488-fd28-480a-95aa-b7af626de068\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://medium.com/@malwaredancer/lockergoga-input-arguments-ipc-communication-and-others-bd4e5a7ba80a\n- https://blog.f-secure.com/analysis-of-lockergoga-ransomware/\n- https://www.carbonblack.com/blog/tau-threat-intelligence-notification-lockergoga-ransomware/\nstatus: stable\ntags:\n- attack.impact\n- attack.t1486\ntitle: LockerGoga Ransomware\n",
+                            "sigma:id": "74db3488-fd28-480a-95aa-b7af626de068",
+                            "title": "LockerGoga Ransomware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "caf02a0a-1e1c-4552-9b48-5e070bd88d11",
+                        "lookup_data": {
+                            "description": "Ransomware create txt file in the user Desktop",
+                            "raw": "author: frack113\ndate: 2021/12/26\ndescription: Ransomware create txt file in the user Desktop\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\cmd.exe\n    TargetFilename|contains|all:\n    - \\Users\\\n    - \\Desktop\\\n    TargetFilename|endswith: .txt\nfalsepositives:\n- Unknown\nid: caf02a0a-1e1c-4552-9b48-5e070bd88d11\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1486/T1486.md#atomic-test-5---purelocker-ransom-note\nstatus: test\ntags:\n- attack.impact\n- attack.t1486\ntitle: Suspicious Creation TXT File in User Desktop\n",
+                            "sigma:id": "caf02a0a-1e1c-4552-9b48-5e070bd88d11",
+                            "title": "Suspicious Creation TXT File in User Desktop",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e3f673b3-65d1-4d80-9146-466f8b63fa99",
+                        "lookup_data": {
+                            "description": "Detects possible ransomware adding a custom extension to the encrypted files, such as \".jpg.crypted\", \".docx.locky\" etc.",
+                            "raw": "author: frack113\ndate: 2022/07/16\ndescription: Detects possible ransomware adding a custom extension to the encrypted\n  files, such as \".jpg.crypted\", \".docx.locky\" etc.\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_anaconda:\n    TargetFilename|endswith: .c~\n    TargetFilename|startswith: C:\\ProgramData\\Anaconda3\\\n  filter_generic:\n    TargetFilename|endswith:\n    - .tmp\n    - .bak\n    - .old\n    - .orig\n    - .backup\n    - .temp\n  selection:\n    SourceFilename|endswith:\n    - .lnk\n    - .rtf\n    - .pst\n    - .docx\n    - .xlsx\n    - .jpg\n    - .jpeg\n    - .png\n    - .pdf\n    TargetFilename|contains:\n    - .lnk.\n    - .rtf.\n    - .pst.\n    - .docx.\n    - .xlsx.\n    - .jpg.\n    - .jpeg.\n    - .png.\n    - .pdf.\nfalsepositives:\n- Backup software\nid: e3f673b3-65d1-4d80-9146-466f8b63fa99\nlevel: medium\nlogsource:\n  category: file_rename\n  definition: Use the WinEventLog:Microsoft-Windows-Kernel-File/KERNEL_FILE_KEYWORD_RENAME_SETLINK_PATH\n    ETW source\n  product: windows\nmodified: 2023/01/02\nreferences:\n- https://app.any.run/tasks/d66ead5a-faf4-4437-93aa-65785afaf9e5/\n- https://blog.cyble.com/2022/08/10/onyx-ransomware-renames-its-leak-site-to-vsop/\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1486\ntitle: Suspicious Appended Extension\n",
+                            "sigma:id": "e3f673b3-65d1-4d80-9146-466f8b63fa99",
+                            "title": "Suspicious Appended Extension",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4c6ca276-d4d0-4a8c-9e4c-d69832f8671f",
+                        "lookup_data": {
+                            "description": "Detects a highly relevant Antivirus alert that reports ransomware",
+                            "raw": "author: Florian Roth (Nextron Systems), Arnim Rupp\ndate: 2022/05/12\ndescription: Detects a highly relevant Antivirus alert that reports ransomware\ndetection:\n  condition: selection\n  selection:\n    Signature|contains:\n    - Ransom\n    - Cryptor\n    - Crypter\n    - CRYPTES\n    - GandCrab\n    - BlackWorm\n    - Phobos\n    - Destructor\n    - Filecoder\n    - GrandCrab\n    - Krypt\n    - Locker\n    - Ryuk\n    - Ryzerlo\n    - Tescrypt\n    - TeslaCrypt\nfalsepositives:\n- Unlikely\nid: 4c6ca276-d4d0-4a8c-9e4c-d69832f8671f\nlevel: critical\nlogsource:\n  category: antivirus\nmodified: 2023/02/03\nreferences:\n- https://www.nextron-systems.com/?s=antivirus\n- https://www.virustotal.com/gui/file/43b0f7872900bd234975a0877744554f4f355dc57505517abd1ef611e1ce6916\n- https://www.virustotal.com/gui/file/c312c05ddbd227cbb08958876df2b69d0f7c1b09e5689eb9d93c5b357f63eff7\n- https://www.virustotal.com/gui/file/20179093c59bca3acc6ce9a4281e8462f577ffd29fd7bf51cf2a70d106062045\n- https://www.virustotal.com/gui/file/554db97ea82f17eba516e6a6fdb9dc04b1d25580a1eb8cb755eeb260ad0bd61d\n- https://www.virustotal.com/gui/file/69fe77dd558e281621418980040e2af89a2547d377d0f2875502005ce22bc95c\nstatus: test\ntags:\n- attack.t1486\ntitle: Antivirus Ransomware Detection\n",
+                            "sigma:id": "4c6ca276-d4d0-4a8c-9e4c-d69832f8671f",
+                            "title": "Antivirus Ransomware Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "97919310-06a7-482c-9639-92b67ed63cf8",
+                        "lookup_data": {
+                            "description": "Detects multiple file rename or delete events occurrence within a specified period of time by a same user (these events may signalize about ransomware activity).",
+                            "raw": "author: Vasiliy Burov, oscd.community\ndate: 2020/10/16\ndescription: Detects multiple file rename or delete events occurrence within a specified\n  period of time by a same user (these events may signalize about ransomware activity).\ndetection:\n  condition: selection | count() by SubjectLogonId > 10\n  selection:\n    AccessList: '%%1537'\n    EventID: 4663\n    Keywords: '0x8020000000000000'\n    ObjectType: File\n  timeframe: 30s\nfalsepositives:\n- Software uninstallation\n- Files restore activities\nid: 97919310-06a7-482c-9639-92b67ed63cf8\nlevel: medium\nlogsource:\n  definition: 'Requirements: Audit Policy : Policies/Windows Settings/Security Settings/Local\n    Policies/Audit Policy/Audit object access, Policies/Windows Settings/Security\n    Settings/Advanced Audit Policy Configuration/Object Access'\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://www.manageengine.com/data-security/how-to/how-to-detect-ransomware-attacks.html\nstatus: test\ntags:\n- attack.impact\n- attack.t1486\ntitle: Suspicious Multiple File Rename Or Delete Occurred\n",
+                            "sigma:id": "97919310-06a7-482c-9639-92b67ed63cf8",
+                            "title": "Suspicious Multiple File Rename Or Delete Occurred",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "41d40bff-377a-43e2-8e1b-2e543069e079",
+                        "lookup_data": {
+                            "description": "Detects WannaCry ransomware activity",
+                            "raw": "author: Florian Roth (Nextron Systems), Tom U. @c_APT_ure (collection), oscd.community,\n  Jonhnathan Ribeiro\ndate: 2019/01/16\ndescription: Detects WannaCry ransomware activity\ndetection:\n  condition: 1 of selection*\n  selection1:\n  - Image|endswith:\n    - \\tasksche.exe\n    - \\mssecsvc.exe\n    - \\taskdl.exe\n    - \\taskhsvc.exe\n    - \\taskse.exe\n    - \\111.exe\n    - \\lhdfrgui.exe\n    - \\linuxnew.exe\n    - \\wannacry.exe\n  - Image|contains: WanaDecryptor\n  selection2:\n  - CommandLine|contains|all:\n    - icacls\n    - /grant\n    - Everyone:F\n    - /T\n    - /C\n    - /Q\n  - CommandLine|contains|all:\n    - bcdedit\n    - /set\n    - '{default}'\n    - recoveryenabled\n    - 'no'\n  - CommandLine|contains|all:\n    - wbadmin\n    - delete\n    - catalog\n    - -quiet\n  - CommandLine|contains: '@Please_Read_Me@.txt'\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 41d40bff-377a-43e2-8e1b-2e543069e079\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/02/24\nreferences:\n- https://www.hybrid-analysis.com/sample/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa?environmentId=100\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1210\n- attack.discovery\n- attack.t1083\n- attack.defense_evasion\n- attack.t1222.001\n- attack.impact\n- attack.t1486\n- attack.t1490\ntitle: WannaCry Ransomware\n",
+                            "sigma:id": "41d40bff-377a-43e2-8e1b-2e543069e079",
+                            "title": "WannaCry Ransomware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0165e5d7-51e6-4c2e-a382-1dd1e706f7bb",
+                        "lookup_data": {
+                            "description": "OSINT - DearCry ransomware (abusing Exchange Server)",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/0165e5d7-51e6-4c2e-a382-1dd1e706f7bb.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1615541608",
+                            "uuid": "0165e5d7-51e6-4c2e-a382-1dd1e706f7bb",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ee3822c-6828-418c-b619-62de950d210f",
+                        "lookup_data": {
+                            "description": "Dharma Ransomware Event",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ee3822c-6828-418c-b619-62de950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1592742357",
+                            "uuid": "5ee3822c-6828-418c-b619-62de950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                        "lookup_data": {
+                            "description": "Ragnar Locker Ransomware Targeting the Energy Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/8dbeaaac-a671-4a02-8dab-5eec2a1c935b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1662991697",
+                            "uuid": "8dbeaaac-a671-4a02-8dab-5eec2a1c935b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                        "lookup_data": {
+                            "description": "Cyberattack on fuel supplier causes supply chain disruption",
+                            "link": "http://www.botvrij.eu/data/feed-osint/cdc842aa-761d-48e2-9b97-c344bed8b3a8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1644231782",
+                            "uuid": "cdc842aa-761d-48e2-9b97-c344bed8b3a8",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1486",
+                "display_name": "Data Encrypted for Impact",
+                "atomic_tests": [
+                    {
+                        "name": "Encrypt files using gpg (FreeBSD/Linux)",
+                        "auto_generated_guid": "7b8ce084-3922-4618-8d22-95f996173765",
+                        "description": "Uses gpg to encrypt a file\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "pwd_for_encrypted_file": {
+                                "description": "the password that you want for the encrypted file",
+                                "type": "string",
+                                "default": "passwd"
+                            },
+                            "encrypted_file_path": {
+                                "description": "path to the encrypted file",
+                                "type": "path",
+                                "default": "/tmp/passwd.gpg"
+                            },
+                            "input_file_path": {
+                                "description": "path to the file that you want to encrypt",
+                                "type": "path",
+                                "default": "/etc/passwd"
+                            },
+                            "encryption_alg": {
+                                "description": "encryption algorithm of the file",
+                                "type": "string",
+                                "default": "AES-256"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Finds where gpg is located\n",
+                                "prereq_command": "which_gpg=`which gpg`\n",
+                                "get_prereq_command": "(which pkg && pkg install -y gnupg)||(which yum && yum -y install epel-release gpg)||(which apt-get && DEBIAN_FRONTEND=noninteractive apt-get install -y gpg)\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "echo \"#{pwd_for_encrypted_file}\" | $which_gpg --batch --yes --passphrase-fd 0 --cipher-algo #{encryption_alg} -o #{encrypted_file_path} -c #{input_file_path}\n",
+                            "cleanup_command": "rm #{encrypted_file_path}\n"
+                        }
+                    },
+                    {
+                        "name": "Encrypt files using 7z (FreeBSD/Linux)",
+                        "auto_generated_guid": "53e6735a-4727-44cc-b35b-237682a151ad",
+                        "description": "Uses 7z to encrypt a file\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "pwd_for_encrypted_file": {
+                                "description": "the password that you want for the encrypted file",
+                                "type": "string",
+                                "default": "passwd"
+                            },
+                            "encrypted_file_path": {
+                                "description": "path to the encrypted file",
+                                "type": "path",
+                                "default": "/tmp/passwd.zip"
+                            },
+                            "input_file_path": {
+                                "description": "path to the file that you want to encrypt",
+                                "type": "path",
+                                "default": "/etc/passwd"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Finds where 7z is located\n",
+                                "prereq_command": "which_7z=`which 7z`\n",
+                                "get_prereq_command": "(which pkg && pkg install -y 7-zip)\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "$which_7z a -p#{pwd_for_encrypted_file} #{encrypted_file_path} #{input_file_path}\n",
+                            "cleanup_command": "$which_7z e #{encrypted_file_path}\nrm #{encrypted_file_path}\n"
+                        }
+                    },
+                    {
+                        "name": "Encrypt files using ccrypt (FreeBSD/Linux)",
+                        "auto_generated_guid": "08cbf59f-85da-4369-a5f4-049cffd7709f",
+                        "description": "Attempts to encrypt data on target systems as root to simulate an interruption authentication to target system. If root permissions are not available then attempts to encrypt data within user's home directory.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "cped_file_path": {
+                                "description": "Path where you want your copied file to be",
+                                "type": "path",
+                                "default": "/tmp/passwd"
+                            },
+                            "root_input_file_path": {
+                                "description": "Path the target file to be encrypted. File will be copied to /tmp/ before encrypting",
+                                "type": "path",
+                                "default": "/etc/passwd"
+                            },
+                            "pwd_for_encrypted_file": {
+                                "description": "Password to use for encryption",
+                                "type": "string",
+                                "default": "passwd"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Finds where ccencrypt and ccdecrypt are located\n",
+                                "prereq_command": "which_ccencrypt=`which ccencrypt`\nwhich_ccdecrypt=`which ccdecrypt`\n",
+                                "get_prereq_command": "(which pkg && pkg install -y ccript)||(which yum && yum -y install epel-release ccrypt)||(which apt-get && DEBIAN_FRONTEND=noninteractive apt-get install -y ccrypt)\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "which_ccencrypt=`which ccencrypt`\ncp #{root_input_file_path} #{cped_file_path};\n$which_ccencrypt -T -K #{pwd_for_encrypted_file} #{cped_file_path}\n",
+                            "cleanup_command": "rm #{cped_file_path}.cpt\n"
+                        }
+                    },
+                    {
+                        "name": "Encrypt files using openssl (FreeBSD/Linux)",
+                        "auto_generated_guid": "142752dc-ca71-443b-9359-cf6f497315f1",
+                        "description": "Uses openssl to encrypt a file\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "private_key_path": {
+                                "description": "path to the private key",
+                                "type": "path",
+                                "default": "/tmp/key.pem"
+                            },
+                            "public_key_path": {
+                                "description": "path to the public key",
+                                "type": "path",
+                                "default": "/tmp/pub.pem"
+                            },
+                            "encryption_bit_size": {
+                                "description": "size of the bit of encryption",
+                                "type": "integer",
+                                "default": 2048
+                            },
+                            "encrypted_file_path": {
+                                "description": "path to the encrypted file",
+                                "type": "path",
+                                "default": "/tmp/passwd.zip"
+                            },
+                            "input_file_path": {
+                                "description": "path to the file that you want to encrypt",
+                                "type": "path",
+                                "default": "/etc/passwd"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Finds where openssl is located\n",
+                                "prereq_command": "which_openssl=`which openssl`\n",
+                                "get_prereq_command": ""
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": false,
+                            "command": "which_openssl=`which openssl`\n$which_openssl genrsa -out #{private_key_path} #{encryption_bit_size}\n$which_openssl rsa -in #{private_key_path} -pubout -out #{public_key_path}\n$which_openssl rsautl -encrypt -inkey #{public_key_path} -pubin -in #{input_file_path} -out #{encrypted_file_path}\n",
+                            "cleanup_command": "$which_openssl rsautl -decrypt -inkey #{private_key_path} -in #{encrypted_file_path}\nrm #{encrypted_file_path}\n"
+                        }
+                    },
+                    {
+                        "name": "PureLocker Ransom Note",
+                        "auto_generated_guid": "649349c7-9abf-493b-a7a2-b1aa4d141528",
+                        "description": "building the IOC (YOUR_FILES.txt) for the PureLocker ransomware \nhttps://www.bleepingcomputer.com/news/security/purelocker-ransomware-can-lock-files-on-windows-linux-and-macos/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "echo T1486 - Purelocker Ransom Note > %USERPROFILE%\\Desktop\\YOUR_FILES.txt\n",
+                            "cleanup_command": "del %USERPROFILE%\\Desktop\\YOUR_FILES.txt >nul 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "Encrypt files using 7z utility - macOS",
+                        "auto_generated_guid": "645f0f5a-ef09-48d8-b9bc-f0e24c642d72",
+                        "description": "This test encrypts the file(s) using the 7z utility\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Check if 7z command exists on the machine\n",
+                                "prereq_command": "which 7z\n",
+                                "get_prereq_command": "echo Installing 7z, using brew\n/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\nbrew install p7zip\n"
+                            }
+                        ],
+                        "input_arguments": {
+                            "file_password": {
+                                "description": "Password to be provided for archiving the file",
+                                "type": "string",
+                                "default": "ARTPass"
+                            },
+                            "encrypted_file_name": {
+                                "description": "Name of the archive to be created",
+                                "type": "string",
+                                "default": "ARTArchive.7z"
+                            },
+                            "input_file_path": {
+                                "description": "Path to the file that you want to encrypt",
+                                "type": "path",
+                                "default": "~/test.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "7z a -p #{file_password} -mhe=on #{encrypted_file_name} #{input_file_path}\n",
+                            "cleanup_command": "rm #{encrypted_file_name}\n",
+                            "name": "sh",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Encrypt files using openssl utility - macOS",
+                        "auto_generated_guid": "1a01f6b8-b1e8-418e-bbe3-78a6f822759e",
+                        "description": "This test encrypts the file(s) using the openssl utility\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "encryption_option": {
+                                "description": "Specifiy the required encryption option",
+                                "type": "string",
+                                "default": "-pbkdf2"
+                            },
+                            "input_file_path": {
+                                "description": "Path to the file that you want to encrypt",
+                                "type": "path",
+                                "default": "~/test.txt"
+                            },
+                            "output_file_name": {
+                                "description": "Path to the file that you want to encrypt",
+                                "type": "string",
+                                "default": "ARTFile"
+                            }
+                        },
+                        "executor": {
+                            "command": "openssl enc #{encryption_option} -in #{input_file_path} -out #{output_file_name}\n",
+                            "cleanup_command": "rm #{output_file_name}\n",
+                            "name": "sh",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Data Encrypted with GPG4Win",
+                        "auto_generated_guid": "4541e2c2-33c8-44b1-be79-9161440f1718",
+                        "description": "Gpg4win is a Windows tool (also called Kleopatra which is the preferred certificate manager) that uses email and file encryption packages for symmetric encryption. It is used by attackers to encrypt disks. User will need to add pass phrase to encrypt file as automation is not allowed under newer versions.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "GPG_Exe_Location": {
+                                "description": "Path of the GPG program",
+                                "type": "path",
+                                "default": "C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe"
+                            },
+                            "File_to_Encrypt_Location": {
+                                "description": "Path of File",
+                                "type": "path",
+                                "default": "$env:temp\\test.txt"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "GPG must exist at (#{GPG_Exe_Location}). If -GetPrereqs fails, try to install GPG4WIN manually at 'https://www.gpg4win.org/download.html'. Once done, run -CheckPrereqs to confirm that it works.\n",
+                                "prereq_command": "if (test-path '#{GPG_Exe_Location}'){exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Set-Content -Path \"#{File_to_Encrypt_Location}\" -Value \"populating this file with some text\"  # Create the test.txt file\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\ninvoke-webrequest \"https://files.gpg4win.org/gpg4win-4.1.0.exe\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\gpginstall.exe\"\ncmd /c \"PathToAtomicsFolder\\..\\ExternalPayloads\\gpginstall.exe\" /S\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "Set-Content -Path \"#{File_to_Encrypt_Location}\" -Value \"populating this file with some text\"  # Create the test.txt file again in case prereqs failed\ncmd /c \"`\"C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe`\" --passphrase 'SomeParaphraseBlah' --batch --yes -c `\"#{File_to_Encrypt_Location}`\"\"\n",
+                            "cleanup_command": "Remove-Item -Path \"#{File_to_Encrypt_Location}\" -Force -ErrorAction SilentlyContinue\nRemove-Item -Path \"#{File_to_Encrypt_Location}.gpg\" -Force -ErrorAction SilentlyContinue\n"
+                        }
+                    },
+                    {
+                        "name": "Data Encrypt Using DiskCryptor",
+                        "auto_generated_guid": "44b68e11-9da2-4d45-a0d9-893dabd60f30",
+                        "description": "DiskCryptor, an open source encryption utility, can be exploited by adversaries for encrypting all disk partitions, including system partitions. This tool was identified in a ransomware campaign, as reported on https://thedfirreport.com/2021/11/15/exchange-exploit-leads-to-domain-wide-ransomware/. The documentation for DiskCryptor can be found at https://github.com/DavidXanatos/DiskCryptor. During the installation process, running dcrypt.exe starts the encryption console. It's important to note that a system reboot is necessary as part of the installation.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "dcrypt_exe": {
+                                "description": "The dcrypt.exe executable from dcrypt_setup.exe",
+                                "type": "path",
+                                "default": "dcrypt.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "dcrypt_setup will be installed at specified location (#{dcrypt_exe})\n",
+                                "prereq_command": "if (Test-Path \"${env:ProgramFiles}/dcrypt/#{dcrypt_exe}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Downloading DiskCryptor installer\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/DavidXanatos/DiskCryptor/releases/download/1.1.846.118/dcrypt_setup_1.1.846.118.exe\" -OutFile      \"PathToAtomicsFolder\\..\\ExternalPayloads\\dcrypt_setup_1.1.846.118.exe\"\nWrite-Host Install DiskCryptor\nStart-Process \"PathToAtomicsFolder\\..\\ExternalPayloads\\dcrypt_setup_1.1.846.118.exe\" -Wait -ArgumentList \"/s\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "\"\"%PROGRAMFILES%\\dcrypt\"\\#{dcrypt_exe}\"\n"
+                        }
+                    },
+                    {
+                        "name": "Akira Ransomware drop Files with .akira Extension and Ransomnote",
+                        "auto_generated_guid": "ab3f793f-2dcc-4da5-9c71-34988307263f",
+                        "description": "Dropping 100 files with random content and .akira File Extension and the Akira Ransomnote to c:\\\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": true,
+                            "command": "1..100 | ForEach-Object { $out = new-object byte[] 1073741; (new-object Random).NextBytes($out); [IO.File]::WriteAllBytes(\"c:\\test.$_.akira\", $out) }\necho \"Hi friends\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"Whatever who you are and what your title is if you' re reading this it means the internal infrastructure of your company is fully or partially dead, all your backups - virtual, physical - everything that we managed to reach - are completely removed. Moreover, we have taken a great amount of your corporate data prior to encryption  Well, for now let's keep all the tears and resentment to ourselves and try to build a constructive dialogue. We're fully aware of what damage we caused by locking your internal sources. At the moment. you have to know: \" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"1. Dealing with us you will save A LOT due to we are not interested in ruining your financially. We will study in depth your finance, bank income statements, your savings, investments etc. and present our reasonable demand to you. If you have an active cyber insurance, let us know and we will guide you how to properly use it. Also, dragging out the negotiation process will lead to failing of a deal\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"2. Paying us you save your TIME, MONEY, EFFORTS and be back on track within 24 hours approximately. Our decryptor works properly on any files or systems, so you will be able to check it by requesting a test decryption service from the beginning of our conversation. [f you decide to recover on your own, keep in mind that you can permanently lose access to some files or accidently corrupt them — in this case we won't be able to help.  \" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"3. The security report or the exclusive first-hand information that you will receive upon reaching an agreement is of a great value, since NO full audit of your network will show you the vulnerabilities that we' ve managed to detect and used in order to get into. identify backup solutions and upload your data.\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"4. As for your data, if we fail to agree, we will try to sell personal information/trade secrets/databases/source codes — generally speaking, everything that has a value on the darkmarket - to multiple threat actors at ones.\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"Then all of this will be published in our blog -\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"https://akira.onion\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"5. We're more than negotiable and will definitely find the way to settle this quickly and reach an agreement which will satisfy both of us\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"If you' re indeed interested in our assistance and the services we provide you can reach out to us following simple instructions:\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"1. Install TOR Browser to get access to our chat room - https://www.torproject.org/download/.\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"2. Paste this link - https://akira.onion\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"3. Use this code - - to log into our chat.\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"\" >> $env:Userprofile\\Desktop\\akira_readme.txt\necho \"Keep in mind that the faster you will get in touch, the less damage we cause\" >> $env:Userprofile\\Desktop\\akira_readme.txt\n",
+                            "cleanup_command": "del $env:Userprofile\\Desktop\\akira_readme.txt \ndel c:\\test.*.akira\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:35:23"
+}

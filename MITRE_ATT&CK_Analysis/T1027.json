@@ -1,0 +1,1437 @@
+{
+    "id": "T1027",
+    "name": "Obfuscated Files or Information",
+    "description": "Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise obfuscating its contents on the system or in transit. This is common behavior that can be used across different platforms and the network to evade defenses.\nPayloads may be compressed, archived, or encrypted in order to avoid detection. These payloads may be used during Initial Access or later to mitigate detection. Sometimes a user's action may be required to open and [Deobfuscate/Decode Files or Information](T1140) for [User Execution](T1204). The user may also be required to input a password to open a password protected compressed/encrypted file that was provided by the adversary. (Citation: Volexity PowerDuke November 2016) Adversaries may also used compressed or archived scripts, such as JavaScript.\nPortions of files can also be encoded to hide the plain-text strings that would otherwise help defenders with discovery. (Citation: Linux/Cdorked.A We Live Security Analysis) Payloads may also be split into separate, seemingly benign files that only reveal malicious functionality when reassembled. (Citation: Carbon Black Obfuscation Sept 2016)\nAdversaries may also obfuscate commands executed from payloads or directly via a [Command and Scripting Interpreter](T1059). Environment variables, aliases, characters, and other platform/language specific semantics can be used to evade signature based detections and application control mechanisms. (Citation: FireEye Obfuscation June 2017) (Citation: FireEye Revoke-Obfuscation July 2017)(Citation: PaloAlto EncodedCommand March 2017)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Command: Command Execution, File: File Metadata, File: File Creation, Process: Process Creation",
+    "detection": "Detection of file obfuscation is difficult unless artifacts are left behind by the obfuscation process that are uniquely detectable with a signature. If detection of the obfuscation itself is not possible, it may be possible to detect the malicious activity that caused the obfuscated file (for example, the method that was used to write, read, or modify the file on the file system).\nFlag and analyze commands containing indicators of obfuscation and known suspicious syntax such as uninterpreted escape characters like '''^''' and '''\"'''. Windows' Sysmon and Event ID 4688 displays command-line arguments for processes. Deobfuscation tools can be used to detect these indicators in files/payloads. (Citation: GitHub Revoke-Obfuscation) (Citation: FireEye Revoke-Obfuscation July 2017) (Citation: GitHub Office-Crackros Aug 2016)\nObfuscation used in payloads for Initial Access can be detected at the network. Use network intrusion detection systems and email gateway filtering to identify compressed and encrypted attachments and scripts. Some email attachment detonation systems can open compressed and encrypted attachments. Payloads delivered over an encrypted connection from a website require encrypted network traffic inspection.\nThe first detection of a malicious tool may trigger an anti-virus or other security tool alert. Similar events may also occur at the boundary through network IDS, email scanning appliance, etc. The initial detection should be treated as an indication of a potentially more invasive intrusion. The alerting system should be thoroughly investigated beyond that initial alert for activity that was not detected. Adversaries may continue with an operation, assuming that individual events like an anti-virus detect will not be investigated or that an analyst will not be able to conclusively link that event to other activity occurring on the network.",
+    "url": "https://attack.mitre.org/techniques/T1027",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1027",
+                "atomic_attack_guid": "f45df6be-2e1e-4136-a384-8f18ab3826fb",
+                "atomic_attack_name": "Decode base64 Data into Script",
+                "platform": "Linux",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Linux Common Process For Elevation Control",
+                        "rule_link": "https://research.splunk.com/endpoint/66ab15c0-63d0-11ec-9e70-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1027",
+                "atomic_attack_guid": "fad04df1-5229-4185-b016-fb6010cd87ac",
+                "atomic_attack_name": "Execution from Compressed JScript File",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_wscript_cscript_script_exec.yml",
+                        "remote_content": "title: WSF/JSE/JS/VBA/VBE File Execution Via Cscript/Wscript\nid: 1e33157c-53b1-41ad-bbcc-780b80b58288\nrelated:\n    - id: 23250293-eed5-4c39-b57a-841c8933a57d\n      type: obsolete\n    - id: cea72823-df4d-4567-950c-0b579eaf0846\n      type: derived\nstatus: test\ndescription: Detects script file execution (.js, .jse, .vba, .vbe, .vbs, .wsf) by Wscript/Cscript\nreferences:\n    - https://thedfirreport.com/2023/10/30/netsupport-intrusion-results-in-domain-compromise/\n    - https://redcanary.com/blog/gootloader/\nauthor: Michael Haag\ndate: 2019-01-16\nmodified: 2023-05-15\ntags:\n    - attack.execution\n    - attack.t1059.005\n    - attack.t1059.007\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName:\n              - 'wscript.exe'\n              - 'cscript.exe'\n        - Image|endswith:\n              - '\\wscript.exe'\n              - '\\cscript.exe'\n    selection_cli:\n        CommandLine|contains:\n            - '.js'\n            - '.jse'\n            - '.vba'\n            - '.vbe'\n            - '.vbs'\n            - '.wsf'\n    condition: all of selection_*\nfalsepositives:\n    - Some additional tuning is required. It is recommended to add the user profile path in CommandLine if it is getting too noisy.\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1027",
+                "atomic_attack_guid": "e2d85e66-cb66-4ed7-93b1-833fc56c9319",
+                "atomic_attack_name": "DLP Evasion via Sensitive Data in VBA Macro over HTTP",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Invoke-WebRequest Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invoke_webrequest_download.yml",
+                        "remote_content": "title: Suspicious Invoke-WebRequest Execution\nid: 5e3cc4d8-3e68-43db-8656-eaaeefdec9cc\nrelated:\n    - id: e218595b-bbe7-4ee5-8a96-f32a24ad3468\n      type: derived\nstatus: test\ndescription: Detects a suspicious call to Invoke-WebRequest cmdlet where the and output is located in a suspicious location\nreferences:\n    - https://www.sentinelone.com/blog/living-off-windows-defender-lockbit-ransomware-sideloads-cobalt-strike-through-microsoft-security-tool/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-02\nmodified: 2024-02-23\ntags:\n    - attack.command-and-control\n    - attack.t1105\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_commands:\n        CommandLine|contains:\n            # These are all aliases of Invoke-WebRequest\n            - 'curl '\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'wget '\n    selection_flags:\n        CommandLine|contains:\n            - ' -ur'\n            - ' -o'\n    selection_susp_locations:\n        CommandLine|contains:\n            - '\\AppData\\'\n            - '\\Desktop\\'\n            - '\\Temp\\'\n            - '\\Users\\Public\\'\n            - '%AppData%'\n            - '%Public%'\n            - '%Temp%'\n            - '%tmp%'\n            - ':\\Windows\\'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "a136cde0-61ad-4a61-9b82-8dc490e60dd2",
+                    "a5a30a6e-75ca-4233-8b8c-42e0f2037d3b",
+                    "175997c5-803c-4b08-8bb0-70b099f47595",
+                    "14bcba49-a428-42d9-b943-e2ce0f0f7ae6",
+                    "ebdf49d8-b89c-46c9-8fdf-2c308406f6bd",
+                    "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                    "d02e8cf5-6099-48cf-9bfc-1eec2d0c7b18",
+                    "b69888d4-380c-45ce-9cf9-d9ce46e67821",
+                    "cd0f7229-d16f-42de-8fe3-fba365fbcb3a",
+                    "80b708f3-d034-40e4-a6c8-d23b7a7db3d1",
+                    "7034cbbb-cc55-4dc2-8dad-36c0b942e8f1",
+                    "90b63c33-2b97-4631-a011-ceb0f47b77c3",
+                    "e54f5149-6ba3-49cf-b153-070d24679126",
+                    "f3c89218-8c3d-4ba9-9974-f1d8e6a1b4a6",
+                    "779c8c12-0eb1-11eb-adc1-0242ac120002",
+                    "d7bcd677-645d-4691-a8d4-7a5602b780d1",
+                    "bb780e0c-16cf-4383-8383-1e5471db6cf9",
+                    "1a0d4aba-7668-4365-9ce4-6d79ab088dfd",
+                    "c72aca44-8d52-45ad-8f81-f96c4d3c755e",
+                    "db92dd33-a3ad-49cf-8c2c-608c3e30ace0",
+                    "20e5497e-331c-4cd5-8d36-935f6e2a9a07",
+                    "e0552b19-5a83-4222-b141-b36184bb8d79",
+                    "e62a9f0c-ca1e-46b2-85d5-a6da77f86d1a",
+                    "9c0295ce-d60d-40bd-bd74-84673b7592b1",
+                    "9b8d9203-4e0f-4cd9-bb06-4cc4ea6d0e9a",
+                    "719c22d7-c11a-4f2c-93a6-2cfdd5412f68",
+                    "2d117e49-e626-4c7c-bd1f-c3c0147774c8",
+                    "27aec9c9-dbb0-4939-8422-1742242471d0",
+                    "e312efd0-35a1-407f-8439-b8d434b438a6",
+                    "2f211361-7dce-442d-b78a-c04039677378",
+                    "cdf05894-89e7-4ead-b2b0-0a5f97a90f2f",
+                    "e2072cab-8c9a-459b-b63c-40ae79e27031",
+                    "dcf2db1f-f091-425b-a821-c05875b8925a",
+                    "0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "4bf943c6-5146-4273-98dd-e958fd1e3abf",
+                    "e6cb92b4-b470-4eb8-8a9d-d63e8583aae0",
+                    "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "e32d4572-9826-4738-b651-95fa63747e8a",
+                    "ca83e9f3-657a-45d0-88d6-c1ac280caf53",
+                    "8ca7004b-e620-4ecb-870e-86129b5b8e75",
+                    "5d498330-f574-4889-bcc9-c53c950d210f",
+                    "0c718a5e-4284-4fb9-b4d9-b9a50b3a1974",
+                    "f7385ee2-0e0c-11eb-adc1-0242ac120002",
+                    "4edf51e1-cb83-4e1a-bc39-800e396068e3",
+                    "f241cf1b-3a6b-4e1a-b4f9-133c00dd95ca",
+                    "6bfb8fa7-b2e7-4f6c-8d9d-824e5d06ea9e",
+                    "b3d682b6-98f2-4fb0-aa3b-b4df007ca70a",
+                    "36c5146c-d127-4f85-8e21-01bf62355d5a",
+                    "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                    "e9f55347-2928-4c06-88e5-1a7f8169942e",
+                    "e1561947-b4e3-4a74-9bdd-83baed21bdb5",
+                    "1a0a2ff1-611b-4dac-8216-8a7b47c618a6",
+                    "fd0f5778-d3cb-4c9a-9695-66759d04702a",
+                    "9c14c9fa-1a63-4a64-8e57-d19280559490",
+                    "7e9c7999-0f9b-4d4a-a6ed-af6d553d4af4",
+                    "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                    "11b52f18-aaec-4d60-9143-5dd8cc4706b9",
+                    "62b7ccc9-23b4-471e-aa15-6da3663c4d59",
+                    "487c7524-f892-4054-b263-8a0ace63fc25",
+                    "b222df08-0e07-11eb-adc1-0242ac120002",
+                    "ac20ae82-8758-4f38-958e-b44a3140ca88",
+                    "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                    "5b9123c0-1480-4e09-877e-4783950d210f",
+                    "51aa9387-1c53-4153-91cc-d73c59ae1ca9",
+                    "07ad2ea8-6a55-4ac6-bf3e-91b8e59676eb",
+                    "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                    "6f8b3439-a203-45dc-a88b-abf57ea15ccf",
+                    "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                    "e55a5195-4724-480e-a77e-3ebe64bd3759",
+                    "9ac8b09b-45de-4a07-9da1-0de8c09304a3",
+                    "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                    "0adfbc14-0ed1-11eb-adc1-0242ac120002",
+                    "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "96cd126d-f970-49c4-848a-da3a09f55c55",
+                    "73e67340-0d25-11eb-adc1-0242ac120002",
+                    "056a7ee1-4853-4e67-86a0-3fd9ceed7555",
+                    "63e3365d-4824-42d8-8b82-e56810fefa0c",
+                    "6c96fc76-0eb1-11eb-adc1-0242ac120002",
+                    "72862bf2-0eb1-11eb-adc1-0242ac120002",
+                    "1816994b-42e1-4fb1-afd2-134d88184f71",
+                    "1b9dc62e-6e9e-42a3-8990-94d7a10007f7",
+                    "5da1e411-c430-4fd6-bb05-9c81c0a8ab16",
+                    "86b896ba-ffa1-4fea-83e3-ee28a4c915c7",
+                    "0c92f2e6-f08f-4b73-9216-ecb0ca634689",
+                    "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7",
+                    "74403157-20f5-415d-89a7-c505779585cf",
+                    "130c9e58-28ac-4f83-8574-0a4cc913b97e",
+                    "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                    "88a22f69-62f9-4b8a-aa00-6b0212f2f05a",
+                    "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                    "6385697e-9f1b-40bd-8817-f4a91f40508e",
+                    "641a4bfb-c017-44f7-800c-2aee0184ce9b",
+                    "4c54ba8f-73d2-4d40-8890-d9cf1dca3d30",
+                    "b6b49cd1-34d6-4ead-b1bf-176e9edba9a4",
+                    "e8314f79-564d-4f79-bc13-fbc0bf2660d8",
+                    "7a922f1b-2635-4d6c-91ef-af228b198ad3",
+                    "a23791fe-8846-485a-b16b-ca691e1b03d4"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "a136cde0-61ad-4a61-9b82-8dc490e60dd2",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Clip.exe to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated use of Clip.exe to execute PowerShell\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|re: .*cmd.{0,5}(?:/c|/r).+clip(?:\\.exe)?.{0,4}&&.+clipboard]::\\(\\s\\\\\"\\{\\d\\}.+-f.+\"\nfalsepositives:\n- Unknown\nid: a136cde0-61ad-4a61-9b82-8dc490e60dd2\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 73e67340-0d25-11eb-adc1-0242ac120002\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation CLIP+ Launcher - PowerShell Module\n",
+                            "sigma:id": "a136cde0-61ad-4a61-9b82-8dc490e60dd2",
+                            "title": "Invoke-Obfuscation CLIP+ Launcher - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a5a30a6e-75ca-4233-8b8c-42e0f2037d3b",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Rundll32 in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2019/10/08\ndescription: Detects Obfuscated Powershell via use Rundll32 in Scripts\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|contains:\n    - value\n    - invoke\n    - comspec\n    - iex\n    ScriptBlockText|contains|all:\n    - '&&'\n    - rundll32\n    - shell32.dll\n    - shellexec_rundll\nfalsepositives:\n- Unknown\nid: a5a30a6e-75ca-4233-8b8c-42e0f2037d3b\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Rundll32 - PowerShell\n",
+                            "sigma:id": "a5a30a6e-75ca-4233-8b8c-42e0f2037d3b",
+                            "title": "Invoke-Obfuscation Via Use Rundll32 - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "175997c5-803c-4b08-8bb0-70b099f47595",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via COMPRESS OBFUSCATION",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via COMPRESS OBFUSCATION\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - :system.io.compression.deflatestream\n    - system.io.streamreader\n    ImagePath|contains|all:\n    - new-object\n    - text.encoding]::ascii\n    - readtoend\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 175997c5-803c-4b08-8bb0-70b099f47595\nlevel: medium\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation COMPRESS OBFUSCATION - System\n",
+                            "sigma:id": "175997c5-803c-4b08-8bb0-70b099f47595",
+                            "title": "Invoke-Obfuscation COMPRESS OBFUSCATION - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "14bcba49-a428-42d9-b943-e2ce0f0f7ae6",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via VAR++ LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated Powershell via VAR++ LAUNCHER\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - '{0}'\n    - '{1}'\n    - '{2}'\n    - '{3}'\n    - '{4}'\n    - '{5}'\n    ImagePath|contains|all:\n    - '&&set'\n    - cmd\n    - /c\n    - -f\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 14bcba49-a428-42d9-b943-e2ce0f0f7ae6\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - System\n",
+                            "sigma:id": "14bcba49-a428-42d9-b943-e2ce0f0f7ae6",
+                            "title": "Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ebdf49d8-b89c-46c9-8fdf-2c308406f6bd",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Clip.exe in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use Clip.exe in Scripts\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|re: (?i).*?echo.*clip.*&&.*(Clipboard|i`?n`?v`?o`?k`?e`?).*\nfalsepositives:\n- Unknown\nid: ebdf49d8-b89c-46c9-8fdf-2c308406f6bd\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: db92dd33-a3ad-49cf-8c2c-608c3e30ace0\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Clip - PowerShell Module\n",
+                            "sigma:id": "ebdf49d8-b89c-46c9-8fdf-2c308406f6bd",
+                            "title": "Invoke-Obfuscation Via Use Clip - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                        "lookup_data": {
+                            "description": "Detects activity mentioned in Operation Wocao report",
+                            "raw": "author: Florian Roth (Nextron Systems), frack113\ndate: 2019/12/20\ndescription: Detects activity mentioned in Operation Wocao report\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - checkadmin.exe 127.0.0.1 -all\n    - netsh advfirewall firewall add rule name=powershell dir=in\n    - cmd /c powershell.exe -ep bypass -file c:\\s.ps1\n    - /tn win32times /f\n    - create win32times binPath=\n    - \\c$\\windows\\system32\\devmgr.dll\n    - ' -exec bypass -enc JgAg'\n    - type *keepass\\KeePass.config.xml\n    - iie.exe iie.txt\n    - reg query HKEY_CURRENT_USER\\Software\\\\*\\PuTTY\\Sessions\\\nfalsepositives:\n- Administrators that use checkadmin.exe tool to enumerate local administrators\nid: 1cfac73c-be78-4f9a-9b08-5bde0c3953ab\nlevel: high\nlogsource:\n  category: process_creation\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.fox-it.com/en/news/whitepapers/operation-wocao-shining-a-light-on-one-of-chinas-hidden-hacking-groups/\n- https://twitter.com/SBousseaden/status/1207671369963646976\nrelated:\n- id: 74ad4314-482e-4c3e-b237-3f7ed3b9ca8d\n  type: derived\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1036.004\n- attack.t1027\n- attack.execution\n- attack.t1053.005\n- attack.t1059.001\ntitle: Operation Wocao Activity\n",
+                            "sigma:id": "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                            "title": "Operation Wocao Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d02e8cf5-6099-48cf-9bfc-1eec2d0c7b18",
+                        "lookup_data": {
+                            "description": "Detects all Emotet like process executions that are not covered by the more generic rules",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/09/30\ndescription: Detects all Emotet like process executions that are not covered by the\n  more generic rules\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains:\n    - fAAgAEMAbwBuAHYAZQByAHQAVABvAC0ASgBzAG8AbgAgAC0ARQByAHIAbwByAEEAYwB0AGkAbwBuACAAUwBpAGwAZQBuAHQAbAB5AEMAbwBuAHQAaQBuAHUAZQ\n    - wAIABDAG8AbgB2AGUAcgB0AFQAbwAtAEoAcwBvAG4AIAAtAEUAcgByAG8AcgBBAGMAdABpAG8AbgAgAFMAaQBsAGUAbgB0AGwAeQBDAG8AbgB0AGkAbgB1AGUA\n    - 8ACAAQwBvAG4AdgBlAHIAdABUAG8ALQBKAHMAbwBuACAALQBFAHIAcgBvAHIAQQBjAHQAaQBvAG4AIABTAGkAbABlAG4AdABsAHkAQwBvAG4AdABpAG4AdQBlA\n  selection:\n    CommandLine|contains:\n    - ' -e* PAA'\n    - JABlAG4AdgA6AHUAcwBlAHIAcAByAG8AZgBpAGwAZQ\n    - QAZQBuAHYAOgB1AHMAZQByAHAAcgBvAGYAaQBsAGUA\n    - kAGUAbgB2ADoAdQBzAGUAcgBwAHIAbwBmAGkAbABlA\n    - IgAoACcAKgAnACkAOwAkA\n    - IAKAAnACoAJwApADsAJA\n    - iACgAJwAqACcAKQA7ACQA\n    - JABGAGwAeAByAGgAYwBmAGQ\n    - PQAkAGUAbgB2ADoAdABlAG0AcAArACgA\n    - 0AJABlAG4AdgA6AHQAZQBtAHAAKwAoA\n    - 9ACQAZQBuAHYAOgB0AGUAbQBwACsAKA\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: d02e8cf5-6099-48cf-9bfc-1eec2d0c7b18\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/27\nreferences:\n- https://app.any.run/tasks/e13ab713-64cf-4b23-ad93-6dceaa5429ac/\n- https://app.any.run/tasks/81f3c28c-c686-425d-8a2b-a98198d244e1/\n- https://app.any.run/tasks/97f875e8-0e08-4328-815f-055e971ba754/\n- https://app.any.run/tasks/84fc9b4a-ea2b-47b1-8aa6-9014402dfb56/\nstatus: stable\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1027\ntitle: Emotet Process Creation\n",
+                            "sigma:id": "d02e8cf5-6099-48cf-9bfc-1eec2d0c7b18",
+                            "title": "Emotet Process Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b69888d4-380c-45ce-9cf9-d9ce46e67821",
+                        "lookup_data": {
+                            "description": "Detects the creation of an ADS data stream that contains an executable (non-empty imphash)",
+                            "raw": "author: Florian Roth (Nextron Systems), @0xrawsec\ndate: 2018/06/03\ndescription: Detects the creation of an ADS data stream that contains an executable\n  (non-empty imphash)\ndetection:\n  condition: selection and not filter\n  filter:\n    Hash|contains: IMPHASH=00000000000000000000000000000000\n  selection:\n    Hash|contains: IMPHASH=\nfalsepositives:\n- Unknown\nfields:\n- TargetFilename\n- Image\nid: b69888d4-380c-45ce-9cf9-d9ce46e67821\nlevel: medium\nlogsource:\n  category: create_stream_hash\n  definition: 'Requirements: Sysmon config with Imphash logging activated'\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://twitter.com/0xrawsec/status/1002478725605273600?s=21\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.s0139\n- attack.t1564.004\ntitle: Executable in ADS\n",
+                            "sigma:id": "b69888d4-380c-45ce-9cf9-d9ce46e67821",
+                            "title": "Executable in ADS",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cd0f7229-d16f-42de-8fe3-fba365fbcb3a",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Rundll32 in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use Rundll32 in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - value\n    - invoke\n    - comspec\n    - iex\n    ServiceFileName|contains|all:\n    - '&&'\n    - rundll32\n    - shell32.dll\n    - shellexec_rundll\nfalsepositives:\n- Unknown\nid: cd0f7229-d16f-42de-8fe3-fba365fbcb3a\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 641a4bfb-c017-44f7-800c-2aee0184ce9b\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Rundll32 - Security\n",
+                            "sigma:id": "cd0f7229-d16f-42de-8fe3-fba365fbcb3a",
+                            "title": "Invoke-Obfuscation Via Use Rundll32 - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "80b708f3-d034-40e4-a6c8-d23b7a7db3d1",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via Stdin in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/12\ndescription: Detects Obfuscated Powershell via Stdin in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - environment\n    - invoke\n    - ${input)\n    ServiceFileName|contains|all:\n    - set\n    - '&&'\nfalsepositives:\n- Unknown\nid: 80b708f3-d034-40e4-a6c8-d23b7a7db3d1\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 487c7524-f892-4054-b263-8a0ace63fc25\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Stdin - Security\n",
+                            "sigma:id": "80b708f3-d034-40e4-a6c8-d23b7a7db3d1",
+                            "title": "Invoke-Obfuscation Via Stdin - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7034cbbb-cc55-4dc2-8dad-36c0b942e8f1",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via COMPRESS OBFUSCATION",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via COMPRESS OBFUSCATION\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|contains:\n    - system.io.compression.deflatestream\n    - system.io.streamreader\n    Payload|contains|all:\n    - new-object\n    - text.encoding]::ascii\n    Payload|endswith: readtoend\nfalsepositives:\n- Unknown\nid: 7034cbbb-cc55-4dc2-8dad-36c0b942e8f1\nlevel: medium\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 20e5497e-331c-4cd5-8d36-935f6e2a9a07\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation COMPRESS OBFUSCATION - PowerShell Module\n",
+                            "sigma:id": "7034cbbb-cc55-4dc2-8dad-36c0b942e8f1",
+                            "title": "Invoke-Obfuscation COMPRESS OBFUSCATION - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "90b63c33-2b97-4631-a011-ceb0f47b77c3",
+                        "lookup_data": {
+                            "description": "Detects usage of a CLSID folder name located in a suspicious location from the commandline as seen being used in IcedID",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/01\ndescription: Detects usage of a CLSID folder name located in a suspicious location\n  from the commandline as seen being used in IcedID\ndetection:\n  condition: all of selection_* and not 1 of filter*\n  filter:\n    Image|contains|all:\n    - \\{\n    - '}\\'\n  filter_driver_inst:\n    Image: C:\\Windows\\System32\\drvinst.exe\n  filter_null:\n    Image: null\n  selection_clsid:\n    CommandLine|contains|all:\n    - \\{\n    - '}\\'\n  selection_folder:\n    CommandLine|contains:\n    - \\AppData\\Roaming\\\n    - \\AppData\\Local\\Temp\\\nfalsepositives:\n- Some FP is expected with some installers\nid: 90b63c33-2b97-4631-a011-ceb0f47b77c3\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/15\nreferences:\n- https://twitter.com/Kostastsale/status/1565257924204986369\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Suspicious CLSID Folder Name In Suspicious Locations\n",
+                            "sigma:id": "90b63c33-2b97-4631-a011-ceb0f47b77c3",
+                            "title": "Suspicious CLSID Folder Name In Suspicious Locations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e54f5149-6ba3-49cf-b153-070d24679126",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via VAR++ LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated Powershell via VAR++ LAUNCHER\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|re: (?i).*&&set.*(\\{\\d\\}){2,}\\\\\"\\s+?-f.*&&.*cmd.*/c\nfalsepositives:\n- Unknown\nid: e54f5149-6ba3-49cf-b153-070d24679126\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - PowerShell\n",
+                            "sigma:id": "e54f5149-6ba3-49cf-b153-070d24679126",
+                            "title": "Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f3c89218-8c3d-4ba9-9974-f1d8e6a1b4a6",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via VAR++ LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated Powershell via VAR++ LAUNCHER\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|re: (?i).*&&set.*(\\{\\d\\}){2,}\\\\\"\\s+?-f.*&&.*cmd.*/c\nfalsepositives:\n- Unknown\nid: f3c89218-8c3d-4ba9-9974-f1d8e6a1b4a6\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: e54f5149-6ba3-49cf-b153-070d24679126\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - PowerShell Module\n",
+                            "sigma:id": "f3c89218-8c3d-4ba9-9974-f1d8e6a1b4a6",
+                            "title": "Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "779c8c12-0eb1-11eb-adc1-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of stdin to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of stdin to execute PowerShell\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|re: .*cmd.{0,5}(?:/c|/r).+powershell.+(?:\\$?\\{?input\\}?|noexit).+\"\nfalsepositives:\n- Unknown\nid: 779c8c12-0eb1-11eb-adc1-0242ac120002\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/03\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation STDIN+ Launcher - Powershell\n",
+                            "sigma:id": "779c8c12-0eb1-11eb-adc1-0242ac120002",
+                            "title": "Invoke-Obfuscation STDIN+ Launcher - Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d7bcd677-645d-4691-a8d4-7a5602b780d1",
+                        "lookup_data": {
+                            "description": "Detects the PowerShell command lines with special characters",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Vasiliy Burov (rule), oscd.community, Tim Shelton\n  (fp)\ndate: 2020/10/15\ndescription: Detects the PowerShell command lines with special characters\ndetection:\n  condition: (1 of selection_*) and not filter_amazonSSM and not (selection_3 and\n    filter_windef_atp)\n  filter_amazonSSM:\n    ParentImage: C:\\Program Files\\Amazon\\SSM\\ssm-document-worker.exe\n  filter_windef_atp:\n    CommandLine|contains:\n    - new EventSource(\"Microsoft.Windows.Sense.Client.Management\"\n    - public static extern bool InstallELAMCertificateInfo(SafeFileHandle handle);\n  selection_1:\n    CommandLine|re: .*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\\+.*\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  selection_2:\n    CommandLine|re: .*\\{.*\\{.*\\{.*\\{.*\\{.*\\{.*\\{.*\\{.*\\{.*\\{.*\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  selection_3:\n    CommandLine|re: .*\\{.*\\{.*\\{.*\\{.*\\{.*\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  selection_4:\n    CommandLine|re: .*\\^.*\\^.*\\^.*\\^.*\\^.*\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  selection_5:\n    CommandLine|re: .*`.*`.*`.*`.*`.*\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\nfalsepositives:\n- Unlikely\n- Amazon SSM Document Worker\n- Windows Defender ATP\nid: d7bcd677-645d-4691-a8d4-7a5602b780d1\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/18\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-powershell-abuse?slide=64\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Suspicious PowerShell Command Line\n",
+                            "sigma:id": "d7bcd677-645d-4691-a8d4-7a5602b780d1",
+                            "title": "Suspicious PowerShell Command Line",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bb780e0c-16cf-4383-8383-1e5471db6cf9",
+                        "lookup_data": {
+                            "description": "Detects presence of a potentially xor encoded powershell command",
+                            "raw": "author: Sami Ruohonen, Harish Segar, Tim Shelton, Teymur Kheirkhabarov, Vasiliy Burov,\n  oscd.community, Nasreddine Bencherchali\ndate: 2018/09/05\ndescription: Detects presence of a potentially xor encoded powershell command\ndetection:\n  condition: all of selection_*\n  selection_cli_other:\n    CommandLine|contains:\n    - ForEach\n    - for(\n    - 'for '\n    - '-join '\n    - -join'\n    - -join\"\n    - -join`\n    - ::Join\n    - '[char]'\n  selection_cli_xor:\n    CommandLine|contains: bxor\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n  - Description: Windows PowerShell\n  - Product: PowerShell Core 6\nfalsepositives:\n- Unknown\nid: bb780e0c-16cf-4383-8383-1e5471db6cf9\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-powershell-abuse?slide=65\n- https://redcanary.com/blog/yellow-cockatoo/\n- https://zero2auto.com/2020/05/19/netwalker-re/\n- https://mez0.cc/posts/cobaltstrike-powershell-exec/\nrelated:\n- id: 5b572dcf-254b-425c-a8c5-d9af6bea35a6\n  type: obsoletes\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1059.001\n- attack.t1140\n- attack.t1027\ntitle: Suspicious XOR Encoded PowerShell Command\n",
+                            "sigma:id": "bb780e0c-16cf-4383-8383-1e5471db6cf9",
+                            "title": "Suspicious XOR Encoded PowerShell Command",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1a0d4aba-7668-4365-9ce4-6d79ab088dfd",
+                        "lookup_data": {
+                            "description": "Detects a ping command that uses a hex encoded IP address",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/03/23\ndescription: Detects a ping command that uses a hex encoded IP address\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: 0x\n    Image|endswith: \\ping.exe\nfalsepositives:\n- Unlikely, because no sane admin pings IP addresses in a hexadecimal form\nfields:\n- ParentCommandLine\nid: 1a0d4aba-7668-4365-9ce4-6d79ab088dfd\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://github.com/vysecurity/Aggressor-VYSEC/blob/0d61c80387b9432dab64b8b8a9fb52d20cfef80e/ping.cna\n- https://twitter.com/vysecurity/status/977198418354491392\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1140\n- attack.t1027\ntitle: Ping Hex IP\n",
+                            "sigma:id": "1a0d4aba-7668-4365-9ce4-6d79ab088dfd",
+                            "title": "Ping Hex IP",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c72aca44-8d52-45ad-8f81-f96c4d3c755e",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via Stdin in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/12\ndescription: Detects Obfuscated Powershell via Stdin in Scripts\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|re: (?i).*(set).*&&\\s?set.*(environment|invoke|\\$?\\{?input).*&&.*\"\nfalsepositives:\n- Unknown\nid: c72aca44-8d52-45ad-8f81-f96c4d3c755e\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 86b896ba-ffa1-4fea-83e3-ee28a4c915c7\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Stdin - PowerShell Module\n",
+                            "sigma:id": "c72aca44-8d52-45ad-8f81-f96c4d3c755e",
+                            "title": "Invoke-Obfuscation Via Stdin - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "db92dd33-a3ad-49cf-8c2c-608c3e30ace0",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Clip.exe in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use Clip.exe in Scripts\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|re: (?i).*?echo.*clip.*&&.*(Clipboard|i`?n`?v`?o`?k`?e`?).*\nfalsepositives:\n- Unknown\nid: db92dd33-a3ad-49cf-8c2c-608c3e30ace0\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Clip - Powershell\n",
+                            "sigma:id": "db92dd33-a3ad-49cf-8c2c-608c3e30ace0",
+                            "title": "Invoke-Obfuscation Via Use Clip - Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "20e5497e-331c-4cd5-8d36-935f6e2a9a07",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via COMPRESS OBFUSCATION",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via COMPRESS OBFUSCATION\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|contains:\n    - system.io.compression.deflatestream\n    - system.io.streamreader\n    ScriptBlockText|contains|all:\n    - new-object\n    - text.encoding]::ascii\n    ScriptBlockText|endswith: readtoend\nfalsepositives:\n- Unknown\nid: 20e5497e-331c-4cd5-8d36-935f6e2a9a07\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation COMPRESS OBFUSCATION - PowerShell\n",
+                            "sigma:id": "20e5497e-331c-4cd5-8d36-935f6e2a9a07",
+                            "title": "Invoke-Obfuscation COMPRESS OBFUSCATION - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e0552b19-5a83-4222-b141-b36184bb8d79",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise obfuscating its contents on the system or in transit.",
+                            "raw": "author: frack113\ndate: 2022/01/15\ndescription: Adversaries may attempt to make an executable or file difficult to discover\n  or analyze by encrypting, encoding, or otherwise obfuscating its contents on the\n  system or in transit.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - \"\\xE2\"\n    - \"\\u20AC\"\n    - \"\\xA3\"\n    - \"\\xAF\"\n    - \"\\xAE\"\n    - \"\\xB5\"\n    - \"\\xB6\"\nfalsepositives:\n- Unknown\nid: e0552b19-5a83-4222-b141-b36184bb8d79\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.wietzebeukema.nl/blog/windows-command-line-obfuscation\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1027/T1027.md#atomic-test-6---dlp-evasion-via-sensitive-data-in-vba-macro-over-http\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Obfuscated Command Line Using Special Unicode Characters\n",
+                            "sigma:id": "e0552b19-5a83-4222-b141-b36184bb8d79",
+                            "title": "Obfuscated Command Line Using Special Unicode Characters",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e62a9f0c-ca1e-46b2-85d5-a6da77f86d1a",
+                        "lookup_data": {
+                            "description": "Detects suspicious a certutil command that used to encode files, which is sometimes used for data exfiltration",
+                            "raw": "author: Florian Roth (Nextron Systems), Jonhnathan Ribeiro, oscd.community\ndate: 2019/02/24\ndescription: Detects suspicious a certutil command that used to encode files, which\n  is sometimes used for data exfiltration\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - -f\n    - -encode\n    Image|endswith: \\certutil.exe\nfalsepositives:\n- Unknown\nid: e62a9f0c-ca1e-46b2-85d5-a6da77f86d1a\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/01/07\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/certutil\n- https://unit42.paloaltonetworks.com/new-babyshark-malware-targets-u-s-national-security-think-tanks/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Certutil Encode\n",
+                            "sigma:id": "e62a9f0c-ca1e-46b2-85d5-a6da77f86d1a",
+                            "title": "Certutil Encode",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9c0295ce-d60d-40bd-bd74-84673b7592b1",
+                        "lookup_data": {
+                            "description": "Detects suspicious base64 encoded and obbfuscated LOAD string often used for reflection.assembly load",
+                            "raw": "author: pH-T (Nextron Systems)\ndate: 2022/03/01\ndescription: Detects suspicious base64 encoded and obbfuscated LOAD string often used\n  for reflection.assembly load\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - OgA6ACgAIgBMACIAKwAiAG8AYQBkACIAKQ\n    - oAOgAoACIATAAiACsAIgBvAGEAZAAiACkA\n    - 6ADoAKAAiAEwAIgArACIAbwBhAGQAIgApA\n    - OgA6ACgAIgBMAG8AIgArACIAYQBkACIAKQ\n    - oAOgAoACIATABvACIAKwAiAGEAZAAiACkA\n    - 6ADoAKAAiAEwAbwAiACsAIgBhAGQAIgApA\n    - OgA6ACgAIgBMAG8AYQAiACsAIgBkACIAKQ\n    - oAOgAoACIATABvAGEAIgArACIAZAAiACkA\n    - 6ADoAKAAiAEwAbwBhACIAKwAiAGQAIgApA\n    - OgA6ACgAJwBMACcAKwAnAG8AYQBkACcAKQ\n    - oAOgAoACcATAAnACsAJwBvAGEAZAAnACkA\n    - 6ADoAKAAnAEwAJwArACcAbwBhAGQAJwApA\n    - OgA6ACgAJwBMAG8AJwArACcAYQBkACcAKQ\n    - oAOgAoACcATABvACcAKwAnAGEAZAAnACkA\n    - 6ADoAKAAnAEwAbwAnACsAJwBhAGQAJwApA\n    - OgA6ACgAJwBMAG8AYQAnACsAJwBkACcAKQ\n    - oAOgAoACcATABvAGEAJwArACcAZAAnACkA\n    - 6ADoAKAAnAEwAbwBhACcAKwAnAGQAJwApA\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\nid: 9c0295ce-d60d-40bd-bd74-84673b7592b1\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/20\nreferences:\n- https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/mal_revil.yar\n- https://thedfirreport.com/2022/05/09/seo-poisoning-a-gootloader-story/\nrelated:\n- id: 62b7ccc9-23b4-471e-aa15-6da3663c4d59\n  type: similar\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1027\ntitle: Suspicious Encoded Obfuscated LOAD String\n",
+                            "sigma:id": "9c0295ce-d60d-40bd-bd74-84673b7592b1",
+                            "title": "Suspicious Encoded Obfuscated LOAD String",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9b8d9203-4e0f-4cd9-bb06-4cc4ea6d0e9a",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use MSHTA in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use MSHTA in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains|all:\n    - mshta\n    - vbscript:createobject\n    - .run\n    - window.close\nfalsepositives:\n- Unknown\nid: 9b8d9203-4e0f-4cd9-bb06-4cc4ea6d0e9a\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 7e9c7999-0f9b-4d4a-a6ed-af6d553d4af4\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use MSHTA - Security\n",
+                            "sigma:id": "9b8d9203-4e0f-4cd9-bb06-4cc4ea6d0e9a",
+                            "title": "Invoke-Obfuscation Via Use MSHTA - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "719c22d7-c11a-4f2c-93a6-2cfdd5412f68",
+                        "lookup_data": {
+                            "description": "Detects usage of base64 utility to decode arbitrary base64-encoded text",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2020/10/19\ndescription: Detects usage of base64 utility to decode arbitrary base64-encoded text\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: -d\n    Image: /usr/bin/base64\nfalsepositives:\n- Legitimate activities\nid: 719c22d7-c11a-4f2c-93a6-2cfdd5412f68\nlevel: low\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/11/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1027/T1027.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Decode Base64 Encoded Text -MacOs\n",
+                            "sigma:id": "719c22d7-c11a-4f2c-93a6-2cfdd5412f68",
+                            "title": "Decode Base64 Encoded Text -MacOs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2d117e49-e626-4c7c-bd1f-c3c0147774c8",
+                        "lookup_data": {
+                            "description": "Detects Base64 encoded Shellcode",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/11/17\ndescription: Detects Base64 encoded Shellcode\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - OiCAAAAYInlM\n    - OiJAAAAYInlM\nfalsepositives:\n- Unknown\nid: 2d117e49-e626-4c7c-bd1f-c3c0147774c8\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/26\nreferences:\n- https://twitter.com/cyb3rops/status/1063072865992523776\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: PowerShell Base64 Encoded Shellcode\n",
+                            "sigma:id": "2d117e49-e626-4c7c-bd1f-c3c0147774c8",
+                            "title": "PowerShell Base64 Encoded Shellcode",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "27aec9c9-dbb0-4939-8422-1742242471d0",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Environment Variables to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of Environment Variables to execute PowerShell\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - /c\n    - /r\n    CommandLine|contains|all:\n    - cmd\n    - '\"set'\n    - -f\nfalsepositives:\n- Unknown\nid: 27aec9c9-dbb0-4939-8422-1742242471d0\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/17\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR+ Launcher\n",
+                            "sigma:id": "27aec9c9-dbb0-4939-8422-1742242471d0",
+                            "title": "Invoke-Obfuscation VAR+ Launcher",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e312efd0-35a1-407f-8439-b8d434b438a6",
+                        "lookup_data": {
+                            "description": "Detects suspicious encoded character syntax often used for defense evasion",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/07/09\ndescription: Detects suspicious encoded character syntax often used for defense evasion\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: (WCHAR)0x\nfalsepositives:\n- Unknown\nid: e312efd0-35a1-407f-8439-b8d434b438a6\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/05\nreferences:\n- https://twitter.com/0gtweet/status/1281103918693482496\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1027\ntitle: Potential PowerShell Obfuscation Via WCHAR\n",
+                            "sigma:id": "e312efd0-35a1-407f-8439-b8d434b438a6",
+                            "title": "Potential PowerShell Obfuscation Via WCHAR",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2f211361-7dce-442d-b78a-c04039677378",
+                        "lookup_data": {
+                            "description": "Detects all variations of obfuscated powershell IEX invocation code generated by Invoke-Obfuscation framework from the code block cited in the reference section below",
+                            "raw": "author: Daniel Bohannon (@Mandiant/@FireEye), oscd.community\ndate: 2019/11/08\ndescription: Detects all variations of obfuscated powershell IEX invocation code generated\n  by Invoke-Obfuscation framework from the code block cited in the reference section\n  below\ndetection:\n  condition: selection_payload\n  selection_payload:\n  - Payload|re: \\$PSHome\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$PSHome\\[\n  - Payload|re: \\$ShellId\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$ShellId\\[\n  - Payload|re: \\$env:Public\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$env:Public\\[\n  - Payload|re: \\$env:ComSpec\\[(\\s*\\d{1,3}\\s*,){2}\n  - Payload|re: \\*mdr\\*\\W\\s*\\)\\.Name\n  - Payload|re: \\$VerbosePreference\\.ToString\\(\n  - Payload|re: \\[String\\]\\s*\\$VerbosePreference\nfalsepositives:\n- Unknown\nid: 2f211361-7dce-442d-b78a-c04039677378\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/12/31\nreferences:\n- https://github.com/danielbohannon/Invoke-Obfuscation/blob/f20e7f843edd0a3a7716736e9eddfa423395dd26/Out-ObfuscatedStringCommand.ps1#L873-L888\nrelated:\n- id: 1b9dc62e-6e9e-42a3-8990-94d7a10007f7\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Obfuscated IEX Invocation - PowerShell Module\n",
+                            "sigma:id": "2f211361-7dce-442d-b78a-c04039677378",
+                            "title": "Invoke-Obfuscation Obfuscated IEX Invocation - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cdf05894-89e7-4ead-b2b0-0a5f97a90f2f",
+                        "lookup_data": {
+                            "description": "Detects specific combinations of encoding methods in PowerShell via the commandline",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Vasiliy Burov (rule), oscd.community, Tim Shelton\ndate: 2020/10/11\ndescription: Detects specific combinations of encoding methods in PowerShell via the\n  commandline\ndetection:\n  condition: selection_img and (all of selection_to_* or 1 of selection_gen_*)\n  selection_gen_1:\n    CommandLine|contains|all:\n    - char\n    - join\n  selection_gen_2:\n    CommandLine|contains|all:\n    - split\n    - join\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n  selection_to_1:\n    CommandLine|contains:\n    - ToInt\n    - ToDecimal\n    - ToByte\n    - ToUint\n    - ToSingle\n    - ToSByte\n  selection_to_2:\n    CommandLine|contains:\n    - ToChar\n    - ToString\n    - String\nfalsepositives:\n- Unknown\nid: cdf05894-89e7-4ead-b2b0-0a5f97a90f2f\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/26\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-powershell-abuse?slide=65\nrelated:\n- id: 5b572dcf-254b-425c-a8c5-d9af6bea35a6\n  type: similar\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Potential Encoded PowerShell Patterns In CommandLine\n",
+                            "sigma:id": "cdf05894-89e7-4ead-b2b0-0a5f97a90f2f",
+                            "title": "Potential Encoded PowerShell Patterns In CommandLine",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e2072cab-8c9a-459b-b63c-40ae79e27031",
+                        "lookup_data": {
+                            "description": "Detects usage of base64 utility to decode arbitrary base64-encoded text",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2020/10/19\ndescription: Detects usage of base64 utility to decode arbitrary base64-encoded text\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: -d\n    Image|endswith: /base64\nfalsepositives:\n- Legitimate activities\nid: e2072cab-8c9a-459b-b63c-40ae79e27031\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1027/T1027.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Decode Base64 Encoded Text\n",
+                            "sigma:id": "e2072cab-8c9a-459b-b63c-40ae79e27031",
+                            "title": "Decode Base64 Encoded Text",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dcf2db1f-f091-425b-a821-c05875b8925a",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Environment Variables to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of Environment Variables to execute PowerShell\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - /c\n    - /r\n    ServiceFileName|contains|all:\n    - cmd\n    - '\"set'\n    - -f\nfalsepositives:\n- Unknown\nid: dcf2db1f-f091-425b-a821-c05875b8925a\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 8ca7004b-e620-4ecb-870e-86129b5b8e75\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR+ Launcher - Security\n",
+                            "sigma:id": "dcf2db1f-f091-425b-a821-c05875b8925a",
+                            "title": "Invoke-Obfuscation VAR+ Launcher - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b",
+                        "lookup_data": {
+                            "description": "Get-Variable is a valid PowerShell cmdlet\nWindowsApps is by default in the path where PowerShell is executed.\nSo when the Get-Variable command is issued on PowerShell execution, the system first looks for the Get-Variable executable in the path and executes the malicious binary instead of looking for the PowerShell cmdlet.\n",
+                            "raw": "author: frack113\ndate: 2022/04/23\ndescription: 'Get-Variable is a valid PowerShell cmdlet\n\n  WindowsApps is by default in the path where PowerShell is executed.\n\n  So when the Get-Variable command is issued on PowerShell execution, the system first\n  looks for the Get-Variable executable in the path and executes the malicious binary\n  instead of looking for the PowerShell cmdlet.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith: Local\\Microsoft\\WindowsApps\\Get-Variable.exe\nfalsepositives:\n- Unknown\nid: 0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://blog.malwarebytes.com/threat-intelligence/2022/04/colibri-loader-combines-task-scheduler-and-powershell-in-clever-persistence-technique/\n- https://www.joesandbox.com/analysis/465533/0/html\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546\n- attack.defense_evasion\n- attack.t1027\ntitle: Suspicious Get-Variable.exe Creation\n",
+                            "sigma:id": "0c3fac91-5627-46e8-a6a8-a0d7b9b8ae1b",
+                            "title": "Suspicious Get-Variable.exe Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bf943c6-5146-4273-98dd-e958fd1e3abf",
+                        "lookup_data": {
+                            "description": "Detects all variations of obfuscated powershell IEX invocation code generated by Invoke-Obfuscation framework from the following code block",
+                            "raw": "author: Daniel Bohannon (@Mandiant/@FireEye), oscd.community\ndate: 2019/11/08\ndescription: Detects all variations of obfuscated powershell IEX invocation code generated\n  by Invoke-Obfuscation framework from the following code block\ndetection:\n  condition: selection\n  selection:\n  - CommandLine|re: \\$PSHome\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$PSHome\\[\n  - CommandLine|re: \\$ShellId\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$ShellId\\[\n  - CommandLine|re: \\$env:Public\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$env:Public\\[\n  - CommandLine|re: \\$env:ComSpec\\[(\\s*\\d{1,3}\\s*,){2}\n  - CommandLine|re: \\*mdr\\*\\W\\s*\\)\\.Name\n  - CommandLine|re: \\$VerbosePreference\\.ToString\\(\n  - CommandLine|re: \\[String\\]\\s*\\$VerbosePreference\nfalsepositives:\n- Unknown\nid: 4bf943c6-5146-4273-98dd-e958fd1e3abf\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/31\nreferences:\n- https://github.com/danielbohannon/Invoke-Obfuscation/blob/f20e7f843edd0a3a7716736e9eddfa423395dd26/Out-ObfuscatedStringCommand.ps1#L873-L888\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Obfuscated IEX Invocation\n",
+                            "sigma:id": "4bf943c6-5146-4273-98dd-e958fd1e3abf",
+                            "title": "Invoke-Obfuscation Obfuscated IEX Invocation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e6cb92b4-b470-4eb8-8a9d-d63e8583aae0",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via RUNDLL LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via RUNDLL LAUNCHER\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|contains|all:\n    - rundll32.exe\n    - shell32.dll\n    - shellexec_rundll\n    - powershell\nfalsepositives:\n- Unknown\nid: e6cb92b4-b470-4eb8-8a9d-d63e8583aae0\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation RUNDLL LAUNCHER - PowerShell\n",
+                            "sigma:id": "e6cb92b4-b470-4eb8-8a9d-d63e8583aae0",
+                            "title": "Invoke-Obfuscation RUNDLL LAUNCHER - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                        "lookup_data": {
+                            "description": "Trickbot to Ryuk in Two Hours",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5e78dc2c-afc8-411f-94a5-40bb950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1585237597",
+                            "uuid": "5e78dc2c-afc8-411f-94a5-40bb950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e32d4572-9826-4738-b651-95fa63747e8a",
+                        "lookup_data": {
+                            "description": "Detects usage of the \"FromBase64String\" function in the commandline which is used to decode a base64 encoded string",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/01/29\ndescription: Detects usage of the \"FromBase64String\" function in the commandline which\n  is used to decode a base64 encoded string\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ::FromBase64String(\nfalsepositives:\n- Administrative script libraries\nid: e32d4572-9826-4738-b651-95fa63747e8a\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/26\nreferences:\n- https://gist.github.com/Neo23x0/6af876ee72b51676c82a2db8d2cd3639\nstatus: test\ntags:\n- attack.t1027\n- attack.defense_evasion\n- attack.t1140\n- attack.t1059.001\ntitle: Base64 Encoded PowerShell Command Detected\n",
+                            "sigma:id": "e32d4572-9826-4738-b651-95fa63747e8a",
+                            "title": "Base64 Encoded PowerShell Command Detected",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ca83e9f3-657a-45d0-88d6-c1ac280caf53",
+                        "lookup_data": {
+                            "description": "Detects a service installation that uses a suspicious double ampersand used in the image path value",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/07/05\ndescription: Detects a service installation that uses a suspicious double ampersand\n  used in the image path value\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains: '&&'\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: ca83e9f3-657a-45d0-88d6-c1ac280caf53\nlevel: high\nlogsource:\n  product: windows\n  service: system\nreferences:\n- Internal Research\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: New Service Uses Double Ampersand in Path\n",
+                            "sigma:id": "ca83e9f3-657a-45d0-88d6-c1ac280caf53",
+                            "title": "New Service Uses Double Ampersand in Path",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8ca7004b-e620-4ecb-870e-86129b5b8e75",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Environment Variables to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of Environment Variables to execute PowerShell\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - /c\n    - /r\n    ImagePath|contains|all:\n    - cmd\n    - '\"set'\n    - -f\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 8ca7004b-e620-4ecb-870e-86129b5b8e75\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR+ Launcher - System\n",
+                            "sigma:id": "8ca7004b-e620-4ecb-870e-86129b5b8e75",
+                            "title": "Invoke-Obfuscation VAR+ Launcher - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Sharpening the Machete",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d498330-f574-4889-bcc9-c53c950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566552908",
+                            "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0c718a5e-4284-4fb9-b4d9-b9a50b3a1974",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of stdin to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of stdin to execute PowerShell\ndetection:\n  condition: all of selection*\n  selection:\n    EventID: 4697\n    ServiceFileName|contains|all:\n    - cmd\n    - powershell\n  selection2:\n    ServiceFileName|contains:\n    - ${input}\n    - noexit\n  selection3:\n    ServiceFileName|contains:\n    - ' /c '\n    - ' /r '\nfalsepositives:\n- Unknown\nid: 0c718a5e-4284-4fb9-b4d9-b9a50b3a1974\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 72862bf2-0eb1-11eb-adc1-0242ac120002\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation STDIN+ Launcher - Security\n",
+                            "sigma:id": "0c718a5e-4284-4fb9-b4d9-b9a50b3a1974",
+                            "title": "Invoke-Obfuscation STDIN+ Launcher - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f7385ee2-0e0c-11eb-adc1-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Clip.exe to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated use of Clip.exe to execute PowerShell\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains|all:\n    - cmd\n    - clip\n    - 'clipboard]::'\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: f7385ee2-0e0c-11eb-adc1-0242ac120002\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/27\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation CLIP+ Launcher - System\n",
+                            "sigma:id": "f7385ee2-0e0c-11eb-adc1-0242ac120002",
+                            "title": "Invoke-Obfuscation CLIP+ Launcher - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4edf51e1-cb83-4e1a-bc39-800e396068e3",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Clip.exe to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated use of Clip.exe to execute PowerShell\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    Provider_Name: Microsoft-Windows-Security-Auditing\n    ServiceFileName|contains|all:\n    - cmd\n    - '&&'\n    - 'clipboard]::'\nfalsepositives:\n- Unknown\nid: 4edf51e1-cb83-4e1a-bc39-800e396068e3\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: f7385ee2-0e0c-11eb-adc1-0242ac120002\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation CLIP+ Launcher - Security\n",
+                            "sigma:id": "4edf51e1-cb83-4e1a-bc39-800e396068e3",
+                            "title": "Invoke-Obfuscation CLIP+ Launcher - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f241cf1b-3a6b-4e1a-b4f9-133c00dd95ca",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via RUNDLL LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via RUNDLL LAUNCHER\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains|all:\n    - rundll32.exe\n    - shell32.dll\n    - shellexec_rundll\n    - powershell\nfalsepositives:\n- Unknown\nid: f241cf1b-3a6b-4e1a-b4f9-133c00dd95ca\nlevel: medium\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 11b52f18-aaec-4d60-9143-5dd8cc4706b9\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation RUNDLL LAUNCHER - Security\n",
+                            "sigma:id": "f241cf1b-3a6b-4e1a-b4f9-133c00dd95ca",
+                            "title": "Invoke-Obfuscation RUNDLL LAUNCHER - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6bfb8fa7-b2e7-4f6c-8d9d-824e5d06ea9e",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Environment Variables to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of Environment Variables to execute PowerShell\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|re: .*cmd.{0,5}(?:/c|/r)(?:\\s|)\"set\\s[a-zA-Z]{3,6}.*(?:\\{\\d\\}){1,}\\\\\"\\s+?-f(?:.*\\)){1,}.*\"\nfalsepositives:\n- Unknown\nid: 6bfb8fa7-b2e7-4f6c-8d9d-824e5d06ea9e\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 0adfbc14-0ed1-11eb-adc1-0242ac120002\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR+ Launcher - PowerShell Module\n",
+                            "sigma:id": "6bfb8fa7-b2e7-4f6c-8d9d-824e5d06ea9e",
+                            "title": "Invoke-Obfuscation VAR+ Launcher - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b3d682b6-98f2-4fb0-aa3b-b4df007ca70a",
+                        "lookup_data": {
+                            "capec": "CAPEC-267",
+                            "mitre-attack-id": "T1027",
+                            "mitre-cti:description": "Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise obfuscating its contents on the system or in transit. This is common behavior that can be used across different platforms and the network to evade defenses. \n\nPayloads may be compressed, archived, or encrypted in order to avoid detection. These payloads may be used during Initial Access or later to mitigate detection. Sometimes a user's action may be required to open and [Deobfuscate/Decode Files or Information](https://attack.mitre.org/techniques/T1140) for [User Execution](https://attack.mitre.org/techniques/T1204). The user may also be required to input a password to open a password protected compressed/encrypted file that was provided by the adversary. (Citation: Volexity PowerDuke November 2016) Adversaries may also use compressed or archived scripts, such as JavaScript. \n\nPortions of files can also be encoded to hide the plain-text strings that would otherwise help defenders with discovery. (Citation: Linux/Cdorked.A We Live Security Analysis) Payloads may also be split into separate, seemingly benign files that only reveal malicious functionality when reassembled. (Citation: Carbon Black Obfuscation Sept 2016)\n\nAdversaries may also obfuscate commands executed from payloads or directly via a [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059). Environment variables, aliases, characters, and other platform/language specific semantics can be used to evade signature based detections and application control mechanisms. (Citation: FireEye Obfuscation June 2017) (Citation: FireEye Revoke-Obfuscation July 2017)(Citation: PaloAlto EncodedCommand March 2017) ",
+                            "mitre-cti:name": "Obfuscated Files or Information",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-09-30T18:06:32.808Z', 'name': 'Obfuscated Files or Information', 'description': \"Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise obfuscating its contents on the system or in transit. This is common behavior that can be used across different platforms and the network to evade defenses. \\n\\nPayloads may be compressed, archived, or encrypted in order to avoid detection. These payloads may be used during Initial Access or later to mitigate detection. Sometimes a user's action may be required to open and [Deobfuscate/Decode Files or Information](https://attack.mitre.org/techniques/T1140) for [User Execution](https://attack.mitre.org/techniques/T1204). The user may also be required to input a password to open a password protected compressed/encrypted file that was provided by the adversary. (Citation: Volexity PowerDuke November 2016) Adversaries may also use compressed or archived scripts, such as JavaScript. \\n\\nPortions of files can also be encoded to hide the plain-text strings that would otherwise help defenders with discovery. (Citation: Linux/Cdorked.A We Live Security Analysis) Payloads may also be split into separate, seemingly benign files that only reveal malicious functionality when reassembled. (Citation: Carbon Black Obfuscation Sept 2016)\\n\\nAdversaries may also obfuscate commands executed from payloads or directly via a [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059). Environment variables, aliases, characters, and other platform/language specific semantics can be used to evade signature based detections and application control mechanisms. (Citation: FireEye Obfuscation June 2017) (Citation: FireEye Revoke-Obfuscation July 2017)(Citation: PaloAlto EncodedCommand March 2017) \", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Detection of file obfuscation is difficult unless artifacts are left behind by the obfuscation process that are uniquely detectable with a signature. If detection of the obfuscation itself is not possible, it may be possible to detect the malicious activity that caused the obfuscated file (for example, the method that was used to write, read, or modify the file on the file system). \\n\\nFlag and analyze commands containing indicators of obfuscation and known suspicious syntax such as uninterpreted escape characters like \\'\\'\\'^\\'\\'\\' and \\'\\'\\'\"\\'\\'\\'. Windows\\' Sysmon and Event ID 4688 displays command-line arguments for processes. Deobfuscation tools can be used to detect these indicators in files/payloads. (Citation: GitHub Revoke-Obfuscation) (Citation: FireEye Revoke-Obfuscation July 2017) (Citation: GitHub Office-Crackros Aug 2016) \\n\\nObfuscation used in payloads for Initial Access can be detected at the network. Use network intrusion detection systems and email gateway filtering to identify compressed and encrypted attachments and scripts. Some email attachment detonation systems can open compressed and encrypted attachments. Payloads delivered over an encrypted connection from a website require encrypted network traffic inspection. \\n\\nThe first detection of a malicious tool may trigger an anti-virus or other security tool alert. Similar events may also occur at the boundary through network IDS, email scanning appliance, etc. The initial detection should be treated as an indication of a potentially more invasive intrusion. The alerting system should be thoroughly investigated beyond that initial alert for activity that was not detected. Adversaries may continue with an operation, assuming that individual events like an anti-virus detect will not be investigated or that an analyst will not be able to conclusively link that event to other activity occurring on the network. ', 'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '1.3', 'x_mitre_contributors': ['Red Canary', 'Christiaan Beek, @ChristiaanBeek'], 'x_mitre_data_sources': ['Process: OS API Execution', 'Command: Command Execution', 'File: File Creation', 'Module: Module Load', 'Process: Process Creation', 'File: File Metadata'], 'x_mitre_defense_bypassed': ['Host Forensic Analysis', 'Signature-based Detection', 'Host Intrusion Prevention Systems', 'Application Control', 'Log Analysis'], 'type': 'attack-pattern', 'id': 'attack-pattern--b3d682b6-98f2-4fb0-aa3b-b4df007ca70a', 'created': '2017-05-31T21:30:32.662Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1027', 'external_id': 'T1027'}, {'source_name': 'Volexity PowerDuke November 2016', 'description': 'Adair, S.. (2016, November 9). PowerDuke: Widespread Post-Election Spear Phishing Campaigns Targeting Think Tanks and NGOs. Retrieved January 11, 2017.', 'url': 'https://www.volexity.com/blog/2016/11/09/powerduke-post-election-spear-phishing-campaigns-targeting-think-tanks-and-ngos/'}, {'source_name': 'GitHub Revoke-Obfuscation', 'description': 'Bohannon, D. (2017, July 27). Revoke-Obfuscation. Retrieved February 12, 2018.', 'url': 'https://github.com/danielbohannon/Revoke-Obfuscation'}, {'source_name': 'FireEye Obfuscation June 2017', 'description': 'Bohannon, D. & Carr N. (2017, June 30). Obfuscation in the Wild: Targeted Attackers Lead the Way in Evasion Techniques. Retrieved February 12, 2018.', 'url': 'https://www.fireeye.com/blog/threat-research/2017/06/obfuscation-in-the-wild.html'}, {'source_name': 'FireEye Revoke-Obfuscation July 2017', 'description': 'Bohannon, D. & Holmes, L. (2017, July 27). Revoke-Obfuscation: PowerShell Obfuscation Detection Using Science. Retrieved February 12, 2018.', 'url': 'https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/revoke-obfuscation-report.pdf'}, {'source_name': 'GitHub Office-Crackros Aug 2016', 'description': 'Carr, N. (2016, August 14). OfficeCrackros. Retrieved February 12, 2018.', 'url': 'https://github.com/itsreallynick/office-crackros'}, {'source_name': 'Linux/Cdorked.A We Live Security Analysis', 'description': 'Pierre-Marc Bureau. (2013, April 26). Linux/Cdorked.A: New Apache backdoor being used in the wild to serve Blackhole. Retrieved September 10, 2017.', 'url': 'https://www.welivesecurity.com/2013/04/26/linuxcdorked-new-apache-backdoor-in-the-wild-serves-blackhole/'}, {'source_name': 'Carbon Black Obfuscation Sept 2016', 'description': 'Tedesco, B. (2016, September 23). Security Alert Summary. Retrieved February 12, 2018.', 'url': 'https://www.carbonblack.com/2016/09/23/security-advisory-variants-well-known-adware-families-discovered-include-sophisticated-obfuscation-techniques-previously-associated-nation-state-attacks/'}, {'source_name': 'PaloAlto EncodedCommand March 2017', 'description': 'White, J. (2017, March 10). Pulling Back the Curtains on EncodedCommand PowerShell Attacks. Retrieved February 12, 2018.', 'url': 'https://researchcenter.paloaltonetworks.com/2017/03/unit42-pulling-back-the-curtains-on-encodedcommand-powershell-attacks/'}, {'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/267.html', 'external_id': 'CAPEC-267'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "36c5146c-d127-4f85-8e21-01bf62355d5a",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Rundll32 in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2019/10/08\ndescription: Detects Obfuscated Powershell via use Rundll32 in Scripts\ndetection:\n  condition: selection\n  selection:\n    CommandLine|re: (?i).*&&.*rundll32.*shell32\\.dll.*shellexec_rundll.*(value|invoke|comspec|iex).*\"\nfalsepositives:\n- Unknown\nid: 36c5146c-d127-4f85-8e21-01bf62355d5a\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/Neo23x0/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Rundll32\n",
+                            "sigma:id": "36c5146c-d127-4f85-8e21-01bf62355d5a",
+                            "title": "Invoke-Obfuscation Via Use Rundll32",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                        "lookup_data": {
+                            "description": "IndigoZebra APT continues to attack Central Asia with evolving tools",
+                            "link": "http://www.botvrij.eu/data/feed-osint/d8c0c469-2d3e-437a-80a1-a38bfe5998e8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1625229668",
+                            "uuid": "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via VAR++ LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated Powershell via VAR++ LAUNCHER\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - '{0}'\n    - '{1}'\n    - '{2}'\n    - '{3}'\n    - '{4}'\n    - '{5}'\n    CommandLine|contains|all:\n    - '&&set'\n    - cmd\n    - /c\n    - -f\nfalsepositives:\n- Unknown\nid: e9f55347-2928-4c06-88e5-1a7f8169942e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/16\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION\n",
+                            "sigma:id": "e9f55347-2928-4c06-88e5-1a7f8169942e",
+                            "title": "Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e1561947-b4e3-4a74-9bdd-83baed21bdb5",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Clip.exe in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use Clip.exe in Scripts\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - clipboard\n    - invoke\n    - i`\n    - n`\n    - v`\n    - o`\n    - k`\n    - e`\n    CommandLine|contains|all:\n    - echo\n    - clip\n    - '&&'\nfalsepositives:\n- Unknown\nid: e1561947-b4e3-4a74-9bdd-83baed21bdb5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/16\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Clip\n",
+                            "sigma:id": "e1561947-b4e3-4a74-9bdd-83baed21bdb5",
+                            "title": "Invoke-Obfuscation Via Use Clip",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1a0a2ff1-611b-4dac-8216-8a7b47c618a6",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Clip.exe in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use Clip.exe in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains: (Clipboard|i\nfalsepositives:\n- Unknown\nid: 1a0a2ff1-611b-4dac-8216-8a7b47c618a6\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 63e3365d-4824-42d8-8b82-e56810fefa0c\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Clip - Security\n",
+                            "sigma:id": "1a0a2ff1-611b-4dac-8216-8a7b47c618a6",
+                            "title": "Invoke-Obfuscation Via Use Clip - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fd0f5778-d3cb-4c9a-9695-66759d04702a",
+                        "lookup_data": {
+                            "description": "Detects all variations of obfuscated powershell IEX invocation code generated by Invoke-Obfuscation framework from the code block linked in the references",
+                            "raw": "author: Daniel Bohannon (@Mandiant/@FireEye), oscd.community\ndate: 2019/11/08\ndescription: Detects all variations of obfuscated powershell IEX invocation code generated\n  by Invoke-Obfuscation framework from the code block linked in the references\ndetection:\n  condition: all of selection_*\n  selection_eid:\n    EventID: 4697\n  selection_servicefilename:\n  - ServiceFileName|re: \\$PSHome\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$PSHome\\[\n  - ServiceFileName|re: \\$ShellId\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$ShellId\\[\n  - ServiceFileName|re: \\$env:Public\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$env:Public\\[\n  - ServiceFileName|re: \\$env:ComSpec\\[(\\s*\\d{1,3}\\s*,){2}\n  - ServiceFileName|re: \\\\*mdr\\*\\W\\s*\\)\\.Name\n  - ServiceFileName|re: \\$VerbosePreference\\.ToString\\(\n  - ServiceFileName|re: \\String\\]\\s*\\$VerbosePreference\nfalsepositives:\n- Unknown\nid: fd0f5778-d3cb-4c9a-9695-66759d04702a\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://github.com/danielbohannon/Invoke-Obfuscation/blob/f20e7f843edd0a3a7716736e9eddfa423395dd26/Out-ObfuscatedStringCommand.ps1#L873-L888\nrelated:\n- id: 51aa9387-1c53-4153-91cc-d73c59ae1ca9\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Invoke-Obfuscation Obfuscated IEX Invocation - Security\n",
+                            "sigma:id": "fd0f5778-d3cb-4c9a-9695-66759d04702a",
+                            "title": "Invoke-Obfuscation Obfuscated IEX Invocation - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9c14c9fa-1a63-4a64-8e57-d19280559490",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via Stdin in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/12\ndescription: Detects Obfuscated Powershell via Stdin in Scripts\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - environment\n    - invoke\n    - input\n    CommandLine|contains|all:\n    - set\n    - '&&'\nfalsepositives:\n- Unknown\nid: 9c14c9fa-1a63-4a64-8e57-d19280559490\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/16\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Stdin\n",
+                            "sigma:id": "9c14c9fa-1a63-4a64-8e57-d19280559490",
+                            "title": "Invoke-Obfuscation Via Stdin",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7e9c7999-0f9b-4d4a-a6ed-af6d553d4af4",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use MSHTA in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use MSHTA in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains|all:\n    - mshta\n    - vbscript:createobject\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 7e9c7999-0f9b-4d4a-a6ed-af6d553d4af4\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use MSHTA - System\n",
+                            "sigma:id": "7e9c7999-0f9b-4d4a-a6ed-af6d553d4af4",
+                            "title": "Invoke-Obfuscation Via Use MSHTA - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                        "lookup_data": {
+                            "description": "Detects commands used by Turla group as reported by ESET in May 2020",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/05/26\ndescription: Detects commands used by Turla group as reported by ESET in May 2020\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains:\n    - tracert -h 10 yahoo.com\n    - .WSqmCons))|iex;\n    - Fr`omBa`se6`4Str`ing\n  selection2:\n    CommandLine|contains|all:\n    - net use https://docs.live.net\n    - '@aol.co.uk'\nfalsepositives:\n- Unknown\nid: 9e2e51c5-c699-4794-ba5a-29f5da40ac0c\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.welivesecurity.com/wp-content/uploads/2020/05/ESET_Turla_ComRAT.pdf\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059.001\n- attack.t1053.005\n- attack.t1027\ntitle: Turla Group Commands May 2020\n",
+                            "sigma:id": "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                            "title": "Turla Group Commands May 2020",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "11b52f18-aaec-4d60-9143-5dd8cc4706b9",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via RUNDLL LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via RUNDLL LAUNCHER\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains|all:\n    - rundll32.exe\n    - shell32.dll\n    - shellexec_rundll\n    - powershell\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 11b52f18-aaec-4d60-9143-5dd8cc4706b9\nlevel: medium\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation RUNDLL LAUNCHER - System\n",
+                            "sigma:id": "11b52f18-aaec-4d60-9143-5dd8cc4706b9",
+                            "title": "Invoke-Obfuscation RUNDLL LAUNCHER - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "62b7ccc9-23b4-471e-aa15-6da3663c4d59",
+                        "lookup_data": {
+                            "description": "Detects base64 encoded .NET reflective loading of Assembly",
+                            "raw": "author: Christian Burkard (Nextron Systems), pH-T (Nextron Systems)\ndate: 2022/03/01\ndescription: Detects base64 encoded .NET reflective loading of Assembly\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - WwBSAGUAZgBsAGUAYwB0AGkAbwBuAC4AQQBzAHMAZQBtAGIAbAB5AF0AOgA6AEwAbwBhAGQAKA\n    - sAUgBlAGYAbABlAGMAdABpAG8AbgAuAEEAcwBzAGUAbQBiAGwAeQBdADoAOgBMAG8AYQBkACgA\n    - bAFIAZQBmAGwAZQBjAHQAaQBvAG4ALgBBAHMAcwBlAG0AYgBsAHkAXQA6ADoATABvAGEAZAAoA\n    - AFsAcgBlAGYAbABlAGMAdABpAG8AbgAuAGEAcwBzAGUAbQBiAGwAeQBdADoAOgAoACIATABvAGEAZAAiAC\n    - BbAHIAZQBmAGwAZQBjAHQAaQBvAG4ALgBhAHMAcwBlAG0AYgBsAHkAXQA6ADoAKAAiAEwAbwBhAGQAIgAp\n    - AWwByAGUAZgBsAGUAYwB0AGkAbwBuAC4AYQBzAHMAZQBtAGIAbAB5AF0AOgA6ACgAIgBMAG8AYQBkACIAK\n    - WwBSAGUAZgBsAGUAYwB0AGkAbwBuAC4AQQBzAHMAZQBtAGIAbAB5AF0AOgA6ACgAIgBMAG8AYQBkACIAKQ\n    - sAUgBlAGYAbABlAGMAdABpAG8AbgAuAEEAcwBzAGUAbQBiAGwAeQBdADoAOgAoACIATABvAGEAZAAiACkA\n    - bAFIAZQBmAGwAZQBjAHQAaQBvAG4ALgBBAHMAcwBlAG0AYgBsAHkAXQA6ADoAKAAiAEwAbwBhAGQAIgApA\n    - WwByAGUAZgBsAGUAYwB0AGkAbwBuAC4AYQBzAHMAZQBtAGIAbAB5AF0AOgA6AEwAbwBhAGQAKA\n    - sAcgBlAGYAbABlAGMAdABpAG8AbgAuAGEAcwBzAGUAbQBiAGwAeQBdADoAOgBMAG8AYQBkACgA\n    - bAHIAZQBmAGwAZQBjAHQAaQBvAG4ALgBhAHMAcwBlAG0AYgBsAHkAXQA6ADoATABvAGEAZAAoA\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\nid: 62b7ccc9-23b4-471e-aa15-6da3663c4d59\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/mal_revil.yar\n- https://thedfirreport.com/2022/05/09/seo-poisoning-a-gootloader-story/\nrelated:\n- id: 9c0295ce-d60d-40bd-bd74-84673b7592b1\n  type: similar\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1027\n- attack.t1620\ntitle: PowerShell Base64 Encoded Reflective Assembly Load\n",
+                            "sigma:id": "62b7ccc9-23b4-471e-aa15-6da3663c4d59",
+                            "title": "PowerShell Base64 Encoded Reflective Assembly Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "487c7524-f892-4054-b263-8a0ace63fc25",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via Stdin in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/12\ndescription: Detects Obfuscated Powershell via Stdin in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - environment\n    - invoke\n    - input\n    ImagePath|contains|all:\n    - set\n    - '&&'\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 487c7524-f892-4054-b263-8a0ace63fc25\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Stdin - System\n",
+                            "sigma:id": "487c7524-f892-4054-b263-8a0ace63fc25",
+                            "title": "Invoke-Obfuscation Via Stdin - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b222df08-0e07-11eb-adc1-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Clip.exe to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated use of Clip.exe to execute PowerShell\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - /c\n    - /r\n    CommandLine|contains|all:\n    - cmd\n    - '&&'\n    - 'clipboard]::'\n    - -f\nfalsepositives:\n- Unknown\nid: b222df08-0e07-11eb-adc1-0242ac120002\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/17\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation CLIP+ Launcher\n",
+                            "sigma:id": "b222df08-0e07-11eb-adc1-0242ac120002",
+                            "title": "Invoke-Obfuscation CLIP+ Launcher",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use MSHTA in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/08\ndescription: Detects Obfuscated Powershell via use MSHTA in Scripts\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - set\n    - '&&'\n    - mshta\n    - vbscript:createobject\n    - .run\n    - (window.close)\nfalsepositives:\n- Unknown\nid: ac20ae82-8758-4f38-958e-b44a3140ca88\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/03/08\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use MSHTA\n",
+                            "sigma:id": "ac20ae82-8758-4f38-958e-b44a3140ca88",
+                            "title": "Invoke-Obfuscation Via Use MSHTA",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                        "lookup_data": {
+                            "description": "UNC3524: Eye Spy on Your Email",
+                            "link": "http://www.botvrij.eu/data/feed-osint/25adc94b-5b29-44fe-a4a8-c89d17ff3566.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652459344",
+                            "uuid": "25adc94b-5b29-44fe-a4a8-c89d17ff3566",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5b9123c0-1480-4e09-877e-4783950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Sigma Ransomware Being Distributed Using Fake Craigslist Malspam",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5b9123c0-1480-4e09-877e-4783950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1536755790",
+                            "uuid": "5b9123c0-1480-4e09-877e-4783950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "51aa9387-1c53-4153-91cc-d73c59ae1ca9",
+                        "lookup_data": {
+                            "description": "Detects all variations of obfuscated powershell IEX invocation code generated by Invoke-Obfuscation framework from the code block linked in the references",
+                            "raw": "author: Daniel Bohannon (@Mandiant/@FireEye), oscd.community\ndate: 2019/11/08\ndescription: Detects all variations of obfuscated powershell IEX invocation code generated\n  by Invoke-Obfuscation framework from the code block linked in the references\ndetection:\n  condition: all of selection_*\n  selection_eid:\n    EventID: 7045\n  selection_imagepath:\n  - ImagePath|re: \\$PSHome\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$PSHome\\[\n  - ImagePath|re: \\$ShellId\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$ShellId\\[\n  - ImagePath|re: \\$env:Public\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$env:Public\\[\n  - ImagePath|re: \\$env:ComSpec\\[(\\s*\\d{1,3}\\s*,){2}\n  - ImagePath|re: \\\\*mdr\\*\\W\\s*\\)\\.Name\n  - ImagePath|re: \\$VerbosePreference\\.ToString\\(\n  - ImagePath|re: \\String\\]\\s*\\$VerbosePreference\nfalsepositives:\n- Unknown\nid: 51aa9387-1c53-4153-91cc-d73c59ae1ca9\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/27\nreferences:\n- https://github.com/danielbohannon/Invoke-Obfuscation/blob/f20e7f843edd0a3a7716736e9eddfa423395dd26/Out-ObfuscatedStringCommand.ps1#L873-L888\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Invoke-Obfuscation Obfuscated IEX Invocation - System\n",
+                            "sigma:id": "51aa9387-1c53-4153-91cc-d73c59ae1ca9",
+                            "title": "Invoke-Obfuscation Obfuscated IEX Invocation - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "07ad2ea8-6a55-4ac6-bf3e-91b8e59676eb",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use MSHTA in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/08\ndescription: Detects Obfuscated Powershell via use MSHTA in Scripts\ndetection:\n  condition: selection\n  selection:\n    Payload|contains|all:\n    - set\n    - '&&'\n    - mshta\n    - vbscript:createobject\n    - .run\n    - (window.close)\nfalsepositives:\n- Unknown\nid: 07ad2ea8-6a55-4ac6-bf3e-91b8e59676eb\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2023/01/04\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: e55a5195-4724-480e-a77e-3ebe64bd3759\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use MSHTA - PowerShell Module\n",
+                            "sigma:id": "07ad2ea8-6a55-4ac6-bf3e-91b8e59676eb",
+                            "title": "Invoke-Obfuscation Via Use MSHTA - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                        "lookup_data": {
+                            "description": "Turla: A Galaxy of Opportunity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/54dd4ef7-f7b2-418e-a191-5def4fbb0033.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1673286950",
+                            "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6f8b3439-a203-45dc-a88b-abf57ea15ccf",
+                        "lookup_data": {
+                            "description": "The CrachMapExec pentesting framework implements a PowerShell obfuscation with some static strings detected by this rule.",
+                            "raw": "author: Thomas Patzke\ndate: 2020/05/22\ndescription: The CrachMapExec pentesting framework implements a PowerShell obfuscation\n  with some static strings detected by this rule.\ndetection:\n  condition: powershell_execution and snippets\n  powershell_execution:\n    CommandLine|contains:\n    - powershell.exe\n    - pwsh.exe\n  snippets:\n    CommandLine|contains:\n    - join*split\n    - ( $ShellId[1]+$ShellId[13]+'x')\n    - ( $PSHome[*]+$PSHOME[*]+\n    - ( $env:Public[13]+$env:Public[5]+'x')\n    - ( $env:ComSpec[4,*,25]-Join'')\n    - '[1,3]+''x''-Join'''')'\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 6f8b3439-a203-45dc-a88b-abf57ea15ccf\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://github.com/byt3bl33d3r/CrackMapExec\n- https://github.com/byt3bl33d3r/CrackMapExec/blob/0a49f75347b625e81ee6aa8c33d3970b5515ea9e/cme/helpers/powershell.py#L242\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1027.005\ntitle: CrackMapExec PowerShell Obfuscation\n",
+                            "sigma:id": "6f8b3439-a203-45dc-a88b-abf57ea15ccf",
+                            "title": "CrackMapExec PowerShell Obfuscation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                        "lookup_data": {
+                            "description": "Detects activity mentioned in Operation Wocao report",
+                            "raw": "author: Florian Roth (Nextron Systems), frack113\ndate: 2019/12/20\ndescription: Detects activity mentioned in Operation Wocao report\ndetection:\n  condition: selection\n  selection:\n    CallerProcessName|endswith: \\checkadmin.exe\n    EventID: 4799\n    TargetUserName|startswith: Administr\nfalsepositives:\n- Administrators that use checkadmin.exe tool to enumerate local administrators\nid: 74ad4314-482e-4c3e-b237-3f7ed3b9ca8d\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://www.fox-it.com/en/news/whitepapers/operation-wocao-shining-a-light-on-one-of-chinas-hidden-hacking-groups/\n- https://twitter.com/SBousseaden/status/1207671369963646976\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1036.004\n- attack.t1027\n- attack.execution\n- attack.t1053.005\n- attack.t1059.001\ntitle: Operation Wocao Activity - Security\n",
+                            "sigma:id": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                            "title": "Operation Wocao Activity - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e55a5195-4724-480e-a77e-3ebe64bd3759",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use MSHTA in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/08\ndescription: Detects Obfuscated Powershell via use MSHTA in Scripts\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|contains|all:\n    - set\n    - '&&'\n    - mshta\n    - vbscript:createobject\n    - .run\n    - (window.close)\nfalsepositives:\n- Unknown\nid: e55a5195-4724-480e-a77e-3ebe64bd3759\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use MSHTA - PowerShell\n",
+                            "sigma:id": "e55a5195-4724-480e-a77e-3ebe64bd3759",
+                            "title": "Invoke-Obfuscation Via Use MSHTA - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9ac8b09b-45de-4a07-9da1-0de8c09304a3",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of stdin to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of stdin to execute PowerShell\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|re: .*cmd.{0,5}(?:/c|/r).+powershell.+(?:\\$\\{?input\\}?|noexit).+\"\nfalsepositives:\n- Unknown\nid: 9ac8b09b-45de-4a07-9da1-0de8c09304a3\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 779c8c12-0eb1-11eb-adc1-0242ac120002\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation STDIN+ Launcher - PowerShell Module\n",
+                            "sigma:id": "9ac8b09b-45de-4a07-9da1-0de8c09304a3",
+                            "title": "Invoke-Obfuscation STDIN+ Launcher - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                        "lookup_data": {
+                            "description": "Turla PowerShell blogpost",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5ced8da1-0960-40bc-b5dc-2fed0a016219.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1559232101",
+                            "uuid": "5ced8da1-0960-40bc-b5dc-2fed0a016219",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0adfbc14-0ed1-11eb-adc1-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Environment Variables to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of Environment Variables to execute PowerShell\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|re: .*cmd.{0,5}(?:/c|/r)(?:\\s|)\"set\\s[a-zA-Z]{3,6}.*(?:\\{\\d\\}){1,}\\\\\"\\s+?-f(?:.*\\)){1,}.*\"\nfalsepositives:\n- Unknown\nid: 0adfbc14-0ed1-11eb-adc1-0242ac120002\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR+ Launcher - PowerShell\n",
+                            "sigma:id": "0adfbc14-0ed1-11eb-adc1-0242ac120002",
+                            "title": "Invoke-Obfuscation VAR+ Launcher - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                        "lookup_data": {
+                            "description": "Operation Ghost - White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5d9b516c-e5f0-4e7c-a958-5d8c0a019371.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1571855044",
+                            "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "96cd126d-f970-49c4-848a-da3a09f55c55",
+                        "lookup_data": {
+                            "description": "Detects Set-Alias or New-Alias cmdlet usage. Which can be use as a mean to obfuscate PowerShell scripts",
+                            "raw": "author: frack113\ndate: 2023/01/08\ndescription: Detects Set-Alias or New-Alias cmdlet usage. Which can be use as a mean\n  to obfuscate PowerShell scripts\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - 'Set-Alias '\n    - 'New-Alias '\nfalsepositives:\n- Unknown\nid: 96cd126d-f970-49c4-848a-da3a09f55c55\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/1337Rin/Swag-PSO\nrelated:\n- id: e8314f79-564d-4f79-bc13-fbc0bf2660d8\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1027\n- attack.t1059.001\ntitle: Potential PowerShell Obfuscation Using Alias Cmdlets\n",
+                            "sigma:id": "96cd126d-f970-49c4-848a-da3a09f55c55",
+                            "title": "Potential PowerShell Obfuscation Using Alias Cmdlets",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "73e67340-0d25-11eb-adc1-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of Clip.exe to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated use of Clip.exe to execute PowerShell\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|re: .*cmd.{0,5}(?:/c|/r).+clip(?:\\.exe)?.{0,4}&&.+clipboard]::\\(\\s\\\\\"\\{\\d\\}.+-f.+\"\nfalsepositives:\n- Unknown\nid: 73e67340-0d25-11eb-adc1-0242ac120002\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation CLIP+ Launcher - PowerShell\n",
+                            "sigma:id": "73e67340-0d25-11eb-adc1-0242ac120002",
+                            "title": "Invoke-Obfuscation CLIP+ Launcher - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "056a7ee1-4853-4e67-86a0-3fd9ceed7555",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via RUNDLL LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via RUNDLL LAUNCHER\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - rundll32.exe\n    - shell32.dll\n    - shellexec_rundll\n    - powershell\nfalsepositives:\n- Unknown\nid: 056a7ee1-4853-4e67-86a0-3fd9ceed7555\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/03/07\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation RUNDLL LAUNCHER\n",
+                            "sigma:id": "056a7ee1-4853-4e67-86a0-3fd9ceed7555",
+                            "title": "Invoke-Obfuscation RUNDLL LAUNCHER",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "63e3365d-4824-42d8-8b82-e56810fefa0c",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Clip.exe in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use Clip.exe in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains: (Clipboard|i\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 63e3365d-4824-42d8-8b82-e56810fefa0c\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Clip - System\n",
+                            "sigma:id": "63e3365d-4824-42d8-8b82-e56810fefa0c",
+                            "title": "Invoke-Obfuscation Via Use Clip - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6c96fc76-0eb1-11eb-adc1-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of stdin to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of stdin to execute PowerShell\ndetection:\n  condition: all of selection_*\n  selection_main:\n    CommandLine|contains:\n    - /c\n    - /r\n    CommandLine|contains|all:\n    - cmd\n    - powershell\n  selection_other:\n  - CommandLine|contains: noexit\n  - CommandLine|contains|all:\n    - input\n    - $\nfalsepositives:\n- Unknown\nid: 6c96fc76-0eb1-11eb-adc1-0242ac120002\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/17\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation STDIN+ Launcher\n",
+                            "sigma:id": "6c96fc76-0eb1-11eb-adc1-0242ac120002",
+                            "title": "Invoke-Obfuscation STDIN+ Launcher",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "72862bf2-0eb1-11eb-adc1-0242ac120002",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated use of stdin to execute PowerShell",
+                            "raw": "author: Jonathan Cheong, oscd.community\ndate: 2020/10/15\ndescription: Detects Obfuscated use of stdin to execute PowerShell\ndetection:\n  condition: all of selection_*\n  selection_main:\n    EventID: 7045\n    ImagePath|contains:\n    - /c\n    - /r\n    ImagePath|contains|all:\n    - cmd\n    - powershell\n    Provider_Name: Service Control Manager\n  selection_other:\n  - ImagePath|contains: noexit\n  - ImagePath|contains|all:\n    - input\n    - $\nfalsepositives:\n- Unknown\nid: 72862bf2-0eb1-11eb-adc1-0242ac120002\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation STDIN+ Launcher - System\n",
+                            "sigma:id": "72862bf2-0eb1-11eb-adc1-0242ac120002",
+                            "title": "Invoke-Obfuscation STDIN+ Launcher - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1816994b-42e1-4fb1-afd2-134d88184f71",
+                        "lookup_data": {
+                            "description": "Detects calls to base64 encoded WMI class such as \"Win32_Shadowcopy\", \"\"...etc.",
+                            "raw": "author: Christian Burkard (Nextron Systems), Nasreddine Bencherchali\ndate: 2023/01/30\ndescription: Detects calls to base64 encoded WMI class such as \"Win32_Shadowcopy\",\n  \"\"...etc.\ndetection:\n  condition: selection_img and 1 of selection_cli_*\n  selection_cli_loggedonuser:\n    CommandLine|contains:\n    - VwBpAG4AMwAyAF8ATABvAGcAZwBlAGQATwBuAFUAcwBlAHIA\n    - cAaQBuADMAMgBfAEwAbwBnAGcAZQBkAE8AbgBVAHMAZQByA\n    - XAGkAbgAzADIAXwBMAG8AZwBnAGUAZABPAG4AVQBzAGUAcg\n    - V2luMzJfTG9nZ2VkT25Vc2Vy\n    - dpbjMyX0xvZ2dlZE9uVXNlc\n    - XaW4zMl9Mb2dnZWRPblVzZX\n  selection_cli_process:\n    CommandLine|contains:\n    - VwBpAG4AMwAyAF8AUAByAG8AYwBlAHMAcw\n    - cAaQBuADMAMgBfAFAAcgBvAGMAZQBzAHMA\n    - XAGkAbgAzADIAXwBQAHIAbwBjAGUAcwBzA\n    - V2luMzJfUHJvY2Vzc\n    - dpbjMyX1Byb2Nlc3\n    - XaW4zMl9Qcm9jZXNz\n  selection_cli_scheduledJob:\n    CommandLine|contains:\n    - VwBpAG4AMwAyAF8AUwBjAGgAZQBkAHUAbABlAGQASgBvAGIA\n    - cAaQBuADMAMgBfAFMAYwBoAGUAZAB1AGwAZQBkAEoAbwBiA\n    - XAGkAbgAzADIAXwBTAGMAaABlAGQAdQBsAGUAZABKAG8AYg\n    - V2luMzJfU2NoZWR1bGVkSm9i\n    - dpbjMyX1NjaGVkdWxlZEpvY\n    - XaW4zMl9TY2hlZHVsZWRKb2\n  selection_cli_shadowcopy:\n    CommandLine|contains:\n    - VwBpAG4AMwAyAF8AUwBoAGEAZABvAHcAYwBvAHAAeQ\n    - cAaQBuADMAMgBfAFMAaABhAGQAbwB3AGMAbwBwAHkA\n    - XAGkAbgAzADIAXwBTAGgAYQBkAG8AdwBjAG8AcAB5A\n    - V2luMzJfU2hhZG93Y29we\n    - dpbjMyX1NoYWRvd2NvcH\n    - XaW4zMl9TaGFkb3djb3B5\n  selection_cli_useraccount:\n    CommandLine|contains:\n    - VwBpAG4AMwAyAF8AVQBzAGUAcgBBAGMAYwBvAHUAbgB0A\n    - cAaQBuADMAMgBfAFUAcwBlAHIAQQBjAGMAbwB1AG4AdA\n    - XAGkAbgAzADIAXwBVAHMAZQByAEEAYwBjAG8AdQBuAHQA\n    - V2luMzJfVXNlckFjY291bn\n    - dpbjMyX1VzZXJBY2NvdW50\n    - XaW4zMl9Vc2VyQWNjb3Vud\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\nfalsepositives:\n- Unknown\nid: 1816994b-42e1-4fb1-afd2-134d88184f71\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/Neo23x0/Raccine/blob/20a569fa21625086433dcce8bb2765d0ea08dcb6/yara/mal_revil.yar\nrelated:\n- id: 47688f1b-9f51-4656-b013-3cc49a166a36\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1027\ntitle: PowerShell Base64 Encoded WMI Classes\n",
+                            "sigma:id": "1816994b-42e1-4fb1-afd2-134d88184f71",
+                            "title": "PowerShell Base64 Encoded WMI Classes",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1b9dc62e-6e9e-42a3-8990-94d7a10007f7",
+                        "lookup_data": {
+                            "description": "Detects all variations of obfuscated powershell IEX invocation code generated by Invoke-Obfuscation framework from the following code block \\u2014",
+                            "raw": "author: Daniel Bohannon (@Mandiant/@FireEye), oscd.community\ndate: 2019/11/08\ndescription: Detects all variations of obfuscated powershell IEX invocation code generated\n  by Invoke-Obfuscation framework from the following code block \\u2014\ndetection:\n  condition: selection_iex\n  selection_iex:\n  - ScriptBlockText|re: \\$PSHome\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$PSHome\\[\n  - ScriptBlockText|re: \\$ShellId\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$ShellId\\[\n  - ScriptBlockText|re: \\$env:Public\\[\\s*\\d{1,3}\\s*\\]\\s*\\+\\s*\\$env:Public\\[\n  - ScriptBlockText|re: \\$env:ComSpec\\[(\\s*\\d{1,3}\\s*,){2}\n  - ScriptBlockText|re: \\*mdr\\*\\W\\s*\\)\\.Name\n  - ScriptBlockText|re: \\$VerbosePreference\\.ToString\\(\nfalsepositives:\n- Unknown\nid: 1b9dc62e-6e9e-42a3-8990-94d7a10007f7\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/31\nreferences:\n- https://github.com/danielbohannon/Invoke-Obfuscation/blob/f20e7f843edd0a3a7716736e9eddfa423395dd26/Out-ObfuscatedStringCommand.ps1#L873-L888\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Obfuscated IEX Invocation - PowerShell\n",
+                            "sigma:id": "1b9dc62e-6e9e-42a3-8990-94d7a10007f7",
+                            "title": "Invoke-Obfuscation Obfuscated IEX Invocation - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5da1e411-c430-4fd6-bb05-9c81c0a8ab16",
+                        "lookup_data": {
+                            "description": "Mahalo FIN7: Responding to the Criminal Operatorsâ€™ New Tools and Techniques",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5da1e411-c430-4fd6-bb05-9c81c0a8ab16.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1570891290",
+                            "uuid": "5da1e411-c430-4fd6-bb05-9c81c0a8ab16",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "86b896ba-ffa1-4fea-83e3-ee28a4c915c7",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via Stdin in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/12\ndescription: Detects Obfuscated Powershell via Stdin in Scripts\ndetection:\n  condition: selection_4104\n  selection_4104:\n    ScriptBlockText|re: (?i).*(set).*&&\\s?set.*(environment|invoke|\\$\\{?input).*&&.*\"\nfalsepositives:\n- Unknown\nid: 86b896ba-ffa1-4fea-83e3-ee28a4c915c7\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Stdin - Powershell\n",
+                            "sigma:id": "86b896ba-ffa1-4fea-83e3-ee28a4c915c7",
+                            "title": "Invoke-Obfuscation Via Stdin - Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0c92f2e6-f08f-4b73-9216-ecb0ca634689",
+                        "lookup_data": {
+                            "description": "Detects the use of rcedit to potentially alter executable PE metadata properties, which could conceal efforts to rename system utilities for defense evasion.",
+                            "raw": "author: Micah Babinski\ndate: 2022/12/11\ndescription: Detects the use of rcedit to potentially alter executable PE metadata\n  properties, which could conceal efforts to rename system utilities for defense evasion.\ndetection:\n  condition: all of selection_*\n  selection_attributes:\n    CommandLine|contains:\n    - OriginalFileName\n    - CompanyName\n    - FileDescription\n    - ProductName\n    - ProductVersion\n    - LegalCopyright\n  selection_flags:\n    CommandLine|contains: --set-\n  selection_img:\n  - Image|endswith:\n    - \\rcedit-x64.exe\n    - \\rcedit-x86.exe\n  - Description: Edit resources of exe\n  - Product: rcedit\nfalsepositives:\n- Legitimate use of the tool by administrators or users to update metadata of a binary\nid: 0c92f2e6-f08f-4b73-9216-ecb0ca634689\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://security.stackexchange.com/questions/210843/is-it-possible-to-change-original-filename-of-an-exe\n- https://www.virustotal.com/gui/file/02e8e8c5d430d8b768980f517b62d7792d690982b9ba0f7e04163cbc1a6e7915\n- https://github.com/electron/rcedit\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1036.003\n- attack.t1036\n- attack.t1027.005\n- attack.t1027\ntitle: Potential PE Metadata Tamper Using Rcedit\n",
+                            "sigma:id": "0c92f2e6-f08f-4b73-9216-ecb0ca634689",
+                            "title": "Potential PE Metadata Tamper Using Rcedit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via COMPRESS OBFUSCATION",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via COMPRESS OBFUSCATION\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - system.io.compression.deflatestream\n    - system.io.streamreader\n    - readtoend(\n    CommandLine|contains|all:\n    - new-object\n    - text.encoding]::ascii\nfalsepositives:\n- Unknown\nid: 7eedcc9d-9fdb-4d94-9c54-474e8affc0c7\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation COMPRESS OBFUSCATION\n",
+                            "sigma:id": "7eedcc9d-9fdb-4d94-9c54-474e8affc0c7",
+                            "title": "Invoke-Obfuscation COMPRESS OBFUSCATION",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74403157-20f5-415d-89a7-c505779585cf",
+                        "lookup_data": {
+                            "description": "Detects usage of the \"ConvertTo-SecureString\" cmdlet via the commandline. Which is fairly uncommon and could indicate potential suspicious activity",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Vasiliy Burov (rule), oscd.community, Tim Shelton\ndate: 2020/10/11\ndescription: Detects usage of the \"ConvertTo-SecureString\" cmdlet via the commandline.\n  Which is fairly uncommon and could indicate potential suspicious activity\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains: ConvertTo-SecureString\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\nfalsepositives:\n- Legitimate use to pass password to different powershell commands\nid: 74403157-20f5-415d-89a7-c505779585cf\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/02/01\nreferences:\n- https://speakerdeck.com/heirhabarov/hunting-for-powershell-abuse?slide=65\n- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/convertto-securestring?view=powershell-7.3#examples\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: ConvertTo-SecureString Cmdlet Usage Via CommandLine\n",
+                            "sigma:id": "74403157-20f5-415d-89a7-c505779585cf",
+                            "title": "ConvertTo-SecureString Cmdlet Usage Via CommandLine",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "130c9e58-28ac-4f83-8574-0a4cc913b97e",
+                        "lookup_data": {
+                            "description": "Detects files dropped by Winnti as described in RedMimicry Winnti playbook",
+                            "raw": "author: Alexander Rausch\ndate: 2020/06/24\ndescription: Detects files dropped by Winnti as described in RedMimicry Winnti playbook\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|endswith:\n    - \\gthread-3.6.dll\n    - \\sigcmm-2.4.dll\n    - \\Windows\\Temp\\tmp.bat\nfalsepositives:\n- Unknown\nid: 130c9e58-28ac-4f83-8574-0a4cc913b97e\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2023/01/05\nreferences:\n- https://redmimicry.com/posts/redmimicry-winnti/#dropper\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\ntitle: Potential Winnti Dropper Activity\n",
+                            "sigma:id": "130c9e58-28ac-4f83-8574-0a4cc913b97e",
+                            "title": "Potential Winnti Dropper Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                        "lookup_data": {
+                            "description": "Aoqin Dragon | Newly-Discovered Chinese-linked APT Has Been Quietly Spying On Organizations For 10 Years",
+                            "link": "http://www.botvrij.eu/data/feed-osint/abfb5a93-e695-4ee9-bc10-541290bcd663.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1655839499",
+                            "uuid": "abfb5a93-e695-4ee9-bc10-541290bcd663",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "88a22f69-62f9-4b8a-aa00-6b0212f2f05a",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Rundll32 in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2019/10/08\ndescription: Detects Obfuscated Powershell via use Rundll32 in Scripts\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|contains:\n    - value\n    - invoke\n    - comspec\n    - iex\n    Payload|contains|all:\n    - '&&'\n    - rundll32\n    - shell32.dll\n    - shellexec_rundll\nfalsepositives:\n- Unknown\nid: 88a22f69-62f9-4b8a-aa00-6b0212f2f05a\nlevel: high\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: a5a30a6e-75ca-4233-8b8c-42e0f2037d3b\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Rundll32 - PowerShell Module\n",
+                            "sigma:id": "88a22f69-62f9-4b8a-aa00-6b0212f2f05a",
+                            "title": "Invoke-Obfuscation Via Use Rundll32 - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                        "lookup_data": {
+                            "description": "FontOnLake: Previously unknown malware family targeting Linux",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633682506",
+                            "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6385697e-9f1b-40bd-8817-f4a91f40508e",
+                        "lookup_data": {
+                            "description": "Detects UTF-8 and UTF-16 Base64 encoded powershell 'Invoke-' calls",
+                            "raw": "author: pH-T (Nextron Systems), Harjot Singh, '@cyb3rjy0t'\ndate: 2022/05/20\ndescription: Detects UTF-8 and UTF-16 Base64 encoded powershell 'Invoke-' calls\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - SQBuAHYAbwBrAGUALQ\n    - kAbgB2AG8AawBlAC0A\n    - JAG4AdgBvAGsAZQAtA\n    - SW52b2tlL\n    - ludm9rZS\n    - JbnZva2Ut\nfalsepositives:\n- Unlikely\nid: 6385697e-9f1b-40bd-8817-f4a91f40508e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/27\nreferences:\n- https://thedfirreport.com/2022/05/09/seo-poisoning-a-gootloader-story/\nrelated:\n- id: fd6e2919-3936-40c9-99db-0aa922c356f7\n  type: obsoletes\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1027\ntitle: PowerShell Base64 Encoded Invoke Keyword\n",
+                            "sigma:id": "6385697e-9f1b-40bd-8817-f4a91f40508e",
+                            "title": "PowerShell Base64 Encoded Invoke Keyword",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "641a4bfb-c017-44f7-800c-2aee0184ce9b",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via use Rundll32 in Scripts",
+                            "raw": "author: Nikita Nazarov, oscd.community\ndate: 2020/10/09\ndescription: Detects Obfuscated Powershell via use Rundll32 in Scripts\ndetection:\n  condition: selection\n  selection:\n    EventID: 7045\n    ImagePath|contains:\n    - value\n    - invoke\n    - comspec\n    - iex\n    ImagePath|contains|all:\n    - '&&'\n    - rundll32\n    - shell32.dll\n    - shellexec_rundll\n    Provider_Name: Service Control Manager\nfalsepositives:\n- Unknown\nid: 641a4bfb-c017-44f7-800c-2aee0184ce9b\nlevel: high\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation Via Use Rundll32 - System\n",
+                            "sigma:id": "641a4bfb-c017-44f7-800c-2aee0184ce9b",
+                            "title": "Invoke-Obfuscation Via Use Rundll32 - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4c54ba8f-73d2-4d40-8890-d9cf1dca3d30",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via VAR++ LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/13\ndescription: Detects Obfuscated Powershell via VAR++ LAUNCHER\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - '{0}'\n    - '{1}'\n    - '{2}'\n    - '{3}'\n    - '{4}'\n    - '{5}'\n    ServiceFileName|contains|all:\n    - '&&set'\n    - cmd\n    - /c\n    - -f\nfalsepositives:\n- Unknown\nid: 4c54ba8f-73d2-4d40-8890-d9cf1dca3d30\nlevel: high\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 14bcba49-a428-42d9-b943-e2ce0f0f7ae6\n  type: derived\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - Security\n",
+                            "sigma:id": "4c54ba8f-73d2-4d40-8890-d9cf1dca3d30",
+                            "title": "Invoke-Obfuscation VAR++ LAUNCHER OBFUSCATION - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b6b49cd1-34d6-4ead-b1bf-176e9edba9a4",
+                        "lookup_data": {
+                            "description": "Detects the presenece of reversed PowerShell commands in the CommandLine. This is often used as a method of obfuscation by attackers",
+                            "raw": "author: Teymur Kheirkhabarov (idea), Vasiliy Burov (rule), oscd.community, Tim Shelton\ndate: 2020/10/11\ndescription: Detects the presenece of reversed PowerShell commands in the CommandLine.\n  This is often used as a method of obfuscation by attackers\ndetection:\n  condition: all of selection_* and not 1 of filter_*\n  filter_ansible:\n    CommandLine|contains|all:\n    - -EncodedCommand\n    - rahc\n    ParentImage: C:\\Windows\\System32\\cmd.exe\n  selection_cli:\n    CommandLine|contains:\n    - hctac\n    - kaerb\n    - dnammoc\n    - ekovn\n    - eliFd\n    - rahc\n    - etirw\n    - golon\n    - tninon\n    - eddih\n    - tpircS\n    - ssecorp\n    - llehsrewop\n    - esnopser\n    - daolnwod\n    - tneilCbeW\n    - tneilc\n    - ptth\n    - elifotevas\n    - 46esab\n    - htaPpmeTteG\n    - tcejbO\n    - maerts\n    - hcaerof\n    - retupmoc\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\nfalsepositives:\n- Unlikely\nid: b6b49cd1-34d6-4ead-b1bf-176e9edba9a4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://2019.offzone.moscow/ru/report/hunting-for-powershell-abuses/\n- https://speakerdeck.com/heirhabarov/hunting-for-powershell-abuse?slide=66\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Potential PowerShell Obfuscation Via Reversed Commands\n",
+                            "sigma:id": "b6b49cd1-34d6-4ead-b1bf-176e9edba9a4",
+                            "title": "Potential PowerShell Obfuscation Via Reversed Commands",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e8314f79-564d-4f79-bc13-fbc0bf2660d8",
+                        "lookup_data": {
+                            "description": "Detects specific techniques often seen used inside of PowerShell scripts to obfscuate Alias creation",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/09\ndescription: Detects specific techniques often seen used inside of PowerShell scripts\n  to obfscuate Alias creation\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - -Alias\n    - ' -Value (-join('\nfalsepositives:\n- Unknown\nid: e8314f79-564d-4f79-bc13-fbc0bf2660d8\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- Internal Research\nrelated:\n- id: 96cd126d-f970-49c4-848a-da3a09f55c55\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1027\n- attack.t1059.001\ntitle: Potential PowerShell Obfuscation Using Character Join\n",
+                            "sigma:id": "e8314f79-564d-4f79-bc13-fbc0bf2660d8",
+                            "title": "Potential PowerShell Obfuscation Using Character Join",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7a922f1b-2635-4d6c-91ef-af228b198ad3",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via COMPRESS OBFUSCATION",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via COMPRESS OBFUSCATION\ndetection:\n  condition: selection\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n    - system.io.compression.deflatestream\n    - system.io.streamreader\n    ServiceFileName|contains|all:\n    - new-object\n    - text.encoding]::ascii\n    - readtoend\nfalsepositives:\n- Unknown\nid: 7a922f1b-2635-4d6c-91ef-af228b198ad3\nlevel: medium\nlogsource:\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\n  service: security\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: 175997c5-803c-4b08-8bb0-70b099f47595\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation COMPRESS OBFUSCATION - Security\n",
+                            "sigma:id": "7a922f1b-2635-4d6c-91ef-af228b198ad3",
+                            "title": "Invoke-Obfuscation COMPRESS OBFUSCATION - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a23791fe-8846-485a-b16b-ca691e1b03d4",
+                        "lookup_data": {
+                            "description": "Detects Obfuscated Powershell via RUNDLL LAUNCHER",
+                            "raw": "author: Timur Zinniatullin, oscd.community\ndate: 2020/10/18\ndescription: Detects Obfuscated Powershell via RUNDLL LAUNCHER\ndetection:\n  condition: selection_4103\n  selection_4103:\n    Payload|contains|all:\n    - rundll32.exe\n    - shell32.dll\n    - shellexec_rundll\n    - powershell\nfalsepositives:\n- Unknown\nid: a23791fe-8846-485a-b16b-ca691e1b03d4\nlevel: medium\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/SigmaHQ/sigma/issues/1009\nrelated:\n- id: e6cb92b4-b470-4eb8-8a9d-d63e8583aae0\n  type: derived\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1027\n- attack.execution\n- attack.t1059.001\ntitle: Invoke-Obfuscation RUNDLL LAUNCHER - PowerShell Module\n",
+                            "sigma:id": "a23791fe-8846-485a-b16b-ca691e1b03d4",
+                            "title": "Invoke-Obfuscation RUNDLL LAUNCHER - PowerShell Module",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1027",
+                "display_name": "Obfuscated Files or Information",
+                "atomic_tests": [
+                    {
+                        "name": "Decode base64 Data into Script",
+                        "auto_generated_guid": "f45df6be-2e1e-4136-a384-8f18ab3826fb",
+                        "description": "Creates a base64-encoded data file and decodes it into an executable shell script\n\nUpon successful execution, sh will execute art.sh, which is a base64 encoded command, that echoes `Hello from the Atomic Red Team` \nand uname -v\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "shell_command": {
+                                "description": "command to encode",
+                                "type": "string",
+                                "default": "echo Hello from the Atomic Red Team && uname -v"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "encode the command into base64 file\n",
+                                "prereq_command": "if [ -e \"/tmp/encoded.dat\" ]; then exit 0; else exit 1; fi\n",
+                                "get_prereq_command": "if [ \"$(uname)\" = 'FreeBSD' ]; then cmd=\"b64encode -r -\"; else cmd=\"base64\"; fi;\necho \"#{shell_command}\" | $cmd > /tmp/encoded.dat\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "if [ \"$(uname)\" = 'FreeBSD' ]; then cmd=\"b64decode -r\"; else cmd=\"base64 -d\"; fi;\ncat /tmp/encoded.dat | $cmd > /tmp/art.sh\nchmod +x /tmp/art.sh\n/tmp/art.sh\n",
+                            "cleanup_command": "rm /tmp/encoded.dat \nrm /tmp/art.sh\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Execute base64-encoded PowerShell",
+                        "auto_generated_guid": "a50d5a97-2531-499e-a1de-5544c74432c6",
+                        "description": "Creates base64-encoded PowerShell code and executes it. This is used by numerous adversaries and malicious tools.\n\nUpon successful execution, powershell will execute an encoded command and stdout default is \"Write-Host \"Hey, Atomic!\"\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "powershell_command": {
+                                "description": "PowerShell command to encode",
+                                "type": "string",
+                                "default": "Write-Host \"Hey, Atomic!\""
+                            }
+                        },
+                        "executor": {
+                            "command": "$OriginalCommand = '#{powershell_command}'\n$Bytes = [System.Text.Encoding]::Unicode.GetBytes($OriginalCommand)\n$EncodedCommand =[Convert]::ToBase64String($Bytes)\n$EncodedCommand\npowershell.exe -EncodedCommand $EncodedCommand\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Execute base64-encoded PowerShell from Windows Registry",
+                        "auto_generated_guid": "450e7218-7915-4be4-8b9b-464a49eafcec",
+                        "description": "Stores base64-encoded PowerShell code in the Windows Registry and deobfuscates it for execution. This is used by numerous adversaries and malicious tools.\n\nUpon successful execution, powershell will execute encoded command and read/write from the registry.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "registry_key_storage": {
+                                "description": "Windows Registry Key to store code",
+                                "type": "string",
+                                "default": "HKCU:Software\\Microsoft\\Windows\\CurrentVersion"
+                            },
+                            "powershell_command": {
+                                "description": "PowerShell command to encode",
+                                "type": "string",
+                                "default": "Write-Host \"Hey, Atomic!\""
+                            },
+                            "registry_entry_storage": {
+                                "description": "Windows Registry entry to store code under key",
+                                "type": "string",
+                                "default": "Debug"
+                            }
+                        },
+                        "executor": {
+                            "command": "$OriginalCommand = '#{powershell_command}'\n$Bytes = [System.Text.Encoding]::Unicode.GetBytes($OriginalCommand)\n$EncodedCommand =[Convert]::ToBase64String($Bytes)\n$EncodedCommand\n\nSet-ItemProperty -Force -Path #{registry_key_storage} -Name #{registry_entry_storage} -Value $EncodedCommand\npowershell.exe -Command \"IEX ([Text.Encoding]::UNICODE.GetString([Convert]::FromBase64String((gp #{registry_key_storage} #{registry_entry_storage}).#{registry_entry_storage})))\"\n",
+                            "cleanup_command": "Remove-ItemProperty -Force -ErrorAction Ignore -Path #{registry_key_storage} -Name #{registry_entry_storage}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Execution from Compressed File",
+                        "auto_generated_guid": "f8c8a909-5f29-49ac-9244-413936ce6d1f",
+                        "description": "Mimic execution of compressed executable. When successfully executed, calculator.exe will open.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "url_path": {
+                                "description": "url to download Exe",
+                                "type": "url",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027/bin/T1027.zip"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "T1027.exe must exist on disk at PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027.zip\\T1027.exe\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027.zip\\T1027.exe\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"#{url_path}\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1027.zip\"\nExpand-Archive -path \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1027.zip\" -DestinationPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027.zip\\\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027.zip\\T1027.exe\"\n",
+                            "cleanup_command": "taskkill /f /im calculator.exe >nul 2>nul\ntaskkill /f /im CalculatorApp.exe >nul 2>nul\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "DLP Evasion via Sensitive Data in VBA Macro over email",
+                        "auto_generated_guid": "129edb75-d7b8-42cd-a8ba-1f3db64ec4ad",
+                        "description": "Upon successful execution, an excel containing VBA Macro containing sensitive data will be sent outside the network using email.\nSensitive data includes about around 20 odd simulated credit card numbers that passes the LUHN check.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_file": {
+                                "description": "Path of the XLSM file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1027\\src\\T1027-cc-macro.xlsm"
+                            },
+                            "sender": {
+                                "description": "sender email",
+                                "type": "string",
+                                "default": "test@corp.com"
+                            },
+                            "receiver": {
+                                "description": "receiver email",
+                                "type": "string",
+                                "default": "test@corp.com"
+                            },
+                            "smtp_server": {
+                                "description": "SMTP Server IP Address",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            }
+                        },
+                        "executor": {
+                            "command": "Send-MailMessage -From #{sender} -To #{receiver} -Subject 'T1027_Atomic_Test' -Attachments \"#{input_file}\" -SmtpServer #{smtp_server}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "DLP Evasion via Sensitive Data in VBA Macro over HTTP",
+                        "auto_generated_guid": "e2d85e66-cb66-4ed7-93b1-833fc56c9319",
+                        "description": "Upon successful execution, an excel containing VBA Macro containing sensitive data will be sent outside the network using HTTP.\nSensitive data includes about around 20 odd simulated credit card numbers that passes the LUHN check.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "input_file": {
+                                "description": "Path of the XLSM file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1027\\src\\T1027-cc-macro.xlsm"
+                            },
+                            "ip_address": {
+                                "description": "Destination IP address",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            }
+                        },
+                        "executor": {
+                            "command": "Invoke-WebRequest -Uri #{ip_address} -Method POST -Body \"#{input_file}\"\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Obfuscated Command in PowerShell",
+                        "auto_generated_guid": "8b3f4ed6-077b-4bdd-891c-2d237f19410f",
+                        "description": "This is an obfuscated PowerShell command which when executed prints \"Hello, from PowerShell!\". Example is from the 2021 Threat Detection Report by Red Canary.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$cmDwhy =[TyPe](\"{0}{1}\" -f 'S','TrING')  ;   $pz2Sb0  =[TYpE](\"{1}{0}{2}\"-f'nv','cO','ert')  ;  &(\"{0}{2}{3}{1}{4}\" -f'In','SiO','vOKe-EXp','ReS','n') (  (&(\"{1}{2}{0}\"-f'blE','gET-','vaRIA')  ('CMdw'+'h'+'y')).\"v`ALUe\"::(\"{1}{0}\" -f'iN','jO').Invoke('',( (127, 162,151, 164,145 ,55 , 110 ,157 ,163 , 164 ,40,47, 110 , 145 ,154, 154 ,157 , 54 ,40, 146, 162 , 157,155 ,40, 120, 157 ,167,145 , 162 ,123,150 ,145 , 154 , 154 , 41,47)| .('%') { ( [CHAR] (  $Pz2sB0::\"t`OinT`16\"(( [sTring]${_}) ,8)))})) )\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Obfuscated Command Line using special Unicode characters",
+                        "auto_generated_guid": "e68b945c-52d0-4dd9-a5e8-d173d70c448f",
+                        "description": "This is an obfuscated certutil command that when executed downloads a file from the web. Adapted from T1105. Obfuscation includes special options chars (unicode hyphens), character substitution (e.g. ᶠ) and character insertion (including the usage of the right-to-left 0x202E and left-to-right 0x202D override characters).\nReference:\nhttps://wietze.github.io/blog/windows-command-line-obfuscation\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "remote_file": {
+                                "description": "URL of file to download",
+                                "type": "url",
+                                "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt"
+                            },
+                            "local_path": {
+                                "description": "Local path/filename to save the downloaded file to",
+                                "type": "path",
+                                "default": "Atomic-license.txt"
+                            }
+                        },
+                        "executor": {
+                            "steps": "1. Copy the following command into the command prompt after replacing #{remote_file} and #{local_path} with your desired URL and filename.\n\n\n  certutil —ૹu૰rlࢰca࣢c෯he  –‮spli؅t‮‭ −\"൏ᶠ൸\" #{remote_file} #{local_path}\n\n\n2. Press enter to execute the command. You will find the file or webpage you specified saved to the file you specified in the command.\n",
+                            "name": "manual"
+                        }
+                    },
+                    {
+                        "name": "Snake Malware Encrypted crmlog file",
+                        "auto_generated_guid": "7e47ee60-9dd1-4269-9c4f-97953b183268",
+                        "description": "The following Atomic Test will create a file with a specific name and sets its attributes to Hidden, System, and Archive. This was related to the Snake Malware campaign and is later decrypted by Snake's kernel driver.\n[Snake Malware - CISA](https://media.defense.gov/2023/May/09/2003218554/-1/-1/0/JOINT_CSA_HUNTING_RU_INTEL_SNAKE_MALWARE_20230509.PDF)  \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$file = New-Item $env:windir\\registration\\04e53197-72be-4dd8-88b1-533fe6eed577.04e53197-72be-4dd8-88b1-533fe6eed577.crmlog; $file.Attributes = 'Hidden', 'System', 'Archive'; Write-Host \"File created: $($file.FullName)\"\n",
+                            "cleanup_command": "$fileNameToDelete = '04e53197-72be-4dd8-88b1-533fe6eed577.04e53197-72be-4dd8-88b1-533fe6eed577.crmlog'; $filePathToDelete = \"$env:windir\\registration\\\"; $fullPathToDelete = Join-Path $filePathToDelete $fileNameToDelete; if (Test-Path $fullPathToDelete) { Remove-Item -Path $fullPathToDelete -Force; Write-Host \"File deleted: $fullPathToDelete\" } else { Write-Host \"File not found: $fullPathToDelete\" }\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Execution from Compressed JScript File",
+                        "auto_generated_guid": "fad04df1-5229-4185-b016-fb6010cd87ac",
+                        "description": "Mimic execution of compressed JavaScript file. When successfully executed, calculator.exe will open. This test is meant to help emulate Gootloader as per https://redcanary.com/blog/gootloader/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "url_path": {
+                                "description": "url to download JScript file",
+                                "type": "url",
+                                "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027/bin/t1027js.zip"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "T1027.js must exist on disk at PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027js.zip\\T1027js.js\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027js.zip\\T1027js.js\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\n[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nInvoke-WebRequest \"#{url_path}\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1027js.zip\"\nExpand-Archive -path \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1027js.zip\" -DestinationPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027js.zip\\\" -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\temp_T1027js.zip\\T1027js.js\"\n",
+                            "cleanup_command": "taskkill /f /im calculator.exe >nul 2>nul\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:05:32"
+}

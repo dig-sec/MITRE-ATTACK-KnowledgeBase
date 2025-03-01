@@ -1,0 +1,108 @@
+{
+    "id": "T1037.001",
+    "name": "Logon Script (Windows)",
+    "description": "Adversaries may use Windows logon scripts automatically executed at logon initialization to establish persistence. Windows allows logon scripts to be run whenever a specific user or group of users log into a system.(Citation: TechNet Logon Scripts) This is done via adding a path to a script to the `HKCUEnvironmentUserInitMprLogonScript` Registry key.(Citation: Hexacorn Logon Scripts)\nAdversaries may use these scripts to maintain persistence on a single system. Depending on the access configuration of the logon scripts, either local credentials or an administrator account may be necessary.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation",
+    "data_sources": "Windows Registry: Windows Registry Key Creation, Process: Process Creation, Command: Command Execution",
+    "detection": "Monitor for changes to Registry values associated with Windows logon scrips, nameley `HKCUEnvironmentUserInitMprLogonScript`.\nMonitor running process for actions that could be indicative of abnormal programs or executables running upon logon.",
+    "url": "https://attack.mitre.org/techniques/T1037/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1037.001",
+                "atomic_attack_guid": "d6042746-07d4-4c92-9ad8-e644c114a231",
+                "atomic_attack_name": "Logon Scripts",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Persistence Via Logon Scripts - CommandLine",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_registry_logon_script.yml",
+                        "remote_content": "title: Potential Persistence Via Logon Scripts - CommandLine\nid: 21d856f9-9281-4ded-9377-51a1a6e2a432\nrelated:\n    - id: 0a98a10c-685d-4ab0-bddc-b6bdd1d48458\n      type: derived\nstatus: test\ndescription: Detects the addition of a new LogonScript to the registry value \"UserInitMprLogonScript\" for potential persistence\nreferences:\n    - https://cocomelonc.github.io/persistence/2022/12/09/malware-pers-20.html\nauthor: Tom Ueltschi (@c_APT_ure)\ndate: 2019-01-12\nmodified: 2023-06-09\ntags:\n    - attack.persistence\n    - attack.t1037.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains: 'UserInitMprLogonScript'\n    condition: selection\nfalsepositives:\n    - Legitimate addition of Logon Scripts via the command line by administrators or third party tools\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "eb125d40-0b2d-41ac-a71a-3229241c2cd3",
+                    "0a98a10c-685d-4ab0-bddc-b6bdd1d48458",
+                    "9ace0707-b560-49b8-b6ca-5148b42f39fb"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "eb125d40-0b2d-41ac-a71a-3229241c2cd3",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1037.001",
+                            "mitre-cti:description": "Adversaries may use Windows logon scripts automatically executed at logon initialization to establish persistence. Windows allows logon scripts to be run whenever a specific user or group of users log into a system.(Citation: TechNet Logon Scripts) This is done via adding a path to a script to the <code>HKCU\\Environment\\UserInitMprLogonScript</code> Registry key.(Citation: Hexacorn Logon Scripts)\n\nAdversaries may use these scripts to maintain persistence on a single system. Depending on the access configuration of the logon scripts, either local credentials or an administrator account may be necessary. ",
+                            "mitre-cti:name": "Logon Script (Windows)",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--eb125d40-0b2d-41ac-a71a-3229241c2cd3', 'type': 'attack-pattern', 'created': '2020-01-10T03:43:37.211Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1037.001', 'url': 'https://attack.mitre.org/techniques/T1037/001'}, {'url': 'https://technet.microsoft.com/en-us/library/cc758918(v=ws.10).aspx', 'description': 'Microsoft. (2005, January 21). Creating logon scripts. Retrieved April 27, 2016.', 'source_name': 'TechNet Logon Scripts'}, {'source_name': 'Hexacorn Logon Scripts', 'url': 'http://www.hexacorn.com/blog/2014/11/14/beyond-good-ol-run-key-part-18/', 'description': 'Hexacorn. (2014, November 14). Beyond good ol’ Run key, Part 18. Retrieved November 15, 2019.'}], 'modified': '2020-03-24T23:45:03.153Z', 'name': 'Logon Script (Windows)', 'description': 'Adversaries may use Windows logon scripts automatically executed at logon initialization to establish persistence. Windows allows logon scripts to be run whenever a specific user or group of users log into a system.(Citation: TechNet Logon Scripts) This is done via adding a path to a script to the <code>HKCU\\\\Environment\\\\UserInitMprLogonScript</code> Registry key.(Citation: Hexacorn Logon Scripts)\\n\\nAdversaries may use these scripts to maintain persistence on a single system. Depending on the access configuration of the logon scripts, either local credentials or an administrator account may be necessary. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_detection': 'Monitor for changes to Registry values associated with Windows logon scrips, nameley <code>HKCU\\\\Environment\\\\UserInitMprLogonScript</code>.\\n\\nMonitor running process for actions that could be indicative of abnormal programs or executables running upon logon.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Windows Registry: Windows Registry Key Creation']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0a98a10c-685d-4ab0-bddc-b6bdd1d48458",
+                        "lookup_data": {
+                            "description": "Detects creation or execution of UserInitMprLogonScript persistence method",
+                            "raw": "author: Tom Ueltschi (@c_APT_ure), Tim Shelton\ndate: 2019/01/12\ndescription: Detects creation or execution of UserInitMprLogonScript persistence method\ndetection:\n  condition: ( exec_selection and not 1 of exec_exclusion* ) or create_keywords_cli\n  create_keywords_cli:\n    CommandLine|contains: UserInitMprLogonScript\n  exec_exclusion1:\n    Image|endswith:\n    - \\explorer.exe\n    - \\proquota.exe\n  exec_exclusion2:\n    CommandLine|contains:\n    - netlogon*.bat\n    - UsrLogon.cmd\n    - C:\\WINDOWS\\Explorer.EXE\n  exec_exclusion3:\n    Image|endswith: \\Citrix\\System32\\icast.exe\n  exec_selection:\n    ParentImage|endswith: \\userinit.exe\nfalsepositives:\n- Exclude legitimate logon scripts\nid: 0a98a10c-685d-4ab0-bddc-b6bdd1d48458\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/31\nreferences:\n- https://cocomelonc.github.io/persistence/2022/12/09/malware-pers-20.html\nstatus: test\ntags:\n- attack.t1037.001\n- attack.persistence\ntitle: Logon Scripts (UserInitMprLogonScript)\n",
+                            "sigma:id": "0a98a10c-685d-4ab0-bddc-b6bdd1d48458",
+                            "title": "Logon Scripts (UserInitMprLogonScript)",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9ace0707-b560-49b8-b6ca-5148b42f39fb",
+                        "lookup_data": {
+                            "description": "Detects creation of UserInitMprLogonScript persistence method",
+                            "raw": "author: Tom Ueltschi (@c_APT_ure)\ndate: 2019/01/12\ndescription: Detects creation of UserInitMprLogonScript persistence method\ndetection:\n  condition: selection\n  selection:\n    EventType: CreateKey\n    TargetObject|contains: UserInitMprLogonScript\nfalsepositives:\n- Exclude legitimate logon scripts\nid: 9ace0707-b560-49b8-b6ca-5148b42f39fb\nlevel: high\nlogsource:\n  category: registry_add\n  product: windows\nmodified: 2022/06/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1037.001/T1037.001.md\nstatus: test\ntags:\n- attack.t1037.001\n- attack.persistence\n- attack.lateral_movement\ntitle: Logon Scripts Creation in UserInitMprLogonScript Registry\n",
+                            "sigma:id": "9ace0707-b560-49b8-b6ca-5148b42f39fb",
+                            "title": "Logon Scripts Creation in UserInitMprLogonScript Registry",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1037.001",
+                "display_name": "Boot or Logon Initialization Scripts: Logon Script (Windows)",
+                "atomic_tests": [
+                    {
+                        "name": "Logon Scripts",
+                        "auto_generated_guid": "d6042746-07d4-4c92-9ad8-e644c114a231",
+                        "description": "Adds a registry value to run batch script created in the %temp% directory. Upon execution, there will be a new environment variable in the HKCU\\Environment key\nthat can be viewed in the Registry Editor.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "script_path": {
+                                "description": "Path to .bat file",
+                                "type": "string",
+                                "default": "%temp%\\art.bat"
+                            },
+                            "script_command": {
+                                "description": "Command To Execute",
+                                "type": "string",
+                                "default": "echo Art \"Logon Script\" atomic test was successful. >> %USERPROFILE%\\desktop\\T1037.001-log.txt"
+                            }
+                        },
+                        "executor": {
+                            "command": "echo \"#{script_command}\" > #{script_path}\nREG.exe ADD HKCU\\Environment /v UserInitMprLogonScript /t REG_SZ /d \"#{script_path}\" /f\n",
+                            "cleanup_command": "REG.exe DELETE HKCU\\Environment /v UserInitMprLogonScript /f >nul 2>&1\ndel #{script_path} >nul 2>&1\ndel \"%USERPROFILE%\\desktop\\T1037.001-log.txt\" >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:23:06"
+}

@@ -1,0 +1,336 @@
+{
+    "id": "T1518.001",
+    "name": "Security Software Discovery",
+    "description": "Adversaries may attempt to get a listing of security software, configurations, defensive tools, and sensors that are installed on a system or in a cloud environment. This may include things such as firewall rules and anti-virus. Adversaries may use the information from [Security Software Discovery](T1518.001) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\nExample commands that can be used to obtain security software information are [netsh](S0108), `reg query` with [Reg](S0075), `dir` with [cmd](S0106), and [Tasklist](S0057), but other indicators of discovery behavior may be more specific to the type of software or security system the adversary is looking for. It is becoming more common to see macOS malware perform checks for LittleSnitch and KnockKnock software.\nAdversaries may also utilize cloud APIs to discover the configurations of firewall rules within an environment.(Citation: Expel IO Evil in AWS)",
+    "platforms": "Windows, Azure AD, Office 365, SaaS, IaaS, Linux, macOS, Google Workspace",
+    "kill_chain_phases": "Discovery",
+    "data_sources": "Firewall: Firewall Metadata, Firewall: Firewall Enumeration, Process: Process Creation, Command: Command Execution, Process: OS API Execution",
+    "detection": "System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as lateral movement, based on the information obtained.\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).\nIn cloud environments, additionally monitor logs for the usage of APIs that may be used to gather information about security software configurations within the environment.",
+    "url": "https://attack.mitre.org/techniques/T1518/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1518.001",
+                "atomic_attack_guid": "23b91cd2-c99c-4002-9e41-317c63e024a2",
+                "atomic_attack_name": "Security Software Discovery - ps (Linux)",
+                "platform": "Linux",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Security Software Discovery - Linux",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_security_software_discovery.yml",
+                        "remote_content": "title: Security Software Discovery - Linux\nid: c9d8b7fd-78e4-44fe-88f6-599135d46d60\nstatus: test\ndescription: Detects usage of system utilities (only grep and egrep for now) to discover security software discovery\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1518.001/T1518.001.md\nauthor: Daniil Yugoslavskiy, oscd.community\ndate: 2020-10-19\nmodified: 2022-11-27\ntags:\n    - attack.discovery\n    - attack.t1518.001\nlogsource:\n    category: process_creation\n    product: linux\ndetection:\n    selection:\n        Image|endswith:\n            # You can add more grep variations such as fgrep, rgrep...etc\n            - '/grep'\n            - '/egrep'\n        CommandLine|contains:\n            - 'nessusd'        # nessus vulnerability scanner\n            - 'td-agent'       # fluentd log shipper\n            - 'packetbeat'     # elastic network logger/shipper\n            - 'filebeat'       # elastic log file shipper\n            - 'auditbeat'      # elastic auditing agent/log shipper\n            - 'osqueryd'       # facebook osquery\n            - 'cbagentd'       # carbon black\n            - 'falcond'        # crowdstrike falcon\n    condition: selection\nfalsepositives:\n    - Legitimate activities\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1518.001",
+                "atomic_attack_guid": "e31564c8-4c60-40cd-a8f4-9261307e8336",
+                "atomic_attack_name": "Get Windows Defender exclusion settings using WMIC",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote WMI Command Attempt",
+                        "rule_link": "https://research.splunk.com/endpoint/272df6de-61f1-4784-877c-1fbc3e2d0838/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1518.001",
+                "atomic_attack_guid": "1553252f-14ea-4d3b-8a08-d7a4211aa945",
+                "atomic_attack_name": "Security Software Discovery - AV Discovery via WMI",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Product Class Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_product_class.yml",
+                        "remote_content": "title: Potential Product Class Reconnaissance Via Wmic.EXE\nid: e568650b-5dcd-4658-8f34-ded0b1e13992\nstatus: test\ndescription: Detects the execution of WMIC in order to get a list of firewall and antivirus products\nreferences:\n    - https://github.com/albertzsigovits/malware-notes/blob/c820c7fea76cf76a861b28ebc77e06100e20ec29/Ransomware/Maze.md\n    - https://www.hybrid-analysis.com/sample/4be06ecd234e2110bd615649fe4a6fa95403979acf889d7e45a78985eb50acf9?environmentId=1\nauthor: Michael Haag, Florian Roth (Nextron Systems), juju4, oscd.community\ndate: 2023-02-14\nmodified: 2023-03-07\ntags:\n    - attack.execution\n    - attack.t1047\n    - car.2016-03-002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\wmic.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains:\n            - 'AntiVirusProduct'\n            - 'FirewallProduct'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Product Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_product.yml",
+                        "remote_content": "title: Potential Product Reconnaissance Via Wmic.EXE\nid: 15434e33-5027-4914-88d5-3d4145ec25a9\nstatus: test\ndescription: Detects the execution of WMIC in order to get a list of firewall and antivirus products\nreferences:\n    - https://thedfirreport.com/2023/03/06/2022-year-in-review/\n    - https://www.yeahhub.com/list-installed-programs-version-path-windows/\n    - https://learn.microsoft.com/en-us/answers/questions/253555/software-list-inventory-wmic-product\nauthor: Nasreddine Bencherchali\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\wmic.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: 'Product'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1518.001",
+                "atomic_attack_guid": "fe613cf3-8009-4446-9a0f-bc78a15b66c9",
+                "atomic_attack_name": "Security Software Discovery - Sysmon Service",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Sysmon Discovery Via Default Driver Altitude Using Findstr.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_findstr_sysmon_discovery_via_default_altitude.yml",
+                        "remote_content": "title: Sysmon Discovery Via Default Driver Altitude Using Findstr.EXE\nid: 37db85d1-b089-490a-a59a-c7b6f984f480\nstatus: test\ndescription: Detects usage of \"findstr\" with the argument \"385201\". Which could indicate potential discovery of an installed Sysinternals Sysmon service using the default driver altitude (even if the name is changed).\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1518.001/T1518.001.md#atomic-test-5---security-software-discovery---sysmon-service\nauthor: frack113\ndate: 2021-12-16\nmodified: 2023-11-14\ntags:\n    - attack.discovery\n    - attack.t1518.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\find.exe'\n              - '\\findstr.exe'\n        - OriginalFileName:\n              - 'FIND.EXE'\n              - 'FINDSTR.EXE'\n    selection_cli:\n        CommandLine|contains: ' 385201' # Sysmon driver default altitude\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1518.001",
+                "atomic_attack_guid": "f92a380f-ced9-491f-b338-95a991418ce2",
+                "atomic_attack_name": "Security Software Discovery",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Recon Command Output Piped To Findstr.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_findstr_recon_pipe_output.yml",
+                        "remote_content": "title: Recon Command Output Piped To Findstr.EXE\nid: ccb5742c-c248-4982-8c5c-5571b9275ad3\nrelated:\n    - id: fe63010f-8823-4864-a96b-a7b4a0f7b929\n      type: derived\nstatus: experimental\ndescription: |\n    Detects the execution of a potential recon command where the results are piped to \"findstr\". This is meant to trigger on inline calls of \"cmd.exe\" via the \"/c\" or \"/k\" for example.\n    Attackers often time use this technique to extract specific information they require in their reconnaissance phase.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/02cb591f75064ffe1e0df9ac3ed5972a2e491c97/atomics/T1057/T1057.md#atomic-test-6---discover-specific-process---tasklist\n    - https://www.hhs.gov/sites/default/files/manage-engine-vulnerability-sector-alert-tlpclear.pdf\n    - https://www.trendmicro.com/en_us/research/22/d/spring4shell-exploited-to-deploy-cryptocurrency-miners.html\nauthor: Nasreddine Bencherchali (Nextron Systems), frack113\ndate: 2023-07-06\nmodified: 2024-06-27\ntags:\n    - attack.discovery\n    - attack.t1057\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            # Note: Add additional CLI to increase and enhance coverage\n            # Note: We use wildcards in this instance to avoid writing a lot of variations that can be avoided easily. You can switch to regex if its supported by your backend.\n            - 'ipconfig*|*find'\n            - 'net*|*find'\n            - 'netstat*|*find'\n            - 'ping*|*find'\n            - 'systeminfo*|*find'\n            - 'tasklist*|*find'\n            - 'whoami*|*find'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Tasklist Discovery Command",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_tasklist_basic_execution.yml",
+                        "remote_content": "title: Suspicious Tasklist Discovery Command\nid: 63332011-f057-496c-ad8d-d2b6afb27f96\nstatus: test\ndescription: Adversaries may attempt to get information about running processes on a system. Information obtained could be used to gain an understanding of common software/applications running on systems within the network\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1057/T1057.md#atomic-test-2---process-discovery---tasklist\nauthor: frack113\ndate: 2021-12-11\nmodified: 2022-12-25\ntags:\n    - attack.discovery\n    - attack.t1057\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        - CommandLine|contains: 'tasklist'\n        - Image|endswith: '\\tasklist.exe'\n        - OriginalFileName: 'tasklist.exe'\n    condition: selection\nfalsepositives:\n    - Likely from users, administrator and different internal and third party applications.\nlevel: informational\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "904e8e61-8edf-4350-b59c-b905fc8e810c",
+                    "cba37adb-d6fb-4610-b069-dd04c0643384",
+                    "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                    "0ed75b9c-c73b-424d-9e7d-496cd565fbe0",
+                    "c9d8b7fd-78e4-44fe-88f6-599135d46d60",
+                    "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                    "37db85d1-b089-490a-a59a-c7b6f984f480"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "904e8e61-8edf-4350-b59c-b905fc8e810c",
+                        "lookup_data": {
+                            "description": "Adversaries may attempt to get a listing of security software, configurations, defensive tools, and sensors that are installed on a system or in a cloud environment.\nThis may include things such as firewall rules and anti-viru\n",
+                            "raw": "author: frack113\ndate: 2021/12/16\ndescription: 'Adversaries may attempt to get a listing of security software, configurations,\n  defensive tools, and sensors that are installed on a system or in a cloud environment.\n\n  This may include things such as firewall rules and anti-viru\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_1:\n    ScriptBlockText|contains|all:\n    - get-process\n    - .Description\n    - -like\n  selection_2:\n    ScriptBlockText|contains:\n    - '\"*virus*\"'\n    - '\"*carbonblack*\"'\n    - '\"*defender*\"'\n    - '\"*cylance*\"'\nfalsepositives:\n- Unknown\nid: 904e8e61-8edf-4350-b59c-b905fc8e810c\nlevel: low\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1518.001/T1518.001.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1518.001\ntitle: Security Software Discovery by Powershell\n",
+                            "sigma:id": "904e8e61-8edf-4350-b59c-b905fc8e810c",
+                            "title": "Security Software Discovery by Powershell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cba37adb-d6fb-4610-b069-dd04c0643384",
+                        "lookup_data": {
+                            "capec": "CAPEC-581",
+                            "mitre-attack-id": "T1518.001",
+                            "mitre-cti:description": "Adversaries may attempt to get a listing of security software, configurations, defensive tools, and sensors that are installed on a system or in a cloud environment. This may include things such as firewall rules and anti-virus. Adversaries may use the information from [Security Software Discovery](https://attack.mitre.org/techniques/T1518/001) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\n\nExample commands that can be used to obtain security software information are [netsh](https://attack.mitre.org/software/S0108), <code>reg query</code> with [Reg](https://attack.mitre.org/software/S0075), <code>dir</code> with [cmd](https://attack.mitre.org/software/S0106), and [Tasklist](https://attack.mitre.org/software/S0057), but other indicators of discovery behavior may be more specific to the type of software or security system the adversary is looking for. It is becoming more common to see macOS malware perform checks for LittleSnitch and KnockKnock software.\n\nAdversaries may also utilize cloud APIs to discover the configurations of firewall rules within an environment.(Citation: Expel IO Evil in AWS) For example, the permitted IP ranges, ports or user accounts for the inbound/outbound rules of security groups, virtual firewalls established within AWS for EC2 and/or VPC instances, can be revealed by the <code>DescribeSecurityGroups</code> action with various request parameters. (Citation: DescribeSecurityGroups - Amazon Elastic Compute Cloud)",
+                            "mitre-cti:name": "Security Software Discovery",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Azure AD', 'Office 365', 'SaaS', 'IaaS', 'Linux', 'macOS', 'Google Workspace'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Isif Ibrahima, Mandiant'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--cba37adb-d6fb-4610-b069-dd04c0643384', 'created': '2020-02-21T21:16:18.066Z', 'x_mitre_version': '1.3', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1518.001', 'url': 'https://attack.mitre.org/techniques/T1518/001'}, {'source_name': 'Expel IO Evil in AWS', 'url': 'https://expel.io/blog/finding-evil-in-aws/', 'description': 'A. Randazzo, B. Manahan and S. Lipton. (2020, April 28). Finding Evil in AWS. Retrieved June 25, 2020.'}, {'source_name': 'DescribeSecurityGroups - Amazon Elastic Compute Cloud', 'url': 'https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html', 'description': 'Amazon Web Services, Inc. . (2022). DescribeSecurityGroups. Retrieved January 28, 2022.'}, {'url': 'https://capec.mitre.org/data/definitions/581.html', 'source_name': 'capec', 'external_id': 'CAPEC-581'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may attempt to get a listing of security software, configurations, defensive tools, and sensors that are installed on a system or in a cloud environment. This may include things such as firewall rules and anti-virus. Adversaries may use the information from [Security Software Discovery](https://attack.mitre.org/techniques/T1518/001) during automated discovery to shape follow-on behaviors, including whether or not the adversary fully infects the target and/or attempts specific actions.\\n\\nExample commands that can be used to obtain security software information are [netsh](https://attack.mitre.org/software/S0108), <code>reg query</code> with [Reg](https://attack.mitre.org/software/S0075), <code>dir</code> with [cmd](https://attack.mitre.org/software/S0106), and [Tasklist](https://attack.mitre.org/software/S0057), but other indicators of discovery behavior may be more specific to the type of software or security system the adversary is looking for. It is becoming more common to see macOS malware perform checks for LittleSnitch and KnockKnock software.\\n\\nAdversaries may also utilize cloud APIs to discover the configurations of firewall rules within an environment.(Citation: Expel IO Evil in AWS) For example, the permitted IP ranges, ports or user accounts for the inbound/outbound rules of security groups, virtual firewalls established within AWS for EC2 and/or VPC instances, can be revealed by the <code>DescribeSecurityGroups</code> action with various request parameters. (Citation: DescribeSecurityGroups - Amazon Elastic Compute Cloud)', 'modified': '2022-04-11T22:26:34.327Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Security Software Discovery', 'x_mitre_detection': 'System and network discovery techniques normally occur throughout an operation as an adversary learns the environment. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as lateral movement, based on the information obtained.\\n\\nMonitor processes and command-line arguments for actions that could be taken to gather system and network information. Remote access tools with built-in features may interact directly with the Windows API to gather information. Information may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).\\n\\nIn cloud environments, additionally monitor logs for the usage of APIs that may be used to gather information about security software configurations within the environment.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'discovery'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Process: OS API Execution', 'Command: Command Execution', 'Process: Process Creation', 'Firewall: Firewall Enumeration', 'Firewall: Firewall Metadata'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                        "lookup_data": {
+                            "description": "IndigoZebra APT continues to attack Central Asia with evolving tools",
+                            "link": "http://www.botvrij.eu/data/feed-osint/d8c0c469-2d3e-437a-80a1-a38bfe5998e8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1625229668",
+                            "uuid": "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0ed75b9c-c73b-424d-9e7d-496cd565fbe0",
+                        "lookup_data": {
+                            "description": "Detects usage of system utilities (only grep for now) to discover security software discovery",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2020/10/19\ndescription: Detects usage of system utilities (only grep for now) to discover security\n  software discovery\ndetection:\n  condition: image and 1 of selection_cli_*\n  image:\n    Image: /usr/bin/grep\n  selection_cli_1:\n    CommandLine|contains:\n    - nessusd\n    - santad\n    - CbDefense\n    - falcond\n    - td-agent\n    - packetbeat\n    - filebeat\n    - auditbeat\n    - osqueryd\n    - BlockBlock\n    - LuLu\n  selection_cli_2:\n    CommandLine|contains|all:\n    - Little\n    - Snitch\nfalsepositives:\n- Legitimate activities\nid: 0ed75b9c-c73b-424d-9e7d-496cd565fbe0\nlevel: medium\nlogsource:\n  category: process_creation\n  product: macos\nmodified: 2022/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1518.001/T1518.001.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1518.001\ntitle: Security Software Discovery - MacOs\n",
+                            "sigma:id": "0ed75b9c-c73b-424d-9e7d-496cd565fbe0",
+                            "title": "Security Software Discovery - MacOs",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c9d8b7fd-78e4-44fe-88f6-599135d46d60",
+                        "lookup_data": {
+                            "description": "Detects usage of system utilities (only grep and egrep for now) to discover security software discovery",
+                            "raw": "author: Daniil Yugoslavskiy, oscd.community\ndate: 2020/10/19\ndescription: Detects usage of system utilities (only grep and egrep for now) to discover\n  security software discovery\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - nessusd\n    - td-agent\n    - packetbeat\n    - filebeat\n    - auditbeat\n    - osqueryd\n    - cbagentd\n    - falcond\n    Image|endswith:\n    - /grep\n    - /egrep\nfalsepositives:\n- Legitimate activities\nid: c9d8b7fd-78e4-44fe-88f6-599135d46d60\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1518.001/T1518.001.md\nstatus: test\ntags:\n- attack.discovery\n- attack.t1518.001\ntitle: Security Software Discovery - Linux\n",
+                            "sigma:id": "c9d8b7fd-78e4-44fe-88f6-599135d46d60",
+                            "title": "Security Software Discovery - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                        "lookup_data": {
+                            "description": "Malware analysis report on SparrowDoor malware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/827e941e-4a99-4e2c-a578-bfcec2d40552.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1650959349",
+                            "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "37db85d1-b089-490a-a59a-c7b6f984f480",
+                        "lookup_data": {
+                            "description": "Discovery of an installed Sysinternals Sysmon service using driver altitude (even if the name is changed).",
+                            "raw": "author: frack113\ndate: 2021/12/16\ndescription: Discovery of an installed Sysinternals Sysmon service using driver altitude\n  (even if the name is changed).\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: ' 385201'\n    Image|endswith: \\findstr.exe\nfalsepositives:\n- Unknown\nid: 37db85d1-b089-490a-a59a-c7b6f984f480\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1518.001/T1518.001.md#atomic-test-5---security-software-discovery---sysmon-service\nstatus: test\ntags:\n- attack.discovery\n- attack.t1518.001\ntitle: Suspicious Findstr 385201 Execution\n",
+                            "sigma:id": "37db85d1-b089-490a-a59a-c7b6f984f480",
+                            "title": "Suspicious Findstr 385201 Execution",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1518.001",
+                "display_name": "Software Discovery: Security Software Discovery",
+                "atomic_tests": [
+                    {
+                        "name": "Security Software Discovery",
+                        "auto_generated_guid": "f92a380f-ced9-491f-b338-95a991418ce2",
+                        "description": "Methods to identify Security Software on an endpoint\n\nwhen sucessfully executed, the test is going to display running processes, firewall configuration on network profiles\nand specific security software.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "netsh.exe advfirewall  show allprofiles \nnetsh.exe advfirewall firewall dump\nnetsh.exe advfirewall show currentprofile\nnetsh.exe advfirewall firewall show rule name=all\nnetsh.exe firewall show state\nnetsh.exe firewall show config\nsc query windefend\npowershell.exe /c \"Get-Process | Where-Object { $_.ProcessName -eq 'Sysmon' }\"\npowershell.exe /c \"Get-Service | where-object {$_.DisplayName -like '*sysm*'}\"\npowershell.exe /c \"Get-CimInstance Win32_Service -Filter 'Description = ''System Monitor service'''\"\ntasklist.exe\ntasklist.exe | findstr /i virus\ntasklist.exe | findstr /i cb\ntasklist.exe | findstr /i defender\ntasklist.exe | findstr /i cylance\ntasklist.exe | findstr /i mc\ntasklist.exe | findstr /i \"virus cb defender cylance mc\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - powershell",
+                        "auto_generated_guid": "7f566051-f033-49fb-89de-b6bacab730f0",
+                        "description": "Methods to identify Security Software on an endpoint\n\nwhen sucessfully executed, powershell is going to processes related AV products if they are running.\nNote that, depending on the privilege of current user, get-process | ?{$_.Description -like \"*\"} may not return the processes related to AV products of the check.\nFor instance, only with Administrator right, you can see the process description of McAffee processes. Hence, it is better to use get-process | ?{$_.ProcessName -like \"*\"},\nif you know the name of those processes.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "get-process | ?{$_.Description -like \"*virus*\"}\nget-process | ?{$_.Description -like \"*carbonblack*\"}\nget-process | ?{$_.Description -like \"*defender*\"}\nget-process | ?{$_.Description -like \"*cylance*\"}\nget-process | ?{$_.Description -like \"*mc*\"}\nget-process | ?{$_.ProcessName -like \"*mc*\"}\nget-process | Where-Object { $_.ProcessName -eq \"Sysmon\" }\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - ps (macOS)",
+                        "auto_generated_guid": "ba62ce11-e820-485f-9c17-6f3c857cd840",
+                        "description": "Methods to identify Security Software on an endpoint\nwhen sucessfully executed, command shell  is going to display AV/Security software it is running.\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "ps aux | egrep 'Little\\ Snitch|CbOsxSensorService|falcond|nessusd|santad|CbDefense|td-agent|packetbeat|filebeat|auditbeat|osqueryd|BlockBlock|LuLu'\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - ps (Linux)",
+                        "auto_generated_guid": "23b91cd2-c99c-4002-9e41-317c63e024a2",
+                        "description": "Methods to identify Security Software on an endpoint\nwhen sucessfully executed, command shell  is going to display AV/Security software it is running.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "ps aux | egrep 'falcond|nessusd|cbagentd|td-agent|packetbeat|filebeat|auditbeat|osqueryd'\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - pgrep (FreeBSD)",
+                        "auto_generated_guid": "fa96c21c-5fd6-4428-aa28-51a2fbecdbdc",
+                        "description": "Methods to identify Security Software on an endpoint\nwhen sucessfully executed, command shell is going to display AV/Security software it is running.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "pgrep -l 'bareos-fd|icinga2|cbagentd|wazuh-agent|packetbeat|filebeat|osqueryd'\n",
+                            "name": "sh"
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - Sysmon Service",
+                        "auto_generated_guid": "fe613cf3-8009-4446-9a0f-bc78a15b66c9",
+                        "description": "Discovery of an installed Sysinternals Sysmon service using driver altitude (even if the name is changed).\n\nwhen sucessfully executed, the test is going to display sysmon driver instance if it is installed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "fltmc.exe | findstr.exe 385201\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - AV Discovery via WMI",
+                        "auto_generated_guid": "1553252f-14ea-4d3b-8a08-d7a4211aa945",
+                        "description": "Discovery of installed antivirus products via a WMI query.\n\nwhen sucessfully executed, the test is going to display installed AV software.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "wmic.exe /Namespace:\\\\root\\SecurityCenter2 Path AntiVirusProduct Get displayName /Format:List",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - AV Discovery via Get-CimInstance and Get-WmiObject cmdlets",
+                        "auto_generated_guid": "015cd268-996e-4c32-8347-94c80c6286ee",
+                        "description": "Discovery of installed antivirus products via Get-CimInstance and Get-WmiObject cmdlets of powershell.\n\nwhen sucessfully executed, information about installed AV software is displayed..\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "powershell Get-CimInstance -Namespace root/securityCenter2 -classname antivirusproduct\npowershell Get-WmiObject -Namespace root\\securitycenter2 -Class antivirusproduct\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - Windows Defender Enumeration",
+                        "auto_generated_guid": "d3415a0e-66ef-429b-acf4-a768876954f6",
+                        "description": "Windows Defender Enumeration via different built-in windows native tools.\nwhen sucessfully executed, information about windows defender is displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Get-Service WinDefend #check the service state of Windows Defender\nGet-MpComputerStatus #provides the current status of security solution elements, including Anti-Spyware, Antivirus, LoavProtection, Real-time protection, etc\nGet-MpThreat #threats details that have been detected using MS Defender\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Security Software Discovery - Windows Firewall Enumeration",
+                        "auto_generated_guid": "9dca5a1d-f78c-4a8d-accb-d6de67cfed6b",
+                        "description": "Enumerates windows firewall to retrieves firewall rules from the target computer.\n\nwhen sucessfully executed, details of windows firewall is displayed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Get-NetFirewallProfile | Format-Table Name, Enabled\nGet-NetFirewallSetting\nGet-NetFirewallRule | select DisplayName, Enabled, Description\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Get Windows Defender exclusion settings using WMIC",
+                        "auto_generated_guid": "e31564c8-4c60-40cd-a8f4-9261307e8336",
+                        "description": "In this test, a WMIC command is used to probe the local Windows system for the configuration of Windows Defender's exclusions. This command targets the MSFT_MpPreference \nclass within the Windows Management Instrumentation (WMI) namespace, allowing the retrieval of critical settings such as disabled real-time monitoring and specified \nexclusion paths, file extensions, and processes. Attackers might use this approach to understand what is excluded from antivirus scans, enabling further exploitation.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "wmic /Node:localhost /Namespace:\\\\root\\Microsoft\\Windows\\Defender Path MSFT_MpPreference Get /format:list | findstr /i /C:\"DisableRealtimeMonitoring\" /C:\"ExclusionPath\" /C:\"ExclusionExtension\" /C:\"ExclusionProcess\"\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 14:59:58"
+}

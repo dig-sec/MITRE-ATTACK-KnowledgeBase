@@ -1,0 +1,1021 @@
+{
+    "id": "T1047",
+    "name": "Windows Management Instrumentation",
+    "description": "Adversaries may abuse Windows Management Instrumentation (WMI) to execute malicious commands and payloads. WMI is an administration feature that provides a uniform environment to access Windows system components. The WMI service enables both local and remote access, though the latter is facilitated by [Remote Services](T1021) such as [Distributed Component Object Model](T1021.003) (DCOM) and [Windows Remote Management](T1021.006) (WinRM). (Citation: MSDN WMI) Remote WMI over DCOM operates using port 135, whereas WMI over WinRM operates over port 5985 when using HTTP and 5986 for HTTPS. (Citation: MSDN WMI) (Citation: FireEye WMI 2015)\nAn adversary can use WMI to interact with local and remote systems and use it as a means to execute various behaviors, such as gathering information for Discovery as well as remote Execution of files as part of Lateral Movement. (Citation: FireEye WMI SANS 2015) (Citation: FireEye WMI 2015)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Execution",
+    "data_sources": "Command: Command Execution, Process: Process Creation, Network Traffic: Network Connection Creation",
+    "detection": "Monitor network traffic for WMI connections; the use of WMI in environments that do not typically use WMI may be suspect. Perform process monitoring to capture command-line arguments of \"wmic\" and detect commands that are used to perform remote behavior. (Citation: FireEye WMI 2015)",
+    "url": "https://attack.mitre.org/techniques/T1047",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "c510d25b-1667-467d-8331-a56d3e9bc4ff",
+                "atomic_attack_name": "Application uninstall using WMIC",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "WMIC Remote Command Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_remote_execution.yml",
+                        "remote_content": "title: WMIC Remote Command Execution\nid: 7773b877-5abb-4a3e-b9c9-fd0369b59b00\nrelated:\n    - id: e42af9df-d90b-4306-b7fb-05c863847ebd\n      type: obsolete\n    - id: 09af397b-c5eb-4811-b2bb-08b3de464ebf\n      type: obsolete\nstatus: test\ndescription: Detects the execution of WMIC to query information on a remote system\nreferences:\n    - https://securelist.com/moonbounce-the-dark-side-of-uefi-firmware/105468/\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: '/node:'\n    filter_localhost:\n        CommandLine|contains:\n            - '/node:127.0.0.1 '\n            - '/node:localhost '\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Application Removed Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_uninstall_application.yml",
+                        "remote_content": "title: Application Removed Via Wmic.EXE\nid: b53317a0-8acf-4fd1-8de8-a5401e776b96\nrelated:\n    - id: 847d5ff3-8a31-4737-a970-aeae8fe21765 # Uninstall Security Products\n      type: derived\nstatus: test\ndescription: Detects the removal or uninstallation of an application via \"Wmic.EXE\".\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md#atomic-test-10---application-uninstall-using-wmic\nauthor: frack113\ndate: 2022-01-28\nmodified: 2024-07-02\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'call'\n            - 'uninstall'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Product Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_product.yml",
+                        "remote_content": "title: Potential Product Reconnaissance Via Wmic.EXE\nid: 15434e33-5027-4914-88d5-3d4145ec25a9\nstatus: test\ndescription: Detects the execution of WMIC in order to get a list of firewall and antivirus products\nreferences:\n    - https://thedfirreport.com/2023/03/06/2022-year-in-review/\n    - https://www.yeahhub.com/list-installed-programs-version-path-windows/\n    - https://learn.microsoft.com/en-us/answers/questions/253555/software-list-inventory-wmic-product\nauthor: Nasreddine Bencherchali\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\wmic.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: 'Product'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote WMI Command Attempt",
+                        "rule_link": "https://research.splunk.com/endpoint/272df6de-61f1-4784-877c-1fbc3e2d0838/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "00738d2a-4651-4d76-adf2-c43a41dfb243",
+                "atomic_attack_name": "WMI Execute rundll32",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_susp_process_creation.yml",
+                        "remote_content": "title: Suspicious Process Created Via Wmic.EXE\nid: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8\nrelated:\n    - id: 526be59f-a573-4eea-b5f7-f0973207634d # Generic\n      type: derived\nstatus: test\ndescription: Detects WMIC executing \"process call create\" with suspicious calls to processes such as \"rundll32\", \"regsrv32\", etc.\nreferences:\n    - https://thedfirreport.com/2020/10/08/ryuks-return/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ransomware-hive-conti-avoslocker\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-10-12\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'process '\n            - 'call '\n            - 'create '\n        CommandLine|contains:\n            # Add more susupicious paths and binaries as you see fit in your env\n            - 'rundll32'\n            - 'bitsadmin'\n            - 'regsvr32'\n            - 'cmd.exe /c '\n            - 'cmd.exe /k '\n            - 'cmd.exe /r '\n            - 'cmd /c '\n            - 'cmd /k '\n            - 'cmd /r '\n            - 'powershell'\n            - 'pwsh'\n            - 'certutil'\n            - 'cscript'\n            - 'wscript'\n            - 'mshta'\n            - '\\Users\\Public\\'\n            - '\\Windows\\Temp\\'\n            - '\\AppData\\Local\\'\n            - '%temp%'\n            - '%tmp%'\n            - '%ProgramData%'\n            - '%appdata%'\n            - '%comspec%'\n            - '%localappdata%'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "New Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml",
+                        "remote_content": "title: New Process Created Via Wmic.EXE\nid: 526be59f-a573-4eea-b5f7-f0973207634d\nrelated:\n    - id: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8 # For suspicious process creation\n      type: derived\nstatus: test\ndescription: Detects new process creation using WMIC via the \"process call create\" flag\nreferences:\n    - https://www.sans.org/blog/wmic-for-incident-response/\n    - https://github.com/redcanaryco/atomic-red-team/blob/84215139ee5127f8e3a117e063b604812bd71928/atomics/T1047/T1047.md#atomic-test-5---wmi-execute-local-process\nauthor: Michael Haag, Florian Roth (Nextron Systems), juju4, oscd.community\ndate: 2019-01-16\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\n    - car.2016-03-002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\wmic.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'process'\n            - 'call'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote WMI Command Attempt",
+                        "rule_link": "https://research.splunk.com/endpoint/272df6de-61f1-4784-877c-1fbc3e2d0838/"
+                    },
+                    {
+                        "rule_name": "Windows WMI Process Call Create",
+                        "rule_link": "https://research.splunk.com/endpoint/0661c2de-93de-11ec-9833-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Remote Process Instantiation via WMI",
+                        "rule_link": "https://research.splunk.com/endpoint/d25d2c3d-d9d8-40ec-8fdf-e86fe155a3da/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "7db7a7f9-9531-4840-9b30-46220135441c",
+                "atomic_attack_name": "Create a Process using WMI Query and an Encoded Command",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Base64 Encoded Invoke Keyword",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_base64_invoke.yml",
+                        "remote_content": "title: PowerShell Base64 Encoded Invoke Keyword\nid: 6385697e-9f1b-40bd-8817-f4a91f40508e\nrelated:\n    - id: fd6e2919-3936-40c9-99db-0aa922c356f7\n      type: obsolete\nstatus: test\ndescription: Detects UTF-8 and UTF-16 Base64 encoded powershell 'Invoke-' calls\nreferences:\n    - https://thedfirreport.com/2022/05/09/seo-poisoning-a-gootloader-story/\nauthor: pH-T (Nextron Systems), Harjot Singh, @cyb3rjy0t\ndate: 2022-05-20\nmodified: 2023-04-06\ntags:\n    - attack.execution\n    - attack.t1059.001\n    - attack.defense-evasion\n    - attack.t1027\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_cli_enc:\n        CommandLine|contains: ' -e'\n    selection_cli_invoke:\n        CommandLine|contains:\n            # Invoke-\n            # UTF-16LE\n            - 'SQBuAHYAbwBrAGUALQ'\n            - 'kAbgB2AG8AawBlAC0A'\n            - 'JAG4AdgBvAGsAZQAtA'\n            # UTF-8\n            - 'SW52b2tlL'\n            - 'ludm9rZS'\n            - 'JbnZva2Ut'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Execution of Powershell with Base64",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_encode.yml",
+                        "remote_content": "title: Suspicious Execution of Powershell with Base64\nid: fb843269-508c-4b76-8b8d-88679db22ce7\nstatus: test\ndescription: Commandline to launch powershell with a base64 payload\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1059.001/T1059.001.md#atomic-test-20---powershell-invoke-known-malicious-cmdlets\n    - https://unit42.paloaltonetworks.com/unit42-pulling-back-the-curtains-on-encodedcommand-powershell-attacks/\n    - https://mikefrobbins.com/2017/06/15/simple-obfuscation-with-powershell-using-base64-encoding/\nauthor: frack113\ndate: 2022-01-02\nmodified: 2023-01-05\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - \\powershell.exe\n            - \\pwsh.exe\n        CommandLine|contains:\n            - ' -e '\n            - ' -en '\n            - ' -enc '\n            - ' -enco'\n            - ' -ec '\n    filter_encoding:\n        CommandLine|contains: ' -Encoding '\n    filter_azure:\n        ParentImage|contains:\n            - 'C:\\Packages\\Plugins\\Microsoft.GuestConfiguration.ConfigurationforWindows\\'\n            - '\\gc_worker.exe'\n    condition: selection and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Parameter Substring",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_susp_parameter_variation.yml",
+                        "remote_content": "title: Suspicious PowerShell Parameter Substring\nid: 36210e0d-5b19-485d-a087-c096088885f0\nstatus: test\ndescription: Detects suspicious PowerShell invocation with a parameter substring\nreferences:\n    - http://www.danielbohannon.com/blog-1/2017/3/12/powershell-execution-argument-obfuscation-how-it-can-make-detection-easier\nauthor: Florian Roth (Nextron Systems), Daniel Bohannon (idea), Roberto Rodriguez (Fix)\ndate: 2019-01-16\nmodified: 2022-07-14\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - ' -windowstyle h '\n            - ' -windowstyl h'\n            - ' -windowsty h'\n            - ' -windowst h'\n            - ' -windows h'\n            - ' -windo h'\n            - ' -wind h'\n            - ' -win h'\n            - ' -wi h'\n            - ' -win h '\n            - ' -win hi '\n            - ' -win hid '\n            - ' -win hidd '\n            - ' -win hidde '\n            - ' -NoPr '\n            - ' -NoPro '\n            - ' -NoProf '\n            - ' -NoProfi '\n            - ' -NoProfil '\n            - ' -nonin '\n            - ' -nonint '\n            - ' -noninte '\n            - ' -noninter '\n            - ' -nonintera '\n            - ' -noninterac '\n            - ' -noninteract '\n            - ' -noninteracti '\n            - ' -noninteractiv '\n            - ' -ec '\n            - ' -encodedComman '\n            - ' -encodedComma '\n            - ' -encodedComm '\n            - ' -encodedCom '\n            - ' -encodedCo '\n            - ' -encodedC '\n            - ' -encoded '\n            - ' -encode '\n            - ' -encod '\n            - ' -enco '\n            - ' -en '\n            - ' -executionpolic '\n            - ' -executionpoli '\n            - ' -executionpol '\n            - ' -executionpo '\n            - ' -executionp '\n            - ' -execution bypass'\n            - ' -executio bypass'\n            - ' -executi bypass'\n            - ' -execut bypass'\n            - ' -execu bypass'\n            - ' -exec bypass'\n            - ' -exe bypass'\n            - ' -ex bypass'\n            - ' -ep bypass'\n            - ' /windowstyle h '\n            - ' /windowstyl h'\n            - ' /windowsty h'\n            - ' /windowst h'\n            - ' /windows h'\n            - ' /windo h'\n            - ' /wind h'\n            - ' /win h'\n            - ' /wi h'\n            - ' /win h '\n            - ' /win hi '\n            - ' /win hid '\n            - ' /win hidd '\n            - ' /win hidde '\n            - ' /NoPr '\n            - ' /NoPro '\n            - ' /NoProf '\n            - ' /NoProfi '\n            - ' /NoProfil '\n            - ' /nonin '\n            - ' /nonint '\n            - ' /noninte '\n            - ' /noninter '\n            - ' /nonintera '\n            - ' /noninterac '\n            - ' /noninteract '\n            - ' /noninteracti '\n            - ' /noninteractiv '\n            - ' /ec '\n            - ' /encodedComman '\n            - ' /encodedComma '\n            - ' /encodedComm '\n            - ' /encodedCom '\n            - ' /encodedCo '\n            - ' /encodedC '\n            - ' /encoded '\n            - ' /encode '\n            - ' /encod '\n            - ' /enco '\n            - ' /en '\n            - ' /executionpolic '\n            - ' /executionpoli '\n            - ' /executionpol '\n            - ' /executionpo '\n            - ' /executionp '\n            - ' /execution bypass'\n            - ' /executio bypass'\n            - ' /executi bypass'\n            - ' /execut bypass'\n            - ' /execu bypass'\n            - ' /exec bypass'\n            - ' /exe bypass'\n            - ' /ex bypass'\n            - ' /ep bypass'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Change PowerShell Policies to an Insecure Level",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_set_policies_to_unsecure_level.yml",
+                        "remote_content": "title: Change PowerShell Policies to an Insecure Level\nid: 87e3c4e8-a6a8-4ad9-bb4f-46e7ff99a180\nrelated:\n    - id: cf2e938e-9a3e-4fe8-a347-411642b28a9f # ProcCreation Registry\n      type: similar\n    - id: 61d0475c-173f-4844-86f7-f3eebae1c66b # ScriptBlock\n      type: similar\n    - id: fad91067-08c5-4d1a-8d8c-d96a21b37814 # Registry\n      type: similar\nstatus: test\ndescription: Detects changing the PowerShell script execution policy to a potentially insecure level using the \"-ExecutionPolicy\" flag.\nreferences:\n    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-executionpolicy?view=powershell-7.4\n    - https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.4\n    - https://adsecurity.org/?p=2604\n    - https://thedfirreport.com/2021/11/01/from-zero-to-domain-admin/\nauthor: frack113\ndate: 2021-11-01\nmodified: 2023-12-13\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n        - Image|endswith:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n    selection_option:\n        CommandLine|contains:\n            - '-executionpolicy '\n            - ' -ep '\n            - ' -exec '\n    selection_level:\n        CommandLine|contains:\n            - 'Bypass'\n            - 'Unrestricted'\n    condition: all of selection_*\nfalsepositives:\n    - Administrator scripts\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Malicious PowerShell Process - Execution Policy Bypass",
+                        "rule_link": "https://research.splunk.com/endpoint/9be56c82-b1cc-4318-87eb-d138afaaca39/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "9c8ef159-c666-472f-9874-90c8d60d136b",
+                "atomic_attack_name": "WMI Execute Remote Process",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_susp_process_creation.yml",
+                        "remote_content": "title: Suspicious Process Created Via Wmic.EXE\nid: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8\nrelated:\n    - id: 526be59f-a573-4eea-b5f7-f0973207634d # Generic\n      type: derived\nstatus: test\ndescription: Detects WMIC executing \"process call create\" with suspicious calls to processes such as \"rundll32\", \"regsrv32\", etc.\nreferences:\n    - https://thedfirreport.com/2020/10/08/ryuks-return/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ransomware-hive-conti-avoslocker\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-10-12\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'process '\n            - 'call '\n            - 'create '\n        CommandLine|contains:\n            # Add more susupicious paths and binaries as you see fit in your env\n            - 'rundll32'\n            - 'bitsadmin'\n            - 'regsvr32'\n            - 'cmd.exe /c '\n            - 'cmd.exe /k '\n            - 'cmd.exe /r '\n            - 'cmd /c '\n            - 'cmd /k '\n            - 'cmd /r '\n            - 'powershell'\n            - 'pwsh'\n            - 'certutil'\n            - 'cscript'\n            - 'wscript'\n            - 'mshta'\n            - '\\Users\\Public\\'\n            - '\\Windows\\Temp\\'\n            - '\\AppData\\Local\\'\n            - '%temp%'\n            - '%tmp%'\n            - '%ProgramData%'\n            - '%appdata%'\n            - '%comspec%'\n            - '%localappdata%'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "New Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml",
+                        "remote_content": "title: New Process Created Via Wmic.EXE\nid: 526be59f-a573-4eea-b5f7-f0973207634d\nrelated:\n    - id: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8 # For suspicious process creation\n      type: derived\nstatus: test\ndescription: Detects new process creation using WMIC via the \"process call create\" flag\nreferences:\n    - https://www.sans.org/blog/wmic-for-incident-response/\n    - https://github.com/redcanaryco/atomic-red-team/blob/84215139ee5127f8e3a117e063b604812bd71928/atomics/T1047/T1047.md#atomic-test-5---wmi-execute-local-process\nauthor: Michael Haag, Florian Roth (Nextron Systems), juju4, oscd.community\ndate: 2019-01-16\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\n    - car.2016-03-002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\wmic.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'process'\n            - 'call'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "WMIC Remote Command Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_remote_execution.yml",
+                        "remote_content": "title: WMIC Remote Command Execution\nid: 7773b877-5abb-4a3e-b9c9-fd0369b59b00\nrelated:\n    - id: e42af9df-d90b-4306-b7fb-05c863847ebd\n      type: obsolete\n    - id: 09af397b-c5eb-4811-b2bb-08b3de464ebf\n      type: obsolete\nstatus: test\ndescription: Detects the execution of WMIC to query information on a remote system\nreferences:\n    - https://securelist.com/moonbounce-the-dark-side-of-uefi-firmware/105468/\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: '/node:'\n    filter_localhost:\n        CommandLine|contains:\n            - '/node:127.0.0.1 '\n            - '/node:localhost '\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote WMI Command Attempt",
+                        "rule_link": "https://research.splunk.com/endpoint/272df6de-61f1-4784-877c-1fbc3e2d0838/"
+                    },
+                    {
+                        "rule_name": "Windows WMI Process Call Create",
+                        "rule_link": "https://research.splunk.com/endpoint/0661c2de-93de-11ec-9833-acde48001122/"
+                    },
+                    {
+                        "rule_name": "Remote Process Instantiation via WMI",
+                        "rule_link": "https://research.splunk.com/endpoint/d25d2c3d-d9d8-40ec-8fdf-e86fe155a3da/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "b3bdfc91-b33e-4c6d-a5c8-d64bee0276b3",
+                "atomic_attack_name": "WMI Execute Local Process",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_susp_process_creation.yml",
+                        "remote_content": "title: Suspicious Process Created Via Wmic.EXE\nid: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8\nrelated:\n    - id: 526be59f-a573-4eea-b5f7-f0973207634d # Generic\n      type: derived\nstatus: test\ndescription: Detects WMIC executing \"process call create\" with suspicious calls to processes such as \"rundll32\", \"regsrv32\", etc.\nreferences:\n    - https://thedfirreport.com/2020/10/08/ryuks-return/\n    - https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ransomware-hive-conti-avoslocker\nauthor: Florian Roth (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-10-12\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'process '\n            - 'call '\n            - 'create '\n        CommandLine|contains:\n            # Add more susupicious paths and binaries as you see fit in your env\n            - 'rundll32'\n            - 'bitsadmin'\n            - 'regsvr32'\n            - 'cmd.exe /c '\n            - 'cmd.exe /k '\n            - 'cmd.exe /r '\n            - 'cmd /c '\n            - 'cmd /k '\n            - 'cmd /r '\n            - 'powershell'\n            - 'pwsh'\n            - 'certutil'\n            - 'cscript'\n            - 'wscript'\n            - 'mshta'\n            - '\\Users\\Public\\'\n            - '\\Windows\\Temp\\'\n            - '\\AppData\\Local\\'\n            - '%temp%'\n            - '%tmp%'\n            - '%ProgramData%'\n            - '%appdata%'\n            - '%comspec%'\n            - '%localappdata%'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "New Process Created Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml",
+                        "remote_content": "title: New Process Created Via Wmic.EXE\nid: 526be59f-a573-4eea-b5f7-f0973207634d\nrelated:\n    - id: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8 # For suspicious process creation\n      type: derived\nstatus: test\ndescription: Detects new process creation using WMIC via the \"process call create\" flag\nreferences:\n    - https://www.sans.org/blog/wmic-for-incident-response/\n    - https://github.com/redcanaryco/atomic-red-team/blob/84215139ee5127f8e3a117e063b604812bd71928/atomics/T1047/T1047.md#atomic-test-5---wmi-execute-local-process\nauthor: Michael Haag, Florian Roth (Nextron Systems), juju4, oscd.community\ndate: 2019-01-16\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\n    - car.2016-03-002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\wmic.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'process'\n            - 'call'\n            - 'create'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows WMI Process Call Create",
+                        "rule_link": "https://research.splunk.com/endpoint/0661c2de-93de-11ec-9833-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "0fd48ef7-d890-4e93-a533-f7dedd5191d3",
+                "atomic_attack_name": "WMI Reconnaissance List Remote Services",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Service Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_service.yml",
+                        "remote_content": "title: Service Reconnaissance Via Wmic.EXE\nid: 76f55eaa-d27f-4213-9d45-7b0e4b60bbae\nrelated:\n    - id: 68bcd73b-37ef-49cb-95fc-edc809730be6\n      type: similar\nstatus: test\ndescription: |\n    An adversary might use WMI to check if a certain remote service is running on a remote device.\n    When the test completes, a service information will be displayed on the screen if it exists.\n    A common feedback message is that \"No instance(s) Available\" if the service queried is not running.\n    A common error message is \"Node - (provided IP or default) ERROR Description =The RPC server is unavailable\" if the provided remote host is unreachable\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: 'service'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "WMIC Remote Command Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_remote_execution.yml",
+                        "remote_content": "title: WMIC Remote Command Execution\nid: 7773b877-5abb-4a3e-b9c9-fd0369b59b00\nrelated:\n    - id: e42af9df-d90b-4306-b7fb-05c863847ebd\n      type: obsolete\n    - id: 09af397b-c5eb-4811-b2bb-08b3de464ebf\n      type: obsolete\nstatus: test\ndescription: Detects the execution of WMIC to query information on a remote system\nreferences:\n    - https://securelist.com/moonbounce-the-dark-side-of-uefi-firmware/105468/\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: '/node:'\n    filter_localhost:\n        CommandLine|contains:\n            - '/node:127.0.0.1 '\n            - '/node:localhost '\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Remote WMI Command Attempt",
+                        "rule_link": "https://research.splunk.com/endpoint/272df6de-61f1-4784-877c-1fbc3e2d0838/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "c107778c-dcf5-47c5-af2e-1d058a3df3ea",
+                "atomic_attack_name": "WMI Reconnaissance Users",
+                "platform": "Windows",
+                "splunk_rules": [
+                    {
+                        "rule_name": "Local Account Discovery With Wmic",
+                        "rule_link": "https://research.splunk.com/endpoint/4902d7aa-0134-11ec-9d65-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "718aebaa-d0e0-471a-8241-c5afa69c7414",
+                "atomic_attack_name": "WMI Reconnaissance Software",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Windows Hotfix Updates Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_hotfix.yml",
+                        "remote_content": "title: Windows Hotfix Updates Reconnaissance Via Wmic.EXE\nid: dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45\nstatus: test\ndescription: Detects the execution of wmic with the \"qfe\" flag in order to obtain information about installed hotfix updates on the system. This is often used by pentester and attacker enumeration scripts\nreferences:\n    - https://github.com/carlospolop/PEASS-ng/blob/fa0f2e17fbc1d86f1fd66338a40e665e7182501d/winPEAS/winPEASbat/winPEAS.bat\n    - https://sushant747.gitbooks.io/total-oscp-guide/content/privilege_escalation_windows.html\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-06-20\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - OriginalFileName: 'wmic.exe'\n        - Image|endswith: '\\WMIC.exe'\n    selection_cli:\n        CommandLine|contains: ' qfe'\n    condition: all of selection*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1047",
+                "atomic_attack_guid": "5750aa16-0e59-4410-8b9a-8a47ca2788e2",
+                "atomic_attack_name": "WMI Reconnaissance Processes",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Process Reconnaissance Via Wmic.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_wmic_recon_process.yml",
+                        "remote_content": "title: Process Reconnaissance Via Wmic.EXE\nid: 221b251a-357a-49a9-920a-271802777cc0\nstatus: test\ndescription: Detects the execution of \"wmic\" with the \"process\" flag, which adversary might use to list processes running on the compromised host or list installed software hotfixes and patches.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nauthor: frack113\ndate: 2022-01-01\nmodified: 2023-02-14\ntags:\n    - attack.execution\n    - attack.t1047\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\WMIC.exe'\n        - OriginalFileName: 'wmic.exe'\n    selection_cli:\n        CommandLine|contains: 'process'\n    filter_main_creation:\n        CommandLine|contains|all:\n            # Rule id 526be59f-a573-4eea-b5f7-f0973207634d for `wmic process call create #{process_to_execute}`\n            - 'call'\n            - 'create'\n    condition: all of selection* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "a457f232-7df9-491d-898f-b5aabd2cbe2f",
+                    "7707a579-e0d8-4886-a853-ce47e4575aaa",
+                    "b7155193-8a81-4d8f-805d-88de864ca50c",
+                    "614a7e17-5643-4d89-b6fe-f9df1a79641c",
+                    "09af397b-c5eb-4811-b2bb-08b3de464ebf",
+                    "f6c68d5f-e101-4b86-8c84-7d96851fd65c",
+                    "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                    "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                    "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                    "5c463bd0-63bc-41f1-91dc-622168f8e8cf",
+                    "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                    "29fd07fc-9cfd-4331-b7fd-cc18dfa21052",
+                    "ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e",
+                    "058f4380-962d-40a5-afce-50207d36d7e2",
+                    "c3198a27-23a0-4c2c-af19-e5328d49680e",
+                    "8028c2c3-e25a-46e3-827f-bbb5abf181d7",
+                    "b53317a0-8acf-4fd1-8de8-a5401e776b96",
+                    "10c14723-61c7-4c75-92ca-9af245723ad2",
+                    "8d5aca11-22b3-4f22-b7ba-90e60533e1fb",
+                    "671bb7e3-a020-4824-a00e-2ee5b55f385e",
+                    "8a582fe2-0882-4b89-a82a-da6b2dc32937",
+                    "5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf",
+                    "01a5a209-b94c-450b-b7f9-946497d91055",
+                    "8d63dadf-b91b-4187-87b6-34a1114577ea",
+                    "23daeb52-e6eb-493c-8607-c4f0246cb7d8",
+                    "5af54681-df95-4c26-854f-2565e13cfab0",
+                    "493fb4ab-cdcc-4c4f-818c-0e363bd1e4bb",
+                    "518643ba-7d9c-4fa5-9f37-baed36059f6a",
+                    "97b9ce1e-c5ab-11ea-87d0-0242ac130003",
+                    "d21374ff-f574-44a7-9998-4a8c8bf33d7d",
+                    "526be59f-a573-4eea-b5f7-f0973207634d",
+                    "e42af9df-d90b-4306-b7fb-05c863847ebd",
+                    "68050b10-e477-4377-a99b-3721b422d6ef",
+                    "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                    "68bcd73b-37ef-49cb-95fc-edc809730be6",
+                    "9d7ca793-f6bd-471c-8d0f-11e68b2f0d2f",
+                    "0b7163dc-7eee-4960-af17-c0cd517f92da",
+                    "92b0b372-a939-44ed-a11b-5136cf680e27",
+                    "02a470d8-493e-41d9-8367-622460dddbe8",
+                    "3c89a1e8-0fba-449e-8f1b-8409d6267ec8",
+                    "221b251a-357a-49a9-920a-271802777cc0",
+                    "f6d1dd2f-b8ce-40ca-bc23-062efb686b34",
+                    "09658312-bc27-4a3b-91c5-e49ab9046d1b",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                    "dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45",
+                    "692f0bec-83ba-4d04-af7e-e884a96059b6",
+                    "83844185-1c5b-45bc-bcf3-b5bf3084ca5b",
+                    "e1693bc8-7168-4eab-8718-cdcaa68a1738",
+                    "04f5363a-6bca-42ff-be70-0d28bf629ead"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "a457f232-7df9-491d-898f-b5aabd2cbe2f",
+                        "lookup_data": {
+                            "description": "Detects DLL's Loaded Via Word Containing VBA Macros Executing WMI Commands",
+                            "raw": "author: Michael R. (@nahamike01)\ndate: 2019/12/26\ndescription: Detects DLL's Loaded Via Word Containing VBA Macros Executing WMI Commands\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith:\n    - \\wmiutils.dll\n    - \\wbemcomn.dll\n    - \\wbemprox.dll\n    - \\wbemdisp.dll\n    - \\wbemsvc.dll\n    Image|endswith:\n    - \\winword.exe\n    - \\powerpnt.exe\n    - \\excel.exe\n    - \\outlook.exe\nfalsepositives:\n- Possible. Requires further testing.\nid: a457f232-7df9-491d-898f-b5aabd2cbe2f\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nreferences:\n- https://medium.com/threatpunter/detecting-adversary-tradecraft-with-image-load-event-logging-and-eql-8de93338c16\n- https://www.carbonblack.com/2019/04/24/cb-tau-threat-intelligence-notification-emotet-utilizing-wmi-to-launch-powershell-encoded-code/\n- https://media.cert.europa.eu/static/SecurityAdvisories/2019/CERT-EU-SA2019-021.pdf\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: Windows Management Instrumentation DLL Loaded Via Microsoft Word\n",
+                            "sigma:id": "a457f232-7df9-491d-898f-b5aabd2cbe2f",
+                            "title": "Windows Management Instrumentation DLL Loaded Via Microsoft Word",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7707a579-e0d8-4886-a853-ce47e4575aaa",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\` directory over the network and loading it for a WMI DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\`\n  directory over the network and loading it for a WMI DLL Hijack scenario.\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded|endswith: \\wbem\\wbemcomn.dll\n    Image|endswith: \\wmiprvse.exe\nfalsepositives:\n- Unknown\nid: 7707a579-e0d8-4886-a853-ce47e4575aaa\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009173318.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Wmiprvse Wbemcomn DLL Hijack\n",
+                            "sigma:id": "7707a579-e0d8-4886-a853-ce47e4575aaa",
+                            "title": "Wmiprvse Wbemcomn DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b7155193-8a81-4d8f-805d-88de864ca50c",
+                        "lookup_data": {
+                            "description": "Detects a specific PowerShell command line pattern used by the UNC2452 actors as mentioned in Microsoft and Symantec reports",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/01/20\ndescription: Detects a specific PowerShell command line pattern used by the UNC2452\n  actors as mentioned in Microsoft and Symantec reports\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains|all:\n    - Invoke-WMIMethod win32_process -name create -argumentlist\n    - rundll32 c:\\windows\n  selection2:\n    CommandLine|contains|all:\n    - 'wmic /node:'\n    - process call create \"rundll32 c:\\windows\nfalsepositives:\n- Unlikely\nid: b7155193-8a81-4d8f-805d-88de864ca50c\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/solarwinds-raindrop-malware\n- https://www.microsoft.com/security/blog/2020/12/18/analyzing-solorigate-the-compromised-dll-file-that-started-a-sophisticated-cyberattack-and-how-microsoft-defender-helps-protect/\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md#atomic-test-7---create-a-process-using-wmi-query-and-an-encoded-command\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.t1047\ntitle: UNC2452 PowerShell Pattern\n",
+                            "sigma:id": "b7155193-8a81-4d8f-805d-88de864ca50c",
+                            "title": "UNC2452 PowerShell Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "614a7e17-5643-4d89-b6fe-f9df1a79641c",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\` directory over the network and loading it for a WMI DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\`\n  directory over the network and loading it for a WMI DLL Hijack scenario.\ndetection:\n  condition: selection\n  selection:\n    Image: System\n    TargetFilename|endswith: \\wbem\\wbemcomn.dll\nfalsepositives:\n- Unknown\nid: 614a7e17-5643-4d89-b6fe-f9df1a79641c\nlevel: critical\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009173318.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.002\ntitle: Wmiprvse Wbemcomn DLL Hijack - File\n",
+                            "sigma:id": "614a7e17-5643-4d89-b6fe-f9df1a79641c",
+                            "title": "Wmiprvse Wbemcomn DLL Hijack - File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "09af397b-c5eb-4811-b2bb-08b3de464ebf",
+                        "lookup_data": {
+                            "description": "An adversary might use WMI to check if a certain Remote Service is running on a remote device.\nWhen the test completes, a service information will be displayed on the screen if it exists.\nA common feedback message is that \"No instance(s) Available\" if the service queried is not running.\nA common error message is \"Node - (provided IP or default) ERROR Description =The RPC server is unavailable\" if the provided remote host is unreachable\n",
+                            "raw": "author: frack113\ndate: 2022/01/01\ndescription: 'An adversary might use WMI to check if a certain Remote Service is running\n  on a remote device.\n\n  When the test completes, a service information will be displayed on the screen if\n  it exists.\n\n  A common feedback message is that \"No instance(s) Available\" if the service queried\n  is not running.\n\n  A common error message is \"Node - (provided IP or default) ERROR Description =The\n  RPC server is unavailable\" if the provided remote host is unreachable\n\n  '\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - '/node:'\n    - service\n  selection_img:\n  - Image|endswith: \\WMIC.exe\n  - OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nid: 09af397b-c5eb-4811-b2bb-08b3de464ebf\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMI Reconnaissance List Remote Services\n",
+                            "sigma:id": "09af397b-c5eb-4811-b2bb-08b3de464ebf",
+                            "title": "WMI Reconnaissance List Remote Services",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f6c68d5f-e101-4b86-8c84-7d96851fd65c",
+                        "lookup_data": {
+                            "description": "Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\` directory over the network for a WMI DLL Hijack scenario.",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g, Open Threat Research (OTR)\ndate: 2020/10/12\ndescription: Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\`\n  directory over the network for a WMI DLL Hijack scenario.\ndetection:\n  condition: selection and not filter\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    EventID: 5145\n    Provider_Name: Microsoft-Windows-Security-Auditing\n    RelativeTargetName|endswith: \\wbem\\wbemcomn.dll\nfalsepositives:\n- Unknown\nid: f6c68d5f-e101-4b86-8c84-7d96851fd65c\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/02/24\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/08_lateral_movement/WIN-201009173318.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.002\ntitle: T1047 Wmiprvse Wbemcomn DLL Hijack\n",
+                            "sigma:id": "f6c68d5f-e101-4b86-8c84-7d96851fd65c",
+                            "title": "T1047 Wmiprvse Wbemcomn DLL Hijack",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                        "lookup_data": {
+                            "description": "Windows DCE-RPC functions which indicate an execution techniques on the remote system. All credit for the Zeek mapping of the suspicious endpoint/operation field goes to MITRE",
+                            "raw": "author: '@neu5ron, SOC Prime'\ndate: 2020/03/19\ndescription: Windows DCE-RPC functions which indicate an execution techniques on the\n  remote system. All credit for the Zeek mapping of the suspicious endpoint/operation\n  field goes to MITRE\ndetection:\n  condition: 1 of op*\n  op1:\n    endpoint: JobAdd\n    operation: atsvc\n  op10:\n    endpoint: svcctl\n    operation: StartServiceW\n  op2:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcEnableTask\n  op3:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcRegisterTask\n  op4:\n    endpoint: ITaskSchedulerService\n    operation: SchRpcRun\n  op5:\n    endpoint: IWbemServices\n    operation: ExecMethod\n  op6:\n    endpoint: IWbemServices\n    operation: ExecMethodAsync\n  op7:\n    endpoint: svcctl\n    operation: CreateServiceA\n  op8:\n    endpoint: svcctl\n    operation: CreateServiceW\n  op9:\n    endpoint: svcctl\n    operation: StartServiceA\nfalsepositives:\n- Windows administrator tasks or troubleshooting\n- Windows management scripts or software\nid: b640c0b8-87f8-4daa-aef8-95a24261dd1d\nlevel: medium\nlogsource:\n  product: zeek\n  service: dce_rpc\nmodified: 2021/11/27\nreferences:\n- https://github.com/mitre-attack/bzar#indicators-for-attck-execution\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1053.002\n- attack.t1569.002\ntitle: MITRE BZAR Indicators for Execution\n",
+                            "sigma:id": "b640c0b8-87f8-4daa-aef8-95a24261dd1d",
+                            "title": "MITRE BZAR Indicators for Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                        "lookup_data": {
+                            "description": "Detects a suspicious child process of a Microsoft HTML Help system when executing compiled HTML files (.chm)",
+                            "raw": "author: Maxim Pavlunin\ndate: 2020/04/01\ndescription: Detects a suspicious child process of a Microsoft HTML Help system when\n  executing compiled HTML files (.chm)\ndetection:\n  condition: 1 of selection_*\n  selection_1:\n    Image|endswith:\n    - \\cmd.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\regsvr32.exe\n    - \\wmic.exe\n    - \\rundll32.exe\n    - \\MSHTA.EXE\n    - \\CertUtil.exe\n    - \\CertReq.exe\n    - \\MSbuild.exe\n    - \\installutil.exe\n    - \\schtasks.exe\n    - \\msiexec.exe\n    ParentImage:\n    - C:\\Windows\\hh.exe\n    - C:\\Windows\\SysWOW64\\hh.exe\n  selection_2:\n    CommandLine|contains:\n    - .application\n    - \\Downloads\\\n    - \\Content.Outlook\\\n    - \\AppData\\Local\\Temp\\\n    Image|endswith:\n    - \\Windows\\hh.exe\n    - \\Windows\\SysWOW64\\hh.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 52cad028-0ff0-4854-8f67-d25dfcbc78b4\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/24\nreferences:\n- https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/chm-badness-delivers-a-banking-trojan/\n- https://github.com/elastic/protections-artifacts/commit/746086721fd385d9f5c6647cada1788db4aea95f#diff-27939090904026cc396b0b629c8e4314acd6f5dac40a676edbc87f4567b47eb7\n- https://www.ptsecurity.com/ww-en/analytics/pt-esc-threat-intelligence/higaisa-or-winnti-apt-41-backdoors-old-and-new/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1218.001\n- attack.t1218.010\n- attack.t1218.011\n- attack.execution\n- attack.t1059.001\n- attack.t1059.003\n- attack.t1059.005\n- attack.t1059.007\n- attack.t1047\n- attack.t1566\n- attack.t1566.001\n- attack.initial_access\n- attack.t1218\ntitle: HTML Help Shell Spawn\n",
+                            "sigma:id": "52cad028-0ff0-4854-8f67-d25dfcbc78b4",
+                            "title": "HTML Help Shell Spawn",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                        "lookup_data": {
+                            "description": "SectorJ04 Groupâ€™s Increased Activity in 2019",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d6e7aa3-aca4-46cc-b96a-46ac950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1568039252",
+                            "uuid": "5d6e7aa3-aca4-46cc-b96a-46ac950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c463bd0-63bc-41f1-91dc-622168f8e8cf",
+                        "lookup_data": {
+                            "description": "2019-01-21: APT28 Autoit Zebrocy Progression",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c463bd0-63bc-41f1-91dc-622168f8e8cf.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1621849993",
+                            "uuid": "5c463bd0-63bc-41f1-91dc-622168f8e8cf",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                        "lookup_data": {
+                            "description": "Emotet in Depth TTP 10-07-19",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d9b5933-964c-433c-b84f-4c680a2fe004.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1621850615",
+                            "uuid": "5d9b5933-964c-433c-b84f-4c680a2fe004",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "29fd07fc-9cfd-4331-b7fd-cc18dfa21052",
+                        "lookup_data": {
+                            "description": "Detects specific process characteristics of Maze ransomware word document droppers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/05/08\ndescription: Detects specific process characteristics of Maze ransomware word document\n  droppers\ndetection:\n  condition: 1 of selection*\n  selection1:\n    Image|endswith: .tmp\n    ParentImage|endswith: \\WINWORD.exe\n  selection2:\n    CommandLine|endswith: shadowcopy delete\n    Image|endswith: \\wmic.exe\n    ParentImage|contains: \\Temp\\\n  selection3:\n    CommandLine|contains: \\..\\..\\system32\n    CommandLine|endswith: shadowcopy delete\nfalsepositives:\n- Unlikely\nfields:\n- ComputerName\n- User\n- Image\nid: 29fd07fc-9cfd-4331-b7fd-cc18dfa21052\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/06/27\nreferences:\n- https://www.fireeye.com/blog/threat-research/2020/05/tactics-techniques-procedures-associated-with-maze-ransomware-incidents.html\n- https://app.any.run/tasks/51e7185c-52d7-4efb-ac0d-e86340053473/\n- https://app.any.run/tasks/65a79440-373a-4725-8d74-77db9f2abda4/\nstatus: test\ntags:\n- attack.execution\n- attack.t1204.002\n- attack.t1047\n- attack.impact\n- attack.t1490\ntitle: Maze Ransomware\n",
+                            "sigma:id": "29fd07fc-9cfd-4331-b7fd-cc18dfa21052",
+                            "title": "Maze Ransomware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e",
+                        "lookup_data": {
+                            "description": "Detects WMI script event consumers",
+                            "raw": "author: Thomas Patzke\ndate: 2018/03/07\ndescription: Detects WMI script event consumers\ndetection:\n  condition: selection\n  selection:\n    Image: C:\\WINDOWS\\system32\\wbem\\scrcons.exe\n    ParentImage: C:\\Windows\\System32\\svchost.exe\nfalsepositives:\n- Legitimate event consumers\n- Dell computers on some versions register an event consumer that is known to cause\n  false positives when brightness is changed by the corresponding keyboard button\nid: ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/11\nreferences:\n- https://www.eideon.com/2018-03-02-THL03-WMIBackdoors/\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1546.003\ntitle: WMI Persistence - Script Event Consumer\n",
+                            "sigma:id": "ec1d5e28-8f3b-4188-a6f8-6e8df81dc28e",
+                            "title": "WMI Persistence - Script Event Consumer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "058f4380-962d-40a5-afce-50207d36d7e2",
+                        "lookup_data": {
+                            "description": "Detect various execution methods of the CrackMapExec pentesting framework",
+                            "raw": "author: Thomas Patzke\ndate: 2020/05/22\ndescription: Detect various execution methods of the CrackMapExec pentesting framework\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - powershell.exe -exec bypass -noni -nop -w 1 -C \"\n    - 'powershell.exe -noni -nop -w 1 -enc '\n    CommandLine|endswith:\n    - cmd.exe /Q /c * 1> \\\\\\\\*\\\\*\\\\* 2>&1\n    - cmd.exe /C * > \\\\\\\\*\\\\*\\\\* 2>&1\n    - cmd.exe /C * > *\\\\Temp\\\\* 2>&1\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- CommandLine\nid: 058f4380-962d-40a5-afce-50207d36d7e2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/byt3bl33d3r/CrackMapExec\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1053\n- attack.t1059.003\n- attack.t1059.001\n- attack.s0106\ntitle: CrackMapExec Command Execution\n",
+                            "sigma:id": "058f4380-962d-40a5-afce-50207d36d7e2",
+                            "title": "CrackMapExec Command Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c3198a27-23a0-4c2c-af19-e5328d49680e",
+                        "lookup_data": {
+                            "description": "Attempts to detect system changes made by Blue Mockingbird",
+                            "raw": "author: Trent Liffick (@tliffick)\ndate: 2020/05/14\ndescription: Attempts to detect system changes made by Blue Mockingbird\ndetection:\n  condition: sc_cmd or wmic_cmd\n  sc_cmd:\n    CommandLine|contains|all:\n    - sc config\n    - wercplsupporte.dll\n    Image|endswith: \\cmd.exe\n  wmic_cmd:\n    CommandLine|endswith: COR_PROFILER\n    Image|endswith: \\wmic.exe\nfalsepositives:\n- Unknown\nid: c3198a27-23a0-4c2c-af19-e5328d49680e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://redcanary.com/blog/blue-mockingbird-cryptominer/\nrelated:\n- id: ce239692-aa94-41b3-b32f-9cab259c96ea\n  type: merged\nstatus: test\ntags:\n- attack.execution\n- attack.t1112\n- attack.t1047\ntitle: Blue Mockingbird\n",
+                            "sigma:id": "c3198a27-23a0-4c2c-af19-e5328d49680e",
+                            "title": "Blue Mockingbird",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8028c2c3-e25a-46e3-827f-bbb5abf181d7",
+                        "lookup_data": {
+                            "description": "Detects parameters used by WMImplant",
+                            "raw": "author: NVISO\ndate: 2020/03/26\ndescription: Detects parameters used by WMImplant\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - WMImplant\n    - ' change_user '\n    - ' gen_cli '\n    - ' command_exec '\n    - ' disable_wdigest '\n    - ' disable_winrm '\n    - ' enable_wdigest '\n    - ' enable_winrm '\n    - ' registry_mod '\n    - ' remote_posh '\n    - ' sched_job '\n    - ' service_mod '\n    - ' process_kill '\n    - ' active_users '\n    - ' basic_info '\n    - ' power_off '\n    - ' vacant_system '\n    - ' logon_events '\nfalsepositives:\n- Administrative scripts that use the same keywords.\nid: 8028c2c3-e25a-46e3-827f-bbb5abf181d7\nlevel: high\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/FortyNorthSecurity/WMImplant\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1059.001\ntitle: WMImplant Hack Tool\n",
+                            "sigma:id": "8028c2c3-e25a-46e3-827f-bbb5abf181d7",
+                            "title": "WMImplant Hack Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b53317a0-8acf-4fd1-8de8-a5401e776b96",
+                        "lookup_data": {
+                            "description": "Uninstall an application with wmic",
+                            "raw": "author: frac113\ndate: 2022/01/28\ndescription: Uninstall an application with wmic\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains: call uninstall\n  selection_img:\n  - Image|endswith: \\WMIC.exe\n  - OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nid: b53317a0-8acf-4fd1-8de8-a5401e776b96\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md#atomic-test-10---application-uninstall-using-wmic\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMI Uninstall An Application\n",
+                            "sigma:id": "b53317a0-8acf-4fd1-8de8-a5401e776b96",
+                            "title": "WMI Uninstall An Application",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "10c14723-61c7-4c75-92ca-9af245723ad2",
+                        "lookup_data": {
+                            "description": "Detects wmiexec/dcomexec/atexec/smbexec from Impacket framework",
+                            "raw": "author: Ecco, oscd.community, Jonhnathan Ribeiro, Tim Rauch\ndate: 2019/09/03\ndescription: Detects wmiexec/dcomexec/atexec/smbexec from Impacket framework\ndetection:\n  condition: 1 of selection_*\n  selection_atexec:\n    CommandLine|contains|all:\n    - cmd.exe\n    - /C\n    - Windows\\Temp\\\n    - '&1'\n    ParentCommandLine|contains:\n    - svchost.exe -k netsvcs\n    - taskeng.exe\n  selection_other:\n    CommandLine|contains|all:\n    - cmd.exe\n    - /Q\n    - /c\n    - \\\\\\\\127.0.0.1\\\\\n    - '&1'\n    ParentImage|endswith:\n    - \\wmiprvse.exe\n    - \\mmc.exe\n    - \\explorer.exe\n    - \\services.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 10c14723-61c7-4c75-92ca-9af245723ad2\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/wmiexec.py\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/atexec.py\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/smbexec.py\n- https://github.com/SecureAuthCorp/impacket/blob/8b1a99f7c715702eafe3f24851817bb64721b156/examples/dcomexec.py\n- https://www.elastic.co/guide/en/security/current/suspicious-cmd-execution-via-wmi.html\nrelated:\n- id: e31f89f7-36fb-4697-8ab6-48823708353b\n  type: obsoletes\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\n- attack.lateral_movement\n- attack.t1021.003\ntitle: Potential Impacket Lateral Movement Activity\n",
+                            "sigma:id": "10c14723-61c7-4c75-92ca-9af245723ad2",
+                            "title": "Potential Impacket Lateral Movement Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8d5aca11-22b3-4f22-b7ba-90e60533e1fb",
+                        "lookup_data": {
+                            "description": "Detects the creation of the default output filename used by the wmicexec tool",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/02\ndescription: Detects the creation of the default output filename used by the wmicexec\n  tool\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|re: \\\\Windows\\\\__1\\d{9}\\.\\d{1,7}$\nfalsepositives:\n- Unlikely\nid: 8d5aca11-22b3-4f22-b7ba-90e60533e1fb\nlevel: critical\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://www.crowdstrike.com/blog/how-to-detect-and-prevent-impackets-wmiexec/\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1047\ntitle: Wmiexec Default Output File\n",
+                            "sigma:id": "8d5aca11-22b3-4f22-b7ba-90e60533e1fb",
+                            "title": "Wmiexec Default Output File",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "671bb7e3-a020-4824-a00e-2ee5b55f385e",
+                        "lookup_data": {
+                            "description": "Detects non wmiprvse loading WMI modules",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g\ndate: 2019/08/10\ndescription: Detects non wmiprvse loading WMI modules\ndetection:\n  condition: selection and not filter and not filter_generic\n  filter:\n    Image|endswith:\n    - \\WmiPrvSE.exe\n    - \\WmiApSrv.exe\n    - \\svchost.exe\n    - \\DeviceCensus.exe\n    - \\CompatTelRunner.exe\n    - \\sdiagnhost.exe\n    - \\SIHClient.exe\n    - \\ngentask.exe\n    - \\windows\\system32\\taskhostw.exe\n    - \\windows\\system32\\MoUsoCoreWorker.exe\n    - \\windows\\system32\\wbem\\WMIADAP.exe\n    - C:\\Windows\\Sysmon64.exe\n    - C:\\Windows\\Sysmon.exe\n    - C:\\Windows\\System32\\wbem\\unsecapp.exe\n    - \\logman.exe\n    - \\systeminfo.exe\n    - \\nvcontainer.exe\n    - C:\\Windows\\System32\\wbem\\WMIC.exe\n    - \\explorer.exe\n    - \\opera_autoupdate.exe\n    - \\MsMpEng.exe\n    - \\thor64.exe\n    - \\thor.exe\n  filter_generic:\n    Image|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n  selection:\n    ImageLoaded|endswith:\n    - \\wmiclnt.dll\n    - \\WmiApRpl.dll\n    - \\wmiprov.dll\n    - \\wmiutils.dll\n    - \\wbemcomn.dll\n    - \\wbemprox.dll\n    - \\WMINet_Utils.dll\n    - \\wbemsvc.dll\n    - \\fastprox.dll\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- Image\n- ImageLoaded\nid: 671bb7e3-a020-4824-a00e-2ee5b55f385e\nlevel: informational\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/01/12\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/02_execution/WIN-190811201010.html\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMI Modules Loaded\n",
+                            "sigma:id": "671bb7e3-a020-4824-a00e-2ee5b55f385e",
+                            "title": "WMI Modules Loaded",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8a582fe2-0882-4b89-a82a-da6b2dc32937",
+                        "lookup_data": {
+                            "description": "Detects suspicious and uncommon child processes of WmiPrvSE",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng\ndate: 2021/08/23\ndescription: Detects suspicious and uncommon child processes of WmiPrvSE\ndetection:\n  condition: selection_parent and 1 of selection_children_*\n  selection_children_1:\n    Image|endswith:\n    - \\regsvr32.exe\n    - \\rundll32.exe\n    - \\msiexec.exe\n    - \\mshta.exe\n    - \\verclsid.exe\n  selection_children_2:\n    CommandLine|contains:\n    - powershell\n    - pwsh\n    - mshta\n    - rundll32\n    - regsvr32\n    - wscript\n    - cscript\n    Image|endswith: \\cmd.exe\n  selection_parent:\n    ParentImage|endswith: \\wbem\\WmiPrvSE.exe\nfalsepositives:\n- Unknown\nid: 8a582fe2-0882-4b89-a82a-da6b2dc32937\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\n- https://blog.osarmor.com/319/onenote-attachment-delivers-asyncrat-malware/\nrelated:\n- id: 692f0bec-83ba-4d04-af7e-e884a96059b6\n  type: similar\n- id: d21374ff-f574-44a7-9998-4a8c8bf33d7d\n  type: similar\nstatus: test\ntags:\n- attack.execution\n- attack.defense_evasion\n- attack.t1047\n- attack.t1204.002\n- attack.t1218.010\ntitle: Suspicious WmiPrvse Child Process Spawned\n",
+                            "sigma:id": "8a582fe2-0882-4b89-a82a-da6b2dc32937",
+                            "title": "Suspicious WmiPrvse Child Process Spawned",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf",
+                        "lookup_data": {
+                            "description": "2019-01-10: North Korea Lazarus Targeting REDBANC",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1547585075",
+                            "uuid": "5c3c4a6d-15f0-4133-baff-3c2c68f8e8cf",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "01a5a209-b94c-450b-b7f9-946497d91055",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1047",
+                            "mitre-cti:description": "Adversaries may abuse Windows Management Instrumentation (WMI) to execute malicious commands and payloads. WMI is an administration feature that provides a uniform environment to access Windows system components. The WMI service enables both local and remote access, though the latter is facilitated by [Remote Services](https://attack.mitre.org/techniques/T1021) such as [Distributed Component Object Model](https://attack.mitre.org/techniques/T1021/003) (DCOM) and [Windows Remote Management](https://attack.mitre.org/techniques/T1021/006) (WinRM).(Citation: MSDN WMI) Remote WMI over DCOM operates using port 135, whereas WMI over WinRM operates over port 5985 when using HTTP and 5986 for HTTPS.(Citation: MSDN WMI)(Citation: FireEye WMI 2015)\n\nAn adversary can use WMI to interact with local and remote systems and use it as a means to execute various behaviors, such as gathering information for Discovery as well as remote Execution of files as part of Lateral Movement. (Citation: FireEye WMI SANS 2015) (Citation: FireEye WMI 2015)",
+                            "mitre-cti:name": "Windows Management Instrumentation",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['@ionstorm'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--01a5a209-b94c-450b-b7f9-946497d91055', 'created': '2017-05-31T21:30:44.329Z', 'x_mitre_version': '1.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1047', 'url': 'https://attack.mitre.org/techniques/T1047'}, {'source_name': 'FireEye WMI 2015', 'url': 'https://www.fireeye.com/content/dam/fireeye-www/global/en/current-threats/pdfs/wp-windows-management-instrumentation.pdf', 'description': 'Ballenthin, W., et al. (2015). Windows Management Instrumentation (WMI) Offense, Defense, and Forensics. Retrieved March 30, 2016.'}, {'source_name': 'FireEye WMI SANS 2015', 'url': 'https://www.fireeye.com/content/dam/fireeye-www/services/pdfs/sans-dfir-2015.pdf', 'description': \"Devon Kerr. (2015). There's Something About WMI. Retrieved May 4, 2020.\"}, {'source_name': 'MSDN WMI', 'url': 'https://msdn.microsoft.com/en-us/library/aa394582.aspx', 'description': 'Microsoft. (n.d.). Windows Management Instrumentation. Retrieved April 27, 2016.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may abuse Windows Management Instrumentation (WMI) to execute malicious commands and payloads. WMI is an administration feature that provides a uniform environment to access Windows system components. The WMI service enables both local and remote access, though the latter is facilitated by [Remote Services](https://attack.mitre.org/techniques/T1021) such as [Distributed Component Object Model](https://attack.mitre.org/techniques/T1021/003) (DCOM) and [Windows Remote Management](https://attack.mitre.org/techniques/T1021/006) (WinRM).(Citation: MSDN WMI) Remote WMI over DCOM operates using port 135, whereas WMI over WinRM operates over port 5985 when using HTTP and 5986 for HTTPS.(Citation: MSDN WMI)(Citation: FireEye WMI 2015)\\n\\nAn adversary can use WMI to interact with local and remote systems and use it as a means to execute various behaviors, such as gathering information for Discovery as well as remote Execution of files as part of Lateral Movement. (Citation: FireEye WMI SANS 2015) (Citation: FireEye WMI 2015)', 'modified': '2022-04-20T16:25:21.348Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Windows Management Instrumentation', 'x_mitre_detection': 'Monitor network traffic for WMI connections; the use of WMI in environments that do not typically use WMI may be suspect. Perform process monitoring to capture command-line arguments of \"wmic\" and detect commands that are used to perform remote behavior. (Citation: FireEye WMI 2015)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Process: Process Creation', 'Network Traffic: Network Connection Creation', 'Command: Command Execution'], 'x_mitre_remote_support': True, 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8d63dadf-b91b-4187-87b6-34a1114577ea",
+                        "lookup_data": {
+                            "description": "Detects WMI SquiblyTwo Attack with possible renamed WMI by looking for imphash",
+                            "raw": "author: Markus Neis, Florian Roth\ndate: 2019/01/16\ndescription: Detects WMI SquiblyTwo Attack with possible renamed WMI by looking for\n  imphash\ndetection:\n  condition: all of selection_org_* or all of selection_renamed_*\n  selection_org_cli:\n    CommandLine|contains|all:\n    - wmic\n    - format\n    - http\n  selection_org_img:\n  - Image|endswith: \\wmic.exe\n  - OriginalFileName: wmic.exe\n  selection_renamed_flags:\n    CommandLine|contains|all:\n    - 'format:'\n    - http\n  selection_renamed_wmic_imphash:\n  - Imphash:\n    - 1B1A3F43BF37B5BFE60751F2EE2F326E\n    - 37777A96245A3C74EB217308F3546F4C\n    - 9D87C9D67CE724033C0B40CC4CA1B206\n  - Hashes|contains:\n    - IMPHASH=1B1A3F43BF37B5BFE60751F2EE2F326E\n    - IMPHASH=37777A96245A3C74EB217308F3546F4C\n    - IMPHASH=9D87C9D67CE724033C0B40CC4CA1B206\nfalsepositives:\n- Unknown\nid: 8d63dadf-b91b-4187-87b6-34a1114577ea\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/11\nreferences:\n- https://subt0x11.blogspot.ch/2018/04/wmicexe-whitelisting-bypass-hacking.html\n- https://twitter.com/mattifestation/status/986280382042595328\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1047\n- attack.t1220\n- attack.execution\n- attack.t1059.005\n- attack.t1059.007\ntitle: SquiblyTwo Execution\n",
+                            "sigma:id": "8d63dadf-b91b-4187-87b6-34a1114577ea",
+                            "title": "SquiblyTwo Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "23daeb52-e6eb-493c-8607-c4f0246cb7d8",
+                        "lookup_data": {
+                            "description": "This rule will monitor any office apps that spins up a new LOLBin process. This activity is pretty suspicious and should be investigated.",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule), Michael Haag, Christopher Peacock\n  @securepeacock (Update), SCYTHE @scythe_io (Update)\ndate: 2021/08/23\ndescription: This rule will monitor any office apps that spins up a new LOLBin process.\n  This activity is pretty suspicious and should be investigated.\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\regsvr32.exe\n    - \\rundll32.exe\n    - \\msiexec.exe\n    - \\mshta.exe\n    - \\verclsid.exe\n    - \\msdt.exe\n    - \\control.exe\n    - \\msidb.exe\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n    - \\msaccess.exe\n    - \\mspub.exe\n    - \\eqnedt32.exe\n    - \\visio.exe\n    - \\wordpad.exe\n    - \\wordview.exe\nfalsepositives:\n- Unknown\nid: 23daeb52-e6eb-493c-8607-c4f0246cb7d8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/03\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://doublepulsar.com/follina-a-microsoft-office-code-execution-vulnerability-1a47fce5629e\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\n- https://github.com/splunk/security_content/blob/develop/detections/endpoint/office_spawning_control.yml\n- https://twitter.com/andythevariable/status/1576953781581144064?s=20&t=QiJILvK4ZiBdR8RJe24u-A\n- https://www.elastic.co/security-labs/exploring-the-ref2731-intrusion-set\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: New Lolbin Process by Office Applications\n",
+                            "sigma:id": "23daeb52-e6eb-493c-8607-c4f0246cb7d8",
+                            "title": "New Lolbin Process by Office Applications",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5af54681-df95-4c26-854f-2565e13cfab0",
+                        "lookup_data": {
+                            "description": "Detection of logins performed with WMI",
+                            "raw": "author: Thomas Patzke\ndate: 2019/12/04\ndescription: Detection of logins performed with WMI\ndetection:\n  condition: selection\n  selection:\n    EventID: 4624\n    ProcessName|endswith: \\WmiPrvSE.exe\nfalsepositives:\n- Monitoring tools\n- Legitimate system administration\nid: 5af54681-df95-4c26-854f-2565e13cfab0\nlevel: low\nlogsource:\n  product: windows\n  service: security\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\ntitle: Login with WMI\n",
+                            "sigma:id": "5af54681-df95-4c26-854f-2565e13cfab0",
+                            "title": "Login with WMI",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "493fb4ab-cdcc-4c4f-818c-0e363bd1e4bb",
+                        "lookup_data": {
+                            "description": "Detects the WMI Event Consumer service scrcons.exe creating a named pipe",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/09/01\ndescription: Detects the WMI Event Consumer service scrcons.exe creating a named pipe\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\scrcons.exe\nfalsepositives:\n- Unknown\nid: 493fb4ab-cdcc-4c4f-818c-0e363bd1e4bb\nlevel: high\nlogsource:\n  category: pipe_created\n  definition: Note that you have to configure logging for Named Pipe Events in Sysmon\n    config (Event ID 17 and Event ID 18). The basic configuration is in popular sysmon\n    configuration (https://github.com/SwiftOnSecurity/sysmon-config), but it is worth\n    verifying. You can also use other repo, e.g. https://github.com/Neo23x0/sysmon-config,\n    https://github.com/olafhartong/sysmon-modular. How to test detection? You can\n    check powershell script from this site https://svch0st.medium.com/guide-to-named-pipes-and-hunting-for-cobalt-strike-pipes-dc46b2c5f575\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/RiccardoAncarani/LiquidSnake\nstatus: test\ntags:\n- attack.t1047\n- attack.execution\ntitle: WMI Event Consumer Created Named Pipe\n",
+                            "sigma:id": "493fb4ab-cdcc-4c4f-818c-0e363bd1e4bb",
+                            "title": "WMI Event Consumer Created Named Pipe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "518643ba-7d9c-4fa5-9f37-baed36059f6a",
+                        "lookup_data": {
+                            "description": "Initial execution of malicious document calls wmic to execute the file with regsvr32",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule)\ndate: 2021/08/23\ndescription: Initial execution of malicious document calls wmic to execute the file\n  with regsvr32\ndetection:\n  condition: all of selection_*\n  selection_img:\n  - Image|endswith: \\wbem\\WMIC.exe\n  - OriginalFileName: wmic.exe\n  selection_parent:\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\nfalsepositives:\n- Unknown\nid: 518643ba-7d9c-4fa5-9f37-baed36059f6a\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\nrelated:\n- id: e1693bc8-7168-4eab-8718-cdcaa68a1738\n  type: derived\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: WMI Execution Via Office Process\n",
+                            "sigma:id": "518643ba-7d9c-4fa5-9f37-baed36059f6a",
+                            "title": "WMI Execution Via Office Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "97b9ce1e-c5ab-11ea-87d0-0242ac130003",
+                        "lookup_data": {
+                            "description": "Detects blocking of process creations originating from PSExec and WMI commands",
+                            "raw": "author: Bhabesh Raj\ndate: 2020/07/14\ndescription: Detects blocking of process creations originating from PSExec and WMI\n  commands\ndetection:\n  condition: selection\n  selection:\n    EventID: 1121\n    ProcessName|endswith:\n    - \\wmiprvse.exe\n    - \\psexesvc.exe\nfalsepositives:\n- Unknown\nid: 97b9ce1e-c5ab-11ea-87d0-0242ac130003\nlevel: high\nlogsource:\n  definition: 'Requirements:Enabled Block process creations originating from PSExec\n    and WMI commands from Attack Surface Reduction (GUID: d1e49aac-8f56-4280-b9ba-993a6d77406c)'\n  product: windows\n  service: windefend\nmodified: 2022/12/25\nreferences:\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/microsoft-defender-atp/attack-surface-reduction?WT.mc_id=twitter#block-process-creations-originating-from-psexec-and-wmi-commands\n- https://twitter.com/duff22b/status/1280166329660497920\nstatus: test\ntags:\n- attack.execution\n- attack.lateral_movement\n- attack.t1047\n- attack.t1569.002\ntitle: PSExec and WMI Process Creations Block\n",
+                            "sigma:id": "97b9ce1e-c5ab-11ea-87d0-0242ac130003",
+                            "title": "PSExec and WMI Process Creations Block",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d21374ff-f574-44a7-9998-4a8c8bf33d7d",
+                        "lookup_data": {
+                            "description": "Detects wmiprvse spawning processes",
+                            "raw": "author: Roberto Rodriguez @Cyb3rWard0g\ndate: 2019/08/15\ndescription: Detects wmiprvse spawning processes\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_generic:\n  - LogonId:\n    - '0x3e7'\n    - 'null'\n  - User|contains:\n    - AUTHORI\n    - AUTORI\n  - Image|endswith:\n    - \\WmiPrvSE.exe\n    - \\WerFault.exe\n  filter_null:\n    LogonId: null\n  selection:\n    ParentImage|endswith: \\WmiPrvSe.exe\nfalsepositives:\n- Unknown\nid: d21374ff-f574-44a7-9998-4a8c8bf33d7d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://threathunterplaybook.com/notebooks/windows/02_execution/WIN-190810201010.html\nrelated:\n- id: 8a582fe2-0882-4b89-a82a-da6b2dc32937\n  type: similar\n- id: 692f0bec-83ba-4d04-af7e-e884a96059b6\n  type: similar\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\ntitle: WmiPrvSE Spawned A Process\n",
+                            "sigma:id": "d21374ff-f574-44a7-9998-4a8c8bf33d7d",
+                            "title": "WmiPrvSE Spawned A Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "526be59f-a573-4eea-b5f7-f0973207634d",
+                        "lookup_data": {
+                            "description": "Detects WMIC executing suspicious or recon commands",
+                            "raw": "author: Michael Haag, Florian Roth (Nextron Systems), juju4, oscd.community\ndate: 2019/01/16\ndescription: Detects WMIC executing suspicious or recon commands\ndetection:\n  condition: all of selection_* or (selection_img and all of recon_*)\n  recon_part1:\n    CommandLine|contains: ' path '\n  recon_part2:\n    CommandLine|contains:\n    - AntiVirus\n    - Firewall\n    CommandLine|contains|all:\n    - Product\n    - ' get '\n  recon_part3:\n    CommandLine|contains: wmic csproduct get name\n  selection_img:\n  - Image|endswith: \\wmic.exe\n  - OriginalFileName: wmic.exe\n  selection_process_call:\n    CommandLine|contains|all:\n    - process\n    - call\n    - 'create '\nfalsepositives:\n- If using Splunk, we recommend | stats count by Computer,CommandLine following for\n  easy hunting by Computer/CommandLine\nfields:\n- CommandLine\n- ParentCommandLine\nid: 526be59f-a573-4eea-b5f7-f0973207634d\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/29\nreferences:\n- https://digital-forensics.sans.org/blog/2010/06/04/wmic-draft/\n- https://www.hybrid-analysis.com/sample/4be06ecd234e2110bd615649fe4a6fa95403979acf889d7e45a78985eb50acf9?environmentId=1\n- https://blog.malwarebytes.com/threat-analysis/2016/04/rokku-ransomware/\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- car.2016-03-002\ntitle: Suspicious WMIC Execution\n",
+                            "sigma:id": "526be59f-a573-4eea-b5f7-f0973207634d",
+                            "title": "Suspicious WMIC Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e42af9df-d90b-4306-b7fb-05c863847ebd",
+                        "lookup_data": {
+                            "description": "An adversary might use WMI to execute commands on a remote system",
+                            "raw": "author: frack113\ndate: 2022/03/13\ndescription: An adversary might use WMI to execute commands on a remote system\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - '/node:'\n    - process\n    - call\n    - create\n  selection_img:\n  - Image|endswith: \\WMIC.exe\n  - OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nid: e42af9df-d90b-4306-b7fb-05c863847ebd\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/13\nreferences:\n- https://securelist.com/moonbounce-the-dark-side-of-uefi-firmware/105468/\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMI Remote Command Execution\n",
+                            "sigma:id": "e42af9df-d90b-4306-b7fb-05c863847ebd",
+                            "title": "WMI Remote Command Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "68050b10-e477-4377-a99b-3721b422d6ef",
+                        "lookup_data": {
+                            "description": "Detects remote RPC calls that performs remote DCOM operations. These could be abused for lateral movement via DCOM or WMI.",
+                            "raw": "author: Sagie Dulce, Dekel Paz\ndate: 2022/01/01\ndescription: Detects remote RPC calls that performs remote DCOM operations. These\n  could be abused for lateral movement via DCOM or WMI.\ndetection:\n  condition: selection\n  selection:\n    EventID: 3\n    EventLog: RPCFW\n    InterfaceUuid:\n    - 4d9f4ab8-7d1c-11cf-861e-0020af6e7c57\n    - 99fcfec4-5260-101b-bbcb-00aa0021347a\n    - 000001a0-0000-0000-c000-000000000046\n    - 00000131-0000-0000-c000-000000000046\n    - 00000143-0000-0000-c000-000000000046\n    - 00000000-0000-0000-c000-000000000046\nfalsepositives:\n- Some administrative tasks on remote host\nid: 68050b10-e477-4377-a99b-3721b422d6ef\nlevel: high\nlogsource:\n  category: application\n  definition: 'Requirements: install and apply the RPC Firewall to all processes with\n    \"audit:true action:block uuid:367abb81-9844-35f1-ad32-98f038001003'\n  product: rpc_firewall\nmodified: 2022/01/01\nreferences:\n- https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-srvs/accf23b0-0f57-441c-9185-43041f1b0ee9\n- https://github.com/zeronetworks/rpcfirewall\n- https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.t1021.003\n- attack.t1047\ntitle: Remote DCOM/WMI Lateral Movement\n",
+                            "sigma:id": "68050b10-e477-4377-a99b-3721b422d6ef",
+                            "title": "Remote DCOM/WMI Lateral Movement",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - A journey to Zebrocy land",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ce6aa86-9cd8-4302-9dc9-4a59950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1563528054",
+                            "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "68bcd73b-37ef-49cb-95fc-edc809730be6",
+                        "lookup_data": {
+                            "description": "Detects wmic known recon method to look for unquoted service paths, often used by pentest and attackers enum scripts",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/20\ndescription: Detects wmic known recon method to look for unquoted service paths, often\n  used by pentest and attackers enum scripts\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains:\n    - name\n    - displayname\n    - pathname\n    - startmode\n    CommandLine|contains|all:\n    - ' service '\n    - ' get '\n  selection_img:\n  - OriginalFileName: wmic.exe\n  - Image|endswith: \\WMIC.exe\nfalsepositives:\n- Unknown\nid: 68bcd73b-37ef-49cb-95fc-edc809730be6\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/nccgroup/redsnarf/blob/35949b30106ae543dc6f2bc3f1be10c6d9a8d40e/redsnarf.py\n- https://github.com/S3cur3Th1sSh1t/Creds/blob/eac23d67f7f90c7fc8e3130587d86158c22aa398/PowershellScripts/jaws-enum.ps1\n- https://www.absolomb.com/2018-01-26-Windows-Privilege-Escalation-Guide/\nrelated:\n- id: 09658312-bc27-4a3b-91c5-e49ab9046d1b\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMIC Unquoted Services Path Lookup\n",
+                            "sigma:id": "68bcd73b-37ef-49cb-95fc-edc809730be6",
+                            "title": "WMIC Unquoted Services Path Lookup",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9d7ca793-f6bd-471c-8d0f-11e68b2f0d2f",
+                        "lookup_data": {
+                            "description": "Detects execution of wmic utility with the \"computersystem\" flag in order to obtain information about the machine such as the domain, username, model...etc.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/08\ndescription: Detects execution of wmic utility with the \"computersystem\" flag in order\n  to obtain information about the machine such as the domain, username, model...etc.\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - ' computersystem '\n    - ' get '\n  selection_img:\n  - Image|endswith: \\wmic.exe\n  - OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nid: 9d7ca793-f6bd-471c-8d0f-11e68b2f0d2f\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://www.microsoft.com/security/blog/2022/09/07/profiling-dev-0270-phosphorus-ransomware-operations/\nstatus: experimental\ntags:\n- attack.discovery\n- attack.execution\n- attack.t1047\ntitle: Suspicious Get ComputerSystem Information with WMIC\n",
+                            "sigma:id": "9d7ca793-f6bd-471c-8d0f-11e68b2f0d2f",
+                            "title": "Suspicious Get ComputerSystem Information with WMIC",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0b7163dc-7eee-4960-af17-c0cd517f92da",
+                        "lookup_data": {
+                            "description": "Detects usage of wmic to start or stop a service",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/20\ndescription: Detects usage of wmic to start or stop a service\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains:\n    - stopservice\n    - startservice\n    CommandLine|contains|all:\n    - ' service '\n    - ' call '\n  selection_img:\n  - OriginalFileName: wmic.exe\n  - Image|endswith: \\WMIC.exe\nfalsepositives:\n- Unknown\nid: 0b7163dc-7eee-4960-af17-c0cd517f92da\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://sushant747.gitbooks.io/total-oscp-guide/content/privilege_escalation_windows.html\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMIC Service Start/Stop\n",
+                            "sigma:id": "0b7163dc-7eee-4960-af17-c0cd517f92da",
+                            "title": "WMIC Service Start/Stop",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "92b0b372-a939-44ed-a11b-5136cf680e27",
+                        "lookup_data": {
+                            "description": "Attempts to detect system changes made by Blue Mockingbird",
+                            "raw": "author: Trent Liffick (@tliffick)\ndate: 2020/05/14\ndescription: Attempts to detect system changes made by Blue Mockingbird\ndetection:\n  condition: selection\n  selection:\n    EventType: Setvalue\n    TargetObject|endswith: \\CurrentControlSet\\Services\\wercplsupport\\Parameters\\ServiceDll\nfalsepositives:\n- Unknown\nid: 92b0b372-a939-44ed-a11b-5136cf680e27\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/11/26\nreferences:\n- https://redcanary.com/blog/blue-mockingbird-cryptominer/\nrelated:\n- id: c3198a27-23a0-4c2c-af19-e5328d49680e\n  type: derived\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1112\n- attack.t1047\ntitle: Blue Mockingbird - Registry\n",
+                            "sigma:id": "92b0b372-a939-44ed-a11b-5136cf680e27",
+                            "title": "Blue Mockingbird - Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                        "lookup_data": {
+                            "description": "Ransomware Attack Irish on Health Sector",
+                            "link": "http://www.botvrij.eu/data/feed-osint/02a470d8-493e-41d9-8367-622460dddbe8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621676993",
+                            "uuid": "02a470d8-493e-41d9-8367-622460dddbe8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3c89a1e8-0fba-449e-8f1b-8409d6267ec8",
+                        "lookup_data": {
+                            "description": "Detects WMIC executing \"process call create\" with suspicious calls to processes such as \"rundll32\", \"regsrv32\"...etc",
+                            "raw": "author: Florian Roth (Nextron Systems), Nasreddine Bencherchali\ndate: 2020/10/12\ndescription: Detects WMIC executing \"process call create\" with suspicious calls to\n  processes such as \"rundll32\", \"regsrv32\"...etc\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - rundll32\n    - bitsadmin\n    - regsvr32\n    - 'cmd.exe /c '\n    - 'cmd.exe /k '\n    - 'cmd.exe /r '\n    - 'cmd /c '\n    - 'cmd /k '\n    - 'cmd /r '\n    - powershell\n    - pwsh\n    - certutil\n    - cscript\n    - wscript\n    - mshta\n    - \\Users\\Public\\\n    - \\Windows\\Temp\\\n    - \\AppData\\Local\\\n    - '%temp%'\n    - '%tmp%'\n    - '%ProgramData%'\n    - '%appdata%'\n    - '%comspec%'\n    - '%localappdata%'\n    CommandLine|contains|all:\n    - 'process '\n    - 'call '\n    - 'create '\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: 3c89a1e8-0fba-449e-8f1b-8409d6267ec8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/18\nreferences:\n- https://thedfirreport.com/2020/10/08/ryuks-return/\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/ransomware-hive-conti-avoslocker\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\ntitle: Suspicious WMIC Execution - ProcessCallCreate\n",
+                            "sigma:id": "3c89a1e8-0fba-449e-8f1b-8409d6267ec8",
+                            "title": "Suspicious WMIC Execution - ProcessCallCreate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "221b251a-357a-49a9-920a-271802777cc0",
+                        "lookup_data": {
+                            "description": "An adversary might use WMI to list Processes running on the compromised host or list installed Software hotfix and patches.",
+                            "raw": "author: frack113\ndate: 2022/01/01\ndescription: An adversary might use WMI to list Processes running on the compromised\n  host or list installed Software hotfix and patches.\ndetection:\n  condition: all of selection* and not filter\n  filter:\n    CommandLine|contains|all:\n    - call\n    - create\n  selection_cli:\n    CommandLine|contains:\n    - process\n    - qfe\n  selection_img:\n  - Image|endswith: \\WMIC.exe\n  - OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nid: 221b251a-357a-49a9-920a-271802777cc0\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/03\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1047/T1047.md\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/wmic\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMI Process Reconnaissance\n",
+                            "sigma:id": "221b251a-357a-49a9-920a-271802777cc0",
+                            "title": "WMI Process Reconnaissance",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f6d1dd2f-b8ce-40ca-bc23-062efb686b34",
+                        "lookup_data": {
+                            "description": "Detects a suspicious child process of Script Event Consumer (scrcons.exe).",
+                            "raw": "author: Sittikorn S\ndate: 2021/06/21\ndescription: Detects a suspicious child process of Script Event Consumer (scrcons.exe).\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\svchost.exe\n    - \\dllhost.exe\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\wscript.exe\n    - \\cscript.exe\n    - \\schtasks.exe\n    - \\regsvr32.exe\n    - \\mshta.exe\n    - \\rundll32.exe\n    - \\msiexec.exe\n    - \\msbuild.exe\n    ParentImage|endswith: \\scrcons.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- ParentCommandLine\nid: f6d1dd2f-b8ce-40ca-bc23-062efb686b34\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://redcanary.com/blog/child-processes/\n- https://docs.paloaltonetworks.com/cortex/cortex-xdr/cortex-xdr-analytics-alert-reference/cortex-xdr-analytics-alert-reference/scrcons-exe-rare-child-process.html\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: Script Event Consumer Spawning Process\n",
+                            "sigma:id": "f6d1dd2f-b8ce-40ca-bc23-062efb686b34",
+                            "title": "Script Event Consumer Spawning Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "09658312-bc27-4a3b-91c5-e49ab9046d1b",
+                        "lookup_data": {
+                            "description": "Detects known WMI recon method to look for unquoted service paths, often used by pentest inside of powershell scripts attackers enum scripts",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/20\ndescription: Detects known WMI recon method to look for unquoted service paths, often\n  used by pentest inside of powershell scripts attackers enum scripts\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains:\n    - 'Get-WmiObject '\n    - 'gwmi '\n    ScriptBlockText|contains|all:\n    - ' Win32_Service '\n    - Name\n    - DisplayName\n    - PathName\n    - StartMode\nfalsepositives:\n- Unknown\nid: 09658312-bc27-4a3b-91c5-e49ab9046d1b\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/11/25\nreferences:\n- https://github.com/nccgroup/redsnarf/blob/35949b30106ae543dc6f2bc3f1be10c6d9a8d40e/redsnarf.py\n- https://github.com/S3cur3Th1sSh1t/Creds/blob/eac23d67f7f90c7fc8e3130587d86158c22aa398/PowershellScripts/jaws-enum.ps1\n- https://www.absolomb.com/2018-01-26-Windows-Privilege-Escalation-Guide/\nrelated:\n- id: 68bcd73b-37ef-49cb-95fc-edc809730be6\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMIC Unquoted Services Path Lookup - PowerShell\n",
+                            "sigma:id": "09658312-bc27-4a3b-91c5-e49ab9046d1b",
+                            "title": "WMIC Unquoted Services Path Lookup - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45",
+                        "lookup_data": {
+                            "description": "Detects wmic known recon method to look for installed hotfixes, often used by pentest and attackers enum scripts",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/20\ndescription: Detects wmic known recon method to look for installed hotfixes, often\n  used by pentest and attackers enum scripts\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - ' qfe '\n    - ' get '\n    - Caption,Description,HotFixID,InstalledOn\n  selection_img:\n  - OriginalFileName: wmic.exe\n  - Image|endswith: \\WMIC.exe\nfalsepositives:\n- Unknown\nid: dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/carlospolop/PEASS-ng/blob/fa0f2e17fbc1d86f1fd66338a40e665e7182501d/winPEAS/winPEASbat/winPEAS.bat\n- https://sushant747.gitbooks.io/total-oscp-guide/content/privilege_escalation_windows.html\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1047\ntitle: WMIC Hotfix Recon\n",
+                            "sigma:id": "dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45",
+                            "title": "WMIC Hotfix Recon",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "692f0bec-83ba-4d04-af7e-e884a96059b6",
+                        "lookup_data": {
+                            "description": "Detects Powershell as a child of the WmiPrvSE process. Which could be a signe of remote access via WMI",
+                            "raw": "author: Markus Neis @Karneades\ndate: 2019/04/03\ndescription: Detects Powershell as a child of the WmiPrvSE process. Which could be\n  a signe of remote access via WMI\ndetection:\n  condition: all of selection* and not 1 of filter_*\n  filter_null_1:\n    CommandLine: 'null'\n  filter_null_2:\n    CommandLine: null\n  selection_img:\n  - Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n  selection_parent:\n    ParentImage|endswith: \\wmiprvse.exe\nfalsepositives:\n- AppvClient\n- CCM\nid: 692f0bec-83ba-4d04-af7e-e884a96059b6\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://any.run/report/68bc255f9b0db6a0d30a8f2dadfbee3256acfe12497bf93943bc1eab0735e45e/a2385d6f-34f7-403c-90d3-b1f9d2a90a5e\nrelated:\n- id: 8a582fe2-0882-4b89-a82a-da6b2dc32937\n  type: similar\n- id: d21374ff-f574-44a7-9998-4a8c8bf33d7d\n  type: similar\nstatus: stable\ntags:\n- attack.execution\n- attack.t1047\n- attack.t1059.001\ntitle: WmiPrvSE Spawned PowerShell\n",
+                            "sigma:id": "692f0bec-83ba-4d04-af7e-e884a96059b6",
+                            "title": "WmiPrvSE Spawned PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "83844185-1c5b-45bc-bcf3-b5bf3084ca5b",
+                        "lookup_data": {
+                            "description": "Detects suspicious encoded payloads in WMI Event Consumers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/09/01\ndescription: Detects suspicious encoded payloads in WMI Event Consumers\ndetection:\n  condition: selection_destination\n  selection_destination:\n    Destination|base64offset|contains:\n    - WriteProcessMemory\n    - This program cannot be run in DOS mode\n    - This program must be run under Win32\nfalsepositives:\n- Unknown\nfields:\n- User\n- Operation\nid: 83844185-1c5b-45bc-bcf3-b5bf3084ca5b\nlevel: high\nlogsource:\n  category: wmi_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/RiccardoAncarani/LiquidSnake\nstatus: test\ntags:\n- attack.execution\n- attack.t1047\n- attack.persistence\n- attack.t1546.003\ntitle: Suspicious Encoded Scripts in a WMI Consumer\n",
+                            "sigma:id": "83844185-1c5b-45bc-bcf3-b5bf3084ca5b",
+                            "title": "Suspicious Encoded Scripts in a WMI Consumer",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e1693bc8-7168-4eab-8718-cdcaa68a1738",
+                        "lookup_data": {
+                            "description": "Office application called wmic to proxye execution through a LOLBIN process. This is often used to break suspicious parent-child chain (Office app spawns LOLBin).",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule)\ndate: 2021/08/23\ndescription: Office application called wmic to proxye execution through a LOLBIN process.\n  This is often used to break suspicious parent-child chain (Office app spawns LOLBin).\ndetection:\n  condition: all of selection_*\n  selection_parent:\n    CommandLine|contains:\n    - regsvr32\n    - rundll32\n    - msiexec\n    - mshta\n    - verclsid\n    CommandLine|contains|all:\n    - process\n    - create\n    - call\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n  selection_wmic:\n  - Image|endswith: \\wbem\\WMIC.exe\n  - OriginalFileName: wmic.exe\nfalsepositives:\n- Unknown\nid: e1693bc8-7168-4eab-8718-cdcaa68a1738\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\nrelated:\n- id: 518643ba-7d9c-4fa5-9f37-baed36059f6a\n  type: derived\n- id: 9d1c72f5-43f0-4da5-9320-648cf2099dd0\n  type: obsoletes\n- id: c0e1c3d5-4381-4f18-8145-2583f06a1fe5\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: Suspicious WMI Execution Via Office Process\n",
+                            "sigma:id": "e1693bc8-7168-4eab-8718-cdcaa68a1738",
+                            "title": "Suspicious WMI Execution Via Office Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "04f5363a-6bca-42ff-be70-0d28bf629ead",
+                        "lookup_data": {
+                            "description": "Initial execution of malicious document calls wmic to execute the file with regsvr32",
+                            "raw": "author: Vadim Khrykov (ThreatIntel), Cyb3rEng (Rule)\ndate: 2021/08/23\ndescription: Initial execution of malicious document calls wmic to execute the file\n  with regsvr32\ndetection:\n  condition: all of selection*\n  selection1:\n  - Image|endswith: \\wbem\\WMIC.exe\n  - CommandLine|contains: 'wmic '\n  selection2:\n    ParentImage|endswith:\n    - \\winword.exe\n    - \\excel.exe\n    - \\powerpnt.exe\n    - \\msaccess.exe\n    - \\mspub.exe\n    - \\eqnedt32.exe\n    - \\visio.exe\nfalsepositives:\n- Unknown\nid: 04f5363a-6bca-42ff-be70-0d28bf629ead\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://github.com/vadim-hunter/Detection-Ideas-Rules/blob/02bcbfc2bfb8b4da601bb30de0344ae453aa1afe/Threat%20Intelligence/The%20DFIR%20Report/20210329_Sodinokibi_(aka_REvil)_Ransomware.yaml\nstatus: experimental\ntags:\n- attack.t1204.002\n- attack.t1047\n- attack.t1218.010\n- attack.execution\n- attack.defense_evasion\ntitle: Office Applications Spawning Wmi Cli Alternate\n",
+                            "sigma:id": "04f5363a-6bca-42ff-be70-0d28bf629ead",
+                            "title": "Office Applications Spawning Wmi Cli Alternate",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1047",
+                "display_name": "Windows Management Instrumentation",
+                "atomic_tests": [
+                    {
+                        "name": "WMI Reconnaissance Users",
+                        "auto_generated_guid": "c107778c-dcf5-47c5-af2e-1d058a3df3ea",
+                        "description": "An adversary might use WMI to list all local User Accounts. \nWhen the test completes , there should be local user accounts information displayed on the command line.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "wmic useraccount get /ALL /format:csv\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "WMI Reconnaissance Processes",
+                        "auto_generated_guid": "5750aa16-0e59-4410-8b9a-8a47ca2788e2",
+                        "description": "An adversary might use WMI to list Processes running on the compromised host.\nWhen the test completes , there should be running processes listed on the command line.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "wmic process get caption,executablepath,commandline /format:csv\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "WMI Reconnaissance Software",
+                        "auto_generated_guid": "718aebaa-d0e0-471a-8241-c5afa69c7414",
+                        "description": "An adversary might use WMI to list installed Software hotfix and patches.\nWhen the test completes, there should be a list of installed patches and when they were installed.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "wmic qfe get description,installedOn /format:csv\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "WMI Reconnaissance List Remote Services",
+                        "auto_generated_guid": "0fd48ef7-d890-4e93-a533-f7dedd5191d3",
+                        "description": "An adversary might use WMI to check if a certain Remote Service is running on a remote device. \nWhen the test completes, a service information will be displayed on the screen if it exists.\nA common feedback message is that \"No instance(s) Available\" if the service queried is not running.\nA common error message is \"Node - (provided IP or default)  ERROR Description =The RPC server is unavailable\" \nif the provided remote host is unreachable\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "node": {
+                                "description": "Ip Address",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "service_search_string": {
+                                "description": "Name Of Service",
+                                "type": "string",
+                                "default": "Spooler"
+                            }
+                        },
+                        "executor": {
+                            "command": "wmic /node:\"#{node}\" service where (caption like \"%#{service_search_string}%\")\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "WMI Execute Local Process",
+                        "auto_generated_guid": "b3bdfc91-b33e-4c6d-a5c8-d64bee0276b3",
+                        "description": "This test uses wmic.exe to execute a process on the local host.\nWhen the test completes , a new process will be started locally .A notepad application will be started when input is left on default.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "process_to_execute": {
+                                "description": "Name or path of process to execute.",
+                                "type": "string",
+                                "default": "notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "wmic process call create #{process_to_execute}\n",
+                            "cleanup_command": "wmic process where name='#{process_to_execute}' delete >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "WMI Execute Remote Process",
+                        "auto_generated_guid": "9c8ef159-c666-472f-9874-90c8d60d136b",
+                        "description": "This test uses wmic.exe to execute a process on a remote host. Specify a valid value for remote IP using the node parameter.\nTo clean up, provide the same node input as the one provided to run the test\nA common error message is \"Node - (provided IP or default)  ERROR Description =The RPC server is unavailable\" if the default or provided IP is unreachable\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "node": {
+                                "description": "Ip Address",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "user_name": {
+                                "description": "Username",
+                                "type": "string",
+                                "default": "DOMAIN\\Administrator"
+                            },
+                            "password": {
+                                "description": "Password",
+                                "type": "string",
+                                "default": "P@ssw0rd1"
+                            },
+                            "process_to_execute": {
+                                "description": "Name or path of process to execute.",
+                                "type": "string",
+                                "default": "notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "wmic /user:#{user_name} /password:#{password} /node:\"#{node}\" process call create #{process_to_execute}\n",
+                            "cleanup_command": "wmic /user:#{user_name} /password:#{password} /node:\"#{node}\" process where name='#{process_to_execute}' delete >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Create a Process using WMI Query and an Encoded Command",
+                        "auto_generated_guid": "7db7a7f9-9531-4840-9b30-46220135441c",
+                        "description": "Solarigate persistence is achieved via backdoors deployed via various techniques including using PowerShell with an EncodedCommand\n Powershell -nop -exec bypass -EncodedCommand <encoded command>\nWhere the –EncodedCommand, once decoded, would resemble:\n  Invoke-WMIMethod win32_process -name create -argumentlist ‘rundll32 c:\\windows\\idmu\\common\\ypprop.dll _XInitImageFuncPtrs’ -ComputerName WORKSTATION\nThe EncodedCommand in this atomic is the following: Invoke-WmiMethod -Path win32_process -Name create -ArgumentList notepad.exe\nYou should expect to see notepad.exe running after execution of this test.\n[Solarigate Analysis from Microsoft](https://www.microsoft.com/security/blog/2020/12/18/analyzing-solorigate-the-compromised-dll-file-that-started-a-sophisticated-cyberattack-and-how-microsoft-defender-helps-protect/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "powershell -exec bypass -e SQBuAHYAbwBrAGUALQBXAG0AaQBNAGUAdABoAG8AZAAgAC0AUABhAHQAaAAgAHcAaQBuADMAMgBfAHAAcgBvAGMAZQBzAHMAIAAtAE4AYQBtAGUAIABjAHIAZQBhAHQAZQAgAC0AQQByAGcAdQBtAGUAbgB0AEwAaQBzAHQAIABuAG8AdABlAHAAYQBkAC4AZQB4AGUA\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Create a Process using obfuscated Win32_Process",
+                        "auto_generated_guid": "10447c83-fc38-462a-a936-5102363b1c43",
+                        "description": "This test tries to mask process creation by creating a new class that inherits from Win32_Process. Indirect call of suspicious method such as Win32_Process::Create can break detection logic.\n[Cybereason blog post No Win32_ProcessNeeded](https://www.cybereason.com/blog/wmi-lateral-movement-win32)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "new_class": {
+                                "description": "Derived class name",
+                                "type": "string",
+                                "default": "Win32_Atomic"
+                            },
+                            "process_to_execute": {
+                                "description": "Name or path of process to execute.",
+                                "type": "string",
+                                "default": "notepad.exe"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": true,
+                            "command": "$Class = New-Object Management.ManagementClass(New-Object Management.ManagementPath(\"Win32_Process\"))\n$NewClass = $Class.Derive(\"#{new_class}\")\n$NewClass.Put()\nInvoke-WmiMethod -Path #{new_class} -Name create -ArgumentList #{process_to_execute}\n",
+                            "cleanup_command": "$CleanupClass = New-Object Management.ManagementClass(New-Object Management.ManagementPath(\"#{new_class}\"))\ntry { $CleanupClass.Delete() } catch {}\n"
+                        }
+                    },
+                    {
+                        "name": "WMI Execute rundll32",
+                        "auto_generated_guid": "00738d2a-4651-4d76-adf2-c43a41dfb243",
+                        "description": "This test uses wmic.exe to execute a DLL function using rundll32. Specify a valid value for remote IP using the node parameter.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "node": {
+                                "description": "Ip Address",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "dll_to_execute": {
+                                "description": "Path to DLL.",
+                                "type": "string",
+                                "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\calc.dll"
+                            },
+                            "function_to_execute": {
+                                "description": "Name of DLL function to call",
+                                "type": "string",
+                                "default": "StartW"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "DLL with function to execute must exist on disk at specified location (#{dll_to_execute})",
+                                "prereq_command": "if (Test-Path \"#{dll_to_execute}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1047/bin/calc.dll?raw=true\" -OutFile \"#{dll_to_execute}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "wmic /node:#{node} process call create \"rundll32.exe \\\"#{dll_to_execute}\\\" #{function_to_execute}\"\n",
+                            "cleanup_command": "taskkill /f /im calculator.exe",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Application uninstall using WMIC",
+                        "auto_generated_guid": "c510d25b-1667-467d-8331-a56d3e9bc4ff",
+                        "description": "Emulates uninstalling  applications using WMIC.  This method only works if the product was installed with an msi file.  APTs have been seen using this to uninstall security products.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "node": {
+                                "description": "Computer the action is being executed against but defaults to the localhost.",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "product": {
+                                "description": "Enter the product name being uninstalled.  This will default to TightVNC.",
+                                "type": "string",
+                                "default": "Tightvnc"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "TightVNC must be installed.",
+                                "prereq_command": "if ((Test-Path \"C:\\Program Files\\TightVNC\\tvnviewer.exe\")-Or (Test-Path \"C:\\Program Files (x86)\\TightVNC\\tvnviewer.exe\")) {exit 0} else {exit 1}",
+                                "get_prereq_command": "Invoke-WebRequest 'https://www.tightvnc.com/download/2.8.63/tightvnc-2.8.63-gpl-setup-64bit.msi' -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\tightvncinstaller.msi\"\nstart-sleep -s 10\nmsiexec /i \"PathToAtomicsFolder\\..\\ExternalPayloads\\tightvncinstaller.msi\" /qn /norestart\nstart-sleep -s 15"
+                            }
+                        ],
+                        "executor": {
+                            "command": "wmic /node:\"#{node}\" product where \"name like '#{product}%%'\" call uninstall",
+                            "cleanup_command": "msiexec /i \"PathToAtomicsFolder\\..\\ExternalPayloads\\tightvncinstaller.msi\" /qn /norestart",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:31:18"
+}

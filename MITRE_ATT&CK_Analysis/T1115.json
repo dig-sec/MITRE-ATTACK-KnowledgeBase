@@ -1,0 +1,275 @@
+{
+    "id": "T1115",
+    "name": "Clipboard Data",
+    "description": "Adversaries may collect data stored in the clipboard from users copying information within or between applications.\nIn Windows, Applications can access clipboard data by using the Windows API.(Citation: MSDN Clipboard) OSX provides a native command, `pbpaste`, to grab clipboard contents.(Citation: Operating with EmPyre)",
+    "platforms": "Linux, Windows, macOS",
+    "kill_chain_phases": "Collection",
+    "data_sources": "Process: OS API Execution, Command: Command Execution",
+    "detection": "Access to the clipboard is a legitimate function of many applications on an operating system. If an organization chooses to monitor for this behavior, then the data will likely need to be correlated against other suspicious or non-user-driven activity.",
+    "url": "https://attack.mitre.org/techniques/T1115",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1115",
+                "atomic_attack_guid": "0cd14633-58d4-4422-9ede-daa2c9474ae7",
+                "atomic_attack_name": "Utilize Clipboard to store or execute commands from",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Read Contents From Stdin Via Cmd.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_stdin_redirect.yml",
+                        "remote_content": "title: Read Contents From Stdin Via Cmd.EXE\nid: 241e802a-b65e-484f-88cd-c2dc10f9206d\nrelated:\n    - id: 00a4bacd-6db4-46d5-9258-a7d5ebff4003\n      type: obsolete\nstatus: test\ndescription: Detect the use of \"<\" to read and potentially execute a file via cmd.exe\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/40b77d63808dd4f4eafb83949805636735a1fd15/atomics/T1059.003/T1059.003.md\n    - https://web.archive.org/web/20220306121156/https://www.x86matthew.com/view_post?id=ntdll_pipe\nauthor: frack113, Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-03-07\ntags:\n    - attack.execution\n    - attack.t1059.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        - OriginalFileName: 'Cmd.Exe'\n        - Image|endswith: '\\cmd.exe'\n    selection_cli:\n        CommandLine|contains: '<'\n    condition: all of selection_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potentially Suspicious CMD Shell Output Redirect",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_cmd_redirection_susp_folder.yml",
+                        "remote_content": "title: Potentially Suspicious CMD Shell Output Redirect\nid: 8e0bb260-d4b2-4fff-bb8d-3f82118e6892\nrelated:\n    - id: aa2efee7-34dd-446e-8a37-40790a66efd7\n      type: derived\n    - id: 4f4eaa9f-5ad4-410c-a4be-bc6132b0175a\n      type: similar\nstatus: test\ndescription: |\n    Detects inline Windows shell commands redirecting output via the \">\" symbol to a suspicious location.\n    This technique is sometimes used by malicious actors in order to redirect the output of reconnaissance commands such as \"hostname\" and \"dir\" to files for future exfiltration.\nreferences:\n    - https://thedfirreport.com/2022/07/11/select-xmrig-from-sqlserver/\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-12\nmodified: 2024-03-19\ntags:\n    - attack.defense-evasion\n    - attack.t1218\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cli_1:\n        CommandLine|contains:\n            # Note: Add more suspicious locations as you find them\n            # Note: The space from the start is missing to cover append operations \">>\"\n            # Note: We use the \"?\" to account for both a single and a double quote\n            # Note: If you want to account for more spaces which is still a valid bypass option. Use a regex with \"\\s\"\n            - '>?%APPDATA%\\'\n            - '>?%TEMP%\\'\n            - '>?%TMP%\\'\n            - '>?%USERPROFILE%\\'\n            - '>?C:\\ProgramData\\'\n            - '>?C:\\Temp\\'\n            - '>?C:\\Users\\Public\\'\n            - '>?C:\\Windows\\Temp\\'\n    selection_cli_2:\n        CommandLine|contains:\n            - ' >'\n            - '\">'\n            - \"'>\"\n        CommandLine|contains|all:\n            - 'C:\\Users\\'\n            - '\\AppData\\Local\\'\n    condition: selection_img and 1 of selection_cli_*\nfalsepositives:\n    - Legitimate admin or third party scripts used for diagnostic collection might generate some false positives\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "30973a08-aed9-4edf-8604-9084ce1b5c4f",
+                    "4cbd4f12-2e22-43e3-882f-bff3247ffb78",
+                    "b9aeac14-2ffd-4ad3-b967-1354a4e628c3",
+                    "ddeff553-5233-4ae9-bbab-d64d2bd634be",
+                    "19edfa02-1a5f-47e4-ad82-3288f57f64cf",
+                    "7794fa3c-edea-4cff-bec7-267dd4770fd7",
+                    "ec127035-a636-4b9a-8555-0efd4e59f316",
+                    "5486f63a-aa4c-488d-9a61-c9192853099f",
+                    "214e7e6c-f21b-47ff-bb6f-551b2d143fcf",
+                    "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                    "5d498330-f574-4889-bcc9-c53c950d210f",
+                    "f200dc3f-b219-425d-a17e-c38467364816"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "30973a08-aed9-4edf-8604-9084ce1b5c4f",
+                        "lookup_data": {
+                            "capec": "CAPEC-637",
+                            "mitre-attack-id": "T1115",
+                            "mitre-cti:description": "Adversaries may collect data stored in the clipboard from users copying information within or between applications. \n\nIn Windows, Applications can access clipboard data by using the Windows API.(Citation: MSDN Clipboard) OSX provides a native command, <code>pbpaste</code>, to grab clipboard contents.(Citation: Operating with EmPyre)",
+                            "mitre-cti:name": "Clipboard Data",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'Windows', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--30973a08-aed9-4edf-8604-9084ce1b5c4f', 'type': 'attack-pattern', 'created': '2017-05-31T21:31:25.967Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1115', 'url': 'https://attack.mitre.org/techniques/T1115'}, {'external_id': 'CAPEC-637', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/637.html'}, {'url': 'https://msdn.microsoft.com/en-us/library/ms649012', 'description': 'Microsoft. (n.d.). About the Clipboard. Retrieved March 29, 2016.', 'source_name': 'MSDN Clipboard'}, {'url': 'https://medium.com/rvrsh3ll/operating-with-empyre-ea764eda3363', 'description': 'rvrsh3ll. (2016, May 18). Operating with EmPyre. Retrieved July 12, 2017.', 'source_name': 'Operating with EmPyre'}], 'modified': '2020-04-23T18:35:58.230Z', 'name': 'Clipboard Data', 'description': 'Adversaries may collect data stored in the clipboard from users copying information within or between applications. \\n\\nIn Windows, Applications can access clipboard data by using the Windows API.(Citation: MSDN Clipboard) OSX provides a native command, <code>pbpaste</code>, to grab clipboard contents.(Citation: Operating with EmPyre)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}], 'x_mitre_detection': 'Access to the clipboard is a legitimate function of many applications on an operating system. If an organization chooses to monitor for this behavior, then the data will likely need to be correlated against other suspicious or non-user-driven activity.', 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: OS API Execution', 'Command: Command Execution'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4cbd4f12-2e22-43e3-882f-bff3247ffb78",
+                        "lookup_data": {
+                            "description": "A General detection for the Get-Clipboard commands in PowerShell logs. This could be an adversary capturing clipboard contents.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection for the Get-Clipboard commands in PowerShell logs.\n  This could be an adversary capturing clipboard contents.\ndetection:\n  condition: selection\n  selection:\n    Payload|contains: Get-Clipboard\nfalsepositives:\n- Unknown\nid: 4cbd4f12-2e22-43e3-882f-bff3247ffb78\nlevel: medium\nlogsource:\n  category: ps_module\n  definition: 'Requirements: PowerShell Module Logging must be enabled'\n  product: windows\nmodified: 2023/01/04\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/16\n- https://threathunterplaybook.com/evals/apt29/detections/7.A.2_F4609F7E-C4DB-4327-91D4-59A58C962A02.html\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1115\ntitle: PowerShell Get Clipboard\n",
+                            "sigma:id": "4cbd4f12-2e22-43e3-882f-bff3247ffb78",
+                            "title": "PowerShell Get Clipboard",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b9aeac14-2ffd-4ad3-b967-1354a4e628c3",
+                        "lookup_data": {
+                            "description": "Detects usage of the 'Get-Clipboard' cmdlet via CLI",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2020/05/02\ndescription: Detects usage of the 'Get-Clipboard' cmdlet via CLI\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: Get-Clipboard\nfalsepositives:\n- Unknown\nid: b9aeac14-2ffd-4ad3-b967-1354a4e628c3\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/16\n- https://threathunterplaybook.com/evals/apt29/detections/7.A.2_F4609F7E-C4DB-4327-91D4-59A58C962A02.html\nrelated:\n- id: 4cbd4f12-2e22-43e3-882f-bff3247ffb78\n  type: derived\nstatus: test\ntags:\n- attack.collection\n- attack.t1115\ntitle: PowerShell Get-Clipboard Cmdlet Via CLI\n",
+                            "sigma:id": "b9aeac14-2ffd-4ad3-b967-1354a4e628c3",
+                            "title": "PowerShell Get-Clipboard Cmdlet Via CLI",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ddeff553-5233-4ae9-bbab-d64d2bd634be",
+                        "lookup_data": {
+                            "description": "Adversaries may collect data stored in the clipboard from users copying information within or between applications.",
+                            "raw": "author: frack113\ndate: 2021/07/27\ndescription: Adversaries may collect data stored in the clipboard from users copying\n  information within or between applications.\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\clip.exe\n  - OriginalFileName: clip.exe\nfalsepositives:\n- Unknown\nid: ddeff553-5233-4ae9-bbab-d64d2bd634be\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/clip\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1115/T1115.md\nstatus: test\ntags:\n- attack.collection\n- attack.t1115\ntitle: Use of CLIP\n",
+                            "sigma:id": "ddeff553-5233-4ae9-bbab-d64d2bd634be",
+                            "title": "Use of CLIP",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "19edfa02-1a5f-47e4-ad82-3288f57f64cf",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1115",
+                            "mitre-cti:description": "Instead of blocking software based on clipboard capture behavior, identify potentially malicious software that may contain this functionality, and audit and/or block it by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Clipboard Data Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--19edfa02-1a5f-47e4-ad82-3288f57f64cf', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1115', 'url': 'https://attack.mitre.org/mitigations/T1115', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'https://blogs.jpcert.or.jp/en/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2021-08-23T20:25:19.205Z', 'name': 'Clipboard Data Mitigation', 'description': 'Instead of blocking software based on clipboard capture behavior, identify potentially malicious software that may contain this functionality, and audit and/or block it by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7794fa3c-edea-4cff-bec7-267dd4770fd7",
+                        "lookup_data": {
+                            "description": "Detects possible collection of data from the clipboard via execution of the osascript binary",
+                            "raw": "author: Sohan G (D4rkCiph3r)\ndate: 2023/01/31\ndescription: Detects possible collection of data from the clipboard via execution\n  of the osascript binary\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - osascript\n    - ' -e '\n    - clipboard\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\nid: 7794fa3c-edea-4cff-bec7-267dd4770fd7\nlevel: high\nlogsource:\n  category: process_creation\n  product: macos\nreferences:\n- https://www.sentinelone.com/blog/how-offensive-actors-use-applescript-for-attacking-macos/\nrelated:\n- id: 1bc2e6c5-0885-472b-bed6-be5ea8eace55\n  type: derived\nstatus: experimental\ntags:\n- attack.collection\n- attack.execution\n- attack.t1115\n- attack.t1059.002\ntitle: Clipboard Data Collection Via OSAScript\n",
+                            "sigma:id": "7794fa3c-edea-4cff-bec7-267dd4770fd7",
+                            "title": "Clipboard Data Collection Via OSAScript",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ec127035-a636-4b9a-8555-0efd4e59f316",
+                        "lookup_data": {
+                            "description": "Detects attempts to collect data stored in the clipboard from users with the usage of xclip tool. Xclip has to be installed.\nHighly recommended using rule on servers, due to high usage of clipboard utilities on user workstations.\n",
+                            "raw": "author: Pawel Mazur, Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research),\n  MSTIC\ndate: 2021/10/15\ndescription: 'Detects attempts to collect data stored in the clipboard from users\n  with the usage of xclip tool. Xclip has to be installed.\n\n  Highly recommended using rule on servers, due to high usage of clipboard utilities\n  on user workstations.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - -sel\n    - clip\n    - -o\n    Image|contains: xclip\nfalsepositives:\n- Legitimate usage of xclip tools.\nid: ec127035-a636-4b9a-8555-0efd4e59f316\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/09/15\nreferences:\n- https://www.packetlabs.net/posts/clipboard-data-security/\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1115\ntitle: Clipboard Collection with Xclip Tool\n",
+                            "sigma:id": "ec127035-a636-4b9a-8555-0efd4e59f316",
+                            "title": "Clipboard Collection with Xclip Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5486f63a-aa4c-488d-9a61-c9192853099f",
+                        "lookup_data": {
+                            "description": "A General detection for the Get-Clipboard commands in PowerShell logs. This could be an adversary capturing clipboard contents.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection for the Get-Clipboard commands in PowerShell logs.\n  This could be an adversary capturing clipboard contents.\ndetection:\n  condition: selection1 or selection2\n  selection1:\n    EventID: 4104\n    ScriptBlockText|contains: Get-Clipboard\n  selection2:\n    EventID: 4103\n    Payload|contains: Get-Clipboard\nfalsepositives:\n- unknown\nid: 5486f63a-aa4c-488d-9a61-c9192853099f\nlevel: medium\nlogsource:\n  product: windows\n  service: powershell\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/16\n- https://threathunterplaybook.com/evals/apt29/detections/7.A.2_F4609F7E-C4DB-4327-91D4-59A58C962A02.html\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1115\ntitle: PowerShell Get Clipboard\n",
+                            "sigma:id": "5486f63a-aa4c-488d-9a61-c9192853099f",
+                            "title": "PowerShell Get Clipboard",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "214e7e6c-f21b-47ff-bb6f-551b2d143fcf",
+                        "lookup_data": {
+                            "description": "Detects attempts to collect data stored in the clipboard from users with the usage of xclip tool.\nXclip has to be installed.\nHighly recommended using rule on servers, due to high usage of clipboard utilities on user workstations.\n",
+                            "raw": "author: Pawel Mazur\ndate: 2021/09/24\ndescription: 'Detects attempts to collect data stored in the clipboard from users\n  with the usage of xclip tool.\n\n  Xclip has to be installed.\n\n  Highly recommended using rule on servers, due to high usage of clipboard utilities\n  on user workstations.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    a0: xclip\n    a1:\n    - -selection\n    - -sel\n    a2:\n    - clipboard\n    - clip\n    a3: -o\n    type: EXECVE\nfalsepositives:\n- Legitimate usage of xclip tools\nid: 214e7e6c-f21b-47ff-bb6f-551b2d143fcf\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/11/26\nreferences:\n- https://linux.die.net/man/1/xclip\n- https://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/\nstatus: test\ntags:\n- attack.collection\n- attack.t1115\ntitle: Clipboard Collection with Xclip Tool - Auditd\n",
+                            "sigma:id": "214e7e6c-f21b-47ff-bb6f-551b2d143fcf",
+                            "title": "Clipboard Collection with Xclip Tool - Auditd",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                        "lookup_data": {
+                            "description": "Malware analysis report on SparrowDoor malware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/827e941e-4a99-4e2c-a578-bfcec2d40552.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1650959349",
+                            "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - Sharpening the Machete",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5d498330-f574-4889-bcc9-c53c950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1566552908",
+                            "uuid": "5d498330-f574-4889-bcc9-c53c950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f200dc3f-b219-425d-a17e-c38467364816",
+                        "lookup_data": {
+                            "description": "Detects attempts to collect image data stored in the clipboard from users with the usage of xclip tool.\nXclip has to be installed.\nHighly recommended using rule on servers, due to high usage of clipboard utilities on user workstations.\n",
+                            "raw": "author: Pawel Mazur\ndate: 2021/10/01\ndescription: 'Detects attempts to collect image data stored in the clipboard from\n  users with the usage of xclip tool.\n\n  Xclip has to be installed.\n\n  Highly recommended using rule on servers, due to high usage of clipboard utilities\n  on user workstations.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    a0: xclip\n    a1:\n    - -selection\n    - -sel\n    a2:\n    - clipboard\n    - clip\n    a3: -t\n    a4|startswith: image/\n    a5: -o\n    type: EXECVE\nfalsepositives:\n- Legitimate usage of xclip tools\nid: f200dc3f-b219-425d-a17e-c38467364816\nlevel: low\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/10/09\nreferences:\n- https://linux.die.net/man/1/xclip\nstatus: test\ntags:\n- attack.collection\n- attack.t1115\ntitle: Clipboard Collection of Image Data with Xclip Tool\n",
+                            "sigma:id": "f200dc3f-b219-425d-a17e-c38467364816",
+                            "title": "Clipboard Collection of Image Data with Xclip Tool",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1115",
+                "display_name": "Clipboard Data",
+                "atomic_tests": [
+                    {
+                        "name": "Utilize Clipboard to store or execute commands from",
+                        "auto_generated_guid": "0cd14633-58d4-4422-9ede-daa2c9474ae7",
+                        "description": "Add data to clipboard to copy off or execute commands from.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "dir | clip\necho \"T1115\" > %temp%\\T1115.txt\nclip < %temp%\\T1115.txt\n",
+                            "cleanup_command": "del %temp%\\T1115.txt >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Execute Commands from Clipboard using PowerShell",
+                        "auto_generated_guid": "d6dc21af-bec9-4152-be86-326b6babd416",
+                        "description": "Utilize PowerShell to echo a command to clipboard and execute it\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "echo Get-Process | clip\nGet-Clipboard | iex\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Execute commands from clipboard",
+                        "auto_generated_guid": "1ac2247f-65f8-4051-b51f-b0ccdfaaa5ff",
+                        "description": "Echo a command to clipboard and execute it",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "executor": {
+                            "command": "echo ifconfig | pbcopy\n$(pbpaste)",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Collect Clipboard Data via VBA",
+                        "auto_generated_guid": "9c8d5a72-9c98-48d3-b9bf-da2cc43bdf52",
+                        "description": "This module copies the data stored in the user's clipboard and writes it to a file, $env:TEMP\\atomic_T1115_clipboard_data.txt\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ms_product": {
+                                "description": "Maldoc application Word",
+                                "type": "string",
+                                "default": "Word"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Microsoft #{ms_product} must be installed\n",
+                                "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }\n",
+                                "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nSet-Clipboard -value \"Atomic T1115 Test, grab data from clipboard via VBA\"\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\nInvoke-Maldoc -macroFile \"PathToAtomicsFolder\\T1115\\src\\T1115-macrocode.txt\" -officeProduct \"Word\" -sub \"GetClipboard\"\n",
+                            "cleanup_command": "Remove-Item \"$env:TEMP\\atomic_T1115_clipboard_data.txt\" -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Add or copy content to clipboard with xClip",
+                        "auto_generated_guid": "ee363e53-b083-4230-aff3-f8d955f2d5bb",
+                        "description": "Utilize Linux Xclip to copy history and place in clipboard then output to a history.txt file. Successful execution will capture history and output to a file on disk.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "apt install xclip -y\nhistory | tail -n 30 | xclip -sel clip\nxclip -o > history.txt\n",
+                            "name": "sh"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:11:53"
+}

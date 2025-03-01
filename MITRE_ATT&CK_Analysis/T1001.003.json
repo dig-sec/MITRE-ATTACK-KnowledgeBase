@@ -1,0 +1,80 @@
+{
+    "id": "T1001.003",
+    "name": "Protocol Impersonation",
+    "description": "Adversaries may impersonate legitimate protocols or web service traffic to disguise command and control activity and thwart analysis efforts. By impersonating legitimate protocols or web services, adversaries can make their command and control traffic blend in with legitimate network traffic.\nAdversaries may impersonate a fake SSL/TLS handshake to make it look like subsequent traffic is SSL/TLS encrypted, potentially interfering with some security tooling, or to make the traffic look like it is related with a trusted entity.",
+    "platforms": "Linux, Windows, macOS",
+    "kill_chain_phases": "Command and Control",
+    "data_sources": "Network Traffic: Network Traffic Content",
+    "detection": "Analyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used.(Citation: University of Birmingham C2)",
+    "url": "https://attack.mitre.org/techniques/T1001/003",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "75bf09fa-1dd7-4d18-9af9-dd9e492562eb",
+                    "b11d75d6-d7c1-11ea-87d0-0242ac130003",
+                    "d00a9a72-2c09-4459-ad03-5e0a23351e36",
+                    "c325b232-d5bc-4dde-a3ec-71f3db9e8adc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "75bf09fa-1dd7-4d18-9af9-dd9e492562eb",
+                        "lookup_data": {
+                            "description": "Detects the usage of ADSI (LDAP) operations by tools. This may also detect tools like LDAPFragger.",
+                            "raw": "author: xknow @xknow_infosec, Tim Shelton\ndate: 2019/03/24\ndescription: Detects the usage of ADSI (LDAP) operations by tools. This may also detect\n  tools like LDAPFragger.\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_begins:\n    Image|startswith:\n    - C:\\Windows\\ccmsetup\\autoupgrade\\ccmsetup\n    - C:\\Program Files\\SentinelOne\\Sentinel Agent\n  filter_citrix:\n    Image|endswith: :\\Program Files\\Citrix\\Receiver StoreFront\\Services\\DefaultDomainServices\\Citrix.DeliveryServices.DomainServices.ServiceHost.exe\n  filter_domain_controller:\n    Image:\n    - C:\\Windows\\system32\\efsui.exe\n    - C:\\Windows\\system32\\dsac.exe\n  filter_ends:\n    Image|endswith: \\LANDesk\\LDCLient\\ldapwhoami.exe\n  filter_eq:\n    Image:\n    - C:\\windows\\system32\\svchost.exe\n    - C:\\windows\\system32\\dllhost.exe\n    - C:\\windows\\system32\\mmc.exe\n    - C:\\windows\\system32\\WindowsPowerShell\\v1.0\\powershell.exe\n    - C:\\Windows\\CCM\\CcmExec.exe\n    - C:\\Program Files\\Cylance\\Desktop\\CylanceSvc.exe\n    - C:\\Windows\\System32\\wbem\\WmiPrvSE.exe\n  selection:\n    TargetFilename|contains: \\Local\\Microsoft\\Windows\\SchCache\\\n    TargetFilename|endswith: .sch\nfalsepositives:\n- Other legimate tools, which do ADSI (LDAP) operations, e.g. any remoting activity\n  by MMC, Powershell, Windows etc.\nid: 75bf09fa-1dd7-4d18-9af9-dd9e492562eb\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2023/01/12\nreferences:\n- https://medium.com/@ivecodoe/detecting-ldapfragger-a-newly-released-cobalt-strike-beacon-using-ldap-for-c2-communication-c274a7f00961\n- https://blog.fox-it.com/2020/03/19/ldapfragger-command-and-control-over-ldap-attributes/\n- https://github.com/fox-it/LDAPFragger\nstatus: test\ntags:\n- attack.t1001.003\n- attack.command_and_control\ntitle: Suspicious ADSI-Cache Usage By Unknown Tool\n",
+                            "sigma:id": "75bf09fa-1dd7-4d18-9af9-dd9e492562eb",
+                            "title": "Suspicious ADSI-Cache Usage By Unknown Tool",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b11d75d6-d7c1-11ea-87d0-0242ac130003",
+                        "lookup_data": {
+                            "description": "The PowerShell implementation of DNSCat2 calls nslookup to craft queries. Counting nslookup processes spawned by PowerShell will show hundreds or thousands of instances if PS DNSCat2 is active locally.",
+                            "raw": "author: Cian Heasley\ndate: 2020/08/08\ndescription: The PowerShell implementation of DNSCat2 calls nslookup to craft queries.\n  Counting nslookup processes spawned by PowerShell will show hundreds or thousands\n  of instances if PS DNSCat2 is active locally.\ndetection:\n  condition: selection | count(Image) by ParentImage > 100\n  selection:\n    CommandLine|endswith: \\nslookup.exe\n    Image|endswith: \\nslookup.exe\n    ParentImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\nfalsepositives:\n- Other powershell scripts that call nslookup.exe\nfields:\n- Image\n- CommandLine\n- ParentImage\nid: b11d75d6-d7c1-11ea-87d0-0242ac130003\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://github.com/lukebaggett/dnscat2-powershell\n- https://blu3-team.blogspot.com/2019/08/powershell-dns-c2-notes.html\n- https://ragged-lab.blogspot.com/2020/06/it-is-always-dns-powershell-edition.html\nstatus: test\ntags:\n- attack.command_and_control\n- attack.t1071\n- attack.t1071.004\n- attack.t1001.003\n- attack.t1041\ntitle: DNSCat2 Powershell Implementation Detection Via Process Creation\n",
+                            "sigma:id": "b11d75d6-d7c1-11ea-87d0-0242ac130003",
+                            "title": "DNSCat2 Powershell Implementation Detection Via Process Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d00a9a72-2c09-4459-ad03-5e0a23351e36",
+                        "lookup_data": {
+                            "description": "Detects the usage of particular AttributeLDAPDisplayNames, which are known for data exchange via LDAP by the tool LDAPFragger and are additionally not commonly used in companies.",
+                            "raw": "author: xknow @xknow_infosec\ndate: 2019/03/24\ndescription: Detects the usage of particular AttributeLDAPDisplayNames, which are\n  known for data exchange via LDAP by the tool LDAPFragger and are additionally not\n  commonly used in companies.\ndetection:\n  condition: selection\n  selection:\n    AttributeLDAPDisplayName:\n    - primaryInternationalISDNNumber\n    - otherFacsimileTelephoneNumber\n    - primaryTelexNumber\n    AttributeValue|contains: '*'\n    EventID: 5136\nfalsepositives:\n- Companies, who may use these default LDAP-Attributes for personal information\nid: d00a9a72-2c09-4459-ad03-5e0a23351e36\nlevel: high\nlogsource:\n  definition: The \"Audit Directory Service Changes\" logging policy must be configured\n    in order to receive events. Audit events are generated only for objects with configured\n    system access control lists (SACLs). Audit events are generated only for objects\n    with configured system access control lists (SACLs) and only when accessed in\n    a manner that matches their SACL settings. This policy covers the following events\n    ids - 5136, 5137, 5138, 5139, 5141. Note that the default policy does not cover\n    User objects. For that a custom AuditRule need to be setup (See https://github.com/OTRF/Set-AuditRule)\n  product: windows\n  service: security\nmodified: 2022/10/05\nreferences:\n- https://medium.com/@ivecodoe/detecting-ldapfragger-a-newly-released-cobalt-strike-beacon-using-ldap-for-c2-communication-c274a7f00961\n- https://blog.fox-it.com/2020/03/19/ldapfragger-command-and-control-over-ldap-attributes/\n- https://github.com/fox-it/LDAPFragger\nstatus: test\ntags:\n- attack.t1001.003\n- attack.command_and_control\ntitle: Suspicious LDAP-Attributes Used\n",
+                            "sigma:id": "d00a9a72-2c09-4459-ad03-5e0a23351e36",
+                            "title": "Suspicious LDAP-Attributes Used",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c325b232-d5bc-4dde-a3ec-71f3db9e8adc",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1001.003",
+                            "mitre-cti:description": "Adversaries may impersonate legitimate protocols or web service traffic to disguise command and control activity and thwart analysis efforts. By impersonating legitimate protocols or web services, adversaries can make their command and control traffic blend in with legitimate network traffic.  \n\nAdversaries may impersonate a fake SSL/TLS handshake to make it look like subsequent traffic is SSL/TLS encrypted, potentially interfering with some security tooling, or to make the traffic look like it is related with a trusted entity. ",
+                            "mitre-cti:name": "Protocol Impersonation",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'Windows', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--c325b232-d5bc-4dde-a3ec-71f3db9e8adc', 'type': 'attack-pattern', 'created': '2020-03-15T00:40:27.503Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1001.003', 'url': 'https://attack.mitre.org/techniques/T1001/003'}, {'url': 'https://arxiv.org/ftp/arxiv/papers/1408/1408.1136.pdf', 'description': 'Gardiner, J.,  Cova, M., Nagaraja, S. (2014, February). Command & Control Understanding, Denying and Detecting. Retrieved April 20, 2016.', 'source_name': 'University of Birmingham C2'}], 'modified': '2020-03-15T00:40:27.503Z', 'name': 'Protocol Impersonation', 'description': 'Adversaries may impersonate legitimate protocols or web service traffic to disguise command and control activity and thwart analysis efforts. By impersonating legitimate protocols or web services, adversaries can make their command and control traffic blend in with legitimate network traffic.  \\n\\nAdversaries may impersonate a fake SSL/TLS handshake to make it look like subsequent traffic is SSL/TLS encrypted, potentially interfering with some security tooling, or to make the traffic look like it is related with a trusted entity. ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'command-and-control'}], 'x_mitre_detection': 'Analyze network data for uncommon data flows (e.g., a client sending significantly more data than it receives from a server). Processes utilizing the network that do not normally have network communication or have never been seen before are suspicious. Analyze packet contents to detect communications that do not follow the expected protocol behavior for the port that is being used.(Citation: University of Birmingham C2)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Network Traffic: Network Traffic Content']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": []
+    },
+    "timestamp": "2025-02-28 10:34:20"
+}

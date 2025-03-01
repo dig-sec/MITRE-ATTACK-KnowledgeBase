@@ -1,0 +1,343 @@
+{
+    "id": "T1127",
+    "name": "Trusted Developer Utilities Proxy Execution",
+    "description": "Adversaries may take advantage of trusted developer utilities to proxy execution of malicious payloads. There are many utilities used for software development related tasks that can be used to execute code in various forms to assist in development, debugging, and reverse engineering.(Citation: engima0x3 DNX Bypass)(Citation: engima0x3 RCSI Bypass)(Citation: Exploit Monday WinDbg)(Citation: LOLBAS Tracker) These utilities may often be signed with legitimate certificates that allow them to execute on a system and proxy execution of malicious code through a trusted process that effectively bypasses application control solutions.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Command: Command Execution",
+    "detection": "Monitor for abnormal presence of these or other utilities that enable proxy execution that are typically used for development, debugging, and reverse engineering on a system that is not used for these purposes may be suspicious.\nUse process monitoring to monitor the execution and arguments of from developer utilities that may be abused. Compare recent invocations of those binaries with prior history of known good arguments and executed binaries to determine anomalous and potentially adversarial activity. It is likely that these utilities will be used by software developers or for other software development related tasks, so if it exists and is used outside of that context, then the event may be suspicious. Command arguments used before and after invocation of the utilities may also be useful in determining the origin and purpose of the binary being executed.",
+    "url": "https://attack.mitre.org/techniques/T1127",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1127",
+                "atomic_attack_guid": "3fc9fea2-871d-414d-8ef6-02e85e322b80",
+                "atomic_attack_name": "Lolbin Jsc.exe compile javascript to dll",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1127",
+                "atomic_attack_guid": "1ec1c269-d6bd-49e7-b71b-a461f7fa7bc8",
+                "atomic_attack_name": "Lolbin Jsc.exe compile javascript to exe",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "850d55f9-6eeb-4492-ad69-a72338f65ba4",
+                    "d047726b-c71c-4048-a99b-2e2f50dc107d",
+                    "3d48c9d3-1aa6-418d-98d3-8fd3c01a564e",
+                    "49be8799-7b4d-4fda-ad23-cafbefdebbc5",
+                    "ff25900d-76d5-449b-a351-8824e62fc81b",
+                    "18749301-f1c5-4efc-a4c3-276ff1f5b6f8",
+                    "419dbf2b-8a9b-4bea-bf99-7544b050ec8d",
+                    "a01b8329-5953-4f73-ae2d-aa01e1f35f00",
+                    "c15e99a3-c474-48ab-b9a7-84549a7a9d16",
+                    "6640f31c-01ad-49b5-beb5-83498a5cd8bd",
+                    "b5c7395f-e501-4a08-94d4-57fe7a9da9d2",
+                    "52788a70-f1da-40dd-8fbd-73b5865d6568",
+                    "a746c9b8-a2fb-4ee5-a428-92bee9e99060",
+                    "0152550d-3a26-4efd-9f0e-54a0b28ae2f3",
+                    "b27077d6-23e6-45d2-81a0-e2b356eea5fd",
+                    "a9e416a8-e613-4f8b-88b8-a7d1d1af2f61",
+                    "df1f26d3-bea7-4700-9ea2-ad3e990cf90e",
+                    "82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719",
+                    "4eddc365-79b4-43ff-a9d7-99422dc34b93"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "850d55f9-6eeb-4492-ad69-a72338f65ba4",
+                        "lookup_data": {
+                            "description": "Detect use of Ilasm.exe to compile c# code into dll or exe.",
+                            "raw": "author: frack113\ndate: 2022/05/07\ndescription: Detect use of Ilasm.exe to compile c# code into dll or exe.\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\ilasm.exe\n  - OriginalFileName: ilasm.exe\nfalsepositives:\n- Unknown\nid: 850d55f9-6eeb-4492-ad69-a72338f65ba4\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/05/16\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Ilasm/\n- https://www.echotrail.io/insights/search/ilasm.exe\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Ilasm Lolbin Use Compile C-Sharp\n",
+                            "sigma:id": "850d55f9-6eeb-4492-ad69-a72338f65ba4",
+                            "title": "Ilasm Lolbin Use Compile C-Sharp",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d047726b-c71c-4048-a99b-2e2f50dc107d",
+                        "lookup_data": {
+                            "description": "Detects the execution of a signed binary dropped by Kaspersky Lab Products Remover (kavremover) which can be abused as a LOLBIN to execute arbitrary commands and binaries.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/11/01\ndescription: Detects the execution of a signed binary dropped by Kaspersky Lab Products\n  Remover (kavremover) which can be abused as a LOLBIN to execute arbitrary commands\n  and binaries.\ndetection:\n  condition: selection and not filter\n  filter:\n    ParentImage|endswith:\n    - \\kavremover.exe\n    - \\cleanapi.exe\n  selection:\n    CommandLine|contains: ' run run-cmd '\nfalsepositives:\n- Unknown\nid: d047726b-c71c-4048-a99b-2e2f50dc107d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://nasbench.medium.com/lolbined-using-kaspersky-endpoint-security-kes-installer-to-execute-arbitrary-commands-1c999f1b7fea\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Kavremover Dropped Binary LOLBIN Usage\n",
+                            "sigma:id": "d047726b-c71c-4048-a99b-2e2f50dc107d",
+                            "title": "Kavremover Dropped Binary LOLBIN Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3d48c9d3-1aa6-418d-98d3-8fd3c01a564e",
+                        "lookup_data": {
+                            "description": "The \"Trace log generation tool for Media Foundation Tools\" (Mftrace.exe) can be used to execute arbitrary binaries",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/09\ndescription: The \"Trace log generation tool for Media Foundation Tools\" (Mftrace.exe)\n  can be used to execute arbitrary binaries\ndetection:\n  condition: all of selection* or parent\n  parent:\n    ParentImage|endswith: \\mftrace.exe\n  selection_cli:\n    CommandLine|contains: '.exe '\n    CommandLine|endswith: .exe\n  selection_img:\n  - Image|endswith: \\mftrace.exe\n  - OriginalFileName: mftrace.exe\nfalsepositives:\n- Legitimate use for tracing purposes\nid: 3d48c9d3-1aa6-418d-98d3-8fd3c01a564e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Mftrace/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Use of Mftrace.exe\n",
+                            "sigma:id": "3d48c9d3-1aa6-418d-98d3-8fd3c01a564e",
+                            "title": "Use of Mftrace.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "49be8799-7b4d-4fda-ad23-cafbefdebbc5",
+                        "lookup_data": {
+                            "description": "The Workflow Command-line Compiler can be used for AWL bypass and is listed in Microsoft's recommended block rules.",
+                            "raw": "author: Christopher Peacock @SecurePeacock, SCYTHE @scythe_io\ndate: 2022/06/01\ndescription: The Workflow Command-line Compiler can be used for AWL bypass and is\n  listed in Microsoft's recommended block rules.\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\wfc.exe\n  - OriginalFileName: wfc.exe\nfalsepositives:\n- Legitimate use by a software developer\nid: 49be8799-7b4d-4fda-ad23-cafbefdebbc5\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Wfc/\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/microsoft-recommended-block-rules\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Use of Wfc.exe\n",
+                            "sigma:id": "49be8799-7b4d-4fda-ad23-cafbefdebbc5",
+                            "title": "Use of Wfc.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ff25900d-76d5-449b-a351-8824e62fc81b",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1127",
+                            "mitre-cti:description": "Adversaries may take advantage of trusted developer utilities to proxy execution of malicious payloads. There are many utilities used for software development related tasks that can be used to execute code in various forms to assist in development, debugging, and reverse engineering.(Citation: engima0x3 DNX Bypass)(Citation: engima0x3 RCSI Bypass)(Citation: Exploit Monday WinDbg)(Citation: LOLBAS Tracker) These utilities may often be signed with legitimate certificates that allow them to execute on a system and proxy execution of malicious code through a trusted process that effectively bypasses application control solutions.",
+                            "mitre-cti:name": "Trusted Developer Utilities Proxy Execution",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Casey Smith', 'Matthew Demaske, Adaptforward'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--ff25900d-76d5-449b-a351-8824e62fc81b', 'created': '2017-05-31T21:31:39.262Z', 'x_mitre_version': '1.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1127', 'url': 'https://attack.mitre.org/techniques/T1127'}, {'source_name': 'Exploit Monday WinDbg', 'url': 'http://www.exploit-monday.com/2016/08/windbg-cdb-shellcode-runner.html', 'description': 'Graeber, M. (2016, August 15). Bypassing Application Whitelisting by using WinDbg/CDB as a Shellcode Runner. Retrieved May 26, 2017.'}, {'source_name': 'LOLBAS Tracker', 'url': 'https://lolbas-project.github.io/lolbas/OtherMSBinaries/Tracker/', 'description': 'LOLBAS. (n.d.). Tracker.exe. Retrieved July 31, 2019.'}, {'source_name': 'engima0x3 RCSI Bypass', 'url': 'https://enigma0x3.net/2016/11/21/bypassing-application-whitelisting-by-using-rcsi-exe/', 'description': 'Nelson, M. (2016, November 21). Bypassing Application Whitelisting By Using rcsi.exe. Retrieved May 26, 2017.'}, {'source_name': 'engima0x3 DNX Bypass', 'url': 'https://enigma0x3.net/2016/11/17/bypassing-application-whitelisting-by-using-dnx-exe/', 'description': 'Nelson, M. (2017, November 17). Bypassing Application Whitelisting By Using dnx.exe. Retrieved May 25, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may take advantage of trusted developer utilities to proxy execution of malicious payloads. There are many utilities used for software development related tasks that can be used to execute code in various forms to assist in development, debugging, and reverse engineering.(Citation: engima0x3 DNX Bypass)(Citation: engima0x3 RCSI Bypass)(Citation: Exploit Monday WinDbg)(Citation: LOLBAS Tracker) These utilities may often be signed with legitimate certificates that allow them to execute on a system and proxy execution of malicious code through a trusted process that effectively bypasses application control solutions.', 'modified': '2022-05-05T05:00:37.443Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Trusted Developer Utilities Proxy Execution', 'x_mitre_detection': 'Monitor for abnormal presence of these or other utilities that enable proxy execution that are typically used for development, debugging, and reverse engineering on a system that is not used for these purposes may be suspicious.\\n\\nUse process monitoring to monitor the execution and arguments of from developer utilities that may be abused. Compare recent invocations of those binaries with prior history of known good arguments and executed binaries to determine anomalous and potentially adversarial activity. It is likely that these utilities will be used by software developers or for other software development related tasks, so if it exists and is used outside of that context, then the event may be suspicious. Command arguments used before and after invocation of the utilities may also be useful in determining the origin and purpose of the binary being executed.', 'kill_chain_phases': [{'phase_name': 'defense-evasion', 'kill_chain_name': 'mitre-attack'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Process: Process Creation', 'Command: Command Execution'], 'x_mitre_defense_bypassed': ['Application Control'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "18749301-f1c5-4efc-a4c3-276ff1f5b6f8",
+                        "lookup_data": {
+                            "description": "The \"VSIISExeLauncher.exe\" binary part of the Visual Studio/VS Code can be used to execute arbitrary binaries",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/06/09\ndescription: The \"VSIISExeLauncher.exe\" binary part of the Visual Studio/VS Code can\n  be used to execute arbitrary binaries\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains:\n    - ' -p '\n    - ' -a '\n  selection_img:\n  - Image|endswith: \\VSIISExeLauncher.exe\n  - OriginalFileName: VSIISExeLauncher.exe\nfalsepositives:\n- Unknown\nid: 18749301-f1c5-4efc-a4c3-276ff1f5b6f8\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/VSIISExeLauncher/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Use of VSIISExeLauncher.exe\n",
+                            "sigma:id": "18749301-f1c5-4efc-a4c3-276ff1f5b6f8",
+                            "title": "Use of VSIISExeLauncher.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "419dbf2b-8a9b-4bea-bf99-7544b050ec8d",
+                        "lookup_data": {
+                            "description": "Detects invocation of Microsoft Workflow Compiler, which may permit the execution of arbitrary unsigned code.",
+                            "raw": "author: Nik Seetharaman, frack113\ndate: 2019/01/16\ndescription: Detects invocation of Microsoft Workflow Compiler, which may permit the\n  execution of arbitrary unsigned code.\ndetection:\n  condition: selection or selection_t1218\n  selection:\n    Image|endswith: \\Microsoft.Workflow.Compiler.exe\n  selection_t1218:\n    CommandLine|contains: .xml\n    OriginalFileName: Microsoft.Workflow.Compiler.exe\nfalsepositives:\n- Legitimate MWC use (unlikely in modern enterprise environments)\nfields:\n- CommandLine\n- ParentCommandLine\nid: 419dbf2b-8a9b-4bea-bf99-7544b050ec8d\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://posts.specterops.io/arbitrary-unsigned-code-execution-vector-in-microsoft-workflow-compiler-exe-3d9294bc5efb\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218/T1218.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.execution\n- attack.t1127\n- attack.t1218\ntitle: Microsoft Workflow Compiler\n",
+                            "sigma:id": "419dbf2b-8a9b-4bea-bf99-7544b050ec8d",
+                            "title": "Microsoft Workflow Compiler",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a01b8329-5953-4f73-ae2d-aa01e1f35f00",
+                        "lookup_data": {
+                            "description": "Execute C# code with the Build Provider and proper folder structure in place.",
+                            "raw": "author: frack113\ndate: 2021/11/24\ndescription: Execute C# code with the Build Provider and proper folder structure in\n  place.\ndetection:\n  condition: selection\n  selection:\n    Image|contains|all:\n    - C:\\Windows\\Microsoft.NET\\Framework\n    - aspnet_compiler.exe\nfalsepositives:\n- Unknown\nid: a01b8329-5953-4f73-ae2d-aa01e1f35f00\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Aspnet_Compiler/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Suspicious aspnet_compiler.exe Execution\n",
+                            "sigma:id": "a01b8329-5953-4f73-ae2d-aa01e1f35f00",
+                            "title": "Suspicious aspnet_compiler.exe Execution",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c15e99a3-c474-48ab-b9a7-84549a7a9d16",
+                        "lookup_data": {
+                            "description": "Detects a remote thread creation of Ttdinject.exe used as proxy",
+                            "raw": "author: frack113\ndate: 2022/05/16\ndescription: Detects a remote thread creation of Ttdinject.exe used as proxy\ndetection:\n  condition: selection\n  selection:\n    SourceImage|endswith: \\ttdinject.exe\nfalsepositives:\n- Unknown\nid: c15e99a3-c474-48ab-b9a7-84549a7a9d16\nlevel: high\nlogsource:\n  category: create_remote_thread\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Ttdinject/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Remote Thread Creation Ttdinject.exe Proxy\n",
+                            "sigma:id": "c15e99a3-c474-48ab-b9a7-84549a7a9d16",
+                            "title": "Remote Thread Creation Ttdinject.exe Proxy",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6640f31c-01ad-49b5-beb5-83498a5cd8bd",
+                        "lookup_data": {
+                            "description": "Detects the execution node.exe which is shipped with multiple softwares such as VMware, Adobe...etc. In order to execute arbitrary code. For example to establish reverse shell as seen in Log4j attacks...etc",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/09\ndescription: Detects the execution node.exe which is shipped with multiple softwares\n  such as VMware, Adobe...etc. In order to execute arbitrary code. For example to\n  establish reverse shell as seen in Log4j attacks...etc\ndetection:\n  action_reverse_shell:\n    CommandLine|contains|all:\n    - .exec(\n    - net.socket\n    - .connect\n    - child_process\n  condition: selection and 1 of action_*\n  selection:\n    CommandLine|contains:\n    - ' -e '\n    - ' --eval '\n    Image|endswith: \\node.exe\nfalsepositives:\n- Unlikely\nid: 6640f31c-01ad-49b5-beb5-83498a5cd8bd\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\n- https://www.sprocketsecurity.com/resources/crossing-the-log4j-horizon-a-vulnerability-with-no-return\n- https://www.rapid7.com/blog/post/2022/01/18/active-exploitation-of-vmware-horizon-servers/\n- https://nodejs.org/api/cli.html\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Node.exe Process Abuse\n",
+                            "sigma:id": "6640f31c-01ad-49b5-beb5-83498a5cd8bd",
+                            "title": "Node.exe Process Abuse",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b5c7395f-e501-4a08-94d4-57fe7a9da9d2",
+                        "lookup_data": {
+                            "description": "Detects usage of \"cdb.exe\" to launch 64-bit shellcode or arbitrary processes or commands from a debugger script file",
+                            "raw": "author: Beyu Denis, oscd.community, Nasreddine Bencherchali\ndate: 2019/10/26\ndescription: Detects usage of \"cdb.exe\" to launch 64-bit shellcode or arbitrary processes\n  or commands from a debugger script file\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains:\n    - ' -c '\n    - ' -cf '\n  selection_img:\n  - Image|endswith: \\cdb.exe\n  - OriginalFileName: CDB.Exe\nfalsepositives:\n- Legitimate use of debugging tools\nid: b5c7395f-e501-4a08-94d4-57fe7a9da9d2\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/04\nreferences:\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Cdb/\n- https://web.archive.org/web/20170715043507/http://www.exploit-monday.com/2016/08/windbg-cdb-shellcode-runner.html\n- https://twitter.com/nas_bench/status/1534957360032120833\nstatus: test\ntags:\n- attack.execution\n- attack.t1106\n- attack.defense_evasion\n- attack.t1218\n- attack.t1127\ntitle: WinDbg/CDB LOLBIN Usage\n",
+                            "sigma:id": "b5c7395f-e501-4a08-94d4-57fe7a9da9d2",
+                            "title": "WinDbg/CDB LOLBIN Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "52788a70-f1da-40dd-8fbd-73b5865d6568",
+                        "lookup_data": {
+                            "description": "Detects the execution of the LOLBIN jsc.exe used by .NET to compile javascript code to .exe or .dll format",
+                            "raw": "author: frack113\ndate: 2022/05/02\ndescription: Detects the execution of the LOLBIN jsc.exe used by .NET to compile javascript\n  code to .exe or .dll format\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains: .js\n    Image|endswith: \\jsc.exe\nfalsepositives:\n- Unknown\nid: 52788a70-f1da-40dd-8fbd-73b5865d6568\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Jsc/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: JSC Convert Javascript To Executable\n",
+                            "sigma:id": "52788a70-f1da-40dd-8fbd-73b5865d6568",
+                            "title": "JSC Convert Javascript To Executable",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a746c9b8-a2fb-4ee5-a428-92bee9e99060",
+                        "lookup_data": {
+                            "description": "This rule detects execution of a PowerShell code through the sqltoolsps.exe utility, which is included in the standard set of utilities supplied with the Microsoft SQL Server Management studio.\nScript blocks are not logged in this case, so this utility helps to bypass protection mechanisms based on the analysis of these logs.\n",
+                            "raw": "author: Agro (@agro_sev) oscd.communitly\ndate: 2020/10/13\ndescription: 'This rule detects execution of a PowerShell code through the sqltoolsps.exe\n  utility, which is included in the standard set of utilities supplied with the Microsoft\n  SQL Server Management studio.\n\n  Script blocks are not logged in this case, so this utility helps to bypass protection\n  mechanisms based on the analysis of these logs.\n\n  '\ndetection:\n  condition: selection and not filter\n  filter:\n    ParentImage|endswith: \\smss.exe\n  selection:\n  - Image|endswith: \\sqltoolsps.exe\n  - ParentImage|endswith: \\sqltoolsps.exe\n  - OriginalFileName: \\sqltoolsps.exe\nfalsepositives:\n- Direct PS command execution through SQLToolsPS.exe is uncommon, childprocess sqltoolsps.exe\n  spawned by smss.exe is a legitimate action.\nid: a746c9b8-a2fb-4ee5-a428-92bee9e99060\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/02/25\nreferences:\n- https://github.com/LOLBAS-Project/LOLBAS/blob/8283d8d91552213ded165fd36deb6cb9534cb443/yml/OtherMSBinaries/Sqltoolsps.yml\n- https://twitter.com/pabraeken/status/993298228840992768\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1127\ntitle: SQL Client Tools PowerShell Session Detection\n",
+                            "sigma:id": "a746c9b8-a2fb-4ee5-a428-92bee9e99060",
+                            "title": "SQL Client Tools PowerShell Session Detection",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0152550d-3a26-4efd-9f0e-54a0b28ae2f3",
+                        "lookup_data": {
+                            "description": "This rule detects execution of a PowerShell code through the sqlps.exe utility, which is included in the standard set of utilities supplied with the MSSQL Server.\nScript blocks are not logged in this case, so this utility helps to bypass protection mechanisms based on the analysis of these logs.\n",
+                            "raw": "author: Agro (@agro_sev) oscd.community\ndate: 2020/10/10\ndescription: 'This rule detects execution of a PowerShell code through the sqlps.exe\n  utility, which is included in the standard set of utilities supplied with the MSSQL\n  Server.\n\n  Script blocks are not logged in this case, so this utility helps to bypass protection\n  mechanisms based on the analysis of these logs.\n\n  '\ndetection:\n  condition: selection_parent or (selection_image and not filter_image)\n  filter_image:\n    ParentImage|endswith: \\sqlagent.exe\n  selection_image:\n  - Image|endswith: \\sqlps.exe\n  - OriginalFileName: sqlps.exe\n  selection_parent:\n    ParentImage|endswith: \\sqlps.exe\nfalsepositives:\n- Direct PS command execution through SQLPS.exe is uncommon, childprocess sqlps.exe\n  spawned by sqlagent.exe is a legitimate action.\nid: 0152550d-3a26-4efd-9f0e-54a0b28ae2f3\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/09\nreferences:\n- https://docs.microsoft.com/en-us/sql/tools/sqlps-utility?view=sql-server-ver15\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Sqlps/\n- https://twitter.com/bryon_/status/975835709587075072\nstatus: test\ntags:\n- attack.execution\n- attack.t1059.001\n- attack.defense_evasion\n- attack.t1127\ntitle: Detection of PowerShell Execution via Sqlps.exe\n",
+                            "sigma:id": "0152550d-3a26-4efd-9f0e-54a0b28ae2f3",
+                            "title": "Detection of PowerShell Execution via Sqlps.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b27077d6-23e6-45d2-81a0-e2b356eea5fd",
+                        "lookup_data": {
+                            "description": "Detects the executiob of TTDInject.exe, which is used by Windows 10 v1809 and newer to debug time travel (underlying call of tttracer.exe)",
+                            "raw": "author: frack113\ndate: 2022/05/16\ndescription: Detects the executiob of TTDInject.exe, which is used by Windows 10 v1809\n  and newer to debug time travel (underlying call of tttracer.exe)\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: ttdinject.exe\n  - OriginalFileName: TTDInject.EXE\nfalsepositives:\n- Legitimate use\nid: b27077d6-23e6-45d2-81a0-e2b356eea5fd\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://lolbas-project.github.io/lolbas/Binaries/Ttdinject/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Use of TTDInject.exe\n",
+                            "sigma:id": "b27077d6-23e6-45d2-81a0-e2b356eea5fd",
+                            "title": "Use of TTDInject.exe",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a9e416a8-e613-4f8b-88b8-a7d1d1af2f61",
+                        "lookup_data": {
+                            "description": "Detects the execution of CSharp interactive console by PowerShell",
+                            "raw": "author: Michael R. (@nahamike01)\ndate: 2020/03/08\ndescription: Detects the execution of CSharp interactive console by PowerShell\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\csi.exe\n    OriginalFileName: csi.exe\n    ParentImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    - \\powershell_ise.exe\nfalsepositives:\n- Possible depending on environment. Pair with other factors such as net connections,\n  command-line args, etc.\nid: a9e416a8-e613-4f8b-88b8-a7d1d1af2f61\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://redcanary.com/blog/detecting-attacks-leveraging-the-net-framework/\nstatus: test\ntags:\n- attack.execution\n- attack.t1127\ntitle: Suspicious Use of CSharp Interactive Console\n",
+                            "sigma:id": "a9e416a8-e613-4f8b-88b8-a7d1d1af2f61",
+                            "title": "Suspicious Use of CSharp Interactive Console",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "df1f26d3-bea7-4700-9ea2-ad3e990cf90e",
+                        "lookup_data": {
+                            "description": "Detects the execution of other scripts using the Node executable packaged with Adobe Creative Cloud",
+                            "raw": "author: Max Altgelt (Nextron Systems)\ndate: 2022/04/06\ndescription: Detects the execution of other scripts using the Node executable packaged\n  with Adobe Creative Cloud\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: Adobe Creative Cloud Experience\\js\n  selection:\n    Image|endswith: \\Adobe Creative Cloud Experience\\libs\\node.exe\nfalsepositives:\n- Unknown\nfields:\n- Image\n- CommandLine\n- ParentCommandLine\nid: df1f26d3-bea7-4700-9ea2-ad3e990cf90e\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://twitter.com/mttaggart/status/1511804863293784064\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\n- attack.t1059.007\ntitle: Node Process Executions\n",
+                            "sigma:id": "df1f26d3-bea7-4700-9ea2-ad3e990cf90e",
+                            "title": "Node Process Executions",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719",
+                        "lookup_data": {
+                            "description": "Detects execution of executables that can be used to bypass Applocker whitelisting",
+                            "raw": "author: juju4\ndate: 2019/01/16\ndescription: Detects execution of executables that can be used to bypass Applocker\n  whitelisting\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - \\msdt.exe\n    - \\installutil.exe\n    - \\regsvcs.exe\n    - \\regasm.exe\n    - \\msbuild.exe\n    - \\ieexec.exe\nfalsepositives:\n- False positives depend on scripts and administrative tools used in the monitored\n  environment\n- Using installutil to add features for .NET applications (primarily would occur in\n  developer environments)\nid: 82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2020/09/01\nreferences:\n- https://github.com/subTee/ApplicationWhitelistBypassTechniques/blob/master/TheList.txt\n- https://room362.com/post/2014/2014-01-16-application-whitelist-bypass-using-ieexec-dot-exe/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1118\n- attack.t1218.004\n- attack.t1121\n- attack.t1218.009\n- attack.t1127\n- attack.t1127.001\n- attack.t1170\n- attack.t1218.005\n- attack.t1218\ntitle: Possible Applocker Bypass\n",
+                            "sigma:id": "82a19e3a-2bfe-4a91-8c0d-5d4c98fbb719",
+                            "title": "Possible Applocker Bypass",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4eddc365-79b4-43ff-a9d7-99422dc34b93",
+                        "lookup_data": {
+                            "description": "Remote.exe is part of WinDbg in the Windows SDK and can be used for AWL bypass and running remote files.",
+                            "raw": "author: Christopher Peacock @SecurePeacock, SCYTHE @scythe_io\ndate: 2022/06/02\ndescription: Remote.exe is part of WinDbg in the Windows SDK and can be used for AWL\n  bypass and running remote files.\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\remote.exe\n  - OriginalFileName: remote.exe\nfalsepositives:\n- Approved installs of Windows SDK with Debugging Tools for Windows (WinDbg).\nid: 4eddc365-79b4-43ff-a9d7-99422dc34b93\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://blog.thecybersecuritytutor.com/Exeuction-AWL-Bypass-Remote-exe-LOLBin/\n- https://lolbas-project.github.io/lolbas/OtherMSBinaries/Remote/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1127\ntitle: Use of Remote.exe\n",
+                            "sigma:id": "4eddc365-79b4-43ff-a9d7-99422dc34b93",
+                            "title": "Use of Remote.exe",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1127",
+                "display_name": "Trusted Developer Utilities Proxy Execution",
+                "atomic_tests": [
+                    {
+                        "name": "Lolbin Jsc.exe compile javascript to exe",
+                        "auto_generated_guid": "1ec1c269-d6bd-49e7-b71b-a461f7fa7bc8",
+                        "description": "Use jsc.exe to compile javascript code stored in scriptfile.js and output scriptfile.exe.\nhttps://lolbas-project.github.io/lolbas/Binaries/Jsc/\nhttps://www.phpied.com/make-your-javascript-a-windows-exe/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "filename": {
+                                "description": "Location of the project file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1127\\src\\hello.js"
+                            },
+                            "jscpath": {
+                                "description": "Default location of jsc.exe",
+                                "type": "path",
+                                "default": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319"
+                            },
+                            "jscname": {
+                                "description": "Default name of jsc",
+                                "type": "path",
+                                "default": "jsc.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "JavaScript code file must exist on disk at specified location (#{filename})\n",
+                                "prereq_command": "if (Test-Path \"#{filename}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{filename}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1127/src/hello.js\" -OutFile \"#{filename}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "copy \"#{filename}\" %TEMP%\\hello.js\n#{jscpath}\\#{jscname} %TEMP%\\hello.js\n",
+                            "cleanup_command": "del %TEMP%\\hello.js\ndel %TEMP%\\hello.exe\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Lolbin Jsc.exe compile javascript to dll",
+                        "auto_generated_guid": "3fc9fea2-871d-414d-8ef6-02e85e322b80",
+                        "description": "Use jsc.exe to compile javascript code stored in Library.js and output Library.dll.\nhttps://lolbas-project.github.io/lolbas/Binaries/Jsc/\nhttps://www.phpied.com/make-your-javascript-a-windows-exe/\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "filename": {
+                                "description": "Location of the project file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1127\\src\\LibHello.js"
+                            },
+                            "jscpath": {
+                                "description": "Default location of jsc.exe",
+                                "type": "path",
+                                "default": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319"
+                            },
+                            "jscname": {
+                                "description": "Default name of jsc",
+                                "type": "path",
+                                "default": "jsc.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "JavaScript code file must exist on disk at specified location (#{filename})\n",
+                                "prereq_command": "if (Test-Path \"#{filename}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{filename}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1127/src/LibHello.js\" -OutFile \"#{filename}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "copy \"#{filename}\" %TEMP%\\LibHello.js\n#{jscpath}\\#{jscname} /t:library %TEMP%\\LibHello.js\n",
+                            "cleanup_command": "del %TEMP%\\LibHello.js\ndel %TEMP%\\LibHello.dll\n",
+                            "name": "command_prompt"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 13:17:10"
+}

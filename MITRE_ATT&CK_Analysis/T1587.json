@@ -1,0 +1,90 @@
+{
+    "id": "T1587",
+    "name": "Develop Capabilities",
+    "description": "Adversaries may build capabilities that can be used during targeting. Rather than purchasing, freely downloading, or stealing capabilities, adversaries may develop their own capabilities in-house. This is the process of identifying development requirements and building solutions such as malware, exploits, and self-signed certificates. Adversaries may develop capabilities to support their operations throughout numerous phases of the adversary lifecycle.(Citation: Mandiant APT1)(Citation: Kaspersky Sofacy)(Citation: Bitdefender StrongPity June 2020)(Citation: Talos Promethium June 2020)\nAs with legitimate development efforts, different skill sets may be required for developing capabilities. The skills needed may be located in-house, or may need to be contracted out. Use of a contractor may be considered an extension of that adversary's development capabilities, provided the adversary plays a role in shaping requirements and maintains a degree of exclusivity to the capability.",
+    "platforms": "PRE",
+    "kill_chain_phases": "Resource Development",
+    "data_sources": "Malware Repository: Malware Metadata, Malware Repository: Malware Content, Internet Scan: Response Content",
+    "detection": "Consider analyzing malware for features that may be associated with the adversary and/or their developers, such as compiler used, debugging artifacts, or code similarities. Malware repositories can also be used to identify additional samples associated with the adversary and identify development patterns over time.\nConsider use of services that may aid in the tracking of certificates in use on sites across the Internet. In some cases it may be possible to pivot on known pieces of certificate information to uncover other adversary infrastructure.(Citation: Splunk Kovar Certificates 2017)\nMuch of this activity will take place outside the visibility of the target organization, making detection of this behavior difficult. Detection efforts may be focused on related stages of the adversary lifecycle, such as during Defense Evasion or Command and Control.",
+    "url": "https://attack.mitre.org/techniques/T1587",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "640dc51c-7713-4faa-8a0e-e7c0d9d4654c",
+                    "2131cfb3-8c12-45e8-8fa0-31f5924e9f07",
+                    "a39d7fa7-3fbd-4dc2-97e1-d87f546b1bbc",
+                    "60c0a111-787a-4e8a-9262-ee485f3ef9d5",
+                    "ff23ffbc-3378-435e-992f-0624dcf93ab4",
+                    "edadea33-549c-4ed1-9783-8f5a5853cbdf"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "640dc51c-7713-4faa-8a0e-e7c0d9d4654c",
+                        "lookup_data": {
+                            "description": "Detects DLL hijacking technique used by NOBELIUM in their FoggyWeb backdoor. Which loads a malicious version of the expected \"version.dll\" dll",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/09/27\ndescription: Detects DLL hijacking technique used by NOBELIUM in their FoggyWeb backdoor.\n  Which loads a malicious version of the expected \"version.dll\" dll\ndetection:\n  condition: selection\n  selection:\n    ImageLoaded: C:\\Windows\\ADFS\\version.dll\nfalsepositives:\n- Unlikely\nid: 640dc51c-7713-4faa-8a0e-e7c0d9d4654c\nlevel: critical\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/12/09\nreferences:\n- https://www.microsoft.com/security/blog/2021/09/27/foggyweb-targeted-nobelium-malware-leads-to-persistent-backdoor/\nstatus: test\ntags:\n- attack.resource_development\n- attack.t1587\ntitle: FoggyWeb Backdoor DLL Loading\n",
+                            "sigma:id": "640dc51c-7713-4faa-8a0e-e7c0d9d4654c",
+                            "title": "FoggyWeb Backdoor DLL Loading",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2131cfb3-8c12-45e8-8fa0-31f5924e9f07",
+                        "lookup_data": {
+                            "description": "Detects the default filename used in PoC code against print spooler vulnerability CVE-2021-1675",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/06/29\ndescription: Detects the default filename used in PoC code against print spooler vulnerability\n  CVE-2021-1675\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|contains: C:\\Windows\\System32\\spool\\drivers\\x64\\3\\old\\1\\123\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- TargetFilename\nid: 2131cfb3-8c12-45e8-8fa0-31f5924e9f07\nlevel: critical\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/hhlxf/PrintNightmare\n- https://github.com/afwu/PrintNightmare\n- https://github.com/cube0x0/CVE-2021-1675\nstatus: test\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.resource_development\n- attack.t1587\n- cve.2021.1675\ntitle: CVE-2021-1675 Print Spooler Exploitation Filename Pattern\n",
+                            "sigma:id": "2131cfb3-8c12-45e8-8fa0-31f5924e9f07",
+                            "title": "CVE-2021-1675 Print Spooler Exploitation Filename Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a39d7fa7-3fbd-4dc2-97e1-d87f546b1bbc",
+                        "lookup_data": {
+                            "description": "Detects program executions in suspicious non-program folders related to malware or hacking activity",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2018/01/23\ndescription: Detects program executions in suspicious non-program folders related\n  to malware or hacking activity\ndetection:\n  condition: selection\n  selection:\n    exe|startswith:\n    - /tmp/\n    - /var/www/\n    - /home/*/public_html/\n    - /usr/local/apache2/\n    - /usr/local/httpd/\n    - /var/apache/\n    - /srv/www/\n    - /home/httpd/html/\n    - /srv/http/\n    - /usr/share/nginx/html/\n    - /var/lib/pgsql/data/\n    - /usr/local/mysql/data/\n    - /var/lib/mysql/\n    - /var/vsftpd/\n    - /etc/bind/\n    - /var/named/\n    type: SYSCALL\nfalsepositives:\n- Admin activity (especially in /tmp folders)\n- Crazy web applications\nid: a39d7fa7-3fbd-4dc2-97e1-d87f546b1bbc\nlevel: medium\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2021/11/27\nreferences:\n- Internal Research\nstatus: test\ntags:\n- attack.t1587\n- attack.t1584\n- attack.resource_development\ntitle: Program Executions in Suspicious Folders\n",
+                            "sigma:id": "a39d7fa7-3fbd-4dc2-97e1-d87f546b1bbc",
+                            "title": "Program Executions in Suspicious Folders",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "60c0a111-787a-4e8a-9262-ee485f3ef9d5",
+                        "lookup_data": {
+                            "description": "Detects file creation patterns noticeable during the exploitation of CVE-2021-40444",
+                            "raw": "author: Florian Roth (Nextron Systems), Sittikorn S\ndate: 2021/09/10\ndescription: Detects file creation patterns noticeable during the exploitation of\n  CVE-2021-40444\ndetection:\n  condition: (selection_cab or selection_inf) and not filter_legit\n  filter_legit:\n    TargetFilename|contains: AppData\\Local\\Temp\n    TargetFilename|endswith: \\Content.inf\n    TargetFilename|startswith: C:\\Users\\\n  selection_cab:\n    Image|endswith: \\winword.exe\n    TargetFilename|contains: \\Windows\\INetCache\n    TargetFilename|endswith: .cab\n  selection_inf:\n    Image|endswith: \\winword.exe\n    TargetFilename|contains|all:\n    - \\AppData\\Local\\Temp\\\n    - '.inf'\nfalsepositives:\n- Unknown\nfields:\n- TargetFilename\nid: 60c0a111-787a-4e8a-9262-ee485f3ef9d5\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/06/17\nreferences:\n- https://twitter.com/RonnyTNL/status/1436334640617373699?s=20\n- https://twitter.com/vanitasnk/status/1437329511142420483?s=21\nstatus: experimental\ntags:\n- attack.resource_development\n- attack.t1587\ntitle: Suspicious Word Cab File Write CVE-2021-40444\n",
+                            "sigma:id": "60c0a111-787a-4e8a-9262-ee485f3ef9d5",
+                            "title": "Suspicious Word Cab File Write CVE-2021-40444",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ff23ffbc-3378-435e-992f-0624dcf93ab4",
+                        "lookup_data": {
+                            "description": "Detects the execution of the PurpleSharp adversary simulation tool",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/06/18\ndescription: Detects the execution of the PurpleSharp adversary simulation tool\ndetection:\n  condition: 1 of selection_*\n  selection_cli:\n    CommandLine|contains:\n    - xyz123456.exe\n    - PurpleSharp\n  selection_img:\n  - Image|contains: \\purplesharp\n  - OriginalFileName: PurpleSharp.exe\nfalsepositives:\n- Unlikely\nid: ff23ffbc-3378-435e-992f-0624dcf93ab4\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/31\nreferences:\n- https://github.com/mvelazc0/PurpleSharp\nstatus: test\ntags:\n- attack.t1587\n- attack.resource_development\ntitle: PurpleSharp Indicator\n",
+                            "sigma:id": "ff23ffbc-3378-435e-992f-0624dcf93ab4",
+                            "title": "PurpleSharp Indicator",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "edadea33-549c-4ed1-9783-8f5a5853cbdf",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1587",
+                            "mitre-cti:description": "Adversaries may build capabilities that can be used during targeting. Rather than purchasing, freely downloading, or stealing capabilities, adversaries may develop their own capabilities in-house. This is the process of identifying development requirements and building solutions such as malware, exploits, and self-signed certificates. Adversaries may develop capabilities to support their operations throughout numerous phases of the adversary lifecycle.(Citation: Mandiant APT1)(Citation: Kaspersky Sofacy)(Citation: Bitdefender StrongPity June 2020)(Citation: Talos Promethium June 2020)\n\nAs with legitimate development efforts, different skill sets may be required for developing capabilities. The skills needed may be located in-house, or may need to be contracted out. Use of a contractor may be considered an extension of that adversary's development capabilities, provided the adversary plays a role in shaping requirements and maintains a degree of exclusivity to the capability.",
+                            "mitre-cti:name": "Develop Capabilities",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['PRE'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--edadea33-549c-4ed1-9783-8f5a5853cbdf', 'type': 'attack-pattern', 'created': '2020-10-01T01:30:00.877Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1587', 'url': 'https://attack.mitre.org/techniques/T1587'}, {'url': 'https://www.fireeye.com/content/dam/fireeye-www/services/pdfs/mandiant-apt1-report.pdf', 'description': 'Mandiant. (n.d.). APT1 Exposing One of China’s Cyber Espionage Units. Retrieved July 18, 2016.', 'source_name': 'Mandiant APT1'}, {'source_name': 'Kaspersky Sofacy', 'description': \"Kaspersky Lab's Global Research and Analysis Team. (2015, December 4). Sofacy APT hits high profile targets with updated toolset. Retrieved December 10, 2015.\", 'url': 'https://securelist.com/sofacy-apt-hits-high-profile-targets-with-updated-toolset/72924/'}, {'source_name': 'Bitdefender StrongPity June 2020', 'url': 'https://www.bitdefender.com/files/News/CaseStudies/study/353/Bitdefender-Whitepaper-StrongPity-APT.pdf', 'description': 'Tudorica, R. et al. (2020, June 30). StrongPity APT - Revealing Trojanized Tools, Working Hours and Infrastructure. Retrieved July 20, 2020.'}, {'source_name': 'Talos Promethium June 2020', 'url': 'https://blog.talosintelligence.com/2020/06/promethium-extends-with-strongpity3.html', 'description': 'Mercer, W. et al. (2020, June 29). PROMETHIUM extends global reach with StrongPity3 APT. Retrieved July 20, 2020.'}, {'source_name': 'Splunk Kovar Certificates 2017', 'url': 'https://www.splunk.com/en_us/blog/security/tall-tales-of-hunting-with-tls-ssl-certificates.html', 'description': 'Kovar, R. (2017, December 11). Tall Tales of Hunting with TLS/SSL Certificates. Retrieved October 16, 2020.'}], 'modified': '2021-10-17T16:07:08.768Z', 'name': 'Develop Capabilities', 'description': \"Adversaries may build capabilities that can be used during targeting. Rather than purchasing, freely downloading, or stealing capabilities, adversaries may develop their own capabilities in-house. This is the process of identifying development requirements and building solutions such as malware, exploits, and self-signed certificates. Adversaries may develop capabilities to support their operations throughout numerous phases of the adversary lifecycle.(Citation: Mandiant APT1)(Citation: Kaspersky Sofacy)(Citation: Bitdefender StrongPity June 2020)(Citation: Talos Promethium June 2020)\\n\\nAs with legitimate development efforts, different skill sets may be required for developing capabilities. The skills needed may be located in-house, or may need to be contracted out. Use of a contractor may be considered an extension of that adversary's development capabilities, provided the adversary plays a role in shaping requirements and maintains a degree of exclusivity to the capability.\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'resource-development'}], 'x_mitre_detection': 'Consider analyzing malware for features that may be associated with the adversary and/or their developers, such as compiler used, debugging artifacts, or code similarities. Malware repositories can also be used to identify additional samples associated with the adversary and identify development patterns over time.\\n\\nConsider use of services that may aid in the tracking of certificates in use on sites across the Internet. In some cases it may be possible to pivot on known pieces of certificate information to uncover other adversary infrastructure.(Citation: Splunk Kovar Certificates 2017)\\n\\nMuch of this activity will take place outside the visibility of the target organization, making detection of this behavior difficult. Detection efforts may be focused on related stages of the adversary lifecycle, such as during Defense Evasion or Command and Control.', 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Internet Scan: Response Content', 'Malware Repository: Malware Metadata', 'Malware Repository: Malware Content'], 'x_mitre_is_subtechnique': False}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": []
+    },
+    "timestamp": "2025-02-28 17:57:06"
+}

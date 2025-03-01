@@ -1,0 +1,194 @@
+{
+    "id": "T1036.004",
+    "name": "Masquerade Task or Service",
+    "description": "Adversaries may attempt to manipulate the name of a task or service to make it appear legitimate or benign. Tasks/services executed by the Task Scheduler or systemd will typically be given a name and/or description.(Citation: TechNet Schtasks)(Citation: Systemd Service Units) Windows services will have a service name as well as a display name. Many benign tasks and services exist that have commonly associated names. Adversaries may give tasks or services names that are similar or identical to those of legitimate ones.\nTasks or services contain other fields, such as a description, that adversaries may attempt to make appear legitimate.(Citation: Palo Alto Shamoon Nov 2016)(Citation: Fysbis Dr Web Analysis)",
+    "platforms": "Windows, Linux, macOS",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Command: Command Execution, Service: Service Metadata, Service: Service Creation, Scheduled Job: Scheduled Job Metadata, Scheduled Job: Scheduled Job Modification",
+    "detection": "Look for changes to tasks and services that do not correlate with known software, patch cycles, etc. Suspicious program execution through scheduled tasks or services may show up as outlier processes that have not been seen before when compared against historical data. Monitor processes and command-line arguments for actions that could be taken to create tasks or services. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.",
+    "url": "https://attack.mitre.org/techniques/T1036/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1036.004",
+                "atomic_attack_guid": "f9f2fe59-96f7-4a7d-ba9f-a9783200d4c9",
+                "atomic_attack_name": "Creating W32Time similar named service using schtasks",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Command Patterns In Scheduled Task Creation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_susp_pattern.yml",
+                        "remote_content": "title: Suspicious Command Patterns In Scheduled Task Creation\nid: f2c64357-b1d2-41b7-849f-34d2682c0fad\nstatus: test\ndescription: Detects scheduled task creation using \"schtasks\" that contain potentially suspicious or uncommon commands\nreferences:\n    - https://app.any.run/tasks/512c1352-6380-4436-b27d-bb62f0c020d6/\n    - https://twitter.com/RedDrip7/status/1506480588827467785\n    - https://www.ncsc.gov.uk/static-assets/documents/malware-analysis-reports/devil-bait/NCSC-MAR-Devil-Bait.pdf\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-23\nmodified: 2024-03-19\ntags:\n    - attack.execution\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_schtasks:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: '/Create '\n    selection_pattern_1:\n        CommandLine|contains:\n            - '/sc minute '\n            - '/ru system '\n    selection_pattern_2:\n        CommandLine|contains:\n            - 'cmd /c'\n            - 'cmd /k'\n            - 'cmd /r'\n            - 'cmd.exe /c '\n            - 'cmd.exe /k '\n            - 'cmd.exe /r '\n    selection_uncommon:\n        CommandLine|contains:\n            - ' -decode '\n            - ' -enc '\n            - ' -w hidden '\n            - ' bypass '\n            - ' IEX'\n            - '.DownloadData'\n            - '.DownloadFile'\n            - '.DownloadString'\n            - '/c start /min ' # https://twitter.com/RedDrip7/status/1506480588827467785\n            - 'FromBase64String'\n            - 'mshta http'\n            - 'mshta.exe http'\n    selection_anomaly_1:\n        CommandLine|contains:\n            - ':\\ProgramData\\'\n            - ':\\Temp\\'\n            - ':\\Tmp\\'\n            - ':\\Users\\Public\\'\n            - ':\\Windows\\Temp\\'\n            - '\\AppData\\'\n            - '%AppData%'\n            - '%Temp%'\n            - '%tmp%'\n    selection_anomaly_2:\n        CommandLine|contains:\n            - 'cscript'\n            - 'curl'\n            - 'wscript'\n    condition: selection_schtasks and ( all of selection_pattern_* or selection_uncommon or all of selection_anomaly_* )\nfalsepositives:\n    - Software installers that run from temporary folders and also install scheduled tasks are expected to generate some false positives\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Schtasks Creation Or Modification With SYSTEM Privileges",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_system.yml",
+                        "remote_content": "title: Schtasks Creation Or Modification With SYSTEM Privileges\nid: 89ca78fd-b37c-4310-b3d3-81a023f83936\nstatus: test\ndescription: Detects the creation or update of a scheduled task to run with \"NT AUTHORITY\\SYSTEM\" privileges\nreferences:\n    - https://www.elastic.co/security-labs/exploring-the-qbot-attack-pattern\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-28\nmodified: 2025-02-15\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_root:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains:\n            - ' /change '\n            - ' /create '\n    selection_run:\n        CommandLine|contains: '/ru '\n    selection_user:\n        CommandLine|contains:\n            - 'NT AUT' # This covers the usual NT AUTHORITY\\SYSTEM\n            - ' SYSTEM ' # SYSTEM is a valid value for schtasks hence it gets it's own value with space\n    filter_optional_teamviewer:\n        # FP from test set in SIGMA\n        # Cannot use ParentImage on all OSes for 4688 events\n        # ParentImage|contains|all:\n        #     - '\\AppData\\Local\\Temp\\'\n        #     - 'TeamViewer_.exe'\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains|all:\n            - '/TN TVInstallRestore'\n            - '\\TeamViewer_.exe'\n    filter_optional_office:\n        CommandLine|contains|all:\n            # https://answers.microsoft.com/en-us/msoffice/forum/all/office-15-subscription-heartbeat-task-created-on/43ab5e53-a9fb-47c6-8c14-44889974b9ff\n            - 'Subscription Heartbeat'\n            - '\\HeartbeatConfig.xml'\n            - '\\Microsoft Shared\\OFFICE'\n    filter_optional_avira:\n        CommandLine|contains:\n            - '/Create /F /RU System /SC WEEKLY /TN AviraSystemSpeedupVerify /TR '\n            - ':\\Program Files (x86)\\Avira\\System Speedup\\setup\\avira_speedup_setup.exe'\n            - '/VERIFY /VERYSILENT /NOSTART /NODOTNET /NORESTART\" /RL HIGHEST'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Scheduled Task Creation Via Schtasks.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+                        "remote_content": "title: Scheduled Task Creation Via Schtasks.EXE\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nstatus: test\ndescription: Detects the creation of scheduled tasks by user accounts via the \"schtasks\" utility.\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-01-16\nmodified: 2024-01-18\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1053.005\n    - attack.s0111\n    - car.2013-08-001\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: ' /create '\n    filter_main_system_user:\n        User|contains: # covers many language settings\n            - 'AUTHORI'\n            - 'AUTORI'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrative activity\n    - Software installation\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Schtasks Create Run As System",
+                        "rule_link": "https://research.splunk.com/endpoint/41a0e58e-884c-11ec-9976-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1036.004",
+                "atomic_attack_guid": "b721c6ef-472c-4263-a0d9-37f1f4ecff66",
+                "atomic_attack_name": "Creating W32Time similar named service using sc",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "New Service Creation Using Sc.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sc_create_service.yml",
+                        "remote_content": "title: New Service Creation Using Sc.EXE\nid: 85ff530b-261d-48c6-a441-facaa2e81e48\nrelated:\n    - id: c02e96b7-c63a-4c47-bd83-4a9f74afcfb2 # Using PowerShell\n      type: similar\nstatus: test\ndescription: Detects the creation of a new service using the \"sc.exe\" utility.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1543.003/T1543.003.md\nauthor: Timur Zinniatullin, Daniil Yugoslavskiy, oscd.community\ndate: 2023-02-20\ntags:\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1543.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\sc.exe'\n        CommandLine|contains|all:\n            - 'create'\n            - 'binPath'\n    condition: selection\nfalsepositives:\n    - Legitimate administrator or user creates a service for legitimate reasons.\n    - Software installation\nlevel: low\n"
+                    },
+                    {
+                        "rule_name": "Suspicious New Service Creation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_service_creation.yml",
+                        "remote_content": "title: Suspicious New Service Creation\nid: 17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8\nrelated:\n    - id: 7fe71fc9-de3b-432a-8d57-8c809efc10ab\n      type: derived\nstatus: test\ndescription: Detects creation of a new service via \"sc\" command or the powershell \"new-service\" cmdlet with suspicious binary paths\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1543.003/T1543.003.md\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-14\nmodified: 2022-11-18\ntags:\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1543.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_sc:\n        Image|endswith: '\\sc.exe'\n        CommandLine|contains|all:\n            - 'create'\n            - 'binPath='\n    selection_posh:\n        CommandLine|contains|all:\n            - 'New-Service'\n            - '-BinaryPathName'\n    susp_binpath:\n        CommandLine|contains:\n            # Add more suspicious commands or binaries\n            - 'powershell'\n            - 'mshta'\n            - 'wscript'\n            - 'cscript'\n            - 'svchost'\n            - 'dllhost'\n            - 'cmd '\n            - 'cmd.exe /c'\n            - 'cmd.exe /k'\n            - 'cmd.exe /r'\n            - 'rundll32'\n            # Add more suspicious paths\n            - 'C:\\Users\\Public'\n            - '\\Downloads\\'\n            - '\\Desktop\\'\n            - '\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'\n            - 'C:\\Windows\\TEMP\\'\n            - '\\AppData\\Local\\Temp'\n    condition: 1 of selection* and susp_binpath\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                    "7bdca9d5-d500-4d7d-8c52-5fd47baf4c0c",
+                    "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                        "lookup_data": {
+                            "description": "Detects activity mentioned in Operation Wocao report",
+                            "raw": "author: Florian Roth (Nextron Systems), frack113\ndate: 2019/12/20\ndescription: Detects activity mentioned in Operation Wocao report\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - checkadmin.exe 127.0.0.1 -all\n    - netsh advfirewall firewall add rule name=powershell dir=in\n    - cmd /c powershell.exe -ep bypass -file c:\\s.ps1\n    - /tn win32times /f\n    - create win32times binPath=\n    - \\c$\\windows\\system32\\devmgr.dll\n    - ' -exec bypass -enc JgAg'\n    - type *keepass\\KeePass.config.xml\n    - iie.exe iie.txt\n    - reg query HKEY_CURRENT_USER\\Software\\\\*\\PuTTY\\Sessions\\\nfalsepositives:\n- Administrators that use checkadmin.exe tool to enumerate local administrators\nid: 1cfac73c-be78-4f9a-9b08-5bde0c3953ab\nlevel: high\nlogsource:\n  category: process_creation\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.fox-it.com/en/news/whitepapers/operation-wocao-shining-a-light-on-one-of-chinas-hidden-hacking-groups/\n- https://twitter.com/SBousseaden/status/1207671369963646976\nrelated:\n- id: 74ad4314-482e-4c3e-b237-3f7ed3b9ca8d\n  type: derived\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1036.004\n- attack.t1027\n- attack.execution\n- attack.t1053.005\n- attack.t1059.001\ntitle: Operation Wocao Activity\n",
+                            "sigma:id": "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                            "title": "Operation Wocao Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7bdca9d5-d500-4d7d-8c52-5fd47baf4c0c",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1036.004",
+                            "mitre-cti:description": "Adversaries may attempt to manipulate the name of a task or service to make it appear legitimate or benign. Tasks/services executed by the Task Scheduler or systemd will typically be given a name and/or description.(Citation: TechNet Schtasks)(Citation: Systemd Service Units) Windows services will have a service name as well as a display name. Many benign tasks and services exist that have commonly associated names. Adversaries may give tasks or services names that are similar or identical to those of legitimate ones.\n\nTasks or services contain other fields, such as a description, that adversaries may attempt to make appear legitimate.(Citation: Palo Alto Shamoon Nov 2016)(Citation: Fysbis Dr Web Analysis)",
+                            "mitre-cti:name": "Masquerade Task or Service",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--7bdca9d5-d500-4d7d-8c52-5fd47baf4c0c', 'type': 'attack-pattern', 'created': '2020-02-10T20:30:07.426Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1036.004', 'url': 'https://attack.mitre.org/techniques/T1036/004'}, {'url': 'https://technet.microsoft.com/en-us/library/bb490996.aspx', 'description': 'Microsoft. (n.d.). Schtasks. Retrieved April 28, 2016.', 'source_name': 'TechNet Schtasks'}, {'source_name': 'Systemd Service Units', 'url': 'https://www.freedesktop.org/software/systemd/man/systemd.service.html', 'description': 'Freedesktop.org. (n.d.). systemd.service — Service unit configuration. Retrieved March 16, 2020.'}, {'url': 'http://researchcenter.paloaltonetworks.com/2016/11/unit42-shamoon-2-return-disttrack-wiper/', 'description': 'Falcone, R.. (2016, November 30). Shamoon 2: Return of the Disttrack Wiper. Retrieved January 11, 2017.', 'source_name': 'Palo Alto Shamoon Nov 2016'}, {'url': 'https://vms.drweb.com/virus/?i=4276269', 'description': 'Doctor Web. (2014, November 21). Linux.BackDoor.Fysbis.1. Retrieved December 7, 2017.', 'source_name': 'Fysbis Dr Web Analysis'}], 'modified': '2021-10-18T13:24:52.618Z', 'name': 'Masquerade Task or Service', 'description': 'Adversaries may attempt to manipulate the name of a task or service to make it appear legitimate or benign. Tasks/services executed by the Task Scheduler or systemd will typically be given a name and/or description.(Citation: TechNet Schtasks)(Citation: Systemd Service Units) Windows services will have a service name as well as a display name. Many benign tasks and services exist that have commonly associated names. Adversaries may give tasks or services names that are similar or identical to those of legitimate ones.\\n\\nTasks or services contain other fields, such as a description, that adversaries may attempt to make appear legitimate.(Citation: Palo Alto Shamoon Nov 2016)(Citation: Fysbis Dr Web Analysis)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Look for changes to tasks and services that do not correlate with known software, patch cycles, etc. Suspicious program execution through scheduled tasks or services may show up as outlier processes that have not been seen before when compared against historical data. Monitor processes and command-line arguments for actions that could be taken to create tasks or services. Data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Scheduled Job: Scheduled Job Modification', 'Scheduled Job: Scheduled Job Metadata', 'Service: Service Metadata', 'Service: Service Creation', 'Command: Command Execution'], 'x_mitre_permissions_required': ['User', 'Administrator', 'SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                        "lookup_data": {
+                            "description": "Detects activity mentioned in Operation Wocao report",
+                            "raw": "author: Florian Roth (Nextron Systems), frack113\ndate: 2019/12/20\ndescription: Detects activity mentioned in Operation Wocao report\ndetection:\n  condition: selection\n  selection:\n    CallerProcessName|endswith: \\checkadmin.exe\n    EventID: 4799\n    TargetUserName|startswith: Administr\nfalsepositives:\n- Administrators that use checkadmin.exe tool to enumerate local administrators\nid: 74ad4314-482e-4c3e-b237-3f7ed3b9ca8d\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://www.fox-it.com/en/news/whitepapers/operation-wocao-shining-a-light-on-one-of-chinas-hidden-hacking-groups/\n- https://twitter.com/SBousseaden/status/1207671369963646976\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1036.004\n- attack.t1027\n- attack.execution\n- attack.t1053.005\n- attack.t1059.001\ntitle: Operation Wocao Activity - Security\n",
+                            "sigma:id": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                            "title": "Operation Wocao Activity - Security",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1036.004",
+                "display_name": "Masquerading: Masquerade Task or Service",
+                "atomic_tests": [
+                    {
+                        "name": "Creating W32Time similar named service using schtasks",
+                        "auto_generated_guid": "f9f2fe59-96f7-4a7d-ba9f-a9783200d4c9",
+                        "description": "Creating W32Time similar named service (win32times) using schtasks just like threat actor dubbed \"Operation Wocao\"",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "schtasks /create /ru system /sc daily /tr \"cmd /c powershell.exe -ep bypass -file c:\\T1036.004_NonExistingScript.ps1\" /tn win32times /f\nschtasks /query /tn win32times\n",
+                            "cleanup_command": "schtasks /tn win32times /delete /f\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Creating W32Time similar named service using sc",
+                        "auto_generated_guid": "b721c6ef-472c-4263-a0d9-37f1f4ecff66",
+                        "description": "Creating W32Time similar named service (win32times) using sc just like threat actor dubbed \"Operation Wocao\"",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "sc create win32times binPath= \"cmd /c start c:\\T1036.004_NonExistingScript.ps1\"\nsc qc win32times\n",
+                            "cleanup_command": "sc delete win32times\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "linux rename /proc/pid/comm using prctl",
+                        "auto_generated_guid": "f0e3aaea-5cd9-4db6-a077-631dd19b27a8",
+                        "description": "Runs a C program that calls prctl(PR_SET_NAME) to modify /proc/pid/comm value to \"totally_legit\".  This will show up as process name in simple 'ps' listings.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "exe_path": {
+                                "description": "Output Binary Path",
+                                "type": "path",
+                                "default": "/tmp/T1036_004_prctl_rename"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "#{exe_path} must be exist on system.\n",
+                                "prereq_command": "stat #{exe_path}\n",
+                                "get_prereq_command": "cc -o #{exe_path} PathToAtomicsFolder/T1036.004/src/prctl_rename.c\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "command": "#{exe_path} & ps\nTMP=`ps | grep totally_legit`\nif [ -z \"${TMP}\" ] ; then echo \"renamed process NOT FOUND in process list\" && exit 1; fi\nexit 0\n",
+                            "cleanup_command": "rm -f #{exe_path}\n"
+                        }
+                    },
+                    {
+                        "name": "Hiding a malicious process with bind mounts",
+                        "auto_generated_guid": "ad4b73c2-d6e2-4d8b-9868-4c6f55906e01",
+                        "description": "Creates a malicious process and hides it by bind mounting to the /proc filesystem of a benign process\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "elevation_required": true,
+                            "command": "eval '(while true; do :; done) &'\necho $! > /tmp/evil_pid.txt\nrandom_kernel_pid=$(ps -ef | grep \"\\[.*\\]\" | awk '{print $2}' | shuf -n 1)\nsudo mount -B /proc/$random_kernel_pid /proc/$(cat /tmp/evil_pid.txt)\n",
+                            "cleanup_command": "kill $(cat /tmp/evil_pid.txt) || echo \"Failed to kill PID $evil_pid\"\nrm /tmp/evil_pid.txt\n",
+                            "name": "sh"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:18:31"
+}

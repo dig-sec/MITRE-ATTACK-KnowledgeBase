@@ -1,0 +1,401 @@
+{
+    "id": "T1531",
+    "name": "Account Access Removal",
+    "description": "Adversaries may interrupt availability of system and network resources by inhibiting access to accounts utilized by legitimate users. Accounts may be deleted, locked, or manipulated (ex: changed credentials) to remove access to accounts.\nAdversaries may also subsequently log off and/or reboot boxes to set malicious changes into place.(Citation: CarbonBlack LockerGoga 2019)(Citation: Unit42 LockerGoga 2019)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Impact",
+    "data_sources": "User Account: User Account Deletion, User Account: User Account Modification, Active Directory: Active Directory Object Modification",
+    "detection": "Use process monitoring to monitor the execution and command line parameters of binaries involved in deleting accounts or changing passwords, such as use of [Net](S0039). Windows event logs may also designate activity associated with an adversary's attempt to remove access to an account:\n* Event ID 4723 - An attempt was made to change an account's password\n* Event ID 4724 - An attempt was made to reset an account's password\n* Event ID 4726 - A user account was deleted\n* Event ID 4740 - A user account was locked out\nAlerting on [Net](S0039) and these Event IDs may generate a high degree of false positives, so compare against baseline knowledge for how systems are typically used and correlate modification events with other indications of malicious activity where possible.",
+    "url": "https://attack.mitre.org/techniques/T1531",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1531",
+                "atomic_attack_guid": "f21a1d7d-a62f-442a-8c3a-2440d43b19e5",
+                "atomic_attack_name": "Delete User - Windows",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "New User Created Via Net.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_net_user_add.yml",
+                        "remote_content": "title: New User Created Via Net.EXE\nid: cd219ff3-fa99-45d4-8380-a7d15116c6dc\nrelated:\n    - id: b9f0e6f5-09b4-4358-bae4-08408705bd5c\n      type: similar\nstatus: test\ndescription: Identifies the creation of local users via the net.exe command.\nreferences:\n    - https://eqllib.readthedocs.io/en/latest/analytics/014c3f51-89c6-40f1-ac9c-5688f26090ab.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1136.001/T1136.001.md\nauthor: Endgame, JHasenbusch (adapted to Sigma for oscd.community)\ndate: 2018-10-30\nmodified: 2023-02-21\ntags:\n    - attack.persistence\n    - attack.t1136.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains|all:\n            - 'user'\n            - 'add'\n    condition: all of selection_*\nfalsepositives:\n    - Legitimate user creation.\n    - Better use event IDs for user creation rather than command line rules.\nlevel: medium\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Network Connection Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/640337e5-6e41-4b7f-af06-9d9eab5e1e2d/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1531",
+                "atomic_attack_guid": "1b99ef28-f83c-4ec5-8a08-1a56263a5bb2",
+                "atomic_attack_name": "Change User Password - Windows",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Net.EXE Execution",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules-threat-hunting/windows/process_creation/proc_creation_win_net_execution.yml",
+                        "remote_content": "title: Net.EXE Execution\nid: 183e7ea8-ac4b-4c23-9aec-b3dac4e401ac\nstatus: test\ndescription: Detects execution of \"Net.EXE\".\nreferences:\n    - https://pentest.blog/windows-privilege-escalation-methods-for-pentesters/\n    - https://eqllib.readthedocs.io/en/latest/analytics/4d2e7fc1-af0b-4915-89aa-03d25ba7805e.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/e61f557c-a9d0-4c25-ab5b-bbc46bb24deb.html\n    - https://eqllib.readthedocs.io/en/latest/analytics/9b3dd402-891c-4c4d-a662-28947168ce61.html\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1007/T1007.md#atomic-test-2---system-service-discovery---netexe\nauthor: Michael Haag, Mark Woan (improvements), James Pemberton / @4A616D6573 / oscd.community (improvements)\ndate: 2019-01-16\nmodified: 2022-07-11\ntags:\n    - attack.discovery\n    - attack.t1007\n    - attack.t1049\n    - attack.t1018\n    - attack.t1135\n    - attack.t1201\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.lateral-movement\n    - attack.t1021.002\n    - attack.s0039\n    - detection.threat-hunting\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_img:\n        - Image|endswith:\n              - '\\net.exe'\n              - '\\net1.exe'\n        - OriginalFileName:\n              - 'net.exe'\n              - 'net1.exe'\n    selection_cli:\n        CommandLine|contains:\n            - ' accounts'\n            - ' group'\n            - ' localgroup'\n            - ' share'\n            - ' start'\n            - ' stop '\n            - ' user'\n            - ' view'\n    condition: all of selection_*\nfalsepositives:\n    - Likely\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Network Connection Discovery With Net",
+                        "rule_link": "https://research.splunk.com/endpoint/640337e5-6e41-4b7f-af06-9d9eab5e1e2d/"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "b24e2a20-3b3d-4bf0-823b-1ed765398fb0",
+                    "7c797da2-9cf2-4523-ba64-33b06339f0cc",
+                    "12d027c3-b48c-4d9d-8bb6-a732200034b2",
+                    "13f81a90-a69c-4fab-8f07-b5bb55416a9f",
+                    "8a46f16c-8c4c-82d1-b121-0fdd3ba70a84",
+                    "14701da0-4b0f-4ee6-9c95-2ffb4e73bb9a",
+                    "08f26069-6f80-474b-8d1f-d971c6fedea0",
+                    "48a45d45-8112-416b-8a67-46e03a4b2107"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "b24e2a20-3b3d-4bf0-823b-1ed765398fb0",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1531",
+                            "mitre-cti:description": "Adversaries may interrupt availability of system and network resources by inhibiting access to accounts utilized by legitimate users. Accounts may be deleted, locked, or manipulated (ex: changed credentials) to remove access to accounts. Adversaries may also subsequently log off and/or perform a [System Shutdown/Reboot](https://attack.mitre.org/techniques/T1529) to set malicious changes into place.(Citation: CarbonBlack LockerGoga 2019)(Citation: Unit42 LockerGoga 2019)\n\nIn Windows, [Net](https://attack.mitre.org/software/S0039) utility, <code>Set-LocalUser</code> and <code>Set-ADAccountPassword</code> [PowerShell](https://attack.mitre.org/techniques/T1059/001) cmdlets may be used by adversaries to modify user accounts. In Linux, the <code>passwd</code> utility may be used to change passwords. Accounts could also be disabled by Group Policy. \n\nAdversaries who use ransomware may first perform this and other Impact behaviors, such as [Data Destruction](https://attack.mitre.org/techniques/T1485) and [Defacement](https://attack.mitre.org/techniques/T1491), before completing the [Data Encrypted for Impact](https://attack.mitre.org/techniques/T1486) objective. ",
+                            "mitre-cti:name": "Account Access Removal",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows', 'Office 365', 'SaaS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--b24e2a20-3b3d-4bf0-823b-1ed765398fb0', 'created': '2019-10-09T18:48:31.906Z', 'x_mitre_version': '1.1', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1531', 'url': 'https://attack.mitre.org/techniques/T1531'}, {'source_name': 'CarbonBlack LockerGoga 2019', 'url': 'https://www.carbonblack.com/2019/03/22/tau-threat-intelligence-notification-lockergoga-ransomware/', 'description': 'CarbonBlack Threat Analysis Unit. (2019, March 22). TAU Threat Intelligence Notification – LockerGoga Ransomware. Retrieved April 16, 2019.'}, {'source_name': 'Unit42 LockerGoga 2019', 'url': 'https://unit42.paloaltonetworks.com/born-this-way-origins-of-lockergoga/', 'description': 'Harbison, M. (2019, March 26). Born This Way? Origins of LockerGoga. Retrieved April 16, 2019.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may interrupt availability of system and network resources by inhibiting access to accounts utilized by legitimate users. Accounts may be deleted, locked, or manipulated (ex: changed credentials) to remove access to accounts. Adversaries may also subsequently log off and/or perform a [System Shutdown/Reboot](https://attack.mitre.org/techniques/T1529) to set malicious changes into place.(Citation: CarbonBlack LockerGoga 2019)(Citation: Unit42 LockerGoga 2019)\\n\\nIn Windows, [Net](https://attack.mitre.org/software/S0039) utility, <code>Set-LocalUser</code> and <code>Set-ADAccountPassword</code> [PowerShell](https://attack.mitre.org/techniques/T1059/001) cmdlets may be used by adversaries to modify user accounts. In Linux, the <code>passwd</code> utility may be used to change passwords. Accounts could also be disabled by Group Policy. \\n\\nAdversaries who use ransomware may first perform this and other Impact behaviors, such as [Data Destruction](https://attack.mitre.org/techniques/T1485) and [Defacement](https://attack.mitre.org/techniques/T1491), before completing the [Data Encrypted for Impact](https://attack.mitre.org/techniques/T1486) objective. ', 'modified': '2022-04-19T22:57:27.449Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Account Access Removal', 'x_mitre_detection': \"Use process monitoring to monitor the execution and command line parameters of binaries involved in deleting accounts or changing passwords, such as use of [Net](https://attack.mitre.org/software/S0039). Windows event logs may also designate activity associated with an adversary's attempt to remove access to an account:\\n\\n* Event ID 4723 - An attempt was made to change an account's password\\n* Event ID 4724 - An attempt was made to reset an account's password\\n* Event ID 4726 - A user account was deleted\\n* Event ID 4740 - A user account was locked out\\n\\nAlerting on [Net](https://attack.mitre.org/software/S0039) and these Event IDs may generate a high degree of false positives, so compare against baseline knowledge for how systems are typically used and correlate modification events with other indications of malicious activity where possible.\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'impact'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['User Account: User Account Modification', 'Active Directory: Active Directory Object Modification', 'User Account: User Account Deletion'], 'x_mitre_impact_type': ['Availability'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7c797da2-9cf2-4523-ba64-33b06339f0cc",
+                        "lookup_data": {
+                            "description": "Identifies when an ElastiCache security group has been modified or deleted.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/07/24\ndescription: Identifies when an ElastiCache security group has been modified or deleted.\ndetection:\n  condition: selection\n  selection:\n    eventName:\n    - DeleteCacheSecurityGroup\n    - AuthorizeCacheSecurityGroupIngress\n    - RevokeCacheSecurityGroupIngress\n    - AuthorizeCacheSecurityGroupEgress\n    - RevokeCacheSecurityGroupEgress\n    eventSource: elasticache.amazonaws.com\nfalsepositives:\n- A ElastiCache security group deletion may be done by a system or network administrator.\n  Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment. Security Group deletions from unfamiliar users or hosts should\n  be investigated. If known behavior is causing false positives, it can be exempted\n  from the rule.\nid: 7c797da2-9cf2-4523-ba64-33b06339f0cc\nlevel: low\nlogsource:\n  product: aws\n  service: cloudtrail\nmodified: 2022/10/09\nreferences:\n- https://github.com/elastic/detection-rules/blob/7d5efd68603f42be5e125b5a6a503b2ef3ac0f4e/rules/integrations/aws/impact_elasticache_security_group_modified_or_deleted.toml\nstatus: test\ntags:\n- attack.impact\n- attack.t1531\ntitle: AWS ElastiCache Security Group Modified or Deleted\n",
+                            "sigma:id": "7c797da2-9cf2-4523-ba64-33b06339f0cc",
+                            "title": "AWS ElastiCache Security Group Modified or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "12d027c3-b48c-4d9d-8bb6-a732200034b2",
+                        "lookup_data": {
+                            "description": "Identifies when a service account is modified or deleted.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/08/07\ndescription: Identifies when a service account is modified or deleted.\ndetection:\n  condition: selection\n  selection:\n    operationName:\n    - MICROSOFT.KUBERNETES/CONNECTEDCLUSTERS/SERVICEACCOUNTS/WRITE\n    - MICROSOFT.KUBERNETES/CONNECTEDCLUSTERS/SERVICEACCOUNTS/DELETE\n    - MICROSOFT.KUBERNETES/CONNECTEDCLUSTERS/SERVICEACCOUNTS/IMPERSONATE/ACTION\nfalsepositives:\n- Service account being modified or deleted may be performed by a system administrator.\n  Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- Service account modified or deleted from unfamiliar users should be investigated.\n  If known behavior is causing false positives, it can be exempted from the rule.\nid: 12d027c3-b48c-4d9d-8bb6-a732200034b2\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nmodified: 2022/08/23\nreferences:\n- https://docs.microsoft.com/en-us/azure/role-based-access-control/resource-provider-operations#microsoftkubernetes\n- https://www.microsoft.com/security/blog/2021/03/23/secure-containerized-environments-with-updated-threat-matrix-for-kubernetes/\n- https://www.microsoft.com/security/blog/2020/04/02/attack-matrix-kubernetes/\n- https://medium.com/mitre-engenuity/att-ck-for-containers-now-available-4c2359654bf1\n- https://attack.mitre.org/matrices/enterprise/cloud/\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1531\ntitle: Azure Kubernetes Service Account Modified or Deleted\n",
+                            "sigma:id": "12d027c3-b48c-4d9d-8bb6-a732200034b2",
+                            "title": "Azure Kubernetes Service Account Modified or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "13f81a90-a69c-4fab-8f07-b5bb55416a9f",
+                        "lookup_data": {
+                            "description": "Identifies when a service account is disabled or deleted in Google Cloud.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/08/14\ndescription: Identifies when a service account is disabled or deleted in Google Cloud.\ndetection:\n  condition: selection\n  selection:\n    gcp.audit.method_name|endswith:\n    - .serviceAccounts.disable\n    - .serviceAccounts.delete\nfalsepositives:\n- Service Account being disabled or deleted may be performed by a system administrator.\n  Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\n- Service Account disabled or deleted from unfamiliar users should be investigated.\n  If known behavior is causing false positives, it can be exempted from the rule.\nid: 13f81a90-a69c-4fab-8f07-b5bb55416a9f\nlevel: medium\nlogsource:\n  product: gcp\n  service: gcp.audit\nmodified: 2022/10/09\nreferences:\n- https://cloud.google.com/iam/docs/reference/rest/v1/projects.serviceAccounts\nstatus: test\ntags:\n- attack.impact\n- attack.t1531\ntitle: Google Cloud Service Account Disabled or Deleted\n",
+                            "sigma:id": "13f81a90-a69c-4fab-8f07-b5bb55416a9f",
+                            "title": "Google Cloud Service Account Disabled or Deleted",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8a46f16c-8c4c-82d1-b121-0fdd3ba70a84",
+                        "lookup_data": {
+                            "description": "Detects execution of the \"groupdel\" binary. Which is used to delete a group. This is sometimes abused by threat actors in order to cover their tracks",
+                            "raw": "author: Tuan Le (NCSGroup)\ndate: 2022/12/26\ndescription: Detects execution of the \"groupdel\" binary. Which is used to delete a\n  group. This is sometimes abused by threat actors in order to cover their tracks\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: /groupdel\nfalsepositives:\n- Legitimate administrator activities\nid: 8a46f16c-8c4c-82d1-b121-0fdd3ba70a84\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://linuxize.com/post/how-to-delete-group-in-linux/\n- https://www.cyberciti.biz/faq/linux-remove-user-command/\n- https://www.cybrary.it/blog/0p3n/linux-commands-used-attackers/\n- https://linux.die.net/man/8/groupdel\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1531\ntitle: Group Has Been Deleted Via Groupdel\n",
+                            "sigma:id": "8a46f16c-8c4c-82d1-b121-0fdd3ba70a84",
+                            "title": "Group Has Been Deleted Via Groupdel",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "14701da0-4b0f-4ee6-9c95-2ffb4e73bb9a",
+                        "lookup_data": {
+                            "description": "Detects when an user account is locked out.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/09/12\ndescription: Detects when an user account is locked out.\ndetection:\n  condition: selection\n  selection:\n    displaymessage: Max sign in attempts exceeded\nfalsepositives:\n- Unknown\nid: 14701da0-4b0f-4ee6-9c95-2ffb4e73bb9a\nlevel: medium\nlogsource:\n  product: okta\n  service: okta\nmodified: 2022/10/09\nreferences:\n- https://developer.okta.com/docs/reference/api/system-log/\n- https://developer.okta.com/docs/reference/api/event-types/\nstatus: test\ntags:\n- attack.impact\n- attack.t1531\ntitle: Okta User Account Locked Out\n",
+                            "sigma:id": "14701da0-4b0f-4ee6-9c95-2ffb4e73bb9a",
+                            "title": "Okta User Account Locked Out",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "08f26069-6f80-474b-8d1f-d971c6fedea0",
+                        "lookup_data": {
+                            "description": "Detects execution of the \"userdel\" binary. Which is used to delete a user account and related files. This is sometimes abused by threat actors in order to cover their tracks",
+                            "raw": "author: Tuan Le (NCSGroup)\ndate: 2022/12/26\ndescription: Detects execution of the \"userdel\" binary. Which is used to delete a\n  user account and related files. This is sometimes abused by threat actors in order\n  to cover their tracks\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: /userdel\nfalsepositives:\n- Legitimate administrator activities\nid: 08f26069-6f80-474b-8d1f-d971c6fedea0\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://linuxize.com/post/how-to-delete-group-in-linux/\n- https://www.cyberciti.biz/faq/linux-remove-user-command/\n- https://www.cybrary.it/blog/0p3n/linux-commands-used-attackers/\n- https://linux.die.net/man/8/userdel\nstatus: experimental\ntags:\n- attack.impact\n- attack.t1531\ntitle: User Has Been Deleted Via Userdel\n",
+                            "sigma:id": "08f26069-6f80-474b-8d1f-d971c6fedea0",
+                            "title": "User Has Been Deleted Via Userdel",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "48a45d45-8112-416b-8a67-46e03a4b2107",
+                        "lookup_data": {
+                            "description": "Adversaries may interrupt availability of system and network resources by inhibiting access to accounts utilized by legitimate users.\nAccounts may be deleted, locked, or manipulated (ex: changed credentials) to remove access to accounts.\n",
+                            "raw": "author: frack113\ndate: 2021/12/26\ndescription: 'Adversaries may interrupt availability of system and network resources\n  by inhibiting access to accounts utilized by legitimate users.\n\n  Accounts may be deleted, locked, or manipulated (ex: changed credentials) to remove\n  access to accounts.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains|all:\n    - Remove-ADGroupMember\n    - '-Identity '\n    - '-Members '\nfalsepositives:\n- Unknown\nid: 48a45d45-8112-416b-8a67-46e03a4b2107\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1531/T1531.md#atomic-test-3---remove-account-from-domain-admin-group\nstatus: test\ntags:\n- attack.impact\n- attack.t1531\ntitle: Remove Account From Domain Admin Group\n",
+                            "sigma:id": "48a45d45-8112-416b-8a67-46e03a4b2107",
+                            "title": "Remove Account From Domain Admin Group",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1531",
+                "display_name": "Account Access Removal",
+                "atomic_tests": [
+                    {
+                        "name": "Change User Password - Windows",
+                        "auto_generated_guid": "1b99ef28-f83c-4ec5-8a08-1a56263a5bb2",
+                        "description": "Changes the user password to hinder access attempts. Seen in use by LockerGoga. Upon execution, log into the user account \"AtomicAdministrator\" with\nthe password \"HuHuHUHoHo283283\".\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "user_account": {
+                                "description": "User account whose password will be changed.",
+                                "type": "string",
+                                "default": "AtomicAdministrator"
+                            },
+                            "new_user_password": {
+                                "description": "Password to use if user account must be created first",
+                                "type": "string",
+                                "default": "User2ChangePW!"
+                            },
+                            "new_password": {
+                                "description": "New password for the specified account.",
+                                "type": "string",
+                                "default": "HuHuHUHoHo283283@dJD"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user #{user_account} #{new_user_password} /add\nnet.exe user #{user_account} #{new_password}\n",
+                            "cleanup_command": "net.exe user #{user_account} /delete >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete User - Windows",
+                        "auto_generated_guid": "f21a1d7d-a62f-442a-8c3a-2440d43b19e5",
+                        "description": "Deletes a user account to prevent access. Upon execution, run the command \"net user\" to verify that the new \"AtomicUser\" account was deleted.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "new_user_password": {
+                                "description": "Password to use if user account must be created first",
+                                "type": "string",
+                                "default": "User2DeletePW!"
+                            },
+                            "user_account": {
+                                "description": "User account to be deleted.",
+                                "type": "string",
+                                "default": "AtomicUser"
+                            }
+                        },
+                        "executor": {
+                            "command": "net user #{user_account} #{new_user_password} /add\nnet.exe user #{user_account} /delete\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Remove Account From Domain Admin Group",
+                        "auto_generated_guid": "43f71395-6c37-498e-ab17-897d814a0947",
+                        "description": "This test will remove an account from the domain admins group\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Requires the Active Directory module for powershell to be installed.\n",
+                                "prereq_command": "if(Get-Module -ListAvailable -Name ActiveDirectory) {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Add-WindowsCapability -Online -Name \"Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0\"\n"
+                            }
+                        ],
+                        "input_arguments": {
+                            "super_user": {
+                                "description": "Account used to run the execution command (must include domain).",
+                                "type": "string",
+                                "default": "domain\\super_user"
+                            },
+                            "super_pass": {
+                                "description": "super_user account password.",
+                                "type": "string",
+                                "default": "password"
+                            },
+                            "remove_user": {
+                                "description": "Account to remove from domain admins.",
+                                "type": "string",
+                                "default": "remove_user"
+                            }
+                        },
+                        "executor": {
+                            "command": "$PWord = ConvertTo-SecureString -String #{super_pass} -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList #{super_user}, $PWord\nif((Get-ADUser #{remove_user} -Properties memberof).memberof -like \"CN=Domain Admins*\"){\n  Remove-ADGroupMember -Identity \"Domain Admins\" -Members #{remove_user} -Credential $Credential -Confirm:$False\n} else{\n    write-host \"Error - Make sure #{remove_user} is in the domain admins group\" -foregroundcolor Red\n}\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Change User Password via passwd",
+                        "auto_generated_guid": "3c717bf3-2ecc-4d79-8ac8-0bfbf08fbce6",
+                        "description": "This test changes the user password to hinder access to the account using passwd utility.\n",
+                        "supported_platforms": [
+                            "macos",
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "user_account": {
+                                "description": "User account whose password will be changed.",
+                                "type": "string",
+                                "default": "ARTUser"
+                            }
+                        },
+                        "executor": {
+                            "command": "passwd #{user_account} #enter admin password > enter new password > confirm new password\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete User via dscl utility",
+                        "auto_generated_guid": "4d938c43-2fe8-4d70-a5b3-5bf239aa7846",
+                        "description": "This test deletes the user account using the dscl utility.\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "user_account": {
+                                "description": "User account which will be deleted.",
+                                "type": "string",
+                                "default": "ARTUser"
+                            },
+                            "user_password": {
+                                "description": "User password.",
+                                "type": "string",
+                                "default": "ARTPassword"
+                            }
+                        },
+                        "executor": {
+                            "command": "dscl . -delete /Users/#{user_account} #enter admin password\n",
+                            "cleanup_command": "dscl . -create /Users/#{user_account} #enter admin password\ndscl . -create /Users/#{user_account} UserShell /bin/bash\ndscl . -create /Users/#{user_account} UniqueID 503\ndscl . -create /Users/#{user_account} NFSHomeDirectory /Users/#{user_account}\ndscl . -passwd /Users/#{user_account} #{user_password} #enter password for new user\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Delete User via sysadminctl utility",
+                        "auto_generated_guid": "d3812c4e-30ee-466a-a0aa-07e355b561d6",
+                        "description": "This test deletes the user account using the sysadminctl utility.\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "user_account": {
+                                "description": "User account which will be deleted.",
+                                "type": "string",
+                                "default": "ARTUserAccount"
+                            },
+                            "user_name": {
+                                "description": "New user name.",
+                                "type": "string",
+                                "default": "ARTUser"
+                            },
+                            "user_password": {
+                                "description": "New user password.",
+                                "type": "string",
+                                "default": "ARTPassword"
+                            }
+                        },
+                        "executor": {
+                            "command": "sysadminctl -deleteUser #{user_account} #enter admin password\n",
+                            "cleanup_command": "sysadminctl -addUser #{user_account} -fullName \"#{user_name}\" -password #{user_password}\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Azure AD - Delete user via Azure AD PowerShell",
+                        "auto_generated_guid": "4f577511-dc1c-4045-bcb8-75d2457f01f4",
+                        "description": "Deletes a user in Azure AD. Adversaries may interrupt availability of system and network resources by inhibiting access to accounts utilized by legitimate users. Accounts may be deleted, locked, or manipulated (excluding changed credentials) to remove access to accounts.",
+                        "supported_platforms": [
+                            "azure-ad"
+                        ],
+                        "input_arguments": {
+                            "userprincipalname": {
+                                "description": "User principal name (UPN) for the Azure user being deleted",
+                                "type": "string",
+                                "default": "atomicredteam@yourdomain.com"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if AzureAD PowerShell module is installed",
+                                "prereq_command": "Get-InstalledModule -Name AzureAD",
+                                "get_prereq_command": "echo \"use the following to install AzureAD PowerShell module - Install-Module -Name AzureAD -Scope CurrentUser -Repository PSGallery -Force\""
+                            },
+                            {
+                                "description": "Check if AzureAD PowerShell module is installed",
+                                "prereq_command": "Update the input arguments so the userprincipalname value is accurate for your environment",
+                                "get_prereq_command": "echo \"Update the input arguments in the .yaml file so that the userprincipalname value is accurate for your environment\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "Connect-AzureAD\n$userprincipalname = \"#{userprincipalname}\"\nRemove-AzureADUser -ObjectId $userprincipalname",
+                            "cleanup_command": "N/A",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Azure AD - Delete user via Azure CLI",
+                        "auto_generated_guid": "c955c1c7-3145-4a22-af2d-63eea0d967f0",
+                        "description": "Deletes a user in Azure AD. Adversaries may interrupt availability of system and network resources by inhibiting access to accounts utilized by legitimate users. Accounts may be deleted, locked, or manipulated (excluding changed credentials) to remove access to accounts.",
+                        "supported_platforms": [
+                            "azure-ad"
+                        ],
+                        "input_arguments": {
+                            "userprincipalname": {
+                                "description": "User principal name (UPN) for the Azure user being deleted",
+                                "type": "string",
+                                "default": "atomicredteam@yourdomain.com"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Check if Azure CLI is installed and install manually",
+                                "prereq_command": "az account list",
+                                "get_prereq_command": "echo \"use the following to install the Azure CLI manually https://aka.ms/installazurecliwindows\""
+                            },
+                            {
+                                "description": "Check if Azure CLI is installed and install via PowerShell",
+                                "prereq_command": "az account list",
+                                "get_prereq_command": "echo \"use the following to install the Azure CLI $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; Remove-Item .\\AzureCLI.msi\""
+                            },
+                            {
+                                "description": "Update the userprincipalname to meet your requirements",
+                                "prereq_command": "Update the input arguments so the userprincipalname value is accurate for your environment",
+                                "get_prereq_command": "echo \"Update the input arguments in the .yaml file so that the userprincipalname value is accurate for your environment\""
+                            }
+                        ],
+                        "executor": {
+                            "command": "az login\n$userprincipalname = \"#{userprincipalname}\"\naz ad user delete --id $userprincipalname",
+                            "cleanup_command": "N/A",
+                            "name": "powershell"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:05:31"
+}

@@ -1,0 +1,153 @@
+{
+    "id": "T1546.012",
+    "name": "Image File Execution Options Injection",
+    "description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by Image File Execution Options (IFEO) debuggers. IFEOs enable a developer to attach a debugger to an application. When a process is created, a debugger present in an application’s IFEO will be prepended to the application’s name, effectively launching the new process under the debugger (e.g., `C:dbgntsd.exe -g  notepad.exe`). (Citation: Microsoft Dev Blog IFEO Mar 2010)\nIFEOs can be set directly via the Registry or in Global Flags via the GFlags tool. (Citation: Microsoft GFlags Mar 2017) IFEOs are represented as `Debugger` values in the Registry under `HKLMSOFTWARE{Wow6432Node}MicrosoftWindows NTCurrentVersionImage File Execution Options<executable>` where `&lt;executable&gt;` is the binary on which the debugger is attached. (Citation: Microsoft Dev Blog IFEO Mar 2010)\nIFEOs can also enable an arbitrary monitor program to be launched when a specified program silently exits (i.e. is prematurely terminated by itself or a second, non kernel-mode process). (Citation: Microsoft Silent Process Exit NOV 2017) (Citation: Oddvar Moe IFEO APR 2018) Similar to debuggers, silent exit monitoring can be enabled through GFlags and/or by directly modifying IFEO and silent process exit Registry values in `HKEY_LOCAL_MACHINESOFTWAREMicrosoftWindows NTCurrentVersionSilentProcessExit`. (Citation: Microsoft Silent Process Exit NOV 2017) (Citation: Oddvar Moe IFEO APR 2018)\nSimilar to [Accessibility Features](T1546.008), on Windows Vista and later as well as Windows Server 2008 and later, a Registry key may be modified that configures \"cmd.exe,\" or another program that provides backdoor access, as a \"debugger\" for an accessibility program (ex: utilman.exe). After the Registry is modified, pressing the appropriate key combination at the login screen while at the keyboard or when connected with [Remote Desktop Protocol](T1021.001) will cause the \"debugger\" program to be executed with SYSTEM privileges. (Citation: Tilbury 2014)\nSimilar to [Process Injection](T1055), these values may also be abused to obtain privilege escalation by causing a malicious executable to be loaded and run in the context of separate processes on the computer. (Citation: Elastic Process Injection July 2017) Installing IFEO mechanisms may also provide Persistence via continuous triggered invocation.\nMalware may also use IFEO to [Impair Defenses](T1562) by registering invalid debuggers that redirect and effectively disable various system and security applications. (Citation: FSecure Hupigon) (Citation: Symantec Ushedix June 2008)",
+    "platforms": "Windows",
+    "kill_chain_phases": "Privilege Escalation, Persistence",
+    "data_sources": "Process: Process Creation, Windows Registry: Windows Registry Key Modification, Command: Command Execution",
+    "detection": "Monitor for abnormal usage of the GFlags tool as well as common processes spawned under abnormal parents and/or with creation flags indicative of debugging such as `DEBUG_PROCESS` and `DEBUG_ONLY_THIS_PROCESS`. (Citation: Microsoft Dev Blog IFEO Mar 2010)\nMonitor Registry values associated with IFEOs, as well as silent process exit monitoring, for modifications that do not correlate with known software, patch cycles, etc. Monitor and analyze application programming interface (API) calls that are indicative of Registry edits such as `RegCreateKeyEx` and `RegSetValueEx`. (Citation: Elastic Process Injection July 2017)",
+    "url": "https://attack.mitre.org/techniques/T1546/012",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "36803969-5421-41ec-b92f-8500f79c23b0",
+                    "707e097c-e20f-4f67-8807-1f72ff4500d6",
+                    "c81fe886-cac0-4913-a511-2822d72ff505",
+                    "6d4a7fb3-5a24-42be-ae61-6728a2b581f6"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "36803969-5421-41ec-b92f-8500f79c23b0",
+                        "lookup_data": {
+                            "description": "Detects registry persistence technique using the GlobalFlags and SilentProcessExit keys",
+                            "raw": "author: Karneades, Jonhnathan Ribeiro, Florian Roth\ndate: 2018/04/11\ndescription: Detects registry persistence technique using the GlobalFlags and SilentProcessExit\n  keys\ndetection:\n  condition: all of selection_*\n  selection_global_flag:\n    TargetObject|contains|all:\n    - \\Microsoft\\Windows NT\\CurrentVersion\\\n    - \\Image File Execution Options\\\n    - \\GlobalFlag\n  selection_silent_process:\n    TargetObject|contains:\n    - \\ReportingMode\n    - \\MonitorProcess\n    TargetObject|contains|all:\n    - \\Microsoft\\Windows NT\\CurrentVersion\\\n    - \\SilentProcessExit\\\nfalsepositives:\n- Unknown\nid: 36803969-5421-41ec-b92f-8500f79c23b0\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://oddvar.moe/2018/04/10/persistence-using-globalflags-in-image-file-execution-options-hidden-from-autoruns-exe/\n- https://www.deepinstinct.com/2021/02/16/lsass-memory-dumps-are-stealthier-than-ever-before-part-2/\nrelated:\n- id: c81fe886-cac0-4913-a511-2822d72ff505\n  type: obsoletes\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.persistence\n- attack.defense_evasion\n- attack.t1546.012\n- car.2013-01-002\ntitle: Potential Persistence Via GlobalFlags\n",
+                            "sigma:id": "36803969-5421-41ec-b92f-8500f79c23b0",
+                            "title": "Potential Persistence Via GlobalFlags",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "707e097c-e20f-4f67-8807-1f72ff4500d6",
+                        "lookup_data": {
+                            "description": "Detects changes to the \"Default\" property for keys located in the \\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\ registry. Which might be used as a method of persistence\nThe entries found under App Paths are used primarily for the following purposes.\nFirst, to map an application's executable file name to that file's fully qualified path.\nSecond, to pre-pend information to the PATH environment variable on a per-application, per-process basis.\n",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/10\ndescription: 'Detects changes to the \"Default\" property for keys located in the \\Software\\Microsoft\\Windows\\CurrentVersion\\App\n  Paths\\ registry. Which might be used as a method of persistence\n\n  The entries found under App Paths are used primarily for the following purposes.\n\n  First, to map an application''s executable file name to that file''s fully qualified\n  path.\n\n  Second, to pre-pend information to the PATH environment variable on a per-application,\n  per-process basis.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    Details|contains:\n    - \\Users\\Public\n    - \\AppData\\Local\\Temp\\\n    - \\Windows\\Temp\\\n    - \\Desktop\\\n    - \\Downloads\\\n    - '%temp%'\n    - '%tmp%'\n    - iex\n    - Invoke-\n    - rundll32\n    - regsvr32\n    - mshta\n    - cscript\n    - wscript\n    - .bat\n    - .hta\n    - .dll\n    - .ps1\n    EventType: SetValue\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\n    TargetObject|endswith:\n    - (Default)\n    - Path\nfalsepositives:\n- Legitimate applications registering their binary from on of the suspicious locations\n  mentioned above (tune it)\nid: 707e097c-e20f-4f67-8807-1f72ff4500d6\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/10\nreferences:\n- https://www.hexacorn.com/blog/2013/01/19/beyond-good-ol-run-key-part-3/\n- https://docs.microsoft.com/en-us/windows/win32/shell/app-registration?redirectedfrom=MSDN\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1546.012\ntitle: Potential Persistence Via App Paths Default Property\n",
+                            "sigma:id": "707e097c-e20f-4f67-8807-1f72ff4500d6",
+                            "title": "Potential Persistence Via App Paths Default Property",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c81fe886-cac0-4913-a511-2822d72ff505",
+                        "lookup_data": {
+                            "description": "Detects changes to the Registry in which a monitor program gets registered to monitor the exit of another process",
+                            "raw": "author: Florian Roth\ndate: 2021/02/26\ndescription: Detects changes to the Registry in which a monitor program gets registered\n  to monitor the exit of another process\ndetection:\n  condition: selection\n  selection:\n    Details|contains: MonitorProcess\n    TargetObject|contains: Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\nfalsepositives:\n- Unknown\nid: c81fe886-cac0-4913-a511-2822d72ff505\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nreferences:\n- https://oddvar.moe/2018/04/10/persistence-using-globalflags-in-image-file-execution-options-hidden-from-autoruns-exe/\n- https://www.deepinstinct.com/2021/02/16/lsass-memory-dumps-are-stealthier-than-ever-before-part-2/\ntags:\n- attack.persistence\n- attack.t1546.012\ntitle: SilentProcessExit Monitor Registrytion\n",
+                            "sigma:id": "c81fe886-cac0-4913-a511-2822d72ff505",
+                            "title": "SilentProcessExit Monitor Registrytion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "6d4a7fb3-5a24-42be-ae61-6728a2b581f6",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1546.012",
+                            "mitre-cti:description": "Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by Image File Execution Options (IFEO) debuggers. IFEOs enable a developer to attach a debugger to an application. When a process is created, a debugger present in an application’s IFEO will be prepended to the application’s name, effectively launching the new process under the debugger (e.g., <code>C:\\dbg\\ntsd.exe -g  notepad.exe</code>). (Citation: Microsoft Dev Blog IFEO Mar 2010)\n\nIFEOs can be set directly via the Registry or in Global Flags via the GFlags tool. (Citation: Microsoft GFlags Mar 2017) IFEOs are represented as <code>Debugger</code> values in the Registry under <code>HKLM\\SOFTWARE{\\Wow6432Node}\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\<executable></code> where <code>&lt;executable&gt;</code> is the binary on which the debugger is attached. (Citation: Microsoft Dev Blog IFEO Mar 2010)\n\nIFEOs can also enable an arbitrary monitor program to be launched when a specified program silently exits (i.e. is prematurely terminated by itself or a second, non kernel-mode process). (Citation: Microsoft Silent Process Exit NOV 2017) (Citation: Oddvar Moe IFEO APR 2018) Similar to debuggers, silent exit monitoring can be enabled through GFlags and/or by directly modifying IFEO and silent process exit Registry values in <code>HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\</code>. (Citation: Microsoft Silent Process Exit NOV 2017) (Citation: Oddvar Moe IFEO APR 2018)\n\nSimilar to [Accessibility Features](https://attack.mitre.org/techniques/T1546/008), on Windows Vista and later as well as Windows Server 2008 and later, a Registry key may be modified that configures \"cmd.exe,\" or another program that provides backdoor access, as a \"debugger\" for an accessibility program (ex: utilman.exe). After the Registry is modified, pressing the appropriate key combination at the login screen while at the keyboard or when connected with [Remote Desktop Protocol](https://attack.mitre.org/techniques/T1021/001) will cause the \"debugger\" program to be executed with SYSTEM privileges. (Citation: Tilbury 2014)\n\nSimilar to [Process Injection](https://attack.mitre.org/techniques/T1055), these values may also be abused to obtain privilege escalation by causing a malicious executable to be loaded and run in the context of separate processes on the computer. (Citation: Elastic Process Injection July 2017) Installing IFEO mechanisms may also provide Persistence via continuous triggered invocation.\n\nMalware may also use IFEO to [Impair Defenses](https://attack.mitre.org/techniques/T1562) by registering invalid debuggers that redirect and effectively disable various system and security applications. (Citation: FSecure Hupigon) (Citation: Symantec Ushedix June 2008)",
+                            "mitre-cti:name": "Image File Execution Options Injection",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Oddvar Moe, @oddvarmoe'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--6d4a7fb3-5a24-42be-ae61-6728a2b581f6', 'type': 'attack-pattern', 'created': '2020-01-24T15:05:58.384Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1546.012', 'url': 'https://attack.mitre.org/techniques/T1546/012'}, {'url': 'https://blogs.msdn.microsoft.com/mithuns/2010/03/24/image-file-execution-options-ifeo/', 'description': 'Shanbhag, M. (2010, March 24). Image File Execution Options (IFEO). Retrieved December 18, 2017.', 'source_name': 'Microsoft Dev Blog IFEO Mar 2010'}, {'url': 'https://docs.microsoft.com/windows-hardware/drivers/debugger/gflags-overview', 'description': 'Microsoft. (2017, May 23). GFlags Overview. Retrieved December 18, 2017.', 'source_name': 'Microsoft GFlags Mar 2017'}, {'url': 'https://docs.microsoft.com/windows-hardware/drivers/debugger/registry-entries-for-silent-process-exit', 'description': 'Marshall, D. & Griffin, S. (2017, November 28). Monitoring Silent Process Exit. Retrieved June 27, 2018.', 'source_name': 'Microsoft Silent Process Exit NOV 2017'}, {'url': 'https://oddvar.moe/2018/04/10/persistence-using-globalflags-in-image-file-execution-options-hidden-from-autoruns-exe/', 'description': 'Moe, O. (2018, April 10). Persistence using GlobalFlags in Image File Execution Options - Hidden from Autoruns.exe. Retrieved June 27, 2018.', 'source_name': 'Oddvar Moe IFEO APR 2018'}, {'url': 'http://blog.crowdstrike.com/registry-analysis-with-crowdresponse/', 'description': 'Tilbury, C. (2014, August 28). Registry Analysis with CrowdResponse. Retrieved November 12, 2014.', 'source_name': 'Tilbury 2014'}, {'url': 'https://www.endgame.com/blog/technical-blog/ten-process-injection-techniques-technical-survey-common-and-trending-process', 'description': 'Hosseini, A. (2017, July 18). Ten Process Injection Techniques: A Technical Survey Of Common And Trending Process Injection Techniques. Retrieved December 7, 2017.', 'source_name': 'Elastic Process Injection July 2017'}, {'url': 'https://www.f-secure.com/v-descs/backdoor_w32_hupigon_emv.shtml', 'description': 'FSecure. (n.d.). Backdoor - W32/Hupigon.EMV - Threat Description. Retrieved December 18, 2017.', 'source_name': 'FSecure Hupigon'}, {'url': 'https://www.symantec.com/security_response/writeup.jsp?docid=2008-062807-2501-99&tabid=2', 'description': 'Symantec. (2008, June 28). Trojan.Ushedix. Retrieved December 18, 2017.', 'source_name': 'Symantec Ushedix June 2008'}], 'modified': '2020-11-10T18:29:31.112Z', 'name': 'Image File Execution Options Injection', 'description': 'Adversaries may establish persistence and/or elevate privileges by executing malicious content triggered by Image File Execution Options (IFEO) debuggers. IFEOs enable a developer to attach a debugger to an application. When a process is created, a debugger present in an application’s IFEO will be prepended to the application’s name, effectively launching the new process under the debugger (e.g., <code>C:\\\\dbg\\\\ntsd.exe -g  notepad.exe</code>). (Citation: Microsoft Dev Blog IFEO Mar 2010)\\n\\nIFEOs can be set directly via the Registry or in Global Flags via the GFlags tool. (Citation: Microsoft GFlags Mar 2017) IFEOs are represented as <code>Debugger</code> values in the Registry under <code>HKLM\\\\SOFTWARE{\\\\Wow6432Node}\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Image File Execution Options\\\\<executable></code> where <code>&lt;executable&gt;</code> is the binary on which the debugger is attached. (Citation: Microsoft Dev Blog IFEO Mar 2010)\\n\\nIFEOs can also enable an arbitrary monitor program to be launched when a specified program silently exits (i.e. is prematurely terminated by itself or a second, non kernel-mode process). (Citation: Microsoft Silent Process Exit NOV 2017) (Citation: Oddvar Moe IFEO APR 2018) Similar to debuggers, silent exit monitoring can be enabled through GFlags and/or by directly modifying IFEO and silent process exit Registry values in <code>HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\SilentProcessExit\\\\</code>. (Citation: Microsoft Silent Process Exit NOV 2017) (Citation: Oddvar Moe IFEO APR 2018)\\n\\nSimilar to [Accessibility Features](https://attack.mitre.org/techniques/T1546/008), on Windows Vista and later as well as Windows Server 2008 and later, a Registry key may be modified that configures \"cmd.exe,\" or another program that provides backdoor access, as a \"debugger\" for an accessibility program (ex: utilman.exe). After the Registry is modified, pressing the appropriate key combination at the login screen while at the keyboard or when connected with [Remote Desktop Protocol](https://attack.mitre.org/techniques/T1021/001) will cause the \"debugger\" program to be executed with SYSTEM privileges. (Citation: Tilbury 2014)\\n\\nSimilar to [Process Injection](https://attack.mitre.org/techniques/T1055), these values may also be abused to obtain privilege escalation by causing a malicious executable to be loaded and run in the context of separate processes on the computer. (Citation: Elastic Process Injection July 2017) Installing IFEO mechanisms may also provide Persistence via continuous triggered invocation.\\n\\nMalware may also use IFEO to [Impair Defenses](https://attack.mitre.org/techniques/T1562) by registering invalid debuggers that redirect and effectively disable various system and security applications. (Citation: FSecure Hupigon) (Citation: Symantec Ushedix June 2008)', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Monitor for abnormal usage of the GFlags tool as well as common processes spawned under abnormal parents and/or with creation flags indicative of debugging such as <code>DEBUG_PROCESS</code> and <code>DEBUG_ONLY_THIS_PROCESS</code>. (Citation: Microsoft Dev Blog IFEO Mar 2010)\\n\\nMonitor Registry values associated with IFEOs, as well as silent process exit monitoring, for modifications that do not correlate with known software, patch cycles, etc. Monitor and analyze application programming interface (API) calls that are indicative of Registry edits such as <code>RegCreateKeyEx</code> and <code>RegSetValueEx</code>. (Citation: Elastic Process Injection July 2017)', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Command: Command Execution', 'Process: Process Creation', 'Windows Registry: Windows Registry Key Modification'], 'x_mitre_permissions_required': ['Administrator', 'SYSTEM']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1546.012",
+                "display_name": "Event Triggered Execution: Image File Execution Options Injection",
+                "atomic_tests": [
+                    {
+                        "name": "IFEO Add Debugger",
+                        "auto_generated_guid": "fdda2626-5234-4c90-b163-60849a24c0b8",
+                        "description": "Leverage Global Flags Settings\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_binary": {
+                                "description": "Binary To Attach To",
+                                "type": "path",
+                                "default": "calc.exe"
+                            },
+                            "payload_binary": {
+                                "description": "Binary To Execute",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "REG ADD \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\#{target_binary}\" /v Debugger /d \"#{payload_binary}\"\n",
+                            "cleanup_command": "reg delete \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\#{target_binary}\" /v Debugger /f >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "IFEO Global Flags",
+                        "auto_generated_guid": "46b1f278-c8ee-4aa5-acce-65e77b11f3c1",
+                        "description": "Leverage Global Flags Settings\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_binary": {
+                                "description": "Binary To Attach To",
+                                "type": "path",
+                                "default": "notepad.exe"
+                            },
+                            "payload_binary": {
+                                "description": "Binary To Execute",
+                                "type": "path",
+                                "default": "C:\\Windows\\System32\\cmd.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "REG ADD \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\#{target_binary}\" /v GlobalFlag /t REG_DWORD /d 512\nREG ADD \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\#{target_binary}\" /v ReportingMode /t REG_DWORD /d 1\nREG ADD \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\#{target_binary}\" /v MonitorProcess /d \"#{payload_binary}\"\n",
+                            "cleanup_command": "reg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\#{target_binary}\" /v GlobalFlag /f >nul 2>&1\nreg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\#{target_binary}\" /v ReportingMode /f >nul 2>&1\nreg delete \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\#{target_binary}\" /v MonitorProcess /f >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "GlobalFlags in Image File Execution Options",
+                        "auto_generated_guid": "13117939-c9b2-4a43-999e-0a543df92f0d",
+                        "description": "The following Atomic Test will create a GlobalFlag key under Image File Execution Options, also a SilentProcessExit Key with ReportingMode and MonitorProcess values. This test is similar to a recent CanaryToken that will generate an EventCode 3000 in the Application log when a command, whoami.exe for example, is executed.\nUpon running Whoami.exe, a command shell will spawn and start calc.exe based on the MonitorProcess value. \nUpon successful execution, powershell will modify the registry and spawn calc.exe. An event 3000 will generate in the Application log.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "process": {
+                                "description": "Process to monitor\n",
+                                "type": "string",
+                                "default": "whoami.exe"
+                            },
+                            "cmd_to_run": {
+                                "description": "Command to execute\n",
+                                "type": "string",
+                                "default": "cmd.exe /c calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "$Name = \"GlobalFlag\"\n$Value = \"512\"\n$registryPath = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\#{process}\"\nNew-Item -Path $registryPath -Force\nNew-ItemProperty -Path $registryPath -Name $Name -Value $Value -PropertyType DWord -Force\n$Name = \"ReportingMode\"\n$Value = \"1\"\n$SilentProcessExit = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\#{process}\"\nNew-Item -Path $SilentProcessExit -Force\nNew-ItemProperty -Path $SilentProcessExit -Name $Name -Value $Value -PropertyType DWord -Force \n\n$Name = \"MonitorProcess\"\n$Value = \"#{cmd_to_run}\"\nNew-ItemProperty -Path $SilentProcessExit -Name $Name -Value $Value -PropertyType String -Force\nStart-Process whoami.exe\n",
+                            "cleanup_command": "$SilentProcessExit = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\#{process}\" \nRemove-Item $SilentProcessExit -force\n$registryPath = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\#{process}\"\nRemove-Item $registryPath -force\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:31:40"
+}

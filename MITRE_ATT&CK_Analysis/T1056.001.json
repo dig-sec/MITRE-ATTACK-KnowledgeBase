@@ -1,0 +1,328 @@
+{
+    "id": "T1056.001",
+    "name": "Keylogging",
+    "description": "Adversaries may log user keystrokes to intercept credentials as the user types them. Keylogging is likely to be used to acquire credentials for new access opportunities when [OS Credential Dumping](T1003) efforts are not effective, and may require an adversary to intercept keystrokes on a system for a substantial period of time before credentials can be successfully captured.\nKeylogging is the most prevalent type of input capture, with many different ways of intercepting keystrokes.(Citation: Adventures of a Keystroke) Some methods include:\n* Hooking API callbacks used for processing keystrokes. Unlike [Credential API Hooking](T1056.004), this focuses solely on API functions intended for processing keystroke data.\n* Reading raw keystroke data from the hardware buffer.\n* Windows Registry modifications.\n* Custom drivers.\n* [Modify System Image](T1601) may provide adversaries with hooks into the operating system of network devices to read raw keystrokes for login sessions.(Citation: Cisco Blog Legacy Device Attacks)",
+    "platforms": "Windows, macOS, Linux, Network",
+    "kill_chain_phases": "Collection, Credential Access",
+    "data_sources": "Windows Registry: Windows Registry Key Modification, Driver: Driver Load, Process: OS API Execution",
+    "detection": "Keyloggers may take many forms, possibly involving modification to the Registry and installation of a driver, setting a hook, or polling to intercept keystrokes. Commonly used API calls include `SetWindowsHook`, `GetKeyState`, and `GetAsyncKeyState`.(Citation: Adventures of a Keystroke) Monitor the Registry and file system for such changes, monitor driver installs, and look for common keylogging API calls. API calls alone are not an indicator of keylogging, but may provide behavioral data that is useful when combined with other information such as new files written to disk and unusual processes.",
+    "url": "https://attack.mitre.org/techniques/T1056/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1056.001",
+                "atomic_attack_guid": "d9b633ca-8efb-45e6-b838-70f595c6ae26",
+                "atomic_attack_name": "Input Capture",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Malicious PowerShell Commandlets - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_malicious_cmdlets.yml",
+                        "remote_content": "title: Malicious PowerShell Commandlets - ProcessCreation\nid: 02030f2f-6199-49ec-b258-ea71b07e03dc\nrelated:\n    - id: 89819aa4-bbd6-46bc-88ec-c7f7fe30efa6\n      type: derived\n    - id: 7d0d0329-0ef1-4e84-a9f5-49500f9d7c6c\n      type: similar\nstatus: test\ndescription: Detects Commandlet names from well-known PowerShell exploitation frameworks\nreferences:\n    - https://adsecurity.org/?p=2921\n    - https://github.com/S3cur3Th1sSh1t/PowerSharpPack/tree/master/PowerSharpBinaries\n    - https://github.com/BC-SECURITY/Invoke-ZeroLogon/blob/111d17c7fec486d9bb23387e2e828b09a26075e4/Invoke-ZeroLogon.ps1\n    - https://github.com/xorrior/RandomPS-Scripts/blob/848c919bfce4e2d67b626cbcf4404341cfe3d3b6/Get-DXWebcamVideo.ps1\n    - https://github.com/rvrsh3ll/Misc-Powershell-Scripts/blob/6f23bb41f9675d7e2d32bacccff75e931ae00554/OfficeMemScraper.ps1\n    - https://github.com/dafthack/DomainPasswordSpray/blob/b13d64a5834694aa73fd2aea9911a83027c465a7/DomainPasswordSpray.ps1\n    - https://unit42.paloaltonetworks.com/threat-assessment-black-basta-ransomware/ # Invoke-TotalExec\n    - https://research.nccgroup.com/2022/06/06/shining-the-light-on-black-basta/ # Invoke-TotalExec\n    - https://github.com/calebstewart/CVE-2021-1675 # Invoke-Nightmare\n    - https://github.com/BloodHoundAD/BloodHound/blob/0927441f67161cc6dc08a53c63ceb8e333f55874/Collectors/AzureHound.ps1\n    - https://bloodhound.readthedocs.io/en/latest/data-collection/azurehound.html\n    - https://github.com/HarmJ0y/DAMP\n    - https://github.com/samratashok/nishang\n    - https://github.com/DarkCoderSc/PowerRunAsSystem/\n    - https://github.com/besimorhino/powercat\n    - https://github.com/Kevin-Robertson/Powermad\n    - https://github.com/adrecon/ADRecon\n    - https://github.com/adrecon/AzureADRecon\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-02\nmodified: 2024-01-25\ntags:\n    - attack.execution\n    - attack.discovery\n    - attack.t1482\n    - attack.t1087\n    - attack.t1087.001\n    - attack.t1087.002\n    - attack.t1069.001\n    - attack.t1069.002\n    - attack.t1069\n    - attack.t1059.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        # Note: Please ensure alphabetical order when adding new entries\n        CommandLine|contains:\n            - 'Add-Exfiltration'\n            - 'Add-Persistence'\n            - 'Add-RegBackdoor'\n            - 'Add-RemoteRegBackdoor'\n            - 'Add-ScrnSaveBackdoor'\n            - 'Check-VM'\n            - 'ConvertTo-Rc4ByteStream'\n            - 'Decrypt-Hash'\n            - 'Disable-ADIDNSNode'\n            - 'Disable-MachineAccount'\n            - 'Do-Exfiltration'\n            - 'Enable-ADIDNSNode'\n            - 'Enable-MachineAccount'\n            - 'Enabled-DuplicateToken'\n            - 'Exploit-Jboss'\n            - 'Export-ADR'\n            - 'Export-ADRCSV'\n            - 'Export-ADRExcel'\n            - 'Export-ADRHTML'\n            - 'Export-ADRJSON'\n            - 'Export-ADRXML'\n            - 'Find-Fruit'\n            - 'Find-GPOLocation'\n            - 'Find-TrustedDocuments'\n            - 'Get-ADIDNS' # Covers: Get-ADIDNSNodeAttribute, Get-ADIDNSNodeOwner, Get-ADIDNSNodeTombstoned, Get-ADIDNSPermission, Get-ADIDNSZone\n            - 'Get-ApplicationHost'\n            - 'Get-ChromeDump'\n            - 'Get-ClipboardContents'\n            - 'Get-FoxDump'\n            - 'Get-GPPPassword'\n            - 'Get-IndexedItem'\n            - 'Get-KerberosAESKey'\n            - 'Get-Keystrokes'\n            - 'Get-LSASecret'\n            - 'Get-MachineAccountAttribute'\n            - 'Get-MachineAccountCreator'\n            - 'Get-PassHashes'\n            - 'Get-RegAlwaysInstallElevated'\n            - 'Get-RegAutoLogon'\n            - 'Get-RemoteBootKey'\n            - 'Get-RemoteCachedCredential'\n            - 'Get-RemoteLocalAccountHash'\n            - 'Get-RemoteLSAKey'\n            - 'Get-RemoteMachineAccountHash'\n            - 'Get-RemoteNLKMKey'\n            - 'Get-RickAstley'\n            - 'Get-Screenshot'\n            - 'Get-SecurityPackages'\n            - 'Get-ServiceFilePermission'\n            - 'Get-ServicePermission'\n            - 'Get-ServiceUnquoted'\n            - 'Get-SiteListPassword'\n            - 'Get-System'\n            - 'Get-TimedScreenshot'\n            - 'Get-UnattendedInstallFile'\n            - 'Get-Unconstrained'\n            - 'Get-USBKeystrokes'\n            - 'Get-VaultCredential'\n            - 'Get-VulnAutoRun'\n            - 'Get-VulnSchTask'\n            - 'Grant-ADIDNSPermission'\n            - 'Gupt-Backdoor'\n            - 'HTTP-Login'\n            - 'Install-ServiceBinary'\n            - 'Install-SSP'\n            - 'Invoke-ACLScanner'\n            - 'Invoke-ADRecon'\n            - 'Invoke-ADSBackdoor'\n            - 'Invoke-AgentSmith'\n            - 'Invoke-AllChecks'\n            - 'Invoke-ARPScan'\n            - 'Invoke-AzureHound'\n            - 'Invoke-BackdoorLNK'\n            - 'Invoke-BadPotato'\n            - 'Invoke-BetterSafetyKatz'\n            - 'Invoke-BypassUAC'\n            - 'Invoke-Carbuncle'\n            - 'Invoke-Certify'\n            - 'Invoke-ConPtyShell'\n            - 'Invoke-CredentialInjection'\n            - 'Invoke-DAFT'\n            - 'Invoke-DCSync'\n            - 'Invoke-DinvokeKatz'\n            - 'Invoke-DllInjection'\n            - 'Invoke-DNSUpdate'\n            - 'Invoke-DomainPasswordSpray'\n            - 'Invoke-DowngradeAccount'\n            - 'Invoke-EgressCheck'\n            - 'Invoke-Eyewitness'\n            - 'Invoke-FakeLogonScreen'\n            - 'Invoke-Farmer'\n            - 'Invoke-Get-RBCD-Threaded'\n            - 'Invoke-Gopher'\n            - 'Invoke-Grouper' # Also Covers Invoke-GrouperX\n            - 'Invoke-HandleKatz'\n            - 'Invoke-ImpersonatedProcess'\n            - 'Invoke-ImpersonateSystem'\n            - 'Invoke-InteractiveSystemPowerShell'\n            - 'Invoke-Internalmonologue'\n            - 'Invoke-Inveigh'\n            - 'Invoke-InveighRelay'\n            - 'Invoke-KrbRelay'\n            - 'Invoke-LdapSignCheck'\n            - 'Invoke-Lockless'\n            - 'Invoke-MalSCCM'\n            - 'Invoke-Mimikatz'\n            - 'Invoke-Mimikittenz'\n            - 'Invoke-MITM6'\n            - 'Invoke-NanoDump'\n            - 'Invoke-NetRipper'\n            - 'Invoke-Nightmare'\n            - 'Invoke-NinjaCopy'\n            - 'Invoke-OfficeScrape'\n            - 'Invoke-OxidResolver'\n            - 'Invoke-P0wnedshell'\n            - 'Invoke-Paranoia'\n            - 'Invoke-PortScan'\n            - 'Invoke-PoshRatHttp' # Also Covers Invoke-PoshRatHttps\n            - 'Invoke-PostExfil'\n            - 'Invoke-PowerDump'\n            - 'Invoke-PowerShellTCP'\n            - 'Invoke-PowerShellWMI'\n            - 'Invoke-PPLDump'\n            - 'Invoke-PsExec'\n            - 'Invoke-PSInject'\n            - 'Invoke-PsUaCme'\n            - 'Invoke-ReflectivePEInjection'\n            - 'Invoke-ReverseDNSLookup'\n            - 'Invoke-Rubeus'\n            - 'Invoke-RunAs'\n            - 'Invoke-SafetyKatz'\n            - 'Invoke-SauronEye'\n            - 'Invoke-SCShell'\n            - 'Invoke-Seatbelt'\n            - 'Invoke-ServiceAbuse'\n            - 'Invoke-ShadowSpray'\n            - 'Invoke-Sharp' # Covers all \"Invoke-Sharp\" variants\n            - 'Invoke-Shellcode'\n            - 'Invoke-SMBScanner'\n            - 'Invoke-Snaffler'\n            - 'Invoke-Spoolsample'\n            - 'Invoke-SpraySinglePassword'\n            - 'Invoke-SSHCommand'\n            - 'Invoke-StandIn'\n            - 'Invoke-StickyNotesExtract'\n            - 'Invoke-SystemCommand'\n            - 'Invoke-Tasksbackdoor'\n            - 'Invoke-Tater'\n            - 'Invoke-Thunderfox'\n            - 'Invoke-ThunderStruck'\n            - 'Invoke-TokenManipulation'\n            - 'Invoke-Tokenvator'\n            - 'Invoke-TotalExec'\n            - 'Invoke-UrbanBishop'\n            - 'Invoke-UserHunter'\n            - 'Invoke-VoiceTroll'\n            - 'Invoke-Whisker'\n            - 'Invoke-WinEnum'\n            - 'Invoke-winPEAS'\n            - 'Invoke-WireTap'\n            - 'Invoke-WmiCommand'\n            - 'Invoke-WMIExec'\n            - 'Invoke-WScriptBypassUAC'\n            - 'Invoke-Zerologon'\n            - 'MailRaider'\n            - 'New-ADIDNSNode'\n            - 'New-DNSRecordArray'\n            - 'New-HoneyHash'\n            - 'New-InMemoryModule'\n            - 'New-MachineAccount'\n            - 'New-SOASerialNumberArray'\n            - 'Out-Minidump'\n            - 'Port-Scan'\n            - 'PowerBreach'\n            - 'powercat '\n            - 'PowerUp'\n            - 'PowerView'\n            - 'Remove-ADIDNSNode'\n            - 'Remove-MachineAccount'\n            - 'Remove-Update'\n            - 'Rename-ADIDNSNode'\n            - 'Revoke-ADIDNSPermission'\n            - 'Set-ADIDNSNode' # Covers: Set-ADIDNSNodeAttribute, Set-ADIDNSNodeOwner\n            - 'Set-MacAttribute'\n            - 'Set-MachineAccountAttribute'\n            - 'Set-Wallpaper'\n            - 'Show-TargetScreen'\n            - 'Start-CaptureServer'\n            - 'Start-Dnscat2'\n            - 'Start-WebcamRecorder'\n            - 'VolumeShadowCopyTools'\n    condition: selection\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "34f90d3c-c297-49e9-b26d-911b05a4866c",
+                    "49aae26c-450e-448b-911d-b3c13d178dfc",
+                    "965e2db9-eddb-4cf6-a986-7a967df651e4",
+                    "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                    "09a60ea3-a8d1-4ae5-976e-5783248b72a4",
+                    "5df8df26-fe0e-4858-94a7-6cf71d9519c9"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "34f90d3c-c297-49e9-b26d-911b05a4866c",
+                        "lookup_data": {
+                            "description": "Adversaries may log user keystrokes to intercept credentials as the user types them.",
+                            "raw": "author: frack113\ndate: 2021/07/30\ndescription: Adversaries may log user keystrokes to intercept credentials as the user\n  types them.\ndetection:\n  condition: 1 of selection_*\n  selection_basic:\n    ScriptBlockText|contains: Get-Keystrokes\n  selection_high:\n    ScriptBlockText|contains|all:\n    - Get-ProcAddress user32.dll GetAsyncKeyState\n    - Get-ProcAddress user32.dll GetForegroundWindow\nfalsepositives:\n- Unknown\nid: 34f90d3c-c297-49e9-b26d-911b05a4866c\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nmodified: 2022/07/11\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1218/T1218.md\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1056.001/src/Get-Keystrokes.ps1\nstatus: experimental\ntags:\n- attack.collection\n- attack.t1056.001\ntitle: Powershell Keylogging\n",
+                            "sigma:id": "34f90d3c-c297-49e9-b26d-911b05a4866c",
+                            "title": "Powershell Keylogging",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "49aae26c-450e-448b-911d-b3c13d178dfc",
+                        "lookup_data": {
+                            "description": "Detect attempt to enable auditing of TTY input",
+                            "raw": "author: Pawel Mazur\ndate: 2021/05/24\ndescription: Detect attempt to enable auditing of TTY input\ndetection:\n  condition: 1 of selection_*\n  selection_path_events:\n    name:\n    - /etc/pam.d/system-auth\n    - /etc/pam.d/password-auth\n    type: PATH\n  selection_tty_events:\n    type:\n    - TTY\n    - USER_TTY\nfalsepositives:\n- Administrative work\nid: 49aae26c-450e-448b-911d-b3c13d178dfc\nlevel: high\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2022/12/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1056.001/T1056.001.md\n- https://linux.die.net/man/8/pam_tty_audit\n- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/security_guide/sec-configuring_pam_for_auditing\n- https://access.redhat.com/articles/4409591#audit-record-types-2\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1003\n- attack.t1056.001\ntitle: Linux Keylogging with Pam.d\n",
+                            "sigma:id": "49aae26c-450e-448b-911d-b3c13d178dfc",
+                            "title": "Linux Keylogging with Pam.d",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "965e2db9-eddb-4cf6-a986-7a967df651e4",
+                        "lookup_data": {
+                            "description": "Detects PowerShell scripts that contains reference to keystroke capturing functions",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023/01/04\ndescription: Detects PowerShell scripts that contains reference to keystroke capturing\n  functions\ndetection:\n  condition: selection\n  selection:\n    ScriptBlockText|contains: '[Windows.Input.Keyboard]::IsKeyDown([System.Windows.Input.Key]::'\nfalsepositives:\n- Unknown\nid: 965e2db9-eddb-4cf6-a986-7a967df651e4\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://twitter.com/ScumBots/status/1610626724257046529\n- https://www.virustotal.com/gui/file/d4486b63512755316625230e0c9c81655093be93876e0d80732e7eeaf7d83476/content\n- https://www.virustotal.com/gui/file/720a7ee9f2178c70501d7e3f4bcc28a4f456e200486dbd401b25af6da3b4da62/content\n- https://learn.microsoft.com/en-us/dotnet/api/system.windows.input.keyboard.iskeydown?view=windowsdesktop-7.0\nstatus: experimental\ntags:\n- attack.collection\n- attack.credential_access\n- attack.t1056.001\ntitle: Potential Keylogger Activity\n",
+                            "sigma:id": "965e2db9-eddb-4cf6-a986-7a967df651e4",
+                            "title": "Potential Keylogger Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                        "lookup_data": {
+                            "description": "Buzzing in the Background: BumbleBee, a New Modular Backdoor Evolved From BookWorm",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/758d96ed-9dd4-4009-9270-65f2c3dd30cc.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603410",
+                            "uuid": "758d96ed-9dd4-4009-9270-65f2c3dd30cc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "09a60ea3-a8d1-4ae5-976e-5783248b72a4",
+                        "lookup_data": {
+                            "capec": "CAPEC-568",
+                            "mitre-attack-id": "T1056.001",
+                            "mitre-cti:description": "Adversaries may log user keystrokes to intercept credentials as the user types them. Keylogging is likely to be used to acquire credentials for new access opportunities when [OS Credential Dumping](https://attack.mitre.org/techniques/T1003) efforts are not effective, and may require an adversary to intercept keystrokes on a system for a substantial period of time before credentials can be successfully captured.\n\nKeylogging is the most prevalent type of input capture, with many different ways of intercepting keystrokes.(Citation: Adventures of a Keystroke) Some methods include:\n\n* Hooking API callbacks used for processing keystrokes. Unlike [Credential API Hooking](https://attack.mitre.org/techniques/T1056/004), this focuses solely on API functions intended for processing keystroke data.\n* Reading raw keystroke data from the hardware buffer.\n* Windows Registry modifications.\n* Custom drivers.\n* [Modify System Image](https://attack.mitre.org/techniques/T1601) may provide adversaries with hooks into the operating system of network devices to read raw keystrokes for login sessions.(Citation: Cisco Blog Legacy Device Attacks) ",
+                            "mitre-cti:name": "Keylogging",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows', 'macOS', 'Linux', 'Network'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--09a60ea3-a8d1-4ae5-976e-5783248b72a4', 'type': 'attack-pattern', 'created': '2020-02-11T18:58:11.791Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1056.001', 'url': 'https://attack.mitre.org/techniques/T1056/001'}, {'external_id': 'CAPEC-568', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/568.html'}, {'url': 'http://opensecuritytraining.info/Keylogging_files/The%20Adventures%20of%20a%20Keystroke.pdf', 'description': 'Tinaztepe,  E. (n.d.). The Adventures of a Keystroke:  An in-depth look into keyloggers on Windows. Retrieved April 27, 2016.', 'source_name': 'Adventures of a Keystroke'}, {'source_name': 'Cisco Blog Legacy Device Attacks', 'url': 'https://community.cisco.com/t5/security-blogs/attackers-continue-to-target-legacy-devices/ba-p/4169954', 'description': 'Omar Santos. (2020, October 19). Attackers Continue to Target Legacy Devices. Retrieved October 20, 2020.'}], 'modified': '2020-10-21T01:30:56.227Z', 'name': 'Keylogging', 'description': 'Adversaries may log user keystrokes to intercept credentials as the user types them. Keylogging is likely to be used to acquire credentials for new access opportunities when [OS Credential Dumping](https://attack.mitre.org/techniques/T1003) efforts are not effective, and may require an adversary to intercept keystrokes on a system for a substantial period of time before credentials can be successfully captured.\\n\\nKeylogging is the most prevalent type of input capture, with many different ways of intercepting keystrokes.(Citation: Adventures of a Keystroke) Some methods include:\\n\\n* Hooking API callbacks used for processing keystrokes. Unlike [Credential API Hooking](https://attack.mitre.org/techniques/T1056/004), this focuses solely on API functions intended for processing keystroke data.\\n* Reading raw keystroke data from the hardware buffer.\\n* Windows Registry modifications.\\n* Custom drivers.\\n* [Modify System Image](https://attack.mitre.org/techniques/T1601) may provide adversaries with hooks into the operating system of network devices to read raw keystrokes for login sessions.(Citation: Cisco Blog Legacy Device Attacks) ', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}], 'x_mitre_detection': 'Keyloggers may take many forms, possibly involving modification to the Registry and installation of a driver, setting a hook, or polling to intercept keystrokes. Commonly used API calls include `SetWindowsHook`, `GetKeyState`, and `GetAsyncKeyState`.(Citation: Adventures of a Keystroke) Monitor the Registry and file system for such changes, monitor driver installs, and look for common keylogging API calls. API calls alone are not an indicator of keylogging, but may provide behavioral data that is useful when combined with other information such as new files written to disk and unusual processes.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '1.1', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Process: OS API Execution', 'Driver: Driver Load', 'Windows Registry: Windows Registry Key Modification'], 'x_mitre_permissions_required': ['Administrator', 'root', 'SYSTEM', 'User']}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                        "lookup_data": {
+                            "description": "UEFI threats moving to the ESP: Introducing ESPecter bootkit",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5df8df26-fe0e-4858-94a7-6cf71d9519c9.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1637336858",
+                            "uuid": "5df8df26-fe0e-4858-94a7-6cf71d9519c9",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1056.001",
+                "display_name": "Input Capture: Keylogging",
+                "atomic_tests": [
+                    {
+                        "name": "Input Capture",
+                        "auto_generated_guid": "d9b633ca-8efb-45e6-b838-70f595c6ae26",
+                        "description": "Utilize PowerShell and external resource to capture keystrokes\n[Payload](https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1056.001/src/Get-Keystrokes.ps1)\nProvided by [PowerSploit](https://github.com/PowerShellMafia/PowerSploit/blob/master/Exfiltration/Get-Keystrokes.ps1)\n\nUpon successful execution, Powershell will execute `Get-Keystrokes.ps1` and output to key.log.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "filepath": {
+                                "description": "Name of the local file, include path.",
+                                "type": "path",
+                                "default": "$env:TEMP\\key.log"
+                            }
+                        },
+                        "dependencies": [
+                            {
+                                "description": "Get-Keystrokes PowerShell script must exist on disk at PathToAtomicsFolder\\T1056.001\\src\\Get-Keystrokes.ps1\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\T1056.001\\src\\Get-Keystrokes.ps1\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -ItemType Directory (Split-Path \"PathToAtomicsFolder\\T1056.001\\src\\Get-Keystrokes.ps1\") -Force | Out-Null\nInvoke-WebRequest https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1056.001/src/Get-Keystrokes.ps1 -OutFile \"PathToAtomicsFolder\\T1056.001\\src\\Get-Keystrokes.ps1\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "&\"$PathToAtomicsFolder\\T1056.001\\src\\Get-Keystrokes.ps1\" -LogPath #{filepath}\n",
+                            "cleanup_command": "Remove-Item $env:TEMP\\key.log -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Living off the land Terminal Input Capture on Linux with pam.d",
+                        "auto_generated_guid": "9c6bdb34-a89f-4b90-acb1-5970614c711b",
+                        "description": "Pluggable Access Module, which is present on all modern Linux systems, generally contains a library called pam_tty_audit.so which logs all keystrokes for the selected users and sends it to audit.log.  All terminal activity on any new logins would then be archived and readable by an adversary with elevated privledges.\n\nPasswords hidden by the console can also be logged, with 'log_passwd' as in this example.  If root logging is enabled, then output from any process which is later started by root is also logged, even if this policy is carefully enabled (e.g. 'disable=*' as the initial command).\n\nUse 'aureport --tty' or other audit.d reading tools to read the log output, which is binary.  Mac OS does not currently contain the pam_tty_audit.so library. \n",
+                        "dependencies": [
+                            {
+                                "description": "Checking if pam_tty_audit.so is installed\n",
+                                "prereq_command": "test -f '/usr/lib/pam/pam_tty_audit.so -o  /usr/lib64/security/pam_tty_audit.so'\n",
+                                "get_prereq_command": "echo \"Sorry, you must install module pam_tty_audit.so and recompile, for this test to work\"\n"
+                            }
+                        ],
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "executor": {
+                            "command": "if sudo test -f /etc/pam.d/password-auth; then sudo cp /etc/pam.d/password-auth /tmp/password-auth.bk; fi;\nif sudo test -f /etc/pam.d/system-auth; then sudo cp /etc/pam.d/system-auth /tmp/system-auth.bk; fi;\nsudo touch /tmp/password-auth.bk\nsudo touch /tmp/system-auth.bk sudo echo \"session    required    pam_tty_audit.so\nenable=* log_password\" >> /etc/pam.d/password-auth sudo echo \"session    required    pam_tty_audit.so\nenable=* log_password\" >> /etc/pam.d/system-auth\n",
+                            "cleanup_command": "sudo cp -f /tmp/password-auth.bk /etc/pam.d/password-auth\nsudo cp -f /tmp/system-auth.bk /etc/pam.d/system-auth\n",
+                            "name": "sh",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Logging bash history to syslog",
+                        "auto_generated_guid": "0e59d59d-3265-4d35-bebd-bf5c1ec40db5",
+                        "description": "There are several variables that can be set to control the appearance of the bash command prompt: PS1, PS2, PS3, PS4 and PROMPT_COMMAND. The contents of these variables are executed as if they had been typed on the command line. The PROMPT_COMMAND variable \"if set\" will be executed before the PS1 variable and can be configured to write the latest \"bash history\" entries to the syslog.\n\nTo gain persistence the command could be added to the users .bashrc or .bash_aliases or the systems default .bashrc in /etc/skel/ \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "This test requires to be run in a bash shell and that logger and tee are installed.\n",
+                                "prereq_command": "if [ \"$(echo $SHELL)\" != \"/bin/bash\" ]; then echo -e \"\\n***** Bash not running! *****\\n\"; exit 1; fi\nif [ ! -x \"$(command -v logger)\" ]; then echo -e \"\\n***** logger NOT installed *****\\n\"; exit 1; fi\nif [ ! -x \"$(command -v tee)\" ]; then echo -e \"\\n***** tee NOT installed *****\\n\"; exit 1; fi\n",
+                                "get_prereq_command": "echo \"\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "PROMPT_COMMAND='history -a >(tee -a ~/.bash_history |logger -t \"$USER[$$] $SSH_CONNECTION \")'\necho \"\\$PROMPT_COMMAND=$PROMPT_COMMAND\"\ntail /var/log/syslog\n",
+                            "cleanup_command": "unset PROMPT_COMMAND\n"
+                        }
+                    },
+                    {
+                        "name": "Logging sh history to syslog/messages",
+                        "auto_generated_guid": "b04284dc-3bd9-4840-8d21-61b8d31c99f2",
+                        "description": "There are several variables that can be set to control the appearance of the bash command prompt: PS1, PS2, PS3, PS4 and PROMPT_COMMAND. The contents of these variables are executed as if they had been typed on the command line. The PROMPT_COMMAND variable \"if set\" will be executed before the PS1 variable and can be configured to write the latest \"bash history\" entries to the syslog.\n\nTo gain persistence the command could be added to the users .shrc or .profile \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "This test requires to be run in a bash shell and that logger and tee are installed.\n",
+                                "prereq_command": "if [ \"$(echo $SHELL)\" != \"/bin/sh\" ]; then echo -e \"\\n***** sh not running! *****\\n\"; exit 1; fi\nif [ ! -x \"$(command -v logger)\" ]; then echo -e \"\\n***** logger NOT installed *****\\n\"; exit 1; fi\n",
+                                "get_prereq_command": "echo \"\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "PS2=`logger -t \"$USER\" -f ~/.sh_history`\n$PS2\ntail /var/log/messages\n",
+                            "cleanup_command": "unset PS2\n"
+                        }
+                    },
+                    {
+                        "name": "Bash session based keylogger",
+                        "auto_generated_guid": "7f85a946-a0ea-48aa-b6ac-8ff539278258",
+                        "description": "When a command is executed in bash, the BASH_COMMAND variable contains that command. For example :~$ echo $BASH_COMMAND = \"echo $BASH_COMMAND\". The trap command is not a external command, but a built-in function of bash and can be used in a script to run a bash function when some event occurs. trap will detect when the BASH_COMMAND variable value changes and then pipe that value into a file, creating a bash session based keylogger. \n\nTo gain persistence the command could be added to the users .bashrc or .bash_aliases or the systems default .bashrc in /etc/skel/ \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "This test requires to be run in a bash shell\n",
+                                "prereq_command": "if [ \"$(echo $0)\" != \"bash\" ]; then echo -e \"\\n***** Bash not running! *****\\n\"; exit 1; fi\n",
+                                "get_prereq_command": "echo \"\"\n"
+                            }
+                        ],
+                        "input_arguments": {
+                            "output_file": {
+                                "description": "File to store captured commands",
+                                "type": "string",
+                                "default": "/tmp/.keyboard.log"
+                            }
+                        },
+                        "executor": {
+                            "name": "bash",
+                            "elevation_required": false,
+                            "command": "trap 'echo \"$(date +\"%d/%m/%y %H:%M:%S.%s\") $USER $BASH_COMMAND\" >> #{output_file}' DEBUG\necho \"Hello World!\"\ncat #{output_file}\n",
+                            "cleanup_command": "rm #{output_file}\n"
+                        }
+                    },
+                    {
+                        "name": "SSHD PAM keylogger",
+                        "auto_generated_guid": "81d7d2ad-d644-4b6a-bea7-28ffe43becca",
+                        "description": "Linux PAM (Pluggable Authentication Modules) is used in sshd authentication. The Linux audit tool auditd can use the pam_tty_audit module to enable auditing of TTY input and capture all keystrokes in a ssh session and place them in the /var/log/audit/audit.log file after the session closes.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "This test requires sshd and auditd\n",
+                                "prereq_command": "if [ ! -x \"$(command -v sshd)\" ]; then echo -e \"\\n***** sshd NOT installed *****\\n\"; exit 1; fi\nif [ ! -x \"$(command -v auditd)\" ]; then echo -e \"\\n***** auditd NOT installed *****\\n\"; exit 1; fi\n",
+                                "get_prereq_command": "echo \"\"\n"
+                            }
+                        ],
+                        "input_arguments": {
+                            "user_account": {
+                                "description": "Basic ssh user account for testing.",
+                                "type": "string",
+                                "default": "ubuntu"
+                            }
+                        },
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "cp -v /etc/pam.d/sshd /tmp/\necho \"session required pam_tty_audit.so disable=* enable=* open_only log_passwd\" >> /etc/pam.d/sshd\nsystemctl restart sshd\nsystemctl restart auditd\nssh #{user_account}@localhost \nwhoami\nsudo su\nwhoami\nexit\nexit\n",
+                            "cleanup_command": "cp -fv /tmp/sshd /etc/pam.d/\n"
+                        }
+                    },
+                    {
+                        "name": "Auditd keylogger",
+                        "auto_generated_guid": "a668edb9-334e-48eb-8c2e-5413a40867af",
+                        "description": "The linux audit tool auditd can be used to capture 32 and 64 bit command execution and place the command in the /var/log/audit/audit.log audit log. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "dependency_executor_name": "sh",
+                        "dependencies": [
+                            {
+                                "description": "This test requires sshd and auditd\n",
+                                "prereq_command": "if [ ! -x \"$(command -v auditd)\" ]; then echo -e \"\\n***** auditd NOT installed *****\\n\"; exit 1; fi\n",
+                                "get_prereq_command": "echo \"\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "sh",
+                            "elevation_required": true,
+                            "command": "auditctl -a always,exit -F arch=b64 -S execve -k CMDS \nauditctl -a always,exit -F arch=b32 -S execve -k CMDS\nwhoami; ausearch -i --start now\n",
+                            "cleanup_command": "systemctl restart auditd\n"
+                        }
+                    },
+                    {
+                        "name": "MacOS Swift Keylogger",
+                        "auto_generated_guid": "aee3a097-4c5c-4fff-bbd3-0a705867ae29",
+                        "description": "Utilizes a swift script to log keys to sout. It runs for 5 seconds then dumps the output to standard. Input Monitoring is required.\nInput Monitoring can be enabled in System Preferences > Security & Privacy > Privacy > Input Monitoring.\nReferece: https://cedowens.medium.com/taking-esf-for-a-nother-spin-6e1e6acd1b74\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "swift_src": {
+                                "description": "Location of swift script",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1056.001/src/MacOSKeylogger.swift"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "swift script must exist at #{swift_src}, and the terminal must have input monitoring permissions.\n",
+                                "prereq_command": "if [ -f #{swift_src} ]; then chmod +x #{swift_src}; else exit 1; fi\n",
+                                "get_prereq_command": "echo \"\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "swift #{swift_src} -keylog\n",
+                            "cleanup_command": "kill `pgrep swift-frontend`\n",
+                            "name": "bash",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:57:10"
+}

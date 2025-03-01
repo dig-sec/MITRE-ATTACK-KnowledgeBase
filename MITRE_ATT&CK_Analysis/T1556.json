@@ -1,0 +1,135 @@
+{
+    "id": "T1556",
+    "name": "Modify Authentication Process",
+    "description": "Adversaries may modify authentication mechanisms and processes to access user credentials or enable otherwise unwarranted access to accounts. The authentication process is handled by mechanisms, such as the Local Security Authentication Server (LSASS) process and the Security Accounts Manager (SAM) on Windows, pluggable authentication modules (PAM) on Unix-based systems, and authorization plugins on MacOS systems, responsible for gathering, storing, and validating credentials. By modifying an authentication process, an adversary may be able to authenticate to a service or system without using [Valid Accounts](T1078).\nAdversaries may maliciously modify a part of this process to either reveal credentials or bypass authentication mechanisms. Compromised credentials or access may be used to bypass access controls placed on various resources on systems within the network and may even be used for persistent access to remote systems and externally available services, such as VPNs, Outlook Web Access and remote desktop.",
+    "platforms": "Windows, Linux, macOS, Network",
+    "kill_chain_phases": "Credential Access, Defense Evasion, Persistence",
+    "data_sources": "Logon Session: Logon Session Creation, Process: OS API Execution, Process: Process Access, File: File Modification, File: File Creation, Module: Module Load, Windows Registry: Windows Registry Key Modification",
+    "detection": "Monitor for new, unfamiliar DLL files written to a domain controller and/or local computer. Monitor for changes to Registry entries for password filters (ex: `HKEY_LOCAL_MACHINESYSTEMCurrentControlSetControlLsaNotification Packages`) and correlate then investigate the DLL files these files reference.\nPassword filters will also show up as an autorun and loaded DLL in lsass.exe.(Citation: Clymb3r Function Hook Passwords Sept 2013)\nMonitor for calls to `OpenProcess` that can be used to manipulate lsass.exe running on a domain controller as well as for malicious modifications to functions exported from authentication-related system DLLs (such as cryptdll.dll and samsrv.dll).(Citation: Dell Skeleton)\nMonitor PAM configuration and module paths (ex: `/etc/pam.d/`) for changes. Use system-integrity tools such as AIDE and monitoring tools such as auditd to monitor PAM files.\nMonitor for suspicious additions to the /Library/Security/SecurityAgentPlugins directory.(Citation: Xorrior Authorization Plugins)\nConfigure robust, consistent account activity audit policies across the enterprise and with externally accessible services. (Citation: TechNet Audit Policy) Look for suspicious account behavior across systems that share accounts, either user, admin, or service accounts. Examples: one account logged into multiple systems simultaneously; multiple accounts logged into the same machine simultaneously; accounts logged in at odd times or outside of business hours. Activity may be from interactive login sessions or process ownership from accounts being used to execute binaries on a remote system as a particular account. Correlate other security systems with login information (e.g., a user has an active login session but has not entered the building or does not have VPN access).",
+    "url": "https://attack.mitre.org/techniques/T1556",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "8622c92d-c00e-463c-b09d-fd06166f6794",
+                    "f598ea0c-c25a-4f72-a219-50c44411c791",
+                    "7ea78478-a4f9-42a6-9dcd-f861816122bf",
+                    "4d78a000-ab52-4564-88a5-7ab5242b20c7",
+                    "665e2d43-70dc-4ccc-9d27-026c9dd7ed9c",
+                    "26e7c5e2-6545-481e-b7e6-050143459635",
+                    "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                    "f4c1826f-a322-41cd-9557-562100848c84",
+                    "91c95675-1f27-46d0-bead-d1ae96b97cd3",
+                    "50a3c7aa-ec29-44a4-92c1-fce229eef6fc"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "8622c92d-c00e-463c-b09d-fd06166f6794",
+                        "lookup_data": {
+                            "description": "Detects when a user disables a critical security feature for an organization.",
+                            "raw": "author: Muhammad Faisal\ndate: 2023/01/29\ndescription: Detects when a user disables a critical security feature for an organization.\ndetection:\n  condition: selection\n  selection:\n    action:\n    - org.disable_oauth_app_restrictions\n    - org.disable_two_factor_requirement\n    - repo.advanced_security_disabled\n    - org.advanced_security_policy_selected_member_disabled\nfalsepositives:\n- Approved administrator/owner activities.\nfields:\n- action\n- actor\n- org\n- actor_location.country_code\n- transport_protocol_name\n- repository\n- repo\n- repository_public\n- '@timestamp'\nid: 8622c92d-c00e-463c-b09d-fd06166f6794\nlevel: high\nlogsource:\n  definition: 'Requirements: The audit log streaming feature must be enabled to be\n    able to receive such logs. You can enable following the documentation here: https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/streaming-the-audit-log-for-your-enterprise#setting-up-audit-log-streaming'\n  product: github\n  service: audit\nreferences:\n- https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/disabling-oauth-app-access-restrictions-for-your-organization\n- https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/reviewing-the-audit-log-for-your-organization#dependabot_alerts-category-actions\n- https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-security-and-analysis-settings-for-your-repository\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.defense_evasion\n- attack.persistence\n- attack.t1556\ntitle: Github High Risk Configuration Disabled\n",
+                            "sigma:id": "8622c92d-c00e-463c-b09d-fd06166f6794",
+                            "title": "Github High Risk Configuration Disabled",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f598ea0c-c25a-4f72-a219-50c44411c791",
+                        "lookup_data": {
+                            "description": "Detects possible addition of shadow credentials to an active directory object.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems), Elastic (idea)\ndate: 2022/10/17\ndescription: Detects possible addition of shadow credentials to an active directory\n  object.\ndetection:\n  condition: selection\n  selection:\n    AttributeLDAPDisplayName: msDS-KeyCredentialLink\n    EventID: 5136\nfalsepositives:\n- Modifications in the msDS-KeyCredentialLink attribute can be done legitimately by\n  the Azure AD Connect synchronization account or the ADFS service account. These\n  accounts can be added as Exceptions. (From elastic FP section)\nid: f598ea0c-c25a-4f72-a219-50c44411c791\nlevel: high\nlogsource:\n  definition: The \"Audit Directory Service Changes\" logging policy must be configured\n    in order to receive events. Audit events are generated only for objects with configured\n    system access control lists (SACLs). Audit events are generated only for objects\n    with configured system access control lists (SACLs) and only when accessed in\n    a manner that matches their SACL settings. This policy covers the following events\n    ids - 5136, 5137, 5138, 5139, 5141. Note that the default policy does not cover\n    User objects. For that a custom AuditRule need to be setup (See https://github.com/OTRF/Set-AuditRule)\n  product: windows\n  service: security\nreferences:\n- https://www.elastic.co/guide/en/security/8.4/potential-shadow-credentials-added-to-ad-object.html\n- https://cyberstoph.org/posts/2022/03/detecting-shadow-credentials/\n- https://twitter.com/SBousseaden/status/1581300963650187264?\nstatus: experimental\ntags:\n- attack.credential_access\n- attack.t1556\ntitle: Possible Shadow Credentials Added\n",
+                            "sigma:id": "f598ea0c-c25a-4f72-a219-50c44411c791",
+                            "title": "Possible Shadow Credentials Added",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7ea78478-a4f9-42a6-9dcd-f861816122bf",
+                        "lookup_data": {
+                            "description": "Detection for when multi factor authentication has been disabled, which might indicate a malicious activity to bypass authentication mechanisms.",
+                            "raw": "author: '@ionsor'\ndate: 2022/02/08\ndescription: Detection for when multi factor authentication has been disabled, which\n  might indicate a malicious activity to bypass authentication mechanisms.\ndetection:\n  condition: selection\n  selection:\n    eventName: Disable Strong Authentication.\n    eventSource: AzureActiveDirectory\n    status: success\nfalsepositives:\n- Authorized modification by administrators\nid: 7ea78478-a4f9-42a6-9dcd-f861816122bf\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-userstates\nstatus: test\ntags:\n- attack.persistence\n- attack.t1556\ntitle: Disabled MFA to Bypass Authentication Mechanisms\n",
+                            "sigma:id": "7ea78478-a4f9-42a6-9dcd-f861816122bf",
+                            "title": "Disabled MFA to Bypass Authentication Mechanisms",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4d78a000-ab52-4564-88a5-7ab5242b20c7",
+                        "lookup_data": {
+                            "description": "Change to authentication method could be an indicator of an attacker adding an auth method to the account so they can have continued access.",
+                            "raw": "author: AlertIQ\ndate: 2021/10/10\ndescription: Change to authentication method could be an indicator of an attacker\n  adding an auth method to the account so they can have continued access.\ndetection:\n  condition: selection\n  selection:\n    Category: UserManagement\n    LoggedByService: Authentication Methods\n    OperationName: User registered security info\nfalsepositives:\n- Unknown\nid: 4d78a000-ab52-4564-88a5-7ab5242b20c7\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nmodified: 2022/12/25\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-privileged-accounts\nstatus: test\ntags:\n- attack.credential_access\n- attack.t1556\n- attack.persistence\n- attack.defense_evasion\n- attack.t1098\ntitle: Change to Authentication Method\n",
+                            "sigma:id": "4d78a000-ab52-4564-88a5-7ab5242b20c7",
+                            "title": "Change to Authentication Method",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "665e2d43-70dc-4ccc-9d27-026c9dd7ed9c",
+                        "lookup_data": {
+                            "description": "Monitor and alert on group membership removal of groups that have CA policy modification access",
+                            "raw": "author: Mark Morowczynski '@markmorow', Thomas Detzner '@tdetzner'\ndate: 2022/08/04\ndescription: Monitor and alert on group membership removal of groups that have CA\n  policy modification access\ndetection:\n  condition: selection\n  selection:\n    properties.message: Remove member from group\nfalsepositives:\n- User removed from the group is approved\nid: 665e2d43-70dc-4ccc-9d27-026c9dd7ed9c\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: User Removed From Group With CA Policy Modification Access\n",
+                            "sigma:id": "665e2d43-70dc-4ccc-9d27-026c9dd7ed9c",
+                            "title": "User Removed From Group With CA Policy Modification Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "26e7c5e2-6545-481e-b7e6-050143459635",
+                        "lookup_data": {
+                            "description": "Monitor and alert on conditional access changes where non approved actor removed CA Policy.",
+                            "raw": "author: Corissa Koopmans, '@corissalea'\ndate: 2022/07/19\ndescription: Monitor and alert on conditional access changes where non approved actor\n  removed CA Policy.\ndetection:\n  condition: selection\n  selection:\n    properties.message: Delete conditional access policy\nfalsepositives:\n- Misconfigured role permissions\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\nid: 26e7c5e2-6545-481e-b7e6-050143459635\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: CA Policy Removed by Non Approved Actor\n",
+                            "sigma:id": "26e7c5e2-6545-481e-b7e6-050143459635",
+                            "title": "CA Policy Removed by Non Approved Actor",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                        "lookup_data": {
+                            "description": "FontOnLake: Previously unknown malware family targeting Linux",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633682506",
+                            "uuid": "5f17a0c6-7b04-4f05-9fda-b5d435a8d6a4",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f4c1826f-a322-41cd-9557-562100848c84",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1556",
+                            "mitre-cti:description": "Adversaries may modify authentication mechanisms and processes to access user credentials or enable otherwise unwarranted access to accounts. The authentication process is handled by mechanisms, such as the Local Security Authentication Server (LSASS) process and the Security Accounts Manager (SAM) on Windows, pluggable authentication modules (PAM) on Unix-based systems, and authorization plugins on MacOS systems, responsible for gathering, storing, and validating credentials. By modifying an authentication process, an adversary may be able to authenticate to a service or system without using [Valid Accounts](https://attack.mitre.org/techniques/T1078).\n\nAdversaries may maliciously modify a part of this process to either reveal credentials or bypass authentication mechanisms. Compromised credentials or access may be used to bypass access controls placed on various resources on systems within the network and may even be used for persistent access to remote systems and externally available services, such as VPNs, Outlook Web Access and remote desktop.",
+                            "mitre-cti:name": "Modify Authentication Process",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-18T16:28:56.126Z', 'name': 'Modify Authentication Process', 'description': 'Adversaries may modify authentication mechanisms and processes to access user credentials or enable otherwise unwarranted access to accounts. The authentication process is handled by mechanisms, such as the Local Security Authentication Server (LSASS) process and the Security Accounts Manager (SAM) on Windows, pluggable authentication modules (PAM) on Unix-based systems, and authorization plugins on MacOS systems, responsible for gathering, storing, and validating credentials. By modifying an authentication process, an adversary may be able to authenticate to a service or system without using [Valid Accounts](https://attack.mitre.org/techniques/T1078).\\n\\nAdversaries may maliciously modify a part of this process to either reveal credentials or bypass authentication mechanisms. Compromised credentials or access may be used to bypass access controls placed on various resources on systems within the network and may even be used for persistent access to remote systems and externally available services, such as VPNs, Outlook Web Access and remote desktop.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'credential-access'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'defense-evasion'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Monitor for new, unfamiliar DLL files written to a domain controller and/or local computer. Monitor for changes to Registry entries for password filters (ex: <code>HKEY_LOCAL_MACHINE\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\Notification Packages</code>) and correlate then investigate the DLL files these files reference. \\n\\nPassword filters will also show up as an autorun and loaded DLL in lsass.exe.(Citation: Clymb3r Function Hook Passwords Sept 2013)\\n\\nMonitor for calls to <code>OpenProcess</code> that can be used to manipulate lsass.exe running on a domain controller as well as for malicious modifications to functions exported from authentication-related system DLLs (such as cryptdll.dll and samsrv.dll).(Citation: Dell Skeleton) \\n\\nMonitor PAM configuration and module paths (ex: <code>/etc/pam.d/</code>) for changes. Use system-integrity tools such as AIDE and monitoring tools such as auditd to monitor PAM files.\\n\\nMonitor for suspicious additions to the /Library/Security/SecurityAgentPlugins directory.(Citation: Xorrior Authorization Plugins)\\n\\nConfigure robust, consistent account activity audit policies across the enterprise and with externally accessible services. (Citation: TechNet Audit Policy) Look for suspicious account behavior across systems that share accounts, either user, admin, or service accounts. Examples: one account logged into multiple systems simultaneously; multiple accounts logged into the same machine simultaneously; accounts logged in at odd times or outside of business hours. Activity may be from interactive login sessions or process ownership from accounts being used to execute binaries on a remote system as a particular account. Correlate other security systems with login information (e.g., a user has an active login session but has not entered the building or does not have VPN access).\\n\\nMonitor property changes in Group Policy that manage authentication mechanisms (i.e. [Group Policy Modification](https://attack.mitre.org/techniques/T1484/001)). The <code>Store passwords using reversible encryption</code> configuration should be set to Disabled. Additionally, monitor and/or block suspicious command/script execution of <code>-AllowReversiblePasswordEncryption $true</code>, <code>Set-ADUser</code> and <code>Set-ADAccountControl</code>. Finally, monitor Fine-Grained Password Policies and regularly audit user accounts and group settings.(Citation: dump_pwd_dcsync)\\n', 'x_mitre_platforms': ['Windows', 'Linux', 'macOS', 'Network', 'Azure AD', 'Google Workspace', 'IaaS', 'Office 365', 'SaaS'], 'x_mitre_is_subtechnique': False, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '2.2', 'x_mitre_contributors': ['Chris Ross @xorrior'], 'x_mitre_data_sources': ['Windows Registry: Windows Registry Key Modification', 'User Account: User Account Modification', 'User Account: User Account Authentication', 'Module: Module Load', 'File: File Creation', 'Logon Session: Logon Session Creation', 'File: File Modification', 'Application Log: Application Log Content', 'Process: OS API Execution', 'Active Directory: Active Directory Object Modification', 'Process: Process Access'], 'type': 'attack-pattern', 'id': 'attack-pattern--f4c1826f-a322-41cd-9557-562100848c84', 'created': '2020-02-11T19:01:56.887Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1556', 'external_id': 'T1556'}, {'source_name': 'Clymb3r Function Hook Passwords Sept 2013', 'description': 'Bialek, J. (2013, September 15). Intercepting Password Changes With Function Hooking. Retrieved November 21, 2017.', 'url': 'https://clymb3r.wordpress.com/2013/09/15/intercepting-password-changes-with-function-hooking/'}, {'source_name': 'Xorrior Authorization Plugins', 'description': 'Chris Ross. (2018, October 17). Persistent Credential Theft with Authorization Plugins. Retrieved April 22, 2021.', 'url': 'https://xorrior.com/persistent-credential-theft/'}, {'source_name': 'Dell Skeleton', 'description': 'Dell SecureWorks. (2015, January 12). Skeleton Key Malware Analysis. Retrieved April 8, 2019.', 'url': 'https://www.secureworks.com/research/skeleton-key-malware-analysis'}, {'source_name': 'dump_pwd_dcsync', 'description': 'Metcalf, S. (2015, November 22). Dump Clear-Text Passwords for All Admins in the Domain Using Mimikatz DCSync. Retrieved November 15, 2021.', 'url': 'https://adsecurity.org/?p=2053'}, {'source_name': 'TechNet Audit Policy', 'description': 'Microsoft. (2016, April 15). Audit Policy Recommendations. Retrieved June 3, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/dn487457.aspx'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "91c95675-1f27-46d0-bead-d1ae96b97cd3",
+                        "lookup_data": {
+                            "description": "Monitor and alert on group membership additions of groups that have CA policy modification access",
+                            "raw": "author: Mark Morowczynski '@markmorow', Thomas Detzner '@tdetzner'\ndate: 2022/08/04\ndescription: Monitor and alert on group membership additions of groups that have CA\n  policy modification access\ndetection:\n  condition: selection\n  selection:\n    properties.message: Add member from group\nfalsepositives:\n- User removed from the group is approved\nid: 91c95675-1f27-46d0-bead-d1ae96b97cd3\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: User Added To Group With CA Policy Modification Access\n",
+                            "sigma:id": "91c95675-1f27-46d0-bead-d1ae96b97cd3",
+                            "title": "User Added To Group With CA Policy Modification Access",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "50a3c7aa-ec29-44a4-92c1-fce229eef6fc",
+                        "lookup_data": {
+                            "description": "Monitor and alert on conditional access changes. Is Initiated by (actor) approved to make changes? Review Modified Properties and compare \"old\" vs \"new\" value.",
+                            "raw": "author: Corissa Koopmans, '@corissalea'\ndate: 2022/07/19\ndescription: Monitor and alert on conditional access changes. Is Initiated by (actor)\n  approved to make changes? Review Modified Properties and compare \"old\" vs \"new\"\n  value.\ndetection:\n  condition: keywords\n  keywords:\n  - Update conditional access policy\nfalsepositives:\n- Misconfigured role permissions\n- Verify whether the user identity, user agent, and/or hostname should be making changes\n  in your environment.\nid: 50a3c7aa-ec29-44a4-92c1-fce229eef6fc\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-infrastructure#conditional-access\nstatus: experimental\ntags:\n- attack.defense_evasion\n- attack.persistence\n- attack.t1548\n- attack.t1556\ntitle: CA Policy Updated by Non Approved Actor\n",
+                            "sigma:id": "50a3c7aa-ec29-44a4-92c1-fce229eef6fc",
+                            "title": "CA Policy Updated by Non Approved Actor",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": []
+    },
+    "timestamp": "2025-02-28 16:19:03"
+}

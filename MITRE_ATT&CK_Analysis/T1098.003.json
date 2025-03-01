@@ -1,0 +1,191 @@
+{
+    "id": "T1098.003",
+    "name": "Add Office 365 Global Administrator Role",
+    "description": "An adversary may add the Global Administrator role to an adversary-controlled account to maintain persistent access to an Office 365 tenant.(Citation: Microsoft Support O365 Add Another Admin, October 2019)(Citation: Microsoft O365 Admin Roles) With sufficient permissions, a compromised account can gain almost unlimited access to data and settings (including the ability to reset the passwords of other admins) via the global admin role.(Citation: Microsoft O365 Admin Roles)\nThis account modification may immediately follow [Create Account](T1136) or other malicious account activity.",
+    "platforms": "Office 365",
+    "kill_chain_phases": "Persistence",
+    "data_sources": "User Account: User Account Modification",
+    "detection": "Collect usage logs from cloud administrator accounts to identify unusual activity in the assignment of roles to those accounts. Monitor for accounts assigned to admin roles that go over a certain threshold of known admins.",
+    "url": "https://attack.mitre.org/techniques/T1098/003",
+    "enrichments": {
+        "attack_rule_map": [],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "eaa9ac35-1730-441f-9587-25767bde99d7",
+                    "b04934b2-0a68-4845-8a19-bdfed3a68a7a",
+                    "413d4a81-6c98-4479-9863-014785fd579c",
+                    "a622fcd2-4b5a-436a-b8a2-a4171161833c",
+                    "2dbbdcd5-92cf-44c0-aea2-fe24783a6bc3",
+                    "ebbeb024-5b1d-4e16-9c0c-917f86c708a7",
+                    "5aecf3d5-f8a0-48e7-99be-3a759df7358f"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "eaa9ac35-1730-441f-9587-25767bde99d7",
+                        "lookup_data": {
+                            "description": "Detects when an organization member or an outside collaborator is added to or removed from a project board or has their permission level changed or when an owner removes an outside collaborator from an organization or when two-factor authentication is required in an organization and an outside collaborator does not use 2FA or disables 2FA.\n",
+                            "raw": "author: Muhammad Faisal\ndate: 2023/01/20\ndescription: 'Detects when an organization member or an outside collaborator is added\n  to or removed from a project board or has their permission level changed or when\n  an owner removes an outside collaborator from an organization or when two-factor\n  authentication is required in an organization and an outside collaborator does not\n  use 2FA or disables 2FA.\n\n  '\ndetection:\n  condition: selection\n  selection:\n    action:\n    - project.update_user_permission\n    - org.remove_outside_collaborator\nfalsepositives:\n- Validate the actor if permitted to access the repo.\n- Validate the Multifactor Authentication changes.\nfields:\n- action\n- actor\n- org\n- actor_location.country_code\nid: eaa9ac35-1730-441f-9587-25767bde99d7\nlevel: medium\nlogsource:\n  definition: 'Requirements: The audit log streaming feature must be enabled to be\n    able to receive such logs. You can enable following the documentation here: https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/streaming-the-audit-log-for-your-enterprise#setting-up-audit-log-streaming'\n  product: github\n  service: audit\nreferences:\n- https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/reviewing-the-audit-log-for-your-organization#audit-log-actions\n- https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-two-factor-authentication-for-your-organization/requiring-two-factor-authentication-in-your-organization\nstatus: experimental\ntags:\n- attack.persistence\n- attack.collection\n- attack.t1098.001\n- attack.t1098.003\n- attack.t1213.003\ntitle: Github Outside Collaborator Detected\n",
+                            "sigma:id": "eaa9ac35-1730-441f-9587-25767bde99d7",
+                            "title": "Github Outside Collaborator Detected",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "b04934b2-0a68-4845-8a19-bdfed3a68a7a",
+                        "lookup_data": {
+                            "description": "Detects when an app is assigned Azure AD roles, such as global adminsitrator, or Azure RBAC roles, such as subscription owner.",
+                            "raw": "author: Bailey Bercik '@baileybercik', Mark Morowczynski '@markmorow'\ndate: 2022/07/19\ndescription: Detects when an app is assigned Azure AD roles, such as global adminsitrator,\n  or Azure RBAC roles, such as subscription owner.\ndetection:\n  condition: selection\n  selection:\n    properties.message:\n    - Add member to role\n    - Add eligible member to role\n    - Add scoped member to role\nfalsepositives:\n- When the permission is legitimately needed for the app\nid: b04934b2-0a68-4845-8a19-bdfed3a68a7a\nlevel: medium\nlogsource:\n  product: azure\n  service: auditlogs\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-applications#service-principal-assigned-to-a-role\nstatus: experimental\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1098.003\ntitle: App Role Added\n",
+                            "sigma:id": "b04934b2-0a68-4845-8a19-bdfed3a68a7a",
+                            "title": "App Role Added",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "413d4a81-6c98-4479-9863-014785fd579c",
+                        "lookup_data": {
+                            "description": "Detects when an the Administrator role is assigned to an user or group.",
+                            "raw": "author: Austin Songer @austinsonger\ndate: 2021/09/12\ndescription: Detects when an the Administrator role is assigned to an user or group.\ndetection:\n  condition: selection\n  selection:\n    eventtype:\n    - group.privilege.grant\n    - user.account.privilege.grant\nfalsepositives:\n- Administrator roles could be assigned to users or group by other admin users.\nid: 413d4a81-6c98-4479-9863-014785fd579c\nlevel: medium\nlogsource:\n  product: okta\n  service: okta\nmodified: 2022/10/09\nreferences:\n- https://developer.okta.com/docs/reference/api/system-log/\n- https://developer.okta.com/docs/reference/api/event-types/\nstatus: test\ntags:\n- attack.persistence\n- attack.t1098.003\ntitle: Okta Admin Role Assigned to an User or Group\n",
+                            "sigma:id": "413d4a81-6c98-4479-9863-014785fd579c",
+                            "title": "Okta Admin Role Assigned to an User or Group",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "a622fcd2-4b5a-436a-b8a2-a4171161833c",
+                        "lookup_data": {
+                            "description": "Identifies IPs from which users grant access to other users on azure resources and alerts when a previously unseen source IP address is used.",
+                            "raw": "author: sawwinnnaung\ndate: 2020/05/07\ndescription: Identifies IPs from which users grant access to other users on azure\n  resources and alerts when a previously unseen source IP address is used.\ndetection:\n  condition: keywords\n  keywords:\n  - Microsoft.Authorization/roleAssignments/write\nfalsepositives:\n- Valid change\nid: a622fcd2-4b5a-436a-b8a2-a4171161833c\nlevel: medium\nlogsource:\n  product: azure\n  service: azureactivity\nmodified: 2021/11/27\nreferences:\n- https://github.com/Azure/Azure-Sentinel/blob/e534407884b1ec5371efc9f76ead282176c9e8bb/Detections/AzureActivity/Granting_Permissions_To_Account_detection.yaml\nstatus: test\ntags:\n- attack.persistence\n- attack.t1098.003\ntitle: Granting Of Permissions To An Account\n",
+                            "sigma:id": "a622fcd2-4b5a-436a-b8a2-a4171161833c",
+                            "title": "Granting Of Permissions To An Account",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "2dbbdcd5-92cf-44c0-aea2-fe24783a6bc3",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1098.003",
+                            "mitre-cti:description": "An adversary may add additional roles or permissions to an adversary-controlled cloud account to maintain persistent access to a tenant. For example, adversaries may update IAM policies in cloud-based environments or add a new global administrator in Office 365 environments.(Citation: AWS IAM Policies and Permissions)(Citation: Google Cloud IAM Policies)(Citation: Microsoft Support O365 Add Another Admin, October 2019)(Citation: Microsoft O365 Admin Roles) With sufficient permissions, a compromised account can gain almost unlimited access to data and settings (including the ability to reset the passwords of other admins).(Citation: Expel AWS Attacker)\n(Citation: Microsoft O365 Admin Roles) \n\nThis account modification may immediately follow [Create Account](https://attack.mitre.org/techniques/T1136) or other malicious account activity. Adversaries may also modify existing [Valid Accounts](https://attack.mitre.org/techniques/T1078) that they have compromised. This could lead to privilege escalation, particularly if the roles added allow for lateral movement to additional accounts.\n\nFor example, in Azure AD environments, an adversary with the Application Administrator role can add [Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001) to their application's service principal. In doing so the adversary would be able to gain the service principal’s roles and permissions, which may be different from those of the Application Administrator.(Citation: SpecterOps Azure Privilege Escalation) Similarly, in AWS environments, an adversary with appropriate permissions may be able to use the <code>CreatePolicyVersion</code> API to define a new version of an IAM policy or the <code>AttachUserPolicy</code> API to attach an IAM policy with additional or distinct permissions to a compromised user account.(Citation: Rhino Security Labs AWS Privilege Escalation)\n\nSimilarly, an adversary with the Azure AD Global Administrator role can toggle the “Access management for Azure resources” option to gain the ability to assign privileged access to Azure subscriptions and virtual machines to Azure AD users, including themselves.(Citation: Azure AD to AD) ",
+                            "mitre-cti:name": "Additional Cloud Roles",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'modified': '2022-10-24T15:21:19.955Z', 'name': 'Additional Cloud Roles', 'description': \"An adversary may add additional roles or permissions to an adversary-controlled cloud account to maintain persistent access to a tenant. For example, adversaries may update IAM policies in cloud-based environments or add a new global administrator in Office 365 environments.(Citation: AWS IAM Policies and Permissions)(Citation: Google Cloud IAM Policies)(Citation: Microsoft Support O365 Add Another Admin, October 2019)(Citation: Microsoft O365 Admin Roles) With sufficient permissions, a compromised account can gain almost unlimited access to data and settings (including the ability to reset the passwords of other admins).(Citation: Expel AWS Attacker)\\n(Citation: Microsoft O365 Admin Roles) \\n\\nThis account modification may immediately follow [Create Account](https://attack.mitre.org/techniques/T1136) or other malicious account activity. Adversaries may also modify existing [Valid Accounts](https://attack.mitre.org/techniques/T1078) that they have compromised. This could lead to privilege escalation, particularly if the roles added allow for lateral movement to additional accounts.\\n\\nFor example, in Azure AD environments, an adversary with the Application Administrator role can add [Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001) to their application's service principal. In doing so the adversary would be able to gain the service principal’s roles and permissions, which may be different from those of the Application Administrator.(Citation: SpecterOps Azure Privilege Escalation) Similarly, in AWS environments, an adversary with appropriate permissions may be able to use the <code>CreatePolicyVersion</code> API to define a new version of an IAM policy or the <code>AttachUserPolicy</code> API to attach an IAM policy with additional or distinct permissions to a compromised user account.(Citation: Rhino Security Labs AWS Privilege Escalation)\\n\\nSimilarly, an adversary with the Azure AD Global Administrator role can toggle the “Access management for Azure resources” option to gain the ability to assign privileged access to Azure subscriptions and virtual machines to Azure AD users, including themselves.(Citation: Azure AD to AD) \", 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'persistence'}], 'x_mitre_detection': 'Collect activity logs from IAM services and cloud administrator accounts to identify unusual activity in the assignment of roles to those accounts. Monitor for accounts assigned to admin roles that go over a certain threshold of known admins. ', 'x_mitre_platforms': ['Office 365', 'IaaS', 'SaaS', 'Google Workspace', 'Azure AD'], 'x_mitre_is_subtechnique': True, 'x_mitre_deprecated': False, 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_version': '2.1', 'x_mitre_contributors': ['Microsoft Threat Intelligence Center (MSTIC)', 'Alex Parsons, Crowdstrike', 'Chris Romano, Crowdstrike', 'Wojciech Lesicki', 'Pià Consigny, Tenable', 'Clément Notin, Tenable', 'Praetorian', 'Alex Soler, AttackIQ'], 'x_mitre_data_sources': ['User Account: User Account Modification'], 'type': 'attack-pattern', 'id': 'attack-pattern--2dbbdcd5-92cf-44c0-aea2-fe24783a6bc3', 'created': '2020-01-19T16:59:45.362Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'revoked': False, 'external_references': [{'source_name': 'mitre-attack', 'url': 'https://attack.mitre.org/techniques/T1098/003', 'external_id': 'T1098.003'}, {'source_name': 'Expel AWS Attacker', 'description': ' Brian Bahtiarian, David Blanton, Britton Manahan and Kyle Pellett. (2022, April 5). Incident report: From CLI to console, chasing an attacker in AWS. Retrieved April 7, 2022.', 'url': 'https://expel.com/blog/incident-report-from-cli-to-console-chasing-an-attacker-in-aws/'}, {'source_name': 'Microsoft O365 Admin Roles', 'description': 'Ako-Adjei, K., Dickhaus, M., Baumgartner, P., Faigel, D., et. al.. (2019, October 8). About admin roles. Retrieved October 18, 2019.', 'url': 'https://docs.microsoft.com/en-us/office365/admin/add-users/about-admin-roles?view=o365-worldwide'}, {'source_name': 'SpecterOps Azure Privilege Escalation', 'description': 'Andy Robbins. (2021, October 12). Azure Privilege Escalation via Service Principal Abuse. Retrieved April 1, 2022.', 'url': 'https://posts.specterops.io/azure-privilege-escalation-via-service-principal-abuse-210ae2be2a5'}, {'source_name': 'AWS IAM Policies and Permissions', 'description': 'AWS. (n.d.). Policies and permissions in IAM. Retrieved April 1, 2022.', 'url': 'https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html'}, {'source_name': 'Google Cloud IAM Policies', 'description': 'Google Cloud. (2022, March 31). Understanding policies. Retrieved April 1, 2022.', 'url': 'https://cloud.google.com/iam/docs/policies'}, {'source_name': 'Microsoft Support O365 Add Another Admin, October 2019', 'description': 'Microsoft. (n.d.). Add Another Admin. Retrieved October 18, 2019.', 'url': 'https://support.office.com/en-us/article/add-another-admin-f693489f-9f55-4bd0-a637-a81ce93de22d'}, {'source_name': 'Azure AD to AD', 'description': 'Sean Metcalf. (2020, May 27). From Azure AD to Active Directory (via Azure) – An Unanticipated Attack Path. Retrieved September 28, 2022.', 'url': 'https://adsecurity.org/?p=4277'}, {'source_name': 'Rhino Security Labs AWS Privilege Escalation', 'description': 'Spencer Gietzen. (n.d.). AWS IAM Privilege Escalation – Methods and Mitigation. Retrieved May 27, 2022.', 'url': 'https://rhinosecuritylabs.com/aws/aws-privilege-escalation-methods-mitigation/'}], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ebbeb024-5b1d-4e16-9c0c-917f86c708a7",
+                        "lookup_data": {
+                            "description": "User Added to an Administrator's Azure AD Role",
+                            "raw": "author: \"Rapha\\xEBl CALVET, @MetallicHack\"\ndate: 2021/10/04\ndescription: User Added to an Administrator's Azure AD Role\ndetection:\n  condition: selection\n  selection:\n    ModifiedProperties{}.NewValue|endswith:\n    - Admins\n    - Administrator\n    Operation: Add member to role.\n    Workload: AzureActiveDirectory\nfalsepositives:\n- PIM (Privileged Identity Management) generates this event each time 'eligible role'\n  is enabled.\nid: ebbeb024-5b1d-4e16-9c0c-917f86c708a7\nlevel: medium\nlogsource:\n  product: azure\n  service: activitylogs\nmodified: 2022/10/09\nreferences:\n- https://m365internals.com/2021/07/13/what-ive-learned-from-doing-a-year-of-cloud-forensics-in-azure-ad/\nstatus: test\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1098.003\n- attack.t1078\ntitle: User Added to an Administrator's Azure AD Role\n",
+                            "sigma:id": "ebbeb024-5b1d-4e16-9c0c-917f86c708a7",
+                            "title": "User Added to an Administrator's Azure AD Role",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5aecf3d5-f8a0-48e7-99be-3a759df7358f",
+                        "lookup_data": {
+                            "description": "Detects when administrator grants either application permissions (app roles) or highly privileged delegated permissions",
+                            "raw": "author: Bailey Bercik '@baileybercik', Mark Morowczynski '@markmorow'\ndate: 2022/07/28\ndescription: Detects when administrator grants either application permissions (app\n  roles) or highly privileged delegated permissions\ndetection:\n  condition: selection\n  selection:\n    properties.message: Add app role assignment to service principal\nfalsepositives:\n- When the permission is legitimately needed for the app\nid: 5aecf3d5-f8a0-48e7-99be-3a759df7358f\nlevel: high\nlogsource:\n  product: azure\n  service: microsoft365portal\nreferences:\n- https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/security-operations-applications#application-granted-highly-privileged-permissions\nstatus: experimental\ntags:\n- attack.persistence\n- attack.privilege_escalation\n- attack.t1098.003\ntitle: App Granted Privileged Delegated Or App Permissions\n",
+                            "sigma:id": "5aecf3d5-f8a0-48e7-99be-3a759df7358f",
+                            "title": "App Granted Privileged Delegated Or App Permissions",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1098.003",
+                "display_name": "Account Manipulation: Additional Cloud Roles",
+                "atomic_tests": [
+                    {
+                        "name": "Azure AD - Add Company Administrator Role to a user",
+                        "auto_generated_guid": "4d77f913-56f5-4a14-b4b1-bf7bb24298ad",
+                        "description": "Add an existing Azure user account the Company Administrator Role.\n",
+                        "supported_platforms": [
+                            "azure-ad"
+                        ],
+                        "input_arguments": {
+                            "username": {
+                                "description": "Azure AD username",
+                                "type": "string",
+                                "default": "jonh@contoso.com"
+                            },
+                            "password": {
+                                "description": "Azure AD password",
+                                "type": "string",
+                                "default": "p4sswd"
+                            },
+                            "target_user": {
+                                "description": "Name of the user who will be assigned the Company Admin role",
+                                "type": "string",
+                                "default": "default"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "MSOnline module must be installed.\n",
+                                "prereq_command": "try {if (Get-InstalledModule -Name MSOnline -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}\n",
+                                "get_prereq_command": "Install-Module -Name MSOnline -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Import-Module MSOnline\n$Password = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Password\nConnect-MsolService -Credential $Credential\nAdd-MsolRoleMember -RoleName \"Company Administrator\" -RoleMemberEmailAddress \"#{target_user}\"\n",
+                            "cleanup_command": "Remove-MsolRoleMember -RoleName \"Company Administrator\" -RoleMemberType User -RoleMemberEmailAddress \"#{target_user}\"\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    },
+                    {
+                        "name": "Simulate - Post BEC persistence via user password reset followed by user added to company administrator role",
+                        "auto_generated_guid": "14f3af20-61f1-45b8-ad31-4637815f3f44",
+                        "description": "This test looks at simulating the an adversary described in the following blog post. It involves resetting the password of a normal user and adding to the company administrator role within M365.\n Reference: https://www.huntress.com/blog/business-email-compromise-via-azure-administrative-privileges\n",
+                        "supported_platforms": [
+                            "azure-ad"
+                        ],
+                        "input_arguments": {
+                            "auth_username": {
+                                "description": "Azure AD username used to conduct the adversary activity",
+                                "type": "string",
+                                "default": "jonh@contoso.com"
+                            },
+                            "auth_password": {
+                                "description": "Azure AD password for user auth_username",
+                                "type": "string",
+                                "default": "p4sswd"
+                            },
+                            "target_user": {
+                                "description": "Name of the user whose password be reset and added to the admin role.",
+                                "type": "string",
+                                "default": "default"
+                            },
+                            "target_password": {
+                                "description": "The password that the user target_user will be reset to.",
+                                "type": "string",
+                                "default": "Ohn05GeMe#$"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "MSOnline and AzureAD modules must be installed.\n",
+                                "prereq_command": "$required_mods = 'AzureAD', 'MSOnline'\n$installed_mods = @((Get-Module $required_mods -ListAvailable -ErrorAction SilentlyContinue).Name  | Select-Object -Unique)\n$notInstalled = Compare-Object $required_mods $installed_mods -PassThru -ErrorAction SilentlyContinue\n\nif ($notInstalled) {\n# Prompt for installing the missing ones.\nWrite-Output \"The following PS modules aren't currently installed:\"\n$notInstalled\n  exit 1\n}\n\n else{\n  Write-Output \"All required PS modules are installed\"\n  exit 0\n }\n",
+                                "get_prereq_command": "Install-Module -Name MSOnline -Scope CurrentUser -Force\nInstall-Module -Name AzureAD -Scope CurrentUser -Force\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "Import-Module MSOnline\nImport-Module AzureAD\n$password = ConvertTo-SecureString -String \"#{auth_password}\" -AsPlainText -Force\n$credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{auth_username}\", $password\n$targetsecurepw = ConvertTo-SecureString -String \"#{target_password}\" -AsPlainText -Force\nConnect-MsolService -Credential $credential -ErrorAction:SilentlyContinue\nConnect-AzureAD -Credential $credential -ErrorAction:SilentlyContinue\n\n#Saving the ObjectId of the target_user into a variable\n$target_objid = Get-AzureADUser -filter \"userPrincipalName eq '#{target_user}'\" | Select-Object -ExpandProperty ObjectId\n\n#Reset the password of the target_user\nSet-AzureADUserPassword -ObjectId  $target_objid -Password $targetsecurepw -ErrorAction:SilentlyContinue\n\n#Adding target_user\nAdd-MsolRoleMember -RoleName \"Company Administrator\" -RoleMemberEmailAddress \"#{target_user}\"\nAdd-MsolRoleMember -RoleName \"Global Reader\" -RoleMemberEmailAddress \"#{target_user}\"\n",
+                            "cleanup_command": "Import-Module MSOnline\n$password = ConvertTo-SecureString -String \"#{auth_password}\" -AsPlainText -Force\n$credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{auth_username}\", $password\nConnect-MsolService -Credential $credential\nRemove-MsolRoleMember -RoleName \"Company Administrator\" -RoleMemberType User -RoleMemberEmailAddress \"#{target_user}\"\nRemove-MsolRoleMember -RoleName \"Global Reader\" -RoleMemberType User -RoleMemberEmailAddress \"#{target_user}\"\n",
+                            "name": "powershell",
+                            "elevation_required": false
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 12:52:27"
+}

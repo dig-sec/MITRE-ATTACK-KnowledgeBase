@@ -1,0 +1,231 @@
+{
+    "id": "T1039",
+    "name": "Data from Network Shared Drive",
+    "description": "Adversaries may search network shares on computers they have compromised to find files of interest. Sensitive data can be collected from remote systems via shared network drives (host shared directory, network file server, etc.) that are accessible from the current system prior to Exfiltration. Interactive command shells may be in use, and common functionality within [cmd](S0106) may be used to gather information.",
+    "platforms": "Linux, macOS, Windows",
+    "kill_chain_phases": "Collection",
+    "data_sources": "File: File Access, Network Share: Network Share Access, Command: Command Execution",
+    "detection": "Monitor processes and command-line arguments for actions that could be taken to collect files from a network share. Remote access tools with built-in features may interact directly with the Windows API to gather data. Data may also be acquired through Windows system management tools such as [Windows Management Instrumentation](T1047) and [PowerShell](T1059.001).",
+    "url": "https://attack.mitre.org/techniques/T1039",
+    "enrichments": {
+        "attack_rule_map": [
+            {
+                "tech_id": "T1039",
+                "atomic_attack_guid": "7762e120-5879-44ff-97f8-008b401b9a98",
+                "atomic_attack_name": "Copy a sensitive File over Administrative share with Powershell",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Script Execution From Temp Folder",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_script_exec_from_temp.yml",
+                        "remote_content": "title: Suspicious Script Execution From Temp Folder\nid: a6a39bdb-935c-4f0a-ab77-35f4bbf44d33\nstatus: test\ndescription: Detects a suspicious script executions from temporary folder\nreferences:\n    - https://www.microsoft.com/security/blog/2021/07/13/microsoft-discovers-threat-actor-targeting-solarwinds-serv-u-software-with-0-day-exploit/\nauthor: Florian Roth (Nextron Systems), Max Altgelt (Nextron Systems), Tim Shelton\ndate: 2021-07-14\nmodified: 2022-10-05\ntags:\n    - attack.execution\n    - attack.t1059\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n            - '\\mshta.exe'\n            - '\\wscript.exe'\n            - '\\cscript.exe'\n        CommandLine|contains:\n            - '\\Windows\\Temp'\n            - '\\Temporary Internet'\n            - '\\AppData\\Local\\Temp'\n            - '\\AppData\\Roaming\\Temp'\n            - '%TEMP%'\n            - '%TMP%'\n            - '%LocalAppData%\\Temp'\n    filter:\n        CommandLine|contains:\n            - ' >'\n            - 'Out-File'\n            - 'ConvertTo-Json'\n            - '-WindowStyle hidden -Verb runAs'  # VSCode behaviour if file cannot be written as current user\n            - '\\Windows\\system32\\config\\systemprofile\\AppData\\Local\\Temp\\Amazon\\EC2-Windows\\' # EC2 AWS\n    condition: selection and not filter\nfalsepositives:\n    - Administrative scripts\nlevel: high\n"
+                    },
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Copy From Or To Admin Share Or Sysvol Folder",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_lateral_movement.yml",
+                        "remote_content": "title: Copy From Or To Admin Share Or Sysvol Folder\nid: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\nstatus: test\ndescription: Detects a copy command or a copy utility execution to or from an Admin share or remote\nreferences:\n    - https://twitter.com/SBousseaden/status/1211636381086339073\n    - https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\n    - https://www.elastic.co/guide/en/security/current/remote-file-copy-to-a-hidden-share.html\n    - https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nauthor: Florian Roth (Nextron Systems), oscd.community, Teymur Kheirkhabarov @HeirhabarovT, Zach Stanford @svch0st, Nasreddine Bencherchali\ndate: 2019-12-30\nmodified: 2023-11-15\ntags:\n    - attack.lateral-movement\n    - attack.collection\n    - attack.exfiltration\n    - attack.t1039\n    - attack.t1048\n    - attack.t1021.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_target:\n        CommandLine|contains:\n            - '\\\\\\\\*$'\n            - '\\Sysvol\\'\n    selection_other_tools:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    selection_cmd_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cmd_cli:\n        CommandLine|contains: 'copy'\n    selection_pwsh_img:\n        - Image|contains:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_pwsh_cli:\n        CommandLine|contains:\n            - 'copy-item'\n            - 'copy '\n            - 'cpi '\n            - ' cp '\n            - 'move '\n            - 'move-item'\n            - ' mi '\n            - ' mv '\n    condition: selection_target and (selection_other_tools or all of selection_cmd_* or all of selection_pwsh_*)\nfalsepositives:\n    - Administrative scripts\nlevel: medium\n"
+                    }
+                ]
+            },
+            {
+                "tech_id": "T1039",
+                "atomic_attack_guid": "6ed67921-1774-44ba-bac6-adb51ed60660",
+                "atomic_attack_name": "Copy a sensitive File over Administrative share with copy",
+                "platform": "Windows",
+                "sigma_rules": [
+                    {
+                        "rule_name": "Suspicious Copy From or To System Directory",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_system_dir.yml",
+                        "remote_content": "title: Suspicious Copy From or To System Directory\nid: fff9d2b7-e11c-4a69-93d3-40ef66189767\nrelated:\n    - id: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\n      type: derived\nstatus: test\ndescription: |\n    Detects a suspicious copy operation that tries to copy a program from system (System32, SysWOW64, WinSxS) directories to another on disk.\n    Often used to move LOLBINs such as 'certutil' or 'desktopimgdownldr' to a different location with a different name in order to bypass detections based on locations.\nreferences:\n    - https://www.hybrid-analysis.com/sample/8da5b75b6380a41eee3a399c43dfe0d99eeefaa1fd21027a07b1ecaa4cd96fdd?environmentId=120\n    - https://web.archive.org/web/20180331144337/https://www.fireeye.com/blog/threat-research/2018/03/sanny-malware-delivery-method-updated-in-recently-observed-attacks.html\n    - https://thedfirreport.com/2023/08/28/html-smuggling-leads-to-domain-wide-ransomware/\nauthor: Florian Roth (Nextron Systems), Markus Neis, Tim Shelton (HAWK.IO), Nasreddine Bencherchali (Nextron Systems)\ndate: 2020-07-03\nmodified: 2023-08-29\ntags:\n    - attack.defense-evasion\n    - attack.t1036.003\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_cmd:\n        Image|endswith: '\\cmd.exe'\n        CommandLine|contains: 'copy '\n    selection_pwsh:\n        Image|endswith:\n            - '\\powershell.exe'\n            - '\\pwsh.exe'\n        CommandLine|contains:\n            - 'copy-item'\n            - ' copy '\n            - 'cpi '\n            - ' cp '\n    selection_other:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    target:\n        CommandLine|contains:\n            - '\\System32'\n            - '\\SysWOW64'\n            - '\\WinSxS'\n    condition: 1 of selection_* and target\nfalsepositives:\n    - Depend on scripts and administrative tools used in the monitored environment (For example an admin scripts like https://www.itexperience.net/sccm-batch-files-and-32-bits-processes-on-64-bits-os/)\n    - When cmd.exe and xcopy.exe are called directly #  C:\\Windows\\System32\\cmd.exe /c copy file1 file2\n    - When the command contains the keywords but not in the correct order\nlevel: medium\n"
+                    },
+                    {
+                        "rule_name": "Copy From Or To Admin Share Or Sysvol Folder",
+                        "rule_link": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_copy_lateral_movement.yml",
+                        "remote_content": "title: Copy From Or To Admin Share Or Sysvol Folder\nid: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\nstatus: test\ndescription: Detects a copy command or a copy utility execution to or from an Admin share or remote\nreferences:\n    - https://twitter.com/SBousseaden/status/1211636381086339073\n    - https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\n    - https://www.elastic.co/guide/en/security/current/remote-file-copy-to-a-hidden-share.html\n    - https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nauthor: Florian Roth (Nextron Systems), oscd.community, Teymur Kheirkhabarov @HeirhabarovT, Zach Stanford @svch0st, Nasreddine Bencherchali\ndate: 2019-12-30\nmodified: 2023-11-15\ntags:\n    - attack.lateral-movement\n    - attack.collection\n    - attack.exfiltration\n    - attack.t1039\n    - attack.t1048\n    - attack.t1021.002\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    selection_target:\n        CommandLine|contains:\n            - '\\\\\\\\*$'\n            - '\\Sysvol\\'\n    selection_other_tools:\n        - Image|endswith:\n              - '\\robocopy.exe'\n              - '\\xcopy.exe'\n        - OriginalFileName:\n              - 'robocopy.exe'\n              - 'XCOPY.EXE'\n    selection_cmd_img:\n        - Image|endswith: '\\cmd.exe'\n        - OriginalFileName: 'Cmd.Exe'\n    selection_cmd_cli:\n        CommandLine|contains: 'copy'\n    selection_pwsh_img:\n        - Image|contains:\n              - '\\powershell.exe'\n              - '\\pwsh.exe'\n        - OriginalFileName:\n              - 'PowerShell.EXE'\n              - 'pwsh.dll'\n    selection_pwsh_cli:\n        CommandLine|contains:\n            - 'copy-item'\n            - 'copy '\n            - 'cpi '\n            - ' cp '\n            - 'move '\n            - 'move-item'\n            - ' mi '\n            - ' mv '\n    condition: selection_target and (selection_other_tools or all of selection_cmd_* or all of selection_pwsh_*)\nfalsepositives:\n    - Administrative scripts\nlevel: medium\n"
+                    }
+                ]
+            }
+        ],
+        "cycat": {
+            "cycat": {
+                "cycat_related_uuids": [
+                    "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                    "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                    "ae676644-d2d2-41b7-af7e-9bed1b55898c",
+                    "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                    "d9727aee-48b8-4fdb-89e2-4c49746ba4dd",
+                    "91c945bc-2ad1-4799-a591-4d00198a1215"
+                ],
+                "lookup_results": [
+                    {
+                        "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                        "lookup_data": {
+                            "description": "Operation Ghost - White Paper",
+                            "link": "http://www.botvrij.eu/data/feed-osint/5d9b516c-e5f0-4e7c-a958-5d8c0a019371.json",
+                            "misp:feed": "http://www.botvrij.eu/data/feed-osint",
+                            "timestamp": "1571855044",
+                            "uuid": "5d9b516c-e5f0-4e7c-a958-5d8c0a019371",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                        "lookup_data": {
+                            "description": "Detects a suspicious copy command to or from an Admin share or remote",
+                            "raw": "author: Florian Roth (Nextron Systems), oscd.community, Teymur Kheirkhabarov @HeirhabarovT,\n  Zach Stanford @svch0st, Nasreddine Bencherchali\ndate: 2019/12/30\ndescription: Detects a suspicious copy command to or from an Admin share or remote\ndetection:\n  condition: target and (selection_other_tools or all of selection_cmd_* or all of\n    selection_pwsh_*)\n  selection_cmd_cli:\n    CommandLine|contains: copy\n  selection_cmd_img:\n  - Image|endswith: \\cmd.exe\n  - OriginalFileName: Cmd.Exe\n  selection_other_tools:\n  - Image|endswith:\n    - \\robocopy.exe\n    - \\xcopy.exe\n  - OriginalFileName:\n    - robocopy.exe\n    - XCOPY.EXE\n  selection_pwsh_cli:\n    CommandLine|contains:\n    - copy-item\n    - 'copy '\n    - 'cpi '\n    - ' cp '\n    - 'move '\n    - move-item\n    - ' mi '\n    - ' mv '\n  selection_pwsh_img:\n  - Image|contains:\n    - \\powershell.exe\n    - \\pwsh.exe\n  - OriginalFileName:\n    - PowerShell.EXE\n    - pwsh.dll\n  target:\n    CommandLine|contains|all:\n    - \\\\\\\\\n    - $\nfalsepositives:\n- Administrative scripts\nfields:\n- CommandLine\n- ParentCommandLine\nid: 855bc8b5-2ae8-402e-a9ed-b889e6df1900\nlevel: high\nlogsource:\n  category: process_creation\n  product: windows\nmodified: 2023/01/31\nreferences:\n- https://twitter.com/SBousseaden/status/1211636381086339073\n- https://drive.google.com/file/d/1lKya3_mLnR3UQuCoiYruO3qgu052_iS_/view\n- https://www.elastic.co/guide/en/security/current/remote-file-copy-to-a-hidden-share.html\n- https://www.microsoft.com/en-us/security/blog/2022/10/18/defenders-beware-a-case-for-post-ransomware-investigations/\nstatus: test\ntags:\n- attack.lateral_movement\n- attack.collection\n- attack.exfiltration\n- attack.t1039\n- attack.t1048\n- attack.t1021.002\ntitle: Copy from Admin Share\n",
+                            "sigma:id": "855bc8b5-2ae8-402e-a9ed-b889e6df1900",
+                            "title": "Copy from Admin Share",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "ae676644-d2d2-41b7-af7e-9bed1b55898c",
+                        "lookup_data": {
+                            "capec": "CAPEC-639",
+                            "mitre-attack-id": "T1039",
+                            "mitre-cti:description": "Adversaries may search network shares on computers they have compromised to find files of interest. Sensitive data can be collected from remote systems via shared network drives (host shared directory, network file server, etc.) that are accessible from the current system prior to Exfiltration. Interactive command shells may be in use, and common functionality within [cmd](https://attack.mitre.org/software/S0106) may be used to gather information.",
+                            "mitre-cti:name": "Data from Network Shared Drive",
+                            "mitre-cti:type": "attack-pattern",
+                            "raw": "{'x_mitre_platforms': ['Linux', 'macOS', 'Windows'], 'x_mitre_domains': ['enterprise-attack'], 'x_mitre_contributors': ['David Tayouri'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'type': 'attack-pattern', 'id': 'attack-pattern--ae676644-d2d2-41b7-af7e-9bed1b55898c', 'created': '2017-05-31T21:30:41.022Z', 'x_mitre_version': '1.3', 'external_references': [{'source_name': 'mitre-attack', 'external_id': 'T1039', 'url': 'https://attack.mitre.org/techniques/T1039'}, {'url': 'https://capec.mitre.org/data/definitions/639.html', 'source_name': 'capec', 'external_id': 'CAPEC-639'}], 'x_mitre_deprecated': False, 'revoked': False, 'description': 'Adversaries may search network shares on computers they have compromised to find files of interest. Sensitive data can be collected from remote systems via shared network drives (host shared directory, network file server, etc.) that are accessible from the current system prior to Exfiltration. Interactive command shells may be in use, and common functionality within [cmd](https://attack.mitre.org/software/S0106) may be used to gather information.', 'modified': '2022-06-16T13:08:03.209Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'name': 'Data from Network Shared Drive', 'x_mitre_detection': 'Monitor processes and command-line arguments for actions that could be taken to collect files from a network share. Remote access tools with built-in features may interact directly with the Windows API to gather data. Data may also be acquired through Windows system management tools such as [Windows Management Instrumentation](https://attack.mitre.org/techniques/T1047) and [PowerShell](https://attack.mitre.org/techniques/T1059/001).', 'kill_chain_phases': [{'kill_chain_name': 'mitre-attack', 'phase_name': 'collection'}], 'x_mitre_is_subtechnique': False, 'x_mitre_data_sources': ['Network Share: Network Share Access', 'Network Traffic: Network Connection Creation', 'Command: Command Execution', 'File: File Access', 'Network Traffic: Network Traffic Content'], 'x_mitre_system_requirements': ['Privileges to access network shared drive'], 'x_mitre_attack_spec_version': '2.1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                        "lookup_data": {
+                            "description": "OSINT - A journey to Zebrocy land",
+                            "link": "https://www.circl.lu/doc/misp/feed-osint/5ce6aa86-9cd8-4302-9dc9-4a59950d210f.json",
+                            "misp:feed": "https://www.circl.lu/doc/misp/feed-osint",
+                            "timestamp": "1563528054",
+                            "uuid": "5ce6aa86-9cd8-4302-9dc9-4a59950d210f",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "d9727aee-48b8-4fdb-89e2-4c49746ba4dd",
+                        "lookup_data": {
+                            "mitre-attack-id": "T1039",
+                            "mitre-cti:description": "Identify unnecessary system utilities or potentially malicious software that may be used to collect data from a network share, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)",
+                            "mitre-cti:name": "Data from Network Shared Drive Mitigation",
+                            "mitre-cti:type": "course-of-action",
+                            "raw": "{'x_mitre_domains': ['enterprise-attack'], 'object_marking_refs': ['marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168'], 'id': 'course-of-action--d9727aee-48b8-4fdb-89e2-4c49746ba4dd', 'type': 'course-of-action', 'created': '2018-10-17T00:14:20.652Z', 'created_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5', 'external_references': [{'external_id': 'T1039', 'url': 'https://attack.mitre.org/mitigations/T1039', 'source_name': 'mitre-attack'}, {'source_name': 'Beechey 2010', 'description': 'Beechey, J. (2010, December). Application Whitelisting: Panacea or Propaganda?. Retrieved November 18, 2014.', 'url': 'http://www.sans.org/reading-room/whitepapers/application/application-whitelisting-panacea-propaganda-33599'}, {'url': 'http://blog.jpcert.or.jp/2016/01/windows-commands-abused-by-attackers.html', 'description': 'Tomonaga, S. (2016, January 26). Windows Commands Abused by Attackers. Retrieved February 2, 2016.', 'source_name': 'Windows Commands JPCERT'}, {'url': 'https://apps.nsa.gov/iaarchive/library/ia-guidance/tech-briefs/application-whitelisting-using-microsoft-applocker.cfm', 'description': 'NSA Information Assurance Directorate. (2014, August). Application Whitelisting Using Microsoft AppLocker. Retrieved March 31, 2016.', 'source_name': 'NSA MS AppLocker'}, {'source_name': 'Corio 2008', 'description': 'Corio, C., & Sayana, D. P. (2008, June). Application Lockdown with Software Restriction Policies. Retrieved November 18, 2014.', 'url': 'http://technet.microsoft.com/en-us/magazine/2008.06.srp.aspx'}, {'source_name': 'TechNet Applocker vs SRP', 'description': 'Microsoft. (2012, June 27). Using Software Restriction Policies and AppLocker Policies. Retrieved April 7, 2016.', 'url': 'https://technet.microsoft.com/en-us/library/ee791851.aspx'}], 'modified': '2020-01-17T16:45:23.087Z', 'name': 'Data from Network Shared Drive Mitigation', 'description': 'Identify unnecessary system utilities or potentially malicious software that may be used to collect data from a network share, and audit and/or block them by using whitelisting (Citation: Beechey 2010) tools, like AppLocker, (Citation: Windows Commands JPCERT) (Citation: NSA MS AppLocker) or Software Restriction Policies (Citation: Corio 2008) where appropriate. (Citation: TechNet Applocker vs SRP)', 'x_mitre_deprecated': True, 'x_mitre_version': '1.0', 'x_mitre_modified_by_ref': 'identity--c78cb6e5-0c4b-4611-8297-d1b8b55e40b5'}",
+                            "_cycat_type": "Item"
+                        }
+                    },
+                    {
+                        "uuid": "91c945bc-2ad1-4799-a591-4d00198a1215",
+                        "lookup_data": {
+                            "description": "Detects known sensitive file extensions accessed on a network share",
+                            "raw": "author: Samir Bousseaden\ndate: 2019/04/03\ndescription: Detects known sensitive file extensions accessed on a network share\ndetection:\n  condition: selection\n  selection:\n    EventID: 5145\n    RelativeTargetName|endswith:\n    - .pst\n    - .ost\n    - .msg\n    - .nst\n    - .oab\n    - .edb\n    - .nsf\n    - .bak\n    - .dmp\n    - .kirbi\n    - \\groups.xml\n    - .rdp\nfalsepositives:\n- Help Desk operator doing backup or re-imaging end user machine or backup software\n- Users working with these data types or exchanging message files\nfields:\n- ComputerName\n- SubjectDomainName\n- SubjectUserName\n- RelativeTargetName\nid: 91c945bc-2ad1-4799-a591-4d00198a1215\nlevel: medium\nlogsource:\n  product: windows\n  service: security\nmodified: 2022/10/09\nrelated:\n- id: 286b47ed-f6fe-40b3-b3a8-35129acd43bc\n  type: similar\nstatus: test\ntags:\n- attack.collection\n- attack.t1039\ntitle: Suspicious Access to Sensitive File Extensions\n",
+                            "sigma:id": "91c945bc-2ad1-4799-a591-4d00198a1215",
+                            "title": "Suspicious Access to Sensitive File Extensions",
+                            "_cycat_type": "Item"
+                        }
+                    }
+                ]
+            }
+        },
+        "atomics": [
+            {
+                "attack_technique": "T1039",
+                "display_name": "Data from Network Shared Drive",
+                "atomic_tests": [
+                    {
+                        "name": "Copy a sensitive File over Administrative share with copy",
+                        "auto_generated_guid": "6ed67921-1774-44ba-bac6-adb51ed60660",
+                        "description": "Copy from sensitive File from the c$ of another LAN computer with copy cmd\nhttps://twitter.com/SBousseaden/status/1211636381086339073",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "remote": {
+                                "description": "Remote server name",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "share_file": {
+                                "description": "Remote Path to the file",
+                                "type": "path",
+                                "default": "Windows\\temp\\Easter_Bunny.password"
+                            },
+                            "local_file": {
+                                "description": "Local name",
+                                "type": "string",
+                                "default": "Easter_egg.password"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Administrative share must exist on #{remote}\n",
+                                "prereq_command": "if (Test-Path \"\\\\#{remote}\\C$\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host 'Please Enable \"C$\" share on #{remote}'\n"
+                            },
+                            {
+                                "description": "\"\\\\#{remote}\\C$\\#{share_file}\" must exist on #{remote}\n",
+                                "prereq_command": "if (Test-Path \"\\\\#{remote}\\C$\\#{share_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Out-File -FilePath \"\\\\#{remote}\\C$\\#{share_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "copy \\\\#{remote}\\C$\\#{share_file} %TEMP%\\#{local_file}",
+                            "cleanup_command": "del \\\\#{remote}\\C$\\#{share_file}\ndel %TEMP%\\#{local_file}",
+                            "name": "command_prompt",
+                            "elevation_required": true
+                        }
+                    },
+                    {
+                        "name": "Copy a sensitive File over Administrative share with Powershell",
+                        "auto_generated_guid": "7762e120-5879-44ff-97f8-008b401b9a98",
+                        "description": "Copy from sensitive File from the c$ of another LAN computer with powershell\nhttps://twitter.com/SBousseaden/status/1211636381086339073",
+                        "supported_platforms": [
+                            "windows"
+                        ],
+                        "input_arguments": {
+                            "remote": {
+                                "description": "Remote server name",
+                                "type": "string",
+                                "default": "127.0.0.1"
+                            },
+                            "share_file": {
+                                "description": "Remote Path to the file",
+                                "type": "path",
+                                "default": "Windows\\temp\\Easter_Bunny.password"
+                            },
+                            "local_file": {
+                                "description": "Local name",
+                                "type": "string",
+                                "default": "Easter_egg.password"
+                            }
+                        },
+                        "dependency_executor_name": "powershell",
+                        "dependencies": [
+                            {
+                                "description": "Administrative share must exist on #{remote}\n",
+                                "prereq_command": "if (Test-Path \"\\\\#{remote}\\C$\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Write-Host 'Please Enable \"C$\" share on #{remote}'\n"
+                            },
+                            {
+                                "description": "\"\\\\#{remote}\\C$\\#{share_file}\" must exist on #{remote}\n",
+                                "prereq_command": "if (Test-Path \"\\\\#{remote}\\C$\\#{share_file}\") {exit 0} else {exit 1}\n",
+                                "get_prereq_command": "Out-File -FilePath \"\\\\#{remote}\\C$\\#{share_file}\"\n"
+                            }
+                        ],
+                        "executor": {
+                            "command": "copy-item -Path \"\\\\#{remote}\\C$\\#{share_file}\" -Destination \"$Env:TEMP\\#{local_file}\"",
+                            "cleanup_command": "Remove-Item -Path \"\\\\#{remote}\\C$\\#{share_file}\"\nRemove-Item -Path \"$Env:TEMP\\#{local_file}\"",
+                            "name": "powershell",
+                            "elevation_required": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "timestamp": "2025-02-28 11:27:39"
+}
